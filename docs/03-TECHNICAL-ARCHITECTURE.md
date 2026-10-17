@@ -64,3 +64,7 @@ The official-docs comparison is recorded in [docs/14-STACK-COMPARISON.md](14-STA
 **Native Kotlin + Jetpack Compose with Room** remains the fallback and has stronger direct Android control plus compile-time query/migration support through Room. Revisit the recommendation if precise reminders or platform integration are core, iOS is no longer expected, or Expo's package/build spike fails.
 
 Exact SDK and library versions are intentionally not specified yet. Once the planning gate is approved, select a compatible SDK family, resolve Expo package versions with Expo's installer, check with Expo Doctor, lock versions, and prove persistence, migration, notifications, and real-device APK install in a bounded spike. No web output is an acceptable substitute for the native app.
+
+### Current package-version caution
+
+Current official docs are versioned and can move independently: Expo's SQLite install instructions use SDK-aware package resolution, while Android's Room docs now distinguish the Room 2.x line from Room 3.0's `androidx.room3` artifacts and Kotlin/KSP/coroutine-first APIs. Do not copy package versions from old examples or combine “latest” dependencies independently. See [the stack comparison](14-STACK-COMPARISON.md) for the sources and required compatibility matrix.
