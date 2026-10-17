@@ -42,3 +42,7 @@ This repository is the source of truth for Dayseed planning. The README links th
 
 ## Verification status
 Git commits confirm the listed documentation files were created. Official documentation was reviewed for the Android build route, Expo SQLite/Notifications, Kotlin/Compose, Room, accessibility, testing, build tooling, and package alignment. The stack comparison proposes Expo as the preferred candidate but leaves D-009 open. No application code was built, no app tests were run, and no Dayseed Android build or exact dependency combination has been verified.
+
+## Latest research follow-up — 2026-10-17
+
+The head-to-head comparison is in [docs/14-STACK-COMPARISON.md](14-STACK-COMPARISON.md). A follow-up official-docs check added versioning cautions: use Expo SDK-aware dependency resolution rather than copied version numbers; if choosing native Kotlin, deliberately choose between the Room 2.x and Room 3.0 lines because Room 3.0 has different artifacts and Kotlin/KSP/coroutine requirements. No dependencies were installed, no project was scaffolded, and no build or device test was run. The stack decision remains open for owner approval after the planning gate and a bounded feasibility spike.
