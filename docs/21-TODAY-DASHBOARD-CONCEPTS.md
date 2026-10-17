@@ -27,6 +27,50 @@ The dashboard must not turn into a crowded productivity dashboard. Core habit lo
 - Keep important controls accessible on small Android screens, with large text, TalkBack, and 48dp target checks.
 - Treat all examples below as hypotheses, not approved requirements.
 
+## User-provided reference and direction to expand
+
+On 2026-10-17, the user supplied a dashboard concept screenshot and confirmed that the intended direction combines the existing dashboard exploration with **a little of Concept C (Reflective Today)**. Treat that screenshot as the current discussion anchor, not as an approved final design. The goal is to refine and expand this specific direction—not restart from generic template options.
+
+### What to preserve as hypotheses
+
+- Warm, restrained, paper-like background with subtle tonal variation; no gratuitous gradients or glass effects.
+- Strong editorial headline and clear hierarchy.
+- Today's habit actions are the practical centre of the screen.
+- Tiny / Usual / Extra controls are grouped with the relevant habit and communicate effort plainly.
+- A compact, clearly labelled daily progress summary, provided its metric is unambiguous.
+- A quiet, optional journal entry point that does not imply journaling is mandatory.
+- A restrained growth symbol that has meaning grounded in actual user records.
+- Bottom navigation is a candidate, not a locked decision.
+
+### Anti-slop / anti-pattern guardrails
+
+Avoid:
+- Template-like dashboards built from many identical rounded cards.
+- Decorative gradients, neon glows, glassmorphism, excessive shadows, or ornamental leaves without semantic purpose.
+- Generic motivational wallpaper and overfamiliar “you've got this” copy.
+- Arbitrary XP, scores, badges, streak pressure, punitive decay, or celebratory animation for every routine action.
+- Progress numbers without a precise definition and period.
+- Showing effort-level controls where a habit is completion-only or where the choices are not meaningful.
+- Excessive empty space that pushes the user's next action down the screen, as well as dense screens that make every feature compete.
+- Reflection prompts that feel compulsory, demand emotional disclosure, or imply mood/clinical analysis.
+- Overstating completion: “2 of 3 recorded” must clarify whether the denominator means today's scheduled habits, visible habits, or another defined set. “Not recorded” is not automatically “not done.”
+- Using colour alone for status or making unselected controls hard to distinguish from disabled controls.
+
+### Specific questions raised by the supplied screenshot
+
+1. **Progress card:** What exactly are the three segments? Are they three habits scheduled today, three habits selected for today, or three possible actions? The count and visual must match the eventual schedule/record semantics.
+2. **Effort controls:** Should Tiny / Usual / Extra remain visible on every habit, or appear after selecting a habit? Keep them visible only when they are genuinely useful; test tap count and screen height.
+3. **Completed habit:** Show the chosen effort and a clear recorded state without making the whole row look disabled. Allow correction/editing without friction.
+4. **Unrecorded habit:** The neutral dot should have an accessible label and must not imply failure. Make the next action obvious.
+5. **Reflection card:** Keep it optional and lightweight; explore whether one short invitation is enough instead of multiple lines that compete with habits.
+6. **Header/actions:** The screenshot includes menu and compose actions. Their meaning and priority need to be specified; do not add icons merely to fill the header.
+7. **Navigation:** “History” versus “Journal” placement remains open; test whether a person can find past habit records and journal entries without confusion.
+8. **Small screens:** Validate the actual content height, scroll behaviour, system navigation overlap, keyboard, enlarged text, and touch-target sizes on Android. A concept screenshot is not proof of usability.
+
+### Direction to develop next
+
+Create a refined low-fidelity version of this reference, plus one controlled alternative that reduces visible effort controls and one that gives reflection slightly more prominence. Keep the palette and typography constant across variants so the comparison focuses on hierarchy and interaction. Use realistic examples and annotate each element with its purpose, data source, interaction, empty state, accessibility label, and unresolved decisions. Do not implement app UI or treat generated imagery as a functional prototype before the planning gate is approved.
+
 ## Three layouts to compare
 
 ### Concept A — Action-first Today
