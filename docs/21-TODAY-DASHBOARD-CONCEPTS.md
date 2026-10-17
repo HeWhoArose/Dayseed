@@ -354,3 +354,47 @@ Review each for:
 ### Current conclusion
 
 The owner selected the daily summary + one-line monthly context + quiet route to Progress. The first visual baseline should be layout A, not the reflection-first or icon-compressed alternatives. This is a directional choice for research, not final design approval. No app implementation is authorised or started by this work.
+
+
+## Owner direction: screens 1–8, using the recommended Today baseline
+
+**Recorded:** 2026-10-17  
+**Status:** Approved as the structure for the next design exploration round. Not final visual approval and not permission to implement app code.
+
+The owner likes the generated design board's numbered screens 1–8 and wants those screens developed using the recommended baseline as the skeleton.
+
+### Eight-screen design set
+
+Use the numbered set from the concept board as the working scope:
+1. **Today** — recommended daily-first baseline: daily summary, one-line monthly context with quiet Progress link, habits as the main working area, optional reflection after habits, consistent bottom navigation.
+2. **Habit Creation / Edit** — create and configure a habit with clear, beginner-friendly choices.
+3. **Habit Detail** — view a habit's records and relevant details without turning it into a scorecard.
+4. **History (Calendar)** — inspect dated habit records and navigate to a past day.
+5. **Journal Entry** — write, view, edit, and delete a personal note with clear save state.
+6. **Insights (Overview)** — transparent, understandable summaries derived from actual records; no arbitrary composite score.
+7. **Return Page (After a Break)** — non-judgmental, dismissible welcome back experience that preserves history and offers a next step.
+8. **Settings** — essential controls for reminders, appearance/accessibility, privacy, and data export, subject to unresolved policy decisions.
+
+The Today screen is the skeleton and sets the hierarchy, typography direction, spacing discipline, navigation, and tone. The other screens should feel like parts of the same product, not unrelated templates. However, their exact visual treatments and information architecture remain open for design exploration.
+
+### Today baseline rules for all related screens
+
+- Today is the daily action centre.
+- The daily count comes before broader context.
+- The monthly line stays short and visually secondary, with a quiet route to Progress.
+- Habit actions remain readable and usable at small widths; Tiny / Usual / Extra stay text-labelled.
+- Reflection is optional and comes after the main habit actions.
+- Navigation remains consistent across screens; avoid duplicate controls without a clear need.
+- Preserve the existing screenshot's restrained editorial feel and anti-AI-slop guardrails.
+- Test ordinary, all-recorded, empty, rest/no-schedule, long-list, long-label, and enlarged-text states.
+- Keep claims, metrics, and screen behaviours clearly marked as approved, proposed, or unresolved.
+
+### Work sequence
+
+1. Refine screen 1 across its key states and small-screen constraints.
+2. Design screen 2 (habit creation/edit), since the quality of Today depends on how habits and effort options are configured.
+3. Design screens 3–5 (habit detail, history, journal) and verify record editing/cardinality/navigation relationships.
+4. Design screens 6–8 (insights, return, settings), ensuring metrics, comeback copy, and privacy/export behaviours agree with the product specification.
+5. Review the full eight-screen set for consistency, contradictions, accessibility, and anti-slop issues.
+6. Update related docs and the decision log after the design choices are reviewed.
+7. Do not implement app source code until the explicit planning gate is approved.
