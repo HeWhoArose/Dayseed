@@ -398,3 +398,65 @@ The Today screen is the skeleton and sets the hierarchy, typography direction, s
 5. Review the full eight-screen set for consistency, contradictions, accessibility, and anti-slop issues.
 6. Update related docs and the decision log after the design choices are reviewed.
 7. Do not implement app source code until the explicit planning gate is approved.
+
+
+## Next refinement: Today state matrix
+
+**Status:** Required design exploration before treating the Today layout as stable. The generated home-screen image is a reference for hierarchy only; its text, dates, spacing, icons, and metrics are not implementation specifications.
+
+### Shared layout invariants
+
+Across all states, preserve this order unless small-screen testing shows a clear usability problem:
+1. Header and local date.
+2. Compact daily summary.
+3. One-line monthly context with a quiet Progress destination.
+4. Today's habit list and readable action controls.
+5. Optional “A note to yourself” reflection entry.
+6. Bottom navigation: Today, History, Insights, Settings.
+
+The habit list is the primary working area. Monthly context must remain subordinate. Reflection is optional. The header must not duplicate navigation controls without a clear purpose.
+
+### State matrix
+
+| State | What should change | What must not happen |
+|---|---|---|
+| Typical day | Show count of eligible habits with a qualifying record; unrecorded habits retain clear effort controls | Do not imply an unrecorded habit means failure |
+| All eligible habits recorded | Use neutral confirmation and retain access to edit/correct records | No fireworks, XP, superiority language, or locked controls |
+| Nothing recorded yet | Invite one manageable action; make clear the user can start anywhere | No shaming zero, red warning, or broken-streak message |
+| Rest / no habits scheduled | Explain neutrally that nothing is scheduled today; keep history and reflection available | Do not render “0 of 0” as failure or manufacture a target |
+| Long habit list | Keep actions consistent and allow natural scrolling; preserve access to reflection and navigation | Do not shrink effort controls to fit everything above the fold |
+| Long names / descriptions | Wrap text, allow rows to grow, retain visible action labels | No clipping, overlapping labels, or icon-only controls |
+| Enlarged text / display scaling | Allow vertical growth and scrolling; keep touch targets comfortable | No fixed-height cards that truncate content or cover bottom navigation |
+| Completion-only habit | Use a clear completion action instead of Tiny / Usual / Extra | Do not force effort levels on habits that do not use them |
+| Past record edit | Make the selected date and existing value clear before changing it | Do not silently overwrite records or confuse past and today |
+
+### Metric semantics that remain open
+
+Before any count is treated as a requirement, decide:
+- Which habits are eligible for the daily denominator: active, scheduled for the local date, not paused, and not on planned rest.
+- Whether an explicit skip is a record for the daily summary or shown separately. Do not conflate skip with successful effort.
+- How schedule changes and timezone changes affect historical eligibility.
+- Whether monthly “days with a recorded habit action” counts distinct local calendar dates with at least one qualifying effort record, and how edits/deletions affect it.
+- Whether journaling contributes only to journal activity (recommended) rather than habit progress.
+
+### Small-screen review checklist
+
+Use at least one narrow Android viewport and one enlarged-text condition. Check:
+- No horizontal scrolling in the normal layout.
+- Effort labels remain fully readable and easy to tap.
+- Long habit names wrap without pushing controls off-screen.
+- The first habit action is discoverable without unnecessary scrolling.
+- Bottom navigation does not cover the final habit or reflection content.
+- The monthly sentence is visually secondary.
+- The screen still makes sense without colour, plant illustration, or progress fill.
+- All-recorded and rest-day states remain calm and non-punitive.
+
+### Exit gate for Screen 1
+
+Do not move to Screen 2 as if Today were final until:
+1. The state matrix is represented in wireframes or annotated concepts.
+2. Daily and monthly metric definitions have either been decided or clearly marked open.
+3. The design has been checked against the anti-AI-slop and accessibility checklists.
+4. The owner has reviewed the variants and approved the direction.
+
+This is a design/research gate only; it does not authorize app implementation.
