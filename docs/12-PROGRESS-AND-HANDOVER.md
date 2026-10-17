@@ -24,6 +24,14 @@ Canonical branch: `main`. GitHub is the source of truth for planning and future 
 - App implementation: **not started and not authorised**.
 - Automated tests/build: none run; there is no app source in this planning package.
 
+## Cumulative research inventory and audit — 2026-10-17
+
+- Added [Cumulative Research Inventory and Documentation Audit](20-CUMULATIVE-RESEARCH-INVENTORY-AND-AUDIT.md) to distinguish documented hypotheses from completed evidence and approved decisions.
+- Enumerated all 26 Markdown files on `main`; checked relative Markdown file targets and found no missing target files. Heading anchors, external URLs, and claim-level citations still need deeper review.
+- Confirmed the competitor research document is a plan, not a completed market study; public listing screenshots are not hands-on competitor tests.
+- The audit prioritises day-record semantics, date/time policy, journal cardinality, reminders, privacy/export/deletion, representative usability validation, and the owner approval gate.
+- This was a structural/status pass, not a complete line-by-line source and contradiction audit. No app code was created and no implementation is authorised.
+
 ## Latest research package
 
 New research documents:
