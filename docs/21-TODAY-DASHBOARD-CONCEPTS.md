@@ -282,3 +282,75 @@ Review notes for the next iteration:
 - Ensure effort controls remain usable at narrow widths and with large text; do not compress Tiny / Usual / Extra into undersized pills.
 - Do not use generated text, icons, or imagery as final assets without review.
 - Use the concept to discuss hierarchy only. Final typography, palette, iconography, spacing, states, and navigation remain open for comparative wireframing and accessibility review.
+
+
+## Follow-up exploration: placement, density, and key states
+
+**Research date:** 2026-10-17  
+**Status:** Visual exploration only; not approved for implementation.
+
+A generated design board explored five Today states/layouts plus secondary screens. It is useful for discussing hierarchy, but generated small text, icons, and detailed UI may be inaccurate. Do not treat it as a functional prototype or a source of approved requirements.
+
+### Placement variants compared conceptually
+
+**A — Primary / recommended baseline**
+- Daily summary at the top of the content.
+- One-line monthly context below the daily summary.
+- Habit list follows immediately.
+- Optional reflection after the habits.
+- Bottom navigation remains consistent.
+
+This most clearly communicates “today first, broader context second,” but the monthly note and reflection together may push lower habit rows below the fold.
+
+**B — Reflection higher**
+- Reflection appears before the daily summary and habit list.
+- This makes journaling more prominent but weakens the action-first hierarchy and may create friction for people who only want to log a habit.
+
+**C — Compact controls**
+- Attempts to shrink effort selectors into icon-like controls.
+- Do not adopt this without usability evidence: Tiny / Usual / Extra must remain understandable without requiring users to memorise icons. At small widths, clear text labels may be safer than compact symbolic controls.
+
+**D — Completed day**
+- Shows a neutral, completed state when all eligible habits have records.
+- Avoid celebratory overload or implying that a perfect day is more valuable than a partial day.
+- Ensure users can still edit/correct records and access reflection.
+
+**E — Empty day**
+- Offers a gentle first action and neutral progress display.
+- Avoid “0” as a judgement or messages that assume failure. Confirm how planned rest, new habits, paused habits, and unscheduled days are represented before defining exact copy.
+
+### Recommended next wireframe baseline
+
+Use A as the baseline for the next round, with these refinements:
+1. Keep the daily summary first, using a denominator based on eligible habits for that local date.
+2. Keep the monthly context to one concise sentence with a quiet, optional route to Progress. Avoid adding a separate decorative plant illustration if the text and link already communicate the idea.
+3. Keep the habit list as the dominant working area.
+4. Keep “A note to yourself” after the habit list and make it clearly optional.
+5. Test whether the monthly sentence sits directly beneath the daily summary or after the reflection. Default hypothesis: beneath the daily summary if it is short enough not to push key actions down; compare on a small Android viewport.
+6. Retain text labels for effort options; never rely on icon-only Tiny / Usual / Extra controls.
+7. Keep header and bottom navigation consistent; do not duplicate settings shortcuts without a demonstrated need.
+
+### Required stress-test scenarios
+
+Create wireframes for the same viewport and content across these states:
+- Typical day with a mix of recorded and unrecorded habits.
+- All eligible habits recorded.
+- No habits recorded yet.
+- Planned rest day / no habits scheduled.
+- Several habits (long list requiring scrolling).
+- Long habit names and optional descriptions.
+- Large system text / display scaling.
+- A habit with completion-only logging rather than effort levels.
+- A past record that can be edited or corrected.
+
+Review each for:
+- Whether the primary action is obvious.
+- Whether “2 of 3” has a clear denominator.
+- Whether monthly activity is distinguishable from a streak and from journal activity.
+- Whether the screen remains useful without colour or illustration.
+- Tap target size, wrapping, clipping, scrolling, and bottom-navigation overlap.
+- Whether any copy implies blame, a broken streak, or moral judgement.
+
+### Current conclusion
+
+The owner selected the daily summary + one-line monthly context + quiet route to Progress. The first visual baseline should be layout A, not the reflection-first or icon-compressed alternatives. This is a directional choice for research, not final design approval. No app implementation is authorised or started by this work.
