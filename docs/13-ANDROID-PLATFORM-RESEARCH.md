@@ -127,3 +127,6 @@ The spike is a bounded feasibility experiment, not the start of the product buil
 **Not verified:** Dayseed itself builds; a particular package combination compiles; notification timing is exact across devices; SDK versions are final; monetisation SDKs are suitable; or the Play release is ready.
 
 **Recommendation:** retain React Native + Expo + TypeScript + SQLite as a **proposed candidate**, not an approved decision. Complete product/design planning, approve the technical spike, then validate exact package versions and native configuration before implementation.
+
+## 7. Related stack comparison
+See [Stack Comparison: React Native + Expo vs Native Kotlin + Jetpack Compose](14-STACK-COMPARISON.md) for the head-to-head assessment, criteria and scorecard, the trade-offs around Room versus Expo SQLite, notification constraints, and the conditional recommendation. D-009 remains open; this research does not approve app implementation.
