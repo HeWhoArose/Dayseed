@@ -57,3 +57,10 @@ Separate timestamps (instants) from local calendar dates. Habit completion usual
 After the planning gate permits technical validation, verify official SDK/toolchain support; Android release build on a real device; SQLite transactions and migrations; offline persistence across force-stop/restart; notification permission/scheduling; export and deletion; app size and performance on representative devices; and accessibility integration.
 
 Record actual versions, commands, device details, outcomes, and limitations. Do not mark checks verified without evidence.
+
+## Stack comparison result (2026-10-17)
+The official-docs comparison is recorded in [docs/14-STACK-COMPARISON.md](14-STACK-COMPARISON.md). Its conditional recommendation is **React Native + Expo + TypeScript + expo-sqlite** because Dayseed's v1 is dominated by ordinary app UI and local-first features, a later iOS client remains plausible, and Expo has a documented hosted/local APK/AAB route. This is a narrow planning preference, not final approval.
+
+**Native Kotlin + Jetpack Compose with Room** remains the fallback and has stronger direct Android control plus compile-time query/migration support through Room. Revisit the recommendation if precise reminders or platform integration are core, iOS is no longer expected, or Expo's package/build spike fails.
+
+Exact SDK and library versions are intentionally not specified yet. Once the planning gate is approved, select a compatible SDK family, resolve Expo package versions with Expo's installer, check with Expo Doctor, lock versions, and prove persistence, migration, notifications, and real-device APK install in a bounded spike. No web output is an acceptable substitute for the native app.
