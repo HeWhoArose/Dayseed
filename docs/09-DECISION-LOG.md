@@ -27,6 +27,10 @@
 | D-012 | AI-generated analysis | Deferred | Excluded from v1 | Revisit only through a privacy/product gate |
 | D-013 | Social/leaderboards/pets | Deferred | Excluded from v1 | Do not add implicitly |
 | D-014 | Subscription | Not proposed for v1 | No subscription model currently planned | Do not implement without explicit approval |
+| D-015 | Android build route | Verified at documentation level | Expo documents development builds, APK output for direct device testing, and AAB output for Play distribution; this verifies the route exists, not that Dayseed or a package combination builds | Keep stack proposed; approve a bounded technical spike after the planning gate |
+
+## Evidence for D-015
+The official-documentation review is recorded in [Android Platform and Build-Route Research](13-ANDROID-PLATFORM-RESEARCH.md). Sources include Expo EAS Build, Expo APK builds, Expo SQLite, Expo Notifications, and Android app signing documentation. Exact package versions and an actual Dayseed build have not been tested.
 
 ## Decision change template
 For each new consequential decision record:
