@@ -214,3 +214,33 @@ A concept-board image was generated during the 2026-10-17 discussion to make the
 - [Typography, Colour, and Accessibility](17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md)
 - [Design Review Checklist](DESIGN-REVIEW-CHECKLIST.md)
 - [Decision Log](09-DECISION-LOG.md)
+
+
+## Emerging preference: today first, broader growth second
+
+**Status:** Owner's stated preference, to guide the next prototype round; not final UI approval.
+
+The user prefers the Today dashboard to primarily record today's activity, with a small amount of broader progress context. Recommended hierarchy:
+
+1. **Primary:** today's habits and clear record actions.
+2. **Daily summary:** a compact, clearly labelled summary of today's recorded habits, such as “2 of 3 habits recorded,” only when the denominator is defined from the habits that are actually scheduled/active today.
+3. **Secondary broader context:** one restrained sentence or small link, such as “You've recorded a habit on 8 days this month,” provided that this is computed from valid records and its period is explicit.
+4. **Details on demand:** richer history, trends, and Growth Mark exploration belong in History/Progress rather than taking over Today.
+
+### Important semantic guardrails
+
+- “2 of 3” must mean three eligible habits for the current day, not three actions, effort levels, or an arbitrary target. Define handling for rest days, paused habits, schedules, and skipped habits before implementation.
+- Prefer neutral wording like “recorded” over “completed” if Tiny effort is a valid logged action and the app is reporting records rather than judging outcomes.
+- Never imply that an unrecorded habit is proof the person failed or did nothing.
+- A broader monthly count should count distinct local calendar dates with at least one qualifying recorded habit action, if that metric is selected. Label it precisely; do not combine it with journal entries or turn it into a score.
+- The broader glimpse must remain visually secondary and must not displace habit logging below the fold on small Android screens.
+- Keep the panel useful offline and accessible without relying on colour alone.
+
+### Next prototype comparison
+
+Build low-fidelity variants with identical content:
+- **Variant 1:** daily summary only.
+- **Variant 2:** daily summary plus one-line monthly context.
+- **Variant 3:** daily summary plus a small tap-through progress affordance, with the monthly context shown on Progress.
+
+Compare scan speed, comprehension of the denominator, perceived pressure, and whether users notice the broader context without mistaking it for a score. These are test candidates, not implementation requirements.
