@@ -14,7 +14,7 @@
 - Second screenshot inspected: habit detail with score graph and history.
 - Screenshot URL: https://play-lh.googleusercontent.com/2nZZDFddPS4-wHVgPvAfeYik3vMTsrV-Mgys3g1A6s-KLCcUWsf1PlYLJfKXGyxUnUHkSKX8sESQkrEx6mQN%3Dw526-h296
 
-**Visible evidence:** The “Habits” screenshot uses a compact table-like weekly grid with rows for habits and day columns; different habit rows have distinct accent colours. The detail screenshot shows an overview/score, a line chart, and a history chart. The listing describes habit scores, flexible schedules, reminders, offline use, and data export. These are listing claims, not independent tests.
+**Visible evidence:** The “Habits” screenshot uses a compact table-like weekly grid with rows for habits and day columns; different habit rows have distinct accent colours. The detail screenshot shows an overview/score, a line chart, and a history chart. The listing describes habit scores, flexible schedules, reminders, offline use, and data export. Its current public copy says the habit-strength score increases with repetitions and weakens with missed days; this is an explicit vendor description of the scoring model, not an independent evaluation. The listing also describes the app as ad-free and open source. These are listing claims, not independent tests.
 
 **Design implications for Dayseed:** A compact grid can compare many habits efficiently but may be dense on small screens. Habit detail graphs can provide history but should explain the measure and avoid making streaks the only success signal. A recent user review on the listing mentions poor red visibility in dark theme; treat this as one user's report, not proof of a universal defect. It reinforces the need to test semantic colours in both themes.
 
@@ -26,7 +26,7 @@
   - https://play-lh.googleusercontent.com/GLa2gMHsOmi3aK7IxYEI_nfUa9gbjYG_iqSq8LNOzz0h6ySkw_tpzKaP0pz1FR6JVQ9gGSqim-5ItqrzGXH6%3Dw526-h296
   - https://play-lh.googleusercontent.com/YBmpZ-Tc2orgU8knXP9vA3k7DhrVSpIV8T5nJTD6zvy-Ca0xPGZE__pDbfgpn6ziB0YguK7oTPorUxqMJndfnQ%3Dw526-h296
 
-**Visible evidence:** One publisher graphic presents a monthly calendar filled with mood/activity symbols and advertises several journaling features; another screenshot shows a simple mood selection step. The current listing describes one-tap mood tracking, text/photo/audio entries, charts, weekly/monthly/yearly summaries, a “Year in Pixels” view, reminders, and optional backup/export. Listing metadata and feature text may change by region/version.
+**Visible evidence:** One publisher graphic presents a monthly calendar filled with mood/activity symbols and advertises several journaling features; another screenshot shows a simple mood selection step. The current public listing describes one-tap mood tracking, text/photo/audio entries, charts, weekly/monthly/yearly summaries, a “Year in Pixels” view, reminders, optional backup/export, and lists ads plus in-app purchases. These are vendor claims and listing metadata; availability and exact presentation may vary by region/version.
 
 **Design implications for Dayseed:** A calendar can make dated entries discoverable, but dense colourful symbols need a clear legend and must not imply that blank dates are bad. A single-step reflection/mood selection can be quick, but Dayseed must not add mood tracking by implication: its current scope is a micro-journal, and any mood field needs a separate product decision.
 
@@ -35,7 +35,7 @@
 | Question | Evidence now | Safe conclusion | Still needed |
 |---|---|---|---|
 | How does Loop show multiple habits? | Public listing screenshot | A weekly grid with habit rows and day columns is shown in promotional material | Install current version; check scrolling, tap targets, editing and accessibility |
-| How does Loop show progress? | Public listing screenshot and listing copy | A detail screen shows score and history graphs | Verify metric definition, date behaviour, dark theme and real interaction |
+| How does Loop show progress? | Public listing screenshot and listing copy | A detail screen shows score and history graphs; public copy says missed days weaken the score | Verify metric definition, date behaviour, dark theme and real interaction |
 | How does Daylio start a reflection? | Public listing screenshot | A mood-choice screen is shown | Install current version; test skip, text entry, save/edit and privacy controls |
 | How does Daylio support revisiting entries? | Promotional calendar image and listing text | A calendar-style archive is advertised | Verify current calendar navigation, list/detail flow, search, empty dates and accessibility |
 | Are these layouts best for Dayseed? | No user tests | Not established | Test comparable prototypes against Dayseed tasks |
