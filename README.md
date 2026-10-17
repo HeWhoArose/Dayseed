@@ -11,7 +11,6 @@ Dayseed is an Android-first, offline-first habit and micro-journal app for peopl
 Dayseed should make it easier to do a little, notice progress, reflect briefly, and return after a break. It should treat effort and context as more meaningful than perfect streaks.
 
 Core principles:
-
 - **Progress over perfection:** a tiny action can count; a missed day does not erase past effort.
 - **Come back without shame:** no scolding, guilt loops, or assumptions about why someone was away.
 - **Private by default:** journal entries and personal habit data stay on-device in the first release.
@@ -28,8 +27,13 @@ Core principles:
 | [Product specification](docs/01-PRODUCT-SPECIFICATION.md) | Requirements and behaviour definitions |
 | [UX and design](docs/02-UX-AND-DESIGN.md) | Navigation, screens, design directions, accessibility |
 | [Technical architecture](docs/03-TECHNICAL-ARCHITECTURE.md) | Platform and architecture options, proposed stack |
-| [Android platform research](docs/13-ANDROID-PLATFORM-RESEARCH.md) | Official Android build route, APK/AAB distinction, and package validation gate |
-| [Stack comparison](docs/14-STACK-COMPARISON.md) | Expo versus native Kotlin/Compose, scoring, recommended candidate, package checks, and technical-spike gate |
+| [Android platform research](docs/13-ANDROID-PLATFORM-RESEARCH.md) | Official Android build route, APK/AAB distinction, package validation gate |
+| [Stack comparison](docs/14-STACK-COMPARISON.md) | Expo versus native Kotlin/Compose, scoring, recommended candidate, technical-spike gate |
+| [Growth Mark and Comeback research](docs/15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md) | Metric semantics, return examples, and boundary tests |
+| [Journal archive research](docs/16-JOURNAL-ARCHIVE-RESEARCH.md) | Timeline/calendar/editorial comparison and usability tasks |
+| [Typography, colour, and accessibility](docs/17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md) | Font candidates, semantic palettes, contrast, text scaling, dark theme |
+| [Competitor screenshot audit](docs/18-COMPETITOR-SCREENSHOT-AUDIT.md) | Inspected public screenshots and limits of current evidence |
+| [Planning gate and Replit/GitHub workflow](docs/19-PLANNING-GATE-AND-REPLIT-GITHUB-WORKFLOW.md) | Native app acceptance, approval gates, quota-exhaustion handoff |
 | [Data and privacy](docs/04-DATA-AND-PRIVACY.md) | Local data model, privacy, backup and deletion |
 | [Comeback and encouragement](docs/05-COMEBACK-AND-ENCOURAGEMENT.md) | Re-entry states and humane language rules |
 | [Monetisation](docs/06-MONETISATION.md) | Ethical monetisation hypotheses and boundaries |
@@ -57,14 +61,15 @@ Unless the decision log changes, do not include cloud accounts or sync, AI-gener
 
 ## Planning gate
 
-Implementation must not begin until the product requirements, key user flows, data/privacy approach, architecture, testing plan, and release scope have been reviewed together. Any implementation agent must first read the whole documentation index, decision log, risk register, and handover.
+Implementation must not begin until the product requirements, key user flows, data/privacy approach, architecture, testing plan, and release scope have been reviewed together. Any implementation agent must first read the documentation index, DESIGN.md, decision log, risk register, handover, and planning-gate workflow.
 
 ## Repository rules
 
-1. Documentation is the current deliverable; do not create a website or start app implementation without approval of the planning gate.
-2. Keep decisions and proposals visibly distinct.
-3. Link related documents and update the decision log when a decision changes.
-4. Record the date and URL for external research actually consulted. Never invent sources, benchmark numbers, or competitor capabilities.
-5. Every roadmap phase needs prerequisites, deliverables, acceptance criteria, tests, risks, and an exit gate.
-6. Keep private journal content out of analytics, advertising identifiers, crash reports, and logs.
-7. Re-audit cross-document consistency after substantive changes.
+1. Documentation is the current deliverable; do not create a website or start app implementation without explicit planning-gate approval.
+2. DESIGN.md is the single authoritative design-token and component reference.
+3. Keep decisions and proposals visibly distinct.
+4. Link related documents and update the decision log when a decision changes.
+5. Record the date and URL for external research actually consulted. Never invent sources, benchmark numbers, or competitor capabilities.
+6. Every roadmap phase needs prerequisites, deliverables, acceptance criteria, tests, risks, and an exit gate.
+7. Keep private journal content out of analytics, advertising identifiers, crash reports, and logs.
+8. Re-audit cross-document consistency after substantive changes.
