@@ -460,3 +460,48 @@ Do not move to Screen 2 as if Today were final until:
 4. The owner has reviewed the variants and approved the direction.
 
 This is a design/research gate only; it does not authorize app implementation.
+
+
+## State review round: Today and the connected eight-screen system
+
+**Date:** 2026-10-17  
+**Status:** Generated visual exploration; hierarchy and state coverage review only. Not a final UI specification.
+
+A generated board now shows five Today states and seven connected screens. The numbering in the generated image expands beyond the eight-screen scope by treating individual supporting screens as separate numbered views. For canonical planning, retain the agreed eight screen groups: Today; Habit Creation/Edit; Habit Detail; History; Journal Entry; Insights; Return Page; Settings. The generated board is illustrative and may contain inconsistent or invented details.
+
+### Today state review
+
+1. **Ordinary day:** A mix of recorded and unrecorded habits. Primary task remains easy to identify.
+2. **All eligible habits recorded:** Neutral acknowledgement; do not imply the user must achieve a perfect day to have value.
+3. **Nothing recorded yet:** Offer a manageable first step. Do not assume failure or use a punitive zero.
+4. **Rest / nothing scheduled:** Explicitly distinguish from an eligible day with no records. Avoid counting it as incomplete.
+5. **Many habits:** Keep controls legible and scrollable; bottom navigation must not cover content.
+6. **Long names and descriptions:** Wrap or truncate deliberately with access to the full content; avoid overlapping effort buttons.
+7. **Large text / display scaling:** Reflow controls and cards; do not rely on fixed-height containers.
+8. **Completion-only habit:** Provide a simple record action without presenting irrelevant Tiny / Usual / Extra levels.
+9. **Past record correction:** Make it clear that historical records can be edited and that edits update derived summaries.
+10. **Offline state:** Logging and journaling remain available locally. Any connected-only monetisation must not interfere with core use.
+
+### Findings and guardrails
+
+- Keep the daily summary + one-line monthly context + quiet Progress route as the selected design direction.
+- The generated board repeats monthly context on multiple states; in a real interface this should remain concise and visually secondary, and should not be repeated if it creates clutter.
+- The generated rest-day illustration is more decorative than necessary. Keep the existing editorial reference restrained; illustration is optional and must earn its space.
+- The generated mockup includes specific example counts and sample journal content. These are placeholders, not real user data or approved copy.
+- The mockup uses a date and device/status-bar details that are illustrative only. Date must be the device's local date; do not hard-code the sample date.
+- Avoid relying on colour alone to distinguish recorded states. Combine labels, shape, and accessible state semantics.
+- Do not infer that a habit is “completed” from a journal entry.
+- Daily count denominator, habit schedule semantics, skipped/missed/rest states, time-zone boundaries, and monthly distinct-date counting remain to be specified before implementation.
+
+### Next design task
+
+Move to **Screen 2: Habit Creation / Edit**, keeping Today as the reference skeleton. The habit editor must make these choices understandable:
+- Name and optional description.
+- Icon/appearance choice that avoids overwhelming icon catalogues.
+- Completion-only versus effort-level logging.
+- Tiny / Usual / Extra labels and optional targets.
+- Schedule, rest days, and how a habit appears on Today.
+- Optional reminders, with permission timing and quiet hours still to be researched.
+- Editing, pausing, archiving, and deleting a habit, including effects on history.
+
+Before finalising that screen, resolve the product semantics that affect both creation and Today; do not encode undecided schedule or record rules into the UI as if they were approved.
