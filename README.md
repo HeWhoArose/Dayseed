@@ -33,6 +33,7 @@ Core principles:
 | [Journal archive research](docs/16-JOURNAL-ARCHIVE-RESEARCH.md) | Timeline/calendar/editorial comparison and usability tasks |
 | [Typography, colour, and accessibility](docs/17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md) | Font candidates, semantic palettes, contrast, text scaling, dark theme |
 | [Competitor screenshot audit](docs/18-COMPETITOR-SCREENSHOT-AUDIT.md) | Inspected public screenshots and limits of current evidence |
+| [Cumulative research inventory and audit](docs/20-CUMULATIVE-RESEARCH-INVENTORY-AND-AUDIT.md) | Repository-wide research status, gaps, link audit, and planning-gate priorities |
 | [Planning gate and Replit/GitHub workflow](docs/19-PLANNING-GATE-AND-REPLIT-GITHUB-WORKFLOW.md) | Native app acceptance, approval gates, quota-exhaustion handoff |
 | [Data and privacy](docs/04-DATA-AND-PRIVACY.md) | Local data model, privacy, backup and deletion |
 | [Comeback and encouragement](docs/05-COMEBACK-AND-ENCOURAGEMENT.md) | Re-entry states and humane language rules |
