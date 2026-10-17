@@ -22,7 +22,7 @@ Each phase must produce evidence and pass its exit gate before the next phase be
 
 ## Phase 2 — Technical and privacy feasibility
 **Prerequisites:** Phase 0 scope; Phase 1 may run in parallel where appropriate.  
-**Deliverables:** stack comparison, verified toolchain, local database design, date policy, backup/deletion design, notification feasibility findings.  
+**Deliverables:** compare React Native + Expo against native Kotlin + Jetpack Compose using [docs/14-STACK-COMPARISON.md](14-STACK-COMPARISON.md); verified toolchain; local database design; date policy; backup/deletion design; notification feasibility findings.  
 **Acceptance:** core platform choices supported by evidence from official documentation and a bounded technical spike.  
 **Tests/review:** Android release-build experiment, persistence/migration experiment, offline and export/delete checks.  
 **Risks:** platform limitations, backup surprises, date errors.  
