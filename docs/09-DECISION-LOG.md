@@ -45,3 +45,7 @@ For each new consequential decision record:
 
 ## Change rule
 A statement in a draft is not approval. Update this log when a decision changes and search for contradictory statements in the rest of the repository.
+
+### Follow-up evidence note (2026-10-17)
+
+A current-docs check confirmed that package versioning itself is a material risk: Expo packages should be resolved for the selected SDK using its documented installer, and Android's current Room documentation distinguishes Room 3.0's new artifacts/APIs from the Room 2.x line. The comparison document records the source links and implications. No versions have been pinned and no build has been run. D-009 remains open.
