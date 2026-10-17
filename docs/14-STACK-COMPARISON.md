@@ -172,3 +172,20 @@ All sources below are official vendor/platform documentation and were checked on
 
 ## 8. Evidence and limitations
 This comparison is based on official documentation and project requirements. The scores are subjective planning estimates. No code, build, package compatibility run, device test, battery test, migration test, notification timing test, accessibility audit, or app-size benchmark has been run for Dayseed. The recommendation must be revisited if the technical spike fails or new requirements appear.
+
+## 9. Follow-up verification: versioning and dependency discipline
+
+A follow-up check of the current official documentation reinforces two important implementation cautions:
+
+- Expo's versioned SQLite documentation provides a version-specific recommended package range and directs installation through `npx expo install expo-sqlite`. The package must be selected against the chosen Expo SDK; this comparison intentionally does not pin a package number before the SDK decision.
+- Android's current Room documentation now describes Room 3.0 under the `androidx.room3` group, Kotlin/KSP code generation, and coroutine-first APIs. It is a major-version boundary from Room 2.x, not a version to copy blindly from older tutorials. If native Kotlin is chosen, compare the currently supported Room 2.x and 3.x migration paths and select one deliberately.
+
+This matters because package compatibility is a set of aligned versions, not a list of individually “latest” libraries. Before the spike, record the selected SDK, language/toolchain, package coordinates, plugin versions, and official compatibility references in one matrix; then install, lock, compile, and test the exact set.
+
+Additional official sources checked:
+- Expo SQLite, versioned SDK documentation: https://docs.expo.dev/versions/latest/sdk/sqlite/
+- Android Room overview and current dependency coordinates: https://developer.android.com/training/data-storage/room
+- Android Room 2.x-to-3.0 migration guidance: https://developer.android.com/training/data-storage/room/migration-2-to-3
+- React Native framework guidance: https://reactnative.dev/blog/2024/06/25/use-a-framework-to-build-react-native-apps
+
+These checks do not change the conditional recommendation or close D-009. No package installation, build, or device test was run.
