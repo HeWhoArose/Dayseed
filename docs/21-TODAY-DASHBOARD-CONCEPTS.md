@@ -244,3 +244,25 @@ Build low-fidelity variants with identical content:
 - **Variant 3:** daily summary plus a small tap-through progress affordance, with the monthly context shown on Progress.
 
 Compare scan speed, comprehension of the denominator, perceived pressure, and whether users notice the broader context without mistaking it for a score. These are test candidates, not implementation requirements.
+
+
+## Decision recorded: daily summary + one-line monthly context
+
+**Status:** Selected direction for the next prototype round by the project owner on 2026-10-17. This is a research/design decision, not authorization to implement the app or a claim that the UI is final.
+
+Use the recommended combination:
+- **Today remains primary.** Today's habit list and logging actions are the main focus.
+- **Daily summary:** show a compact count such as “2 of 3 habits recorded” only after the denominator rules are defined for schedules, planned rest, paused habits, and skipped/missed records.
+- **Broader context:** a single restrained sentence such as “You've recorded habits on 8 days this month.” This is a candidate copy/metric, not yet approved wording or final data semantics.
+- **Deeper progress:** provide a quiet route to the Progress screen rather than a chart or decorative timeline on Today.
+- **No tiny timeline on the initial Today concept.** It can be researched later if user evidence suggests it adds value.
+
+The monthly measure should be explicitly labelled and computed from real qualifying habit records, using local calendar dates. It must not include journal entries, infer action from missing records, or treat a day without a record as failure. The broader context should remain visually secondary and must not push the habit actions down the screen on small Android devices.
+
+### Prototype variants to prepare next
+
+Prepare two equivalent low-fidelity wireframes with the same content and viewport:
+1. Daily summary + one-line monthly context + quiet Progress link.
+2. Daily summary + one-line monthly context, with no explicit Progress link in the card (Progress remains accessible through navigation).
+
+Compare whether the link is discoverable, whether the monthly sentence is understood, and whether the card draws too much attention. Keep the screenshot's restrained editorial direction and apply the anti-AI-slop checklist. Do not finalise colour, typography, or the full design system based on this decision alone.
