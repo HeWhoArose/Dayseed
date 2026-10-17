@@ -28,6 +28,7 @@ Core principles:
 | [Product specification](docs/01-PRODUCT-SPECIFICATION.md) | Requirements and behaviour definitions |
 | [UX and design](docs/02-UX-AND-DESIGN.md) | Navigation, screens, design directions, accessibility |
 | [Technical architecture](docs/03-TECHNICAL-ARCHITECTURE.md) | Platform and architecture options, proposed stack |
+| [Android platform research](docs/13-ANDROID-PLATFORM-RESEARCH.md) | Official Android build route, APK/AAB distinction, and package validation gate |
 | [Data and privacy](docs/04-DATA-AND-PRIVACY.md) | Local data model, privacy, backup and deletion |
 | [Comeback and encouragement](docs/05-COMEBACK-AND-ENCOURAGEMENT.md) | Re-entry states and humane language rules |
 | [Monetisation](docs/06-MONETISATION.md) | Ethical monetisation hypotheses and boundaries |
