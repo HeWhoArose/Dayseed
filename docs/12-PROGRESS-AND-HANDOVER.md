@@ -10,7 +10,8 @@ This repository is the source of truth for Dayseed planning. The README links th
 - Product direction: documented as a planning baseline.
 - Core v1 scope and non-goals: drafted.
 - UX directions: explored, not approved.
-- Technical stack: candidate only, not verified or approved.
+- Technical stack: candidate only, not approved; package compatibility and a real Dayseed build are not verified.
+- Android build route: official documentation confirms Expo's documented path for development builds, APK device testing, and AAB Play distribution; see [Android platform research](13-ANDROID-PLATFORM-RESEARCH.md). This is route-level evidence, not a successful Dayseed build.
 - Data/privacy baseline: drafted; platform backup behaviour requires validation.
 - Comeback inactivity bands: proposed; boundaries and copy require testing.
 - Monetisation: hypothesis only; no SDK/provider selected.
@@ -23,9 +24,10 @@ This repository is the source of truth for Dayseed planning. The README links th
 2. Resolve high-impact items in the decision log and risk register.
 3. Conduct targeted competitor and user research; record only sources actually consulted.
 4. Review and approve information architecture, core flows, wireframes, and comeback copy.
-5. Compare technical stacks using current official documentation.
-6. Approve data model, date/time policy, backup, export, and deletion.
-7. Complete the planning gate before any app implementation begins.
+5. Compare technical stacks using current official documentation and review [Android platform/build-route research](13-ANDROID-PLATFORM-RESEARCH.md).
+6. Resolve the package compatibility matrix and approve a bounded technical spike only after the planning gate.
+7. Approve data model, date/time policy, backup, export, and deletion.
+8. Complete the planning gate before any app implementation begins.
 
 ## Rules for the next AI or contributor
 - Do not use Replit as the planning workspace or create a website; this is an Android-first app project and the user explicitly requested Git as the source of truth.
@@ -38,4 +40,4 @@ This repository is the source of truth for Dayseed planning. The README links th
 - At each handover, state exactly what changed, evidence, unresolved issues, and next action.
 
 ## Verification status
-Git commits confirm the listed documentation files were created. No application code was built, no app tests were run, and no Android build has been verified.
+Git commits confirm the listed documentation files were created. Official documentation was reviewed for the Android build route and package candidates. No application code was built, no app tests were run, and no Dayseed Android build or exact dependency combination has been verified.
