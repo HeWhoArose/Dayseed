@@ -266,3 +266,19 @@ Prepare two equivalent low-fidelity wireframes with the same content and viewpor
 2. Daily summary + one-line monthly context, with no explicit Progress link in the card (Progress remains accessible through navigation).
 
 Compare whether the link is discoverable, whether the monthly sentence is understood, and whether the card draws too much attention. Keep the screenshot's restrained editorial direction and apply the anti-AI-slop checklist. Do not finalise colour, typography, or the full design system based on this decision alone.
+
+
+## Visual exploration: selected daily-first direction
+
+A visual concept was generated on 2026-10-17 to explore the selected direction. It places the daily habit summary first, keeps the habit list as the dominant working area, includes the optional “A note to yourself” entry, and adds a quiet monthly sentence with a route to Progress.
+
+**This generated image is a discussion artifact only**, not a production-ready UI specification. It may contain invented or inconsistent details and must not be treated as validated product behaviour.
+
+Review notes for the next iteration:
+- Preserve the user's earlier screenshot as the stronger reference for restrained, practical styling; avoid letting large botanical artwork dominate usable space.
+- Keep the monthly context below or after the primary habit actions where possible. Test whether it should appear above reflection or below it, especially on short screens.
+- Avoid duplicated settings access in the header and bottom navigation unless a clear need is established.
+- Verify that the daily count denominator is well-defined and that “recorded” matches the underlying event semantics.
+- Ensure effort controls remain usable at narrow widths and with large text; do not compress Tiny / Usual / Extra into undersized pills.
+- Do not use generated text, icons, or imagery as final assets without review.
+- Use the concept to discuss hierarchy only. Final typography, palette, iconography, spacing, states, and navigation remain open for comparative wireframing and accessibility review.
