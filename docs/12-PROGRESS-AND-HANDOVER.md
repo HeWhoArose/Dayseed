@@ -1,48 +1,67 @@
 # Progress and Handover
 
 **Last updated:** 2026-10-17  
-**Status:** Planning documentation committed in progress; implementation not started.
+**Status:** Planning documentation expanded; planning gate not approved; implementation not started.
 
 ## Repository status
-This repository is the source of truth for Dayseed planning. The README links the planning documents. The first documentation commits establish product direction, requirements, UX exploration, technical options, privacy, comeback rules, monetisation boundaries, test strategy, roadmap, decision tracking, research plan, risks, and this handover.
+
+Repository: https://github.com/HeWhoArose/Dayseed  
+Canonical branch: `main`. GitHub is the source of truth for planning and future implementation, regardless of the active coding environment.
 
 ## Current state
-- Product direction: documented as a planning baseline.
-- Core v1 scope and non-goals: drafted.
-- UX directions: explored, not approved.
-- Technical stack: compared in [docs/14-STACK-COMPARISON.md](14-STACK-COMPARISON.md); Expo/TypeScript/SQLite is the preferred candidate, with native Kotlin/Compose/Room as fallback. Decision D-009 remains open until the planning gate and technical spike.
-- Package compatibility and a real Dayseed build are not verified.
-- Android build route: official documentation confirms Expo's documented path for development builds, APK device testing, and AAB Play distribution; see [Android platform research](13-ANDROID-PLATFORM-RESEARCH.md). This is route-level evidence, not a successful Dayseed build.
-- Data/privacy baseline: drafted; platform backup behaviour requires validation.
-- Comeback inactivity bands: proposed; boundaries and copy require testing.
-- Monetisation: hypothesis only; no SDK/provider selected.
-- User research and competitor audit: planned, not claimed completed.
-- App implementation: **not started and not authorised by these documents alone**.
-- Automated tests/build: none run; no app source exists as part of this planning package.
+
+- Product direction and core v1 boundaries: documented as a planning baseline; some product semantics remain open.
+- UX directions and information architecture: explored, not approved.
+- Technical stack: compared in [docs/14-STACK-COMPARISON.md](14-STACK-COMPARISON.md); Expo/TypeScript/SQLite is the preferred candidate, with native Kotlin/Compose/Room as fallback. D-009 remains open.
+- Growth Mark and return experience: concepts, definitions, sample copy for 3/14/90 days, zero-completion state, and test cases documented in [docs/15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md](15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md). Not approved.
+- Journal archive: timeline/calendar/editorial comparison and task-based test plan documented in [docs/16-JOURNAL-ARCHIVE-RESEARCH.md](16-JOURNAL-ARCHIVE-RESEARCH.md). Hybrid timeline + calendar is only a proposal.
+- Typography, light/dark candidate palettes, contrast checks, font licensing notes, and small-screen tests documented in [docs/17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md](17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md).
+- DESIGN.md is now specified as the sole authoritative token/component reference; candidate values remain unapproved.
+- Competitor screenshot evidence for Loop Habit Tracker and Daylio is recorded in [docs/18-COMPETITOR-SCREENSHOT-AUDIT.md](18-COMPETITOR-SCREENSHOT-AUDIT.md). Public listing screenshots were inspected; current live app flows have not been tested.
+- Replit/GitHub handoff rules and native-app feasibility-spike acceptance criteria are in [docs/19-PLANNING-GATE-AND-REPLIT-GITHUB-WORKFLOW.md](19-PLANNING-GATE-AND-REPLIT-GITHUB-WORKFLOW.md).
+- Data/privacy baseline is drafted; Android backup behaviour, exact date policy, and export/delete details still need decisions.
+- Monetisation remains a hypothesis; no provider/SDK selected.
+- App implementation: **not started and not authorised**.
+- Automated tests/build: none run; there is no app source in this planning package.
+
+## Latest research package
+
+New research documents:
+1. [Growth Mark and Comeback Research](15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md)
+2. [Journal Archive Research](16-JOURNAL-ARCHIVE-RESEARCH.md)
+3. [Typography, Colour, and Accessibility Research](17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md)
+4. [Competitor Screenshot Audit](18-COMPETITOR-SCREENSHOT-AUDIT.md)
+5. [Planning Gate and Replit–GitHub Workflow](19-PLANNING-GATE-AND-REPLIT-GITHUB-WORKFLOW.md)
+
+Updated references: README.md, DESIGN.md, docs/02-UX-AND-DESIGN.md, docs/08-IMPLEMENTATION-ROADMAP.md, and docs/09-DECISION-LOG.md.
 
 ## Next actions
-1. Review the README and all planning documents as one package.
-2. Resolve high-impact items in the decision log and risk register.
-3. Conduct targeted competitor and user research; record only sources actually consulted.
-4. Review and approve information architecture, core flows, wireframes, and comeback copy.
-5. Review the head-to-head [stack comparison](14-STACK-COMPARISON.md) and its unanswered questions.
-6. Resolve the package compatibility matrix and approve a bounded technical spike only after the planning gate.
-7. Approve data model, date/time policy, backup, export, and deletion.
-8. Complete the planning gate before any app implementation begins.
+
+1. Audit all documentation for contradictions, dead links, duplicates, stale claims, and missing acceptance criteria.
+2. Resolve or explicitly defer high-impact product questions: daily outcome semantics, schedule/missed-day rules, local date/time policy, journal multiplicity, data backup/export/delete, and reminder behaviour.
+3. Create comparable low-fidelity screen samples or wireframes for Today, Growth Mark, comeback return, journal archive, and settings/privacy; do not create app code as a substitute.
+4. Inspect current live competitor flows on an Android device where possible; until then, keep conclusions limited to publisher screenshots/listing copy.
+5. Run typography/contrast and enlarged-text checks on prototype screens; update DESIGN.md only when a token is approved.
+6. Complete the planning gate and record explicit owner approval before authorising the bounded native-app feasibility spike.
+7. After the spike passes and stack approval is explicit, begin feature implementation in small testable phases.
 
 ## Rules for the next AI or contributor
-- Do not use Replit as the planning workspace or create a website; this is an Android-first app project and the user explicitly requested Git as the source of truth.
-- Read README.md, docs/09-DECISION-LOG.md, docs/11-RISKS-AND-OPEN-QUESTIONS.md, and this handover first.
-- Treat **approved**, **proposed**, **open**, and **deferred** as meaningful distinctions.
+
+- Read README.md, DESIGN.md, docs/09-DECISION-LOG.md, docs/11-RISKS-AND-OPEN-QUESTIONS.md, this handover, and docs/19-PLANNING-GATE-AND-REPLIT-GITHUB-WORKFLOW.md first.
+- Do not use Replit as a planning substitute or create a website. Replit may be used as a coding environment only after the owner explicitly approves the planning gate.
+- Treat approved, proposed, open, deferred, and verified as distinct states.
+- DESIGN.md is the sole authoritative design-token/component reference.
 - Do not invent research sources, user research results, competitor capabilities, SDK compatibility, tests, or build status.
 - Do not start app implementation until the planning gate is explicitly approved.
-- For changes, update cross-referenced documents and run a consistency audit.
+- GitHub is canonical. After Replit quota exhaustion, continue from the latest committed GitHub state and sync back only after pulling the latest remote changes.
 - Keep journal privacy and offline operation as core constraints.
+- For changes, update cross-referenced documents and run a consistency audit.
 - At each handover, state exactly what changed, evidence, unresolved issues, and next action.
 
 ## Verification status
-Git commits confirm the listed documentation files were created. Official documentation was reviewed for the Android build route, Expo SQLite/Notifications, Kotlin/Compose, Room, accessibility, testing, build tooling, and package alignment. The stack comparison proposes Expo as the preferred candidate but leaves D-009 open. No application code was built, no app tests were run, and no Dayseed Android build or exact dependency combination has been verified.
 
-## Latest research follow-up — 2026-10-17
+The GitHub connector confirms the planning documents and current reference files exist. Official platform documentation was reviewed for Expo build routes, SQLite/notifications, Kotlin/Compose, Room, accessibility, testing, build tooling, and package alignment. Public Google Play listing screenshots were inspected for Loop Habit Tracker and Daylio; this is not equivalent to installing or testing either app. The candidate font repositories and their archive status were checked. No application code was built, no app tests were run, and no Dayseed Android build or exact dependency combination has been verified.
 
-The head-to-head comparison is in [docs/14-STACK-COMPARISON.md](14-STACK-COMPARISON.md). A follow-up official-docs check added versioning cautions: use Expo SDK-aware dependency resolution rather than copied version numbers; if choosing native Kotlin, deliberately choose between the Room 2.x and Room 3.0 lines because Room 3.0 has different artifacts and Kotlin/KSP/coroutine requirements. No dependencies were installed, no project was scaffolded, and no build or device test was run. The stack decision remains open for owner approval after the planning gate and a bounded feasibility spike.
+## Research follow-up — 2026-10-17
+
+The head-to-head comparison is in [docs/14-STACK-COMPARISON.md](14-STACK-COMPARISON.md). The five new research and workflow documents are linked above. D-008 (visual direction), D-009 (stack), D-016 (Growth Mark), D-017 (comeback), D-018 (journal archive), D-019 (typography/colour), D-021 (competitor evidence), and D-022 (Replit/GitHub workflow) remain open or proposed. No design or implementation approval has been recorded.
