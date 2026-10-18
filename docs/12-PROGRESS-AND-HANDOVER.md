@@ -1,6 +1,6 @@
 # Progress and Handover
 
-**Last updated:** 2026-10-17  
+**Last updated:** 2026-10-18  
 **Status:** Planning documentation expanded; planning gate not approved; implementation not started.
 
 ## Repository status
@@ -23,6 +23,21 @@ Canonical branch: `main`. GitHub is the source of truth for planning and future 
 - Monetisation remains a hypothesis; no provider/SDK selected.
 - App source implementation exists on `main`; further feature work and build/test verification status must be distinguished from the earlier planning-only status. Do not claim a clean build or complete implementation without evidence.
 - Automated tests/build: none run; there is no app source in this planning package.
+
+
+## Planning decisions confirmed — 2026-10-18
+
+The owner has confirmed the following product rules in conversation and they are recorded in [Decision Log](09-DECISION-LOG.md):
+
+- Numeric entries are whole numbers only; an intentional zero is valid and differs from no record. Multiple entries for a habit/date sum to a daily total.
+- Weekly targets are flexible, with optional preferred days that do not restrict completion.
+- Schedule edits offer Apply today/Apply tomorrow while preserving existing activity records unchanged.
+- Historical completion uses the target that applied at the time; comparisons against the current target are separate.
+- Rest/non-scheduled days are neutral, paused periods are excluded, and scheduled non-completion is a missed opportunity rather than a judgement.
+- Habit measurement mode is selected by the user: duration, quantity, or completion-only. For measured modes, progress labels are derived from actual amounts relative to the usual target, not from self-reported feelings.
+- Today cards expose separate quick Complete and detailed Record actions. Quick Complete defaults to the usual target for measured habits; Record supports actual amounts, corrections, and an optional habit/date note.
+
+The current phase remains **planning**. Continue documenting product rules, the eight-screen blueprint, navigation, data contracts, and edge cases. Do not start feature implementation. The current native app source and preview are to be treated as evidence for the later implementation-reality audit, not as proof that implementation is approved or verified. Exact progress-level thresholds, week boundaries, note cardinality, duplicate/undo behavior, and the detailed historical schedule model remain open.
 
 ## Cumulative research inventory and audit — 2026-10-17
 
