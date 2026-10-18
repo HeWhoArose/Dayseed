@@ -561,3 +561,49 @@ Keep the first-time flow approachable and avoid forcing every user through a lon
 ### Next step
 
 Review the flow for unnecessary complexity, then create a focused first-pass wireframe for the **tracking-method choice** and **schedule picker**. These two sections have the largest impact on the Today dashboard and the meaning of progress metrics. Record decisions in the decision log only after the owner confirms them. No app implementation is authorised or started.
+
+
+## Owner preference: tracking methods and progressive scheduling
+
+**Recorded:** 2026-10-18  
+**Status:** Owner-selected direction for the next design iteration. Product semantics still need specification; no implementation is authorised.
+
+### Tracking methods
+The owner prefers the tracking range to extend from effort levels through number-based tracking. Design exploration should support:
+- **Effort levels:** Tiny / Usual / Extra.
+- **Completion-only:** a simple recorded/done action.
+- **Number-based:** record a quantity with a user-defined unit/target where applicable.
+
+This is a direction to explore, not yet a complete data contract. For number-based habits, the next research must define whether users can log partial quantities, whether a target is optional or required, whether exceeding a target is allowed, unit changes, daily reset/aggregation, and how a record is represented when there is no quantity yet. Do not imply that effort-level records, completion-only records, and numeric records are interchangeable without explicit rules.
+
+### Scheduling: progressive disclosure
+The owner wants **selected weekdays plus an optional start date as the default**, with an unobtrusive expandable control for more flexibility.
+
+Default collapsed view:
+- Weekday selector.
+- Optional start date.
+- One short human-readable summary.
+- A clearly labelled secondary affordance such as “More schedule options” with an expand/collapse indicator.
+
+Expanded advanced options should be explored to include:
+- Weekly target (e.g. choose any 3 days per week).
+- Every-N-days interval patterns (e.g. every 2 or 3 days).
+- Clear schedule summary and a way to collapse advanced options without losing selections.
+
+### Design constraints
+- Advanced scheduling must be discoverable but must not overwhelm first-time habit creation.
+- State exactly what a pattern means in plain language and show a summary before saving.
+- Avoid silently converting between weekday schedules, weekly targets, and interval schedules.
+- Decide how schedule edits affect past dates and eligibility before implementation.
+- Handle no weekdays selected, start dates in the past/future, time-zone/local-date boundaries, paused/archived habits, and rest days.
+- All schedule controls need accessible labels, non-colour state cues, large-text reflow, and usable touch targets.
+- Keep all core scheduling functions available offline.
+
+### Next design iteration
+Produce a focused comparative wireframe for:
+1. Default weekday picker + optional start date, advanced options collapsed.
+2. Expanded view showing weekly-target and every-N-days alternatives.
+3. Review/save state with a human-readable schedule summary.
+4. Edit-existing-habit state, explicitly distinguishing future schedule changes from historical records.
+
+The owner-selected direction is to be recorded in the decision log only after the exact semantics are reviewed and confirmed. No app implementation is authorised or started.
