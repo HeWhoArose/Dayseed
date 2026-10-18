@@ -18,7 +18,7 @@ Canonical branch: `main`. GitHub is the source of truth for planning and future 
 - Typography, light/dark candidate palettes, contrast checks, font licensing notes, and small-screen tests documented in [docs/17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md](17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md).
 - DESIGN.md is now specified as the sole authoritative token/component reference; candidate values remain unapproved.
 - Competitor screenshot evidence for Loop Habit Tracker and Daylio is recorded in [docs/18-COMPETITOR-SCREENSHOT-AUDIT.md](18-COMPETITOR-SCREENSHOT-AUDIT.md). Public listing screenshots were inspected; current live app flows have not been tested.
-- Replit/GitHub handoff rules and native-app feasibility-spike acceptance criteria are in [docs/19-PLANNING-GATE-AND-REPLIT-GITHUB-WORKFLOW.md](19-PLANNING-GATE-AND-REPLIT-GITHUB-WORKFLOW.md).
+- AI Studio/GitHub workflow and native-app feasibility-spike acceptance criteria are in [docs/19-AI-STUDIO-GITHUB-WORKFLOW.md](19-AI-STUDIO-GITHUB-WORKFLOW.md).
 - Data/privacy baseline is drafted; Android backup behaviour, exact date policy, and export/delete details still need decisions.
 - Monetisation remains a hypothesis; no provider/SDK selected.
 - App implementation: **not started and not authorised**.
@@ -39,7 +39,7 @@ New research documents:
 2. [Journal Archive Research](16-JOURNAL-ARCHIVE-RESEARCH.md)
 3. [Typography, Colour, and Accessibility Research](17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md)
 4. [Competitor Screenshot Audit](18-COMPETITOR-SCREENSHOT-AUDIT.md)
-5. [Planning Gate and Replit–GitHub Workflow](19-PLANNING-GATE-AND-REPLIT-GITHUB-WORKFLOW.md)
+5. [AI Studio–GitHub Workflow](19-AI-STUDIO-GITHUB-WORKFLOW.md)
 
 Updated references: README.md, DESIGN.md, docs/02-UX-AND-DESIGN.md, docs/08-IMPLEMENTATION-ROADMAP.md, and docs/09-DECISION-LOG.md.
 
@@ -55,13 +55,13 @@ Updated references: README.md, DESIGN.md, docs/02-UX-AND-DESIGN.md, docs/08-IMPL
 
 ## Rules for the next AI or contributor
 
-- Read README.md, DESIGN.md, docs/09-DECISION-LOG.md, docs/11-RISKS-AND-OPEN-QUESTIONS.md, this handover, and docs/19-PLANNING-GATE-AND-REPLIT-GITHUB-WORKFLOW.md first.
-- Do not use Replit as a planning substitute or create a website. Replit may be used as a coding environment only after the owner explicitly approves the planning gate.
+- Read README.md, DESIGN.md, docs/09-DECISION-LOG.md, docs/11-RISKS-AND-OPEN-QUESTIONS.md, this handover, and docs/19-AI-STUDIO-GITHUB-WORKFLOW.md first.
+- AI Studio is the active AI-assisted development environment; do not create a website as a substitute for the Android app. Do not start implementation until the owner explicitly approves the planning gate.
 - Treat approved, proposed, open, deferred, and verified as distinct states.
 - DESIGN.md is the sole authoritative design-token/component reference.
 - Do not invent research sources, user research results, competitor capabilities, SDK compatibility, tests, or build status.
 - Do not start app implementation until the planning gate is explicitly approved.
-- GitHub is canonical. After Replit quota exhaustion, continue from the latest committed GitHub state and sync back only after pulling the latest remote changes.
+- GitHub is canonical. Before continuing after an AI Studio session/context reset, refresh from the latest committed GitHub state and reconcile local changes before pushing.
 - Keep journal privacy and offline operation as core constraints.
 - For changes, update cross-referenced documents and run a consistency audit.
 - At each handover, state exactly what changed, evidence, unresolved issues, and next action.
@@ -72,4 +72,4 @@ The GitHub connector confirms the planning documents and current reference files
 
 ## Research follow-up — 2026-10-17
 
-The head-to-head comparison is in [docs/14-STACK-COMPARISON.md](14-STACK-COMPARISON.md). The five new research and workflow documents are linked above. D-008 (visual direction), D-009 (stack), D-016 (Growth Mark), D-017 (comeback), D-018 (journal archive), D-019 (typography/colour), D-021 (competitor evidence), and D-022 (Replit/GitHub workflow) remain open or proposed. No design or implementation approval has been recorded.
+The head-to-head comparison is in [docs/14-STACK-COMPARISON.md](14-STACK-COMPARISON.md). The five new research and workflow documents are linked above. D-008 (visual direction), D-009 (stack), D-016 (Growth Mark), D-017 (comeback), D-018 (journal archive), D-019 (typography/colour), D-021 (competitor evidence), and D-022 (AI Studio/GitHub workflow) remain open or proposed. No design or implementation approval has been recorded.
