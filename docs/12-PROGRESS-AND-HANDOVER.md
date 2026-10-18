@@ -1,7 +1,7 @@
 # Progress and Handover
 
 **Last updated:** 2026-10-18  
-**Status:** Planning documentation expanded; planning gate not approved; implementation not started.
+**Status:** Planning phase; planning gate not approved; feature implementation is not authorised. Existing source files/preview are evidence for the later audit, not proof of a verified build or approval to add features.
 
 ## Repository status
 
@@ -12,7 +12,7 @@ Canonical branch: `main`. GitHub is the source of truth for planning and future 
 
 - Product direction and core v1 boundaries: documented as a planning baseline; some product semantics remain open.
 - UX directions and information architecture: explored, not approved.
-- Repository implementation: native Kotlin + Jetpack Compose source exists, with `SQLiteOpenHelper`, repository, ViewModel/StateFlow, and screens. This is source-level evidence only; build/test/device status is not yet verified. D-009 needs owner confirmation against the observed project.
+- Existing repository source: native Kotlin + Jetpack Compose, `SQLiteOpenHelper`, repository, ViewModel/StateFlow, and screens are present. Treat the project as being in the planning phase for our workflow; do not add features yet. Source/preview presence does not verify build, tests, installation, or device behavior. The later audit must reconcile observed source with the approved plan.
 - Growth Mark and return experience: concepts, definitions, sample copy for 3/14/90 days, zero-completion state, and test cases documented in [docs/15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md](15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md). Not approved.
 - Journal archive: timeline/calendar/editorial comparison and task-based test plan documented in [docs/16-JOURNAL-ARCHIVE-RESEARCH.md](16-JOURNAL-ARCHIVE-RESEARCH.md). Hybrid timeline + calendar is only a proposal.
 - Typography, light/dark candidate palettes, contrast checks, font licensing notes, and small-screen tests documented in [docs/17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md](17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md).
@@ -21,7 +21,7 @@ Canonical branch: `main`. GitHub is the source of truth for planning and future 
 - AI Studio/GitHub workflow and native-app feasibility-spike acceptance criteria are in [docs/19-AI-STUDIO-GITHUB-WORKFLOW.md](19-AI-STUDIO-GITHUB-WORKFLOW.md).
 - Data/privacy baseline is drafted; Android backup behaviour, exact date policy, and export/delete details still need decisions.
 - Monetisation remains a hypothesis; no provider/SDK selected.
-- App source implementation exists on `main`; further feature work and build/test verification status must be distinguished from the earlier planning-only status. Do not claim a clean build or complete implementation without evidence.
+- Existing app source is present on `main`, but the current workflow remains in planning and feature work is not authorised. Do not claim a clean build or verified implementation without evidence.
 - Automated tests/build: none run; there is no app source in this planning package.
 
 
@@ -37,7 +37,7 @@ The owner has confirmed the following product rules in conversation and they are
 - Habit measurement mode is selected by the user: duration, quantity, or completion-only. For measured modes, progress labels are derived from actual amounts relative to the usual target, not from self-reported feelings.
 - Today cards expose separate quick Complete and detailed Record actions. Quick Complete defaults to the usual target for measured habits; Record supports actual amounts, corrections, and an optional habit/date note.
 
-The current phase remains **planning**. Continue documenting product rules, the eight-screen blueprint, navigation, data contracts, and edge cases. Do not start feature implementation. The current native app source and preview are to be treated as evidence for the later implementation-reality audit, not as proof that implementation is approved or verified. Exact progress-level thresholds, week boundaries, note cardinality, duplicate/undo behavior, and the detailed historical schedule model remain open.
+The current phase remains **planning**. Continue documenting product rules, the eight-screen blueprint, navigation, data contracts, and edge cases. Do not start feature implementation. The existing native app source and preview are evidence for the later implementation-reality audit, not proof that implementation is approved or verified. Exact progress-level thresholds, week boundaries, note cardinality, duplicate/undo behavior, and the detailed historical schedule model remain open.
 
 ## Cumulative research inventory and audit — 2026-10-17
 
