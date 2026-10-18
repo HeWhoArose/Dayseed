@@ -12,7 +12,7 @@ Canonical branch: `main`. GitHub is the source of truth for planning and future 
 
 - Product direction and core v1 boundaries: documented as a planning baseline; some product semantics remain open.
 - UX directions and information architecture: explored, not approved.
-- Technical stack: compared in [docs/14-STACK-COMPARISON.md](14-STACK-COMPARISON.md); Expo/TypeScript/SQLite is the preferred candidate, with native Kotlin/Compose/Room as fallback. D-009 remains open.
+- Repository implementation: native Kotlin + Jetpack Compose source exists, with `SQLiteOpenHelper`, repository, ViewModel/StateFlow, and screens. This is source-level evidence only; build/test/device status is not yet verified. D-009 needs owner confirmation against the observed project.
 - Growth Mark and return experience: concepts, definitions, sample copy for 3/14/90 days, zero-completion state, and test cases documented in [docs/15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md](15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md). Not approved.
 - Journal archive: timeline/calendar/editorial comparison and task-based test plan documented in [docs/16-JOURNAL-ARCHIVE-RESEARCH.md](16-JOURNAL-ARCHIVE-RESEARCH.md). Hybrid timeline + calendar is only a proposal.
 - Typography, light/dark candidate palettes, contrast checks, font licensing notes, and small-screen tests documented in [docs/17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md](17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md).
@@ -21,7 +21,7 @@ Canonical branch: `main`. GitHub is the source of truth for planning and future 
 - AI Studio/GitHub workflow and native-app feasibility-spike acceptance criteria are in [docs/19-AI-STUDIO-GITHUB-WORKFLOW.md](19-AI-STUDIO-GITHUB-WORKFLOW.md).
 - Data/privacy baseline is drafted; Android backup behaviour, exact date policy, and export/delete details still need decisions.
 - Monetisation remains a hypothesis; no provider/SDK selected.
-- App implementation: **not started and not authorised**.
+- App source implementation exists on `main`; further feature work and build/test verification status must be distinguished from the earlier planning-only status. Do not claim a clean build or complete implementation without evidence.
 - Automated tests/build: none run; there is no app source in this planning package.
 
 ## Cumulative research inventory and audit — 2026-10-17
@@ -68,7 +68,7 @@ Updated references: README.md, DESIGN.md, docs/02-UX-AND-DESIGN.md, docs/08-IMPL
 
 ## Verification status
 
-The GitHub connector confirms the planning documents and current reference files exist. Official platform documentation was reviewed for Expo build routes, SQLite/notifications, Kotlin/Compose, Room, accessibility, testing, build tooling, and package alignment. Public Google Play listing screenshots were inspected for Loop Habit Tracker and Daylio; this is not equivalent to installing or testing either app. The candidate font repositories and their archive status were checked. No application code was built, no app tests were run, and no Dayseed Android build or exact dependency combination has been verified.
+The repository tree confirms a native Kotlin/Compose Android project and application source files exist. Source inspection identified a version-1 SQLiteOpenHelper database and placeholder `onUpgrade`; no Gradle build, test suite, APK install, or physical-device run was performed during this documentation audit. Older statements that app implementation has not started are stale. See `docs/22-IMPLEMENTATION-REALITY-AUDIT.md`.
 
 ## Research follow-up — 2026-10-17
 
