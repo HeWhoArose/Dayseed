@@ -38,7 +38,7 @@ Each phase must produce evidence and pass its exit gate before the next phase be
 **Acceptance:** no unresolved high-impact contradiction about data semantics, privacy, date handling, native-app target, or scope. Remaining open questions have owners and are safe to defer.  
 **Tests/review:** cross-document link check, contradiction/duplicate/outdated-plan audit, requirement-to-test traceability review, and owner walkthrough.  
 **Risks:** implementation agent silently fills gaps or creates a website instead of the mobile app.  
-**Exit gate:** explicit owner approval recorded in docs/09-DECISION-LOG.md and docs/19-PLANNING-GATE-AND-REPLIT-GITHUB-WORKFLOW.md.
+**Exit gate:** explicit owner approval recorded in docs/09-DECISION-LOG.md and docs/19-AI-STUDIO-GITHUB-WORKFLOW.md.
 
 ## Phase 4 — Bounded native-app feasibility spike
 
@@ -46,7 +46,7 @@ Each phase must produce evidence and pass its exit gate before the next phase be
 **Deliverables:** minimal React Native + Expo native app, locked dependency set, Android build artifact, SQLite persistence/migration evidence, reminder and privacy feasibility report.  
 **Acceptance:** project is verifiably native, not a website; APK/dev build installs and launches on a physical Android device; seeded data survives restart; migration, offline, export/delete, and relevant notification tests have recorded outcomes.  
 **Tests:** clean dependency install, SDK alignment checks, app build, device install/launch, migration tests, airplane-mode checks, permission denial, schedule/cancel/restart, synthetic export/delete, static checks, full available suite.  
-**Risks:** Replit-generated project may be web-only, package compatibility may differ, reminder timing may be OS-limited.  
+**Risks:** AI-generated project may be web-only, package compatibility may differ, reminder timing may be OS-limited.  
 **Exit gate:** evidence and blockers reviewed; owner explicitly approves the stack and feature implementation plan. A failed spike does not automatically authorise an alternative stack.
 
 ## Phase 5 — Foundation
@@ -114,4 +114,4 @@ Each phase must produce evidence and pass its exit gate before the next phase be
 
 ## Execution discipline
 
-For each defect: reproduce → identify root cause → implement the smallest safe fix → targeted test → regression test → full suite → re-audit affected requirements. Keep the roadmap, decision log, and handover current. Never mark a phase complete based only on code existing. See [Planning Gate and Replit–GitHub Workflow](19-PLANNING-GATE-AND-REPLIT-GITHUB-WORKFLOW.md) for cross-environment rules.
+For each defect: reproduce → identify root cause → implement the smallest safe fix → targeted test → regression test → full suite → re-audit affected requirements. Keep the roadmap, decision log, and handover current. Never mark a phase complete based only on code existing. See [AI Studio–GitHub Workflow](19-AI-STUDIO-GITHUB-WORKFLOW.md) for cross-environment rules.
