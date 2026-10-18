@@ -505,3 +505,59 @@ Move to **Screen 2: Habit Creation / Edit**, keeping Today as the reference skel
 - Editing, pausing, archiving, and deleting a habit, including effects on history.
 
 Before finalising that screen, resolve the product semantics that affect both creation and Today; do not encode undecided schedule or record rules into the UI as if they were approved.
+
+
+## Screen 2 research: Habit Creation / Edit
+
+**Date:** 2026-10-18  
+**Status:** Generated concept board and proposed UX structure; not approved as final UI or product semantics.
+
+A visual exploration board was generated with six creation steps and variations for editing, tracking type, schedules, reminders, rest days, and archived habits. It is a discussion artifact only: small generated text may be inaccurate, and no behavior should be implemented solely because it appears in the image.
+
+### Proposed creation flow
+
+Keep the first-time flow approachable and avoid forcing every user through a long advanced form. Explore a progressive flow with these sections:
+
+1. **Choose a starting point (optional):** select a simple suggested template or start custom. Templates should be shortcuts, not categories users must understand. Allow skipping this step.
+2. **Basic details:** required habit name; optional description; optional icon/accent. Avoid large icon catalogues, decorative customisation, or requiring a colour.
+3. **Tracking method:** choose one clearly explained method:
+   - **Effort levels:** Tiny / Usual / Extra; a Tiny action is a valid record for that day.
+   - **Completion-only:** a single “Record” or “Done” action; do not show irrelevant effort controls.
+   - **Number-based:** optional candidate for later scope; if retained, specify units, targets, reset period, and what constitutes a record before exposing it in v1. This is not yet approved for v1.
+4. **Schedule:** choose days/pattern with plain-language summary and a way to edit later. Define local-date behavior, start date, and how schedule changes affect historical eligibility before implementation.
+5. **Optional reminders:** off by default unless a deliberate onboarding decision says otherwise; explain that reminders are optional and require OS permission when notifications are requested. Avoid requesting permission before the user chooses to enable reminders.
+6. **Review / save:** concise summary, clear create action, and easy back navigation. Don't require a separate review screen if testing shows it adds unnecessary friction.
+
+### Edit, pause, archive, delete
+
+- Editing should not silently rewrite historical records. If changing tracking method or schedule changes how old records are interpreted, explain the consequences and define the policy.
+- **Pause** should mean temporarily stop showing/scheduling future instances without deleting history. Exact eligibility semantics are open.
+- **Archive** should remove a habit from the active Today list while preserving historical records and access in History/Insights. Restoring should be possible.
+- **Delete permanently** is a destructive action and needs explicit confirmation and clear disclosure of which associated records and journal data (if any) are deleted. Retention and export policy must be settled first.
+- Never conflate a rest day, a skipped occurrence, a missed/unrecorded occurrence, pausing, and archiving.
+
+### Anti-slop and usability requirements
+
+- Match the chosen Dayseed editorial skeleton: warm restrained surface, strong readable hierarchy, deliberate spacing, small purposeful accents.
+- Avoid unnecessary gradients, glassmorphism, glowing effects, decorative illustrations that displace controls, excessive pills, arbitrary gamification, and generic motivational copy.
+- Do not make icon or colour selection mandatory.
+- Use labels and examples to explain tracking methods; never rely on icons alone.
+- Keep core setup usable offline.
+- Check small Android screens, keyboard overlap, large text, TalkBack order/labels, tap target size, contrast, and scrolling.
+- Every screen needs loading/error/save feedback where applicable, but do not invent cloud-sync states for an offline-first design.
+- Generated counts, names, dates, sample content, and option lists in the image are placeholders.
+
+### Decisions still needed before finalising this flow
+
+1. Which tracking methods belong in v1: effort levels and completion-only are the current core candidates; number-based tracking remains unapproved.
+2. Whether schedule patterns beyond selected weekdays are required for v1.
+3. How a schedule change affects prior dates and existing records.
+4. How skipped/missed/rest occurrences are represented.
+5. Whether pause and archive are both needed in v1, and how each affects Today, reminders, and insights.
+6. Reminder frequency, quiet hours, permission timing, and notification copy.
+7. Delete/export/backup semantics and whether journal entries can ever be linked to a habit.
+8. Whether icon/accent customisation is valuable enough to include initially.
+
+### Next step
+
+Review the flow for unnecessary complexity, then create a focused first-pass wireframe for the **tracking-method choice** and **schedule picker**. These two sections have the largest impact on the Today dashboard and the meaning of progress metrics. Record decisions in the decision log only after the owner confirms them. No app implementation is authorised or started.
