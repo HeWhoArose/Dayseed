@@ -667,3 +667,27 @@ Create focused wireframe states for:
 5. Pausing, resuming, archiving, restoring, and deletion confirmation as distinct actions.
 
 Before locking these flows, review the proposed contract with the owner and reflect any confirmed choices in the decision log and product specification. No app implementation is authorised or started.
+
+
+## Owner-approved rules: multiple numeric entries and schedule-change prompt
+
+**Confirmed by owner:** 2026-10-18
+
+- Number-based tracking allows multiple entries per local calendar date; the daily total is their sum.
+- Schedule changes prompt the user to choose whether the change applies today or tomorrow.
+
+### Cross-screen implications
+- **Today:** Show the summed quantity and unit, provide an obvious add-entry action, and expose individual entries for review/correction without cluttering the habit card. Avoid showing only the total if the user needs to understand how it was built.
+- **History:** Preserve individual numeric entries and the derived daily sum; edits/deletions recalculate the sum. Historical records remain attached to the date on which they were intentionally recorded.
+- **Insights:** Use daily sums as the canonical per-day numeric value. Define weekly/monthly aggregation separately by unit; do not sum incomparable units or count both individual entries and the derived daily total as separate activity. Target attainment should be distinct from the actual quantity.
+- **Habit editor:** Numeric setup needs a unit, optional target, and explanation of multiple entries. Unit changes should disclose that historic quantities may no longer be comparable. Schedule edits must offer “Apply today” or “Apply tomorrow” and preview the effective pattern.
+- **Schedule and history:** Neither choice may silently delete or create historic records. The effect on eligibility for today and weekly-target patterns needs explicit rules and tests.
+- **Testing:** Add cases for several entries on one date, sum recalculation after edit/delete, date-boundary and time-zone behavior, target overrun, unit changes, schedule edits in both effective-date modes, and regression coverage for historical records.
+
+### Still unresolved before implementation
+1. Whether numeric entries can be decimals and whether zero is a valid intentional entry.
+2. Whether an entry can be timestamped, or is only assigned to a local date.
+3. How weekly targets determine the eligible date set and how schedule edits affect the current week.
+4. Whether Insights preserve the target that existed when a record was made or compare all historic quantities to the current target.
+5. What happens if the user selects “Apply today” after already recording activity today.
+6. Exact pause/resume/archive semantics, deletion/export policy, and the handling of timezone travel.
