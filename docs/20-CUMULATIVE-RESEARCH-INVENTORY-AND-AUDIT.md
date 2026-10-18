@@ -31,7 +31,7 @@ This document distinguishes research that is recorded, research that is only a p
 | Competitor landscape | `10-RESEARCH-AND-COMPETITORS.md` | This is a research plan, not a completed market study | Complete a bounded competitor matrix and source log; separate vendor claims from observed evidence |
 | Competitor screenshots | `18-COMPETITOR-SCREENSHOT-AUDIT.md` | Public listing screenshots/copy for Loop Habit Tracker and Daylio reviewed | Inspect additional relevant competitors and, if access permits, hands-on core flows; record version, region, date, and observation limits |
 | Android platform and build routes | `13-ANDROID-PLATFORM-RESEARCH.md` | Official platform/build documentation reviewed at planning level | Confirm minimum Android/API target and device coverage; recheck current toolchain and policy details before the spike |
-| Framework and persistence | `14-STACK-COMPARISON.md`, `03-TECHNICAL-ARCHITECTURE.md` | Expo/React Native/TypeScript/SQLite is the preferred candidate, not an approved decision; native Kotlin/Compose/Room remains comparator | Owner decision at planning gate; bounded physical-device feasibility spike only after approval |
+| Framework and persistence | `03-TECHNICAL-ARCHITECTURE.md`, `22-IMPLEMENTATION-REALITY-AUDIT.md` | Native Kotlin/Jetpack Compose and SQLiteOpenHelper source exists on main; build/test/device readiness is unverified | Confirm native stack as active baseline, verify build/tests, resolve SQLite migration and owner-approved data-contract gaps |
 | Offline-first, dates and local data | Architecture, data/privacy, testing docs | Principles and candidate model documented | Finalise date/time-zone policy, migration strategy, restore/backup implications, conflict-free local record rules and failure recovery |
 | Privacy, export and deletion | `04-DATA-AND-PRIVACY.md` | Proposed privacy baseline and checklist documented | Decide device backup/encryption posture, export format, deletion guarantees, crash reporting/analytics policy; review platform behaviour and legal obligations before release |
 | Reminders | Android research, product spec, risk register | Permission/platform constraints researched; product behaviour remains open | Define flexible timing, quiet hours, rescheduling, denial handling, reboot handling and expectations around OS-delayed delivery |
@@ -41,7 +41,7 @@ This document distinguishes research that is recorded, research that is only a p
 | Governance and open decisions | Decision log, risks, roadmap, handover | Status vocabulary and approval gate documented | Reconcile each open question to a decision ID, owner, evidence need, safe default, and revisit trigger |
 | Research sources and reproducibility | Individual research documents and source sections | Some official and vendor sources recorded; evidence depth varies by topic | Audit source URLs, publication/update dates, primary-source preference, exact support for claims and links; add source log where absent |
 | Repository navigation and relative links | 26 Markdown files on `main` | Relative Markdown file-target check passed: no missing targets found | Run heading-anchor checks and a deeper content-level consistency audit; re-run after documentation edits |
-| App implementation/build | No app source/build in this planning package | **Not started and not authorised** | Do not create app source, install dependencies, or start the feasibility spike until the user explicitly approves the planning gate |
+| App implementation/build | Native Android source exists on main | Source implementation exists; build/test/APK/device status is **unverified** | Audit and validate existing app; do not scaffold a competing stack. Follow current owner authorization for further implementation |
 
 ## Priority order for remaining work
 
@@ -66,13 +66,13 @@ This document distinguishes research that is recorded, research that is only a p
 ### P2 — Validate technical feasibility after explicit approval
 
 13. Revisit the official-source stack comparison and make D-009 an explicit owner decision.
-14. Only after the planning gate is approved, run the bounded native feasibility spike defined in `docs/13-ANDROID-PLATFORM-RESEARCH.md`, `docs/14-STACK-COMPARISON.md`, and `docs/19-AI-STUDIO-GITHUB-WORKFLOW.md`.
+14. Audit and validate the existing native app using `docs/22-IMPLEMENTATION-REALITY-AUDIT.md` and `docs/19-AI-STUDIO-GITHUB-WORKFLOW.md`; do not create a competing scaffold.
 15. Prove install/launch on a physical Android device, durable SQLite writes, migration, offline use, reminder lifecycle/permission denial, and synthetic export/delete. Record actual SDK, dependency versions, device/API, commands, results and failures.
 16. Update the roadmap and handover from measured results; do not turn a successful scaffold into permission to implement all features.
 
 ## Cross-document consistency findings
 
-- The repository consistently marks the stack, visual direction, and key habit/comeback semantics as proposed or open; keep them that way until explicit approval.
+- The repository contains native Kotlin/Compose source, but runtime/build correctness remains unverified. Keep visual direction and unresolved product semantics clearly marked until approved.
 - The competitor research plan and screenshot audit are distinct artifacts. The latter is partial evidence and does not complete the former.
 - The roadmap includes both pre-implementation planning and later implementation phases. The later phases are future work, not current authorisation.
 - The research documents contain concrete recommendations, but those recommendations must not silently become product decisions.
@@ -94,4 +94,4 @@ The planning gate must remain closed until all of the following are evidenced or
 - [ ] Docs are internally consistent, links and sources are checked, and handover is current.
 - [ ] The owner explicitly approves the gate in writing.
 
-**Until then:** research and documentation only. No app source code, dependency installation, or implementation spike.
+**Until runtime evidence is collected:** distinguish existing source from verified build/test/device behaviour; do not create a competing stack or mark features complete without evidence.
