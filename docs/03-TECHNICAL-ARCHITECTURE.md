@@ -1,6 +1,6 @@
 # Technical Architecture
 
-**Status:** Proposal; no stack is finally approved and no compatibility claim is verified here.
+**Status:** Repository now contains a native Android Kotlin/Jetpack Compose implementation. Architecture documentation is being reconciled against the actual code; design and data-contract gaps remain.
 
 ## Architecture goals
 - Native-feeling Android-first experience.
@@ -12,7 +12,7 @@
 - A realistic path to iOS later without compromising Android v1.
 
 ## Stack candidate
-**Candidate only:** React Native + Expo + TypeScript, with local SQLite. This is a starting hypothesis, not a settled choice. Before approval, verify current support for the required SQLite API, migrations, local notifications, Android backup controls, export/sharing, and release builds. Compare with native Kotlin if platform integration or reliability requirements favour it.
+**Observed implementation:** Kotlin + Jetpack Compose with Android `SQLiteOpenHelper`, a repository, ViewModel/StateFlow, and Compose screens. This reflects current source files, not a claim that the architecture has passed a build/test audit. The current database schema is version 1 and its upgrade handler is a placeholder; migration safety needs implementation and tests.
 
 No implementation should start based solely on this proposal.
 
@@ -59,9 +59,9 @@ After the planning gate permits technical validation, verify official SDK/toolch
 Record actual versions, commands, device details, outcomes, and limitations. Do not mark checks verified without evidence.
 
 ## Stack comparison result (2026-10-17)
-The official-docs comparison is recorded in [docs/14-STACK-COMPARISON.md](14-STACK-COMPARISON.md). Its conditional recommendation is **React Native + Expo + TypeScript + expo-sqlite** because Dayseed's v1 is dominated by ordinary app UI and local-first features, a later iOS client remains plausible, and Expo has a documented hosted/local APK/AAB route. This is a narrow planning preference, not final approval.
+The older Expo/Kotlin comparison was a planning artefact and does not describe the code currently in `main`. The repository now contains native Kotlin/Compose source. Treat the current implementation as the working baseline unless the owner explicitly approves a stack change. See `docs/22-IMPLEMENTATION-REALITY-AUDIT.md`.
 
-**Native Kotlin + Jetpack Compose with Room** remains the fallback and has stronger direct Android control plus compile-time query/migration support through Room. Revisit the recommendation if precise reminders or platform integration are core, iOS is no longer expected, or Expo's package/build spike fails.
+Room is not currently used in the observed implementation: persistence uses platform `SQLiteOpenHelper`. Consider Room only as a future architectural decision after reviewing migration cost and project needs; do not describe it as installed or implemented.
 
 Exact SDK and library versions are intentionally not specified yet. Once the planning gate is approved, select a compatible SDK family, resolve Expo package versions with Expo's installer, check with Expo Doctor, lock versions, and prove persistence, migration, notifications, and real-device APK install in a bounded spike. No web output is an acceptable substitute for the native app.
 
