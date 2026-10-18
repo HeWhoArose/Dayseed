@@ -15,19 +15,30 @@
 ### H1 — Habit management
 Users can create, edit, pause/archive, restore, and delete a habit. A habit should have a name, optional description, tracking mode, schedule, optional reminder, and creation/update metadata. Editing a habit must not silently rewrite historical records.
 
-### H2 — Effort levels
-Proposed modes:
-- **Tiny:** a deliberately small action.
-- **Usual:** the ordinary intended action.
-- **Extra:** an optional stretch action.
-- **Completion only:** done/not done, without levels.
+### H2 — Habit measurement and progress levels
+Every habit uses one explicit measurement mode selected during creation:
+- **Duration:** record time spent in a consistent internal unit (for example, minutes), displayed in a human-friendly format.
+- **Quantity:** record a count in the habit's chosen unit (for example, pages, practice questions, or repetitions). Numeric entries are whole numbers only; intentional zero is valid and is distinct from no record.
+- **Completion-only:** record whether the task was done, without a quantity or duration.
 
-A Tiny completion counts as completion. Extra must not be framed as morally better. Whether users can customise level definitions is open.
+For duration and quantity habits, the user defines a usual target. Dayseed derives progress labels from the recorded amount relative to that target. Tiny, intermediate levels, Usual, and Extra describe measured progress—not the user's feelings, motivation, character, or moral worth. Exact thresholds, intermediate labels, target-zero handling, and display wording remain open planning decisions.
+
+A quick **Complete** action on Today records the usual target for a duration/quantity habit, or completion for a completion-only habit. A separate **Record** action opens detailed entry, custom amount, correction, and optional note controls. The user must be able to correct a quick completion when the recorded amount differs from what actually happened.
+
+Multiple entries for the same habit on the same local calendar date are supported for numeric modes and sum to a daily total. Duration entries should also sum across sessions. The data model must distinguish an explicit zero entry from no entry. Tiny/partial measured progress is not automatically a completed target; weekly target contribution and completion status must be defined separately.
 
 ### H3 — Schedule and daily records
-Support daily and selected-day schedules at minimum; evaluate weekly targets and flexible frequency before scope lock. A record is associated with a habit and a local calendar date. Prevent accidental duplicate daily records while allowing users to edit an existing record. Define timezone and day-boundary behaviour before implementation.
+Support flexible weekly targets with optional preferred days. Preferred days guide the routine but do not restrict completion to those days. Define week boundaries and progress calculation explicitly; a flexible weekly target must not label every uncompleted day as a missed opportunity.
 
-Possible outcomes to distinguish: completed (with optional effort level), skipped by choice, planned rest, and no record. “Missed” should be a derived display state, not a permanent judgement stored as fact. Final semantics remain open.
+Schedule edits offer an effective choice of **Apply today** or **Apply tomorrow**. Existing activity records remain unchanged by schedule edits. Explicit record correction is a separate user action. Historical completion uses the target that applied at the time; current-target comparisons are separate and must not rewrite historical completion.
+
+Distinguish:
+- **Rest/non-scheduled day:** neutral, not a failure or missed opportunity.
+- **Paused period:** excluded from scheduled opportunities.
+- **Scheduled but not completed:** a missed opportunity, never a moral judgement.
+- **No record:** unknown/unrecorded activity, not automatically an explicit zero or proof that the user did nothing.
+
+A record is associated with a habit and the local calendar date on which it was intentionally recorded. Prevent accidental duplicate actions while supporting multiple numeric entries per day and transparent corrections. Define timezone/day-boundary behaviour before implementation. Editing a schedule must not silently create or delete historical records; historical schedule eligibility rules must be explicit.
 
 ### H4 — History
 Show past records and allow correction. Corrections must update summaries consistently. Archiving preserves history. Deleting a habit needs a clear explanation of whether associated records are deleted or retained; recommended default is explicit deletion of the habit and its associated personal data, with confirmation.
