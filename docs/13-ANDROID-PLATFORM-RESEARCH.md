@@ -5,9 +5,9 @@
 
 ## Executive conclusion
 
-Official Expo documentation supports a viable Android-first React Native/Expo route: use a development build for native-module testing, create an installable APK for direct device testing, and produce an AAB for Google Play distribution. EAS Build can run hosted builds from a Git-based workflow and does not require Replit. Local Android builds are another option but require the native development environment.
+Historical stack research only: the repository's current `main` contains a native Android Kotlin/Jetpack Compose Gradle project. Use this document only for generic Android platform requirements; Expo-specific sections are not the active implementation plan.
 
-This verifies that the route exists; it does **not** prove Dayseed's eventual dependency set, minimum Android version, or release configuration has been tested. React Native + Expo + SQLite remains a candidate until the package compatibility gate is passed.
+The existence of native project files does not prove that Dayseed builds, installs, or passes device tests. Capture actual Gradle/build/install evidence before calling these verified.
 
 ## 1. Candidate Android build route
 
