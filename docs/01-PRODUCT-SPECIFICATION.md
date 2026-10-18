@@ -70,3 +70,11 @@ Explain local storage, export, deletion, and platform backup behaviour. Do not s
 
 ## Open requirements
 Resolve before Gate A: schedule model; missed/skipped/rest semantics; date and timezone policy; whether multiple journal entries per day are allowed; edit/delete retention behaviour; export format; reminder behaviour; and whether effort-level names are fixed or customisable.
+
+## Tracking and schedule decision update (2026-10-18)
+
+Owner-approved direction (D-010; detailed semantics remain open):
+- Number-based habits allow multiple entries per local calendar date; the day's displayed quantity is the sum of those entries.
+- When a user changes a habit's schedule, ask whether the change applies to today or tomorrow.
+- Today, History, Insights, and habit editing must represent the individual entries and their daily aggregate consistently, and schedule edits must not silently rewrite existing records.
+- This decision does not settle numeric validation, time-zone rules, target snapshots, or all schedule eligibility semantics. See the decision log and docs/21-TODAY-DASHBOARD-CONCEPTS.md.
