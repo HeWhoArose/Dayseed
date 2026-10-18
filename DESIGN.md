@@ -63,7 +63,7 @@ These are candidate values for prototype comparisons, not final approvals. UI co
 
 No family is selected yet. Compare the system Roboto baseline, Inter, Noto Sans, and Atkinson Hyperlegible using identical screen samples. A restrained serif display face may be tested only if it does not harm compact-screen readability. Record exact font source, version, licence, language coverage, and bundle cost before packaging. The upstream Atkinson Hyperlegible repositories are archived; this is a maintenance/distribution consideration, not a claim that the font is unusable.
 
-Candidate scalable sizes (platform units are not interchangeable; validate actual React Native rendering):
+Candidate scalable sizes (platform units are not interchangeable; validate actual Jetpack Compose rendering):
 
 | Token | Candidate | Usage |
 |---|---:|---|
