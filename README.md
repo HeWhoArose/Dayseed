@@ -23,3 +23,7 @@ Dayseed is an Android-native, offline-first habit and micro-journal application 
 - **Architecture:** MVVM with Kotlin Coroutines and `StateFlow`
 - **Local Persistence:** Android SQLite OpenHelper with full relational schema
 - **Build System:** Gradle 9.3.1 with Android Gradle Plugin 9.1.1
+
+## Project status and audits
+
+- [Implementation Reality Audit](docs/22-IMPLEMENTATION-REALITY-AUDIT.md) — reconciles planning claims with source files actually present.
