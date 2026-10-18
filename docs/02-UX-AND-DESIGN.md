@@ -36,7 +36,7 @@ Whether the journal gets a dedicated tab, lives under History, or is accessible 
 Explain the product promise → explain local storage plainly → create first habit or explore a sample → choose optional schedule/reminder → arrive at Today. Do not require account creation.
 
 ### Daily logging
-Open Today → choose a habit → tap Tiny/Usual/Extra or Done → receive brief acknowledgement → return to Today. Minimise modal dialogs and unnecessary confirmation after routine actions.
+Open Today → use Complete for the usual target/quick completion, or Record for actual amounts, corrections, and an optional habit/date note → return to Today. Keep quick completion lightweight and detailed recording optional.
 
 ### Reflection
 Open reflection → optional prompt → write or skip → save locally → return to Today. Do not require a minimum word count or streak.
@@ -49,6 +49,24 @@ Open History → select date/habit → edit outcome → explain that summaries u
 
 ### Privacy
 Settings → Privacy and data → explain local storage and OS backup implications → export or delete → clear confirmation and completion state.
+
+
+## Today dashboard: quick completion and detailed recording
+
+**Status:** Approved interaction direction; visual layout and detailed states remain to be validated.
+
+Each Today habit row/card should make the habit name, measurement mode, usual target, and today's record/completion state easy to scan. Provide two distinct actions where relevant:
+
+- **Complete:** a lightweight quick action. For duration/quantity habits it records the usual target; for completion-only habits it records completion. The interaction must avoid accidental duplicates and offer a clear way to correct an inaccurate quick record.
+- **Record:** opens the detailed recording flow for the selected habit and date. It supports the actual duration/quantity, appropriate quick choices derived from the habit's target, a custom amount, review/correction of existing entries, and an optional note about that habit on that date.
+
+For duration/quantity habits, the detailed flow should distinguish the usual target from the actual amount and derive a progress label from actual amount versus target. The label must not imply that Dayseed knows how hard the user tried or how they felt. For completion-only habits, do not show numeric controls or effort-level scales.
+
+A quick action must not force navigation to the full detail page. The detailed flow should be available when users want precision, context, or corrections. An optional habit/date note is distinct from the broader daily journal; neither should be required to log a habit. The exact relationship between multiple activity entries and a single daily note remains open.
+
+The card must distinguish no record, explicit numeric zero, partial amount, usual target reached, and amount above target. Progress summaries must state their denominator and period. Schedule edits do not rewrite existing activity records; explicit corrections are separate.
+
+The accompanying dashboard mockups are illustrative planning artifacts only. They do not demonstrate working persistence or imply that app UI implementation has been authorised.
 
 ## Content and voice
 
