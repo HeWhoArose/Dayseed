@@ -1,0 +1,8 @@
+{
+  "name": "Dayseed",
+  "description": "Android-first habit and micro-journal app focused on progress over streaks and gentle comebacks.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

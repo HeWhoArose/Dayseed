@@ -65,19 +65,3 @@ A statement in a draft is not approval. Update this log when a decision changes 
 ### Follow-up evidence note (2026-10-17)
 
 The package comparison is based on official documentation, not a Dayseed build. Use Expo SDK-aware dependency resolution rather than copied version numbers. If choosing native Kotlin, deliberately choose between the Room 2.x and Room 3.0 lines because Room 3.0 has different artifacts and Kotlin/KSP/coroutine requirements. No dependencies have been installed and no build has been run.
-
-
-## D-010 — Numeric habit entries and schedule-change effective date
-- **Date:** 2026-10-18
-- **Status:** Owner-approved direction; detailed edge-case semantics remain to be specified.
-- **Decision:** Number-based habits support multiple entries on the same local calendar date, and the daily total is the sum of those entries. When a user edits a schedule, ask whether the change should apply to today or tomorrow.
-- **Rationale:** Multiple entries support naturally incremental activities; explicitly asking about schedule timing avoids silently changing today's plan.
-- **Alternatives considered:** One editable daily total; schedule edits always effective tomorrow; schedule edits always effective immediately.
-- **Consequences / required follow-up:**
-  - Today must show the summed daily total and offer an understandable way to add another entry and inspect/edit individual entries.
-  - History must preserve the date and individual entries, show their sum, and make corrections transparent.
-  - Insights must aggregate numeric entries without double-counting totals and define whether charts use daily sums, weekly sums, or both.
-  - Habit editing must ask “Apply today or tomorrow?” when changing a schedule, preview the resulting schedule, and preserve historical records.
-  - Define local-date/time-zone behavior, deletion/correction behavior for individual entries, zero and decimal values, target comparisons, unit changes, and weekly-target eligibility before implementation.
-- **Owner approval:** Confirmed explicitly in chat on 2026-10-18.
-- **Documents to update:** Product specification, UX/design, data/privacy, testing/quality, roadmap, and Today/Habit Editor design research.
