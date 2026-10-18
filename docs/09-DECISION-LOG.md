@@ -17,7 +17,7 @@
 | D-002 | Android-first | Proposed | Android is the first target; iOS may follow if feasible | Confirm release target and device coverage |
 | D-003 | Offline-first | Approved direction | Core habit, journal, history, and comeback features must work offline | Validate architecture and test plan |
 | D-004 | Local-only personal data | Proposed baseline | No accounts/cloud sync in v1; review platform backup behaviour | Approve data and backup policy |
-| D-005 | Habit effort levels | Proposed | Tiny/Usual/Extra plus completion-only mode; Tiny counts as completion | Test labels and settle customisation |
+| D-005 | Habit measurement and progress levels | Approved direction | Each habit uses a chosen measurement mode: duration, quantity, or completion-only. Duration/quantity habits record actual amounts; Tiny-to-Extra-style levels describe measured progress relative to the user's usual target, not self-reported feelings or moral worth. One-tap completion defaults to the usual target for measured habits. Exact level thresholds and intermediate labels remain open. | Define thresholds and units during planning; validate accessibility and clarity |
 | D-006 | Daily outcome semantics | Open | Completed, skipped, planned rest, and no record should be distinct | Resolve scheduling and missed-day rules |
 | D-007 | Comeback bands | Proposed | 1–2, 3–6, 7–13, 14–29, 30–89, 90+ days | Test boundaries, copy, date policy, and dismissal behaviour |
 | D-008 | Visual direction | Open | Compare Field Journal, Living Editorial, Quiet Instrument; synthesis remains a hypothesis | Prototype and review with accessibility checks |
@@ -35,6 +35,13 @@
 | D-020 | Design authority | Proposed governance rule | DESIGN.md is the sole authoritative design-token and component reference; research docs are supporting evidence | Enforce in implementation instructions and audit |
 | D-021 | Competitor evidence | Open | Store screenshots give limited visual evidence; no live app interaction audit has been completed | Inspect current app flows on Android before stronger claims |
 | D-022 | AI Studio/GitHub workflow | Proposed | AI Studio is the active AI-assisted development environment; GitHub `main` is the canonical shared source of truth. Reconcile from latest remote state before work and commit auditable changes. | Follow `docs/19-AI-STUDIO-GITHUB-WORKFLOW.md` |
+
+| D-023 | Numeric entry semantics | Approved | Numeric habit entries are whole numbers only; an intentional zero is a valid record and differs from no record. Multiple entries for the same habit and local calendar date are summed into a daily total. | Specify units, entry identity, corrections, and persistence in data-contract plan |
+| D-024 | Weekly-target scheduling | Approved | Weekly targets are flexible targets across the week, with optional preferred days that guide routine but do not restrict completion to those days. | Define week boundary, progress calculation, and schedule-edit effects |
+| D-025 | Schedule edits and existing records | Approved | Schedule edits offer an effective choice of today or tomorrow. Existing activity records remain unchanged by schedule edits; explicit user corrections are separate operations. | Define eligibility/history interpretation and confirmation copy |
+| D-026 | Historical target interpretation | Approved | Historical completion is evaluated using the target that applied at the time. Comparisons against the current target are shown separately and must not silently rewrite historical completion. | Specify target history/versioning and insight labels |
+| D-027 | Rest, pause, and missed-opportunity states | Approved | Rest/non-scheduled days are neutral; paused periods are excluded from scheduled opportunities; scheduled non-completion is a missed opportunity, not a moral judgement. | Define state derivation for flexible weekly targets and historical schedule edits |
+| D-028 | Today quick-complete and detailed recording | Approved direction | Today habit cards expose a quick Complete action and a separate Record action. Complete uses the usual target for duration/quantity habits and records completion for completion-only habits; Record opens detailed entry, correction, and optional habit/date note controls. UI mockups are planning artifacts, not implemented behavior. | Specify duplicate/undo behavior, note cardinality, and interaction states in screen plan |
 
 ## Evidence and research links
 
