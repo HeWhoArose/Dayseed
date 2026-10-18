@@ -37,7 +37,7 @@ This document distinguishes research that is recorded, research that is only a p
 | Reminders | Android research, product spec, risk register | Permission/platform constraints researched; product behaviour remains open | Define flexible timing, quiet hours, rescheduling, denial handling, reboot handling and expectations around OS-delayed delivery |
 | Monetisation | `06-MONETISATION.md`, Android research | Non-coercive candidate model documented; not validated or approved | Confirm whether ads/supporter purchase are in initial release; evaluate SDK/privacy/consent and store-policy impact only after core product validation |
 | Testing and release quality | `07-TESTING-AND-QUALITY.md`, roadmap | Test strategy written at a high level; stack-specific tooling pending | Turn requirements into a traceable acceptance matrix, test cases and release gates after stack approval |
-| Replit/GitHub handoff | `19-PLANNING-GATE-AND-REPLIT-GITHUB-WORKFLOW.md`, `replit.md` | GitHub-canonical workflow and quota recovery rules documented | Use only after owner opens implementation gate; verify real native Android install, not a web preview |
+| AI Studio/GitHub workflow | `19-AI-STUDIO-GITHUB-WORKFLOW.md` | GitHub-canonical workflow and synchronization guidance documented | Use only after owner opens implementation gate; verify real native Android install, not a web preview |
 | Governance and open decisions | Decision log, risks, roadmap, handover | Status vocabulary and approval gate documented | Reconcile each open question to a decision ID, owner, evidence need, safe default, and revisit trigger |
 | Research sources and reproducibility | Individual research documents and source sections | Some official and vendor sources recorded; evidence depth varies by topic | Audit source URLs, publication/update dates, primary-source preference, exact support for claims and links; add source log where absent |
 | Repository navigation and relative links | 26 Markdown files on `main` | Relative Markdown file-target check passed: no missing targets found | Run heading-anchor checks and a deeper content-level consistency audit; re-run after documentation edits |
@@ -66,7 +66,7 @@ This document distinguishes research that is recorded, research that is only a p
 ### P2 — Validate technical feasibility after explicit approval
 
 13. Revisit the official-source stack comparison and make D-009 an explicit owner decision.
-14. Only after the planning gate is approved, run the bounded native feasibility spike defined in `docs/13-ANDROID-PLATFORM-RESEARCH.md`, `docs/14-STACK-COMPARISON.md`, and `docs/19-PLANNING-GATE-AND-REPLIT-GITHUB-WORKFLOW.md`.
+14. Only after the planning gate is approved, run the bounded native feasibility spike defined in `docs/13-ANDROID-PLATFORM-RESEARCH.md`, `docs/14-STACK-COMPARISON.md`, and `docs/19-AI-STUDIO-GITHUB-WORKFLOW.md`.
 15. Prove install/launch on a physical Android device, durable SQLite writes, migration, offline use, reminder lifecycle/permission denial, and synthetic export/delete. Record actual SDK, dependency versions, device/API, commands, results and failures.
 16. Update the roadmap and handover from measured results; do not turn a successful scaffold into permission to implement all features.
 
