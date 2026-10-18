@@ -25,7 +25,7 @@ Each phase must produce evidence and pass its exit gate before the next phase be
 ## Phase 2 — Technical and privacy feasibility
 
 **Prerequisites:** Phase 0 scope; Phase 1 may run in parallel where appropriate.  
-**Deliverables:** compare React Native + Expo against native Kotlin + Jetpack Compose using [docs/14-STACK-COMPARISON.md](14-STACK-COMPARISON.md); verified toolchain; local database design; date policy; backup/deletion design; notification feasibility findings.  
+**Deliverables:** audit the existing Kotlin/Jetpack Compose project, verify Gradle toolchain/build/test/device evidence, reconcile data schema with owner-approved product rules, and document privacy/date/backup/deletion/notification gaps. The old Expo comparison is historical only.  
 **Acceptance:** core platform choices supported by official-documentation evidence and a bounded technical spike.  
 **Tests/review:** Android release-build experiment, persistence/migration experiment, offline and export/delete checks.  
 **Risks:** platform limitations, backup surprises, date errors.  
@@ -43,9 +43,9 @@ Each phase must produce evidence and pass its exit gate before the next phase be
 ## Phase 4 — Bounded native-app feasibility spike
 
 **Prerequisites:** Phase 3 approval and explicit permission to scaffold the spike.  
-**Deliverables:** minimal React Native + Expo native app, locked dependency set, Android build artifact, SQLite persistence/migration evidence, reminder and privacy feasibility report.  
-**Acceptance:** project is verifiably native, not a website; APK/dev build installs and launches on a physical Android device; seeded data survives restart; migration, offline, export/delete, and relevant notification tests have recorded outcomes.  
-**Tests:** clean dependency install, SDK alignment checks, app build, device install/launch, migration tests, airplane-mode checks, permission denial, schedule/cancel/restart, synthetic export/delete, static checks, full available suite.  
+**Deliverables:** validated baseline of the existing native Kotlin/Compose app; reproducible build and test evidence; safe SQLite migration plan; offline persistence, reminders, and privacy/export feasibility report. Do not scaffold a second app or rewrite stacks without explicit owner approval.  
+**Acceptance:** existing project is verifiably native; Gradle build succeeds; APK installs and launches on a physical Android device; data survives restart; migration, offline, export/delete, and relevant notification tests have recorded outcomes.  
+**Tests:** clean Gradle build, unit/instrumentation tests where configured, device install/launch, migration tests, airplane-mode checks, permission denial, schedule/cancel/restart, synthetic export/delete, static checks, full available suite.  
 **Risks:** AI-generated project may be web-only, package compatibility may differ, reminder timing may be OS-limited.  
 **Exit gate:** evidence and blockers reviewed; owner explicitly approves the stack and feature implementation plan. A failed spike does not automatically authorise an alternative stack.
 
