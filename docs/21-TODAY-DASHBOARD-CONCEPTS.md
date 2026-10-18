@@ -667,3 +667,35 @@ Create focused wireframe states for:
 5. Pausing, resuming, archiving, restoring, and deletion confirmation as distinct actions.
 
 Before locking these flows, review the proposed contract with the owner and reflect any confirmed choices in the decision log and product specification. No app implementation is authorised or started.
+
+
+## Owner-approved interaction direction — quick Complete and detailed Record (2026-10-18)
+
+The owner approved a two-level interaction model. This is a product/UX requirement for planning; it is not evidence that the current preview implements it.
+
+### Habit card actions
+
+- Show the habit name, its measurement mode/usual target where applicable, and a clear state for today's records.
+- **Complete** is the quick path. For duration and quantity habits, it records the configured usual target by default. For completion-only habits, it records completion.
+- **Record** opens the detailed entry flow for that habit/date. The user can enter or correct the actual amount, use target-derived quick choices, choose a custom amount, review same-day entries, and optionally add a short note about that habit/date.
+- Quick completion must not require navigating to the full detail page. Avoid accidental duplicate completions and provide a clear correction path.
+- A note is optional and must not itself mark a habit complete. A habit/date note is distinct from the broader daily journal. Whether notes attach to the day or individual entries remains open.
+- For duration habits, quick choices may be in minutes/hours; for quantity habits, choices use the configured unit. Custom entries must preserve the approved numeric rules.
+- The interface distinguishes no record from explicit zero, partial activity, usual target reached, and above-target activity. Do not treat an absent record as zero.
+- Progress labels are calculated from the actual amount versus the user's usual target. They describe measured progress, not self-reported emotion or moral worth. Exact thresholds and intermediate labels remain open.
+- Multiple numeric entries on the same local date sum into a daily total. Duration sessions should also sum to a daily duration total; this behavior needs to be specified in the data contract.
+
+### Interaction states to design
+
+1. Today card with no record.
+2. Quick Complete confirmation/feedback and its usual-target default.
+3. Existing record, with Edit/Correct and additional Record options.
+4. Detailed duration entry (quick values plus custom value).
+5. Detailed quantity entry (whole-number values, unit, intentional zero).
+6. Completion-only recording.
+7. Optional habit/date note and note editing.
+8. Multiple entries and derived daily total.
+9. Error, offline persistence, undo/correction, and duplicate-action handling.
+10. Partial target, usual target reached, above-target amount, rest day, paused habit, and missed opportunity.
+
+These interaction states should be designed and reviewed before any feature implementation. Mockups are not working app functionality.
