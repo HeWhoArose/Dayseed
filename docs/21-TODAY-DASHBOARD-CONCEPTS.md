@@ -607,3 +607,63 @@ Produce a focused comparative wireframe for:
 4. Edit-existing-habit state, explicitly distinguishing future schedule changes from historical records.
 
 The owner-selected direction is to be recorded in the decision log only after the exact semantics are reviewed and confirmed. No app implementation is authorised or started.
+
+
+## Screen 2 follow-up: number-based records and schedule-change semantics
+
+**Date:** 2026-10-18  
+**Status:** Proposed product contract for owner review. These rules are design recommendations, not approved implementation requirements.
+
+### Number-based tracking: recommended first-pass contract
+
+A number-based habit stores a quantity with a user-defined unit (for example, pages, minutes, glasses, repetitions). It may optionally have a target.
+
+Proposed behavior:
+- **Unit required:** the unit tells users what the number means. Offer a short editable text unit, with suggestions only as shortcuts.
+- **Target optional:** a target gives context but should not be required to record an amount. Distinguish “recorded 4 pages” from “reached target of 10 pages.”
+- **Partial values allowed:** allow zero only if zero is meaningful and intentionally recorded; allow decimals where units reasonably need them. Avoid accidental blank or invalid entries.
+- **Target exceeded:** accept values above target. Never cap or discard the actual amount just because the target was exceeded.
+- **Record one daily aggregate, with corrections:** recommended initial UX is one current quantity per habit per local calendar date, editable later. If the user enters a new amount after recording, ask whether they are replacing the day's total or adding to it only if both interpretations are genuinely needed; avoid ambiguous silent behavior. Recommended default: edits replace the saved daily total, not add to it.
+- **No value is not zero:** an unrecorded date remains unrecorded; it must not become zero automatically.
+- **Target changes:** new target applies prospectively by default. Historical recorded quantities remain unchanged; historical target snapshots versus current-target comparison remains an open data/reporting choice.
+- **Unit changes:** warn that changing units may make old values incomparable. Prefer asking whether the change is only a label correction or a true unit change; do not convert historical data without explicit conversion rules.
+- **Today summary:** number-based values should be presented with their unit and optionally target context (e.g. “4 of 10 pages” only if the ratio is meaningful). They should not be reduced to generic completion without explaining the distinction.
+- **Effort levels remain categorical:** Tiny / Usual / Extra are not secretly converted to numbers or compared as quantities.
+
+### Scheduling model: separate the pattern from recorded activity
+
+Recommended conceptual separation:
+- **Schedule pattern:** selected weekdays, weekly target, or every-N-days interval.
+- **Start date:** optional user-selected local calendar date; define the default when omitted.
+- **Eligible occurrence:** whether a habit is scheduled for a given local date under the chosen pattern and start/pause/archive rules.
+- **Record:** the user's saved action/quantity on a date. Records must remain distinct from eligibility.
+- **Rest/no-schedule date:** a date with no eligible occurrence; it should not appear as a missed or incomplete scheduled habit.
+- **Eligible but unrecorded date:** not automatically a zero record, failure, or streak break unless a separately approved feature explicitly defines such language.
+
+### Schedule edits: recommended history-preserving rule
+
+1. A schedule edit changes future eligibility from an explicit effective date, defaulting to the next local date after save unless the user deliberately selects a future effective date.
+2. Past eligibility and saved records are not silently rewritten when the schedule changes.
+3. The user may correct an individual past record, but changing a schedule must not automatically create/delete historical records.
+4. If an edit would make a date's historical eligibility unclear, keep the record itself visible in History and avoid retroactive changes to counts until the product defines historical schedule snapshots.
+5. Pausing stops future scheduled occurrences from appearing as actionable on Today from the pause effective date; preserve existing records. Resume asks when the habit should become active again.
+6. Archiving removes the habit from active Today and reminders but preserves history and derived insights. Restore returns it to active status without deleting records.
+7. Deleting is distinct from pausing/archiving and must disclose exactly which records and associated data will be removed. Do not finalise delete behavior until export/backup/privacy policy is decided.
+
+### Important unresolved questions
+- Should multiple numeric entries on the same day be supported in v1, or should there be one editable daily total only? Recommendation: one editable daily total initially.
+- Should historical insights compare values against the target that existed at the time or the current target? Recommendation: preserve historical target context if the data model can do so simply; otherwise be explicit that charts use the current target.
+- When the user edits a schedule, should the change be effective immediately or from tomorrow? Recommendation: from the next local date by default, with an explicit “apply today” option only if a strong use case emerges.
+- How do weekly-target schedules define eligibility for each day? A weekly target is an aim over a period, not a predetermined set of weekdays; the UI and metrics must not falsely label individual unchosen days as missed.
+- How are daylight-saving/time-zone changes handled for local dates? The date of a record should remain the date on which the user intentionally recorded it, not shift when travelling.
+- Should custom units be normalised or left as user-defined strings? Recommendation: user-defined string plus optional suggestions; don't silently convert units.
+
+### Design work to do next
+Create focused wireframe states for:
+1. Number-based habit setup with unit, optional target, and a clear example.
+2. Logging a number on Today, including replace/edit behavior and target-exceeded state.
+3. Editing a unit or target with an explanation of what changes for historical data.
+4. Editing a schedule with an effective-date summary.
+5. Pausing, resuming, archiving, restoring, and deletion confirmation as distinct actions.
+
+Before locking these flows, review the proposed contract with the owner and reflect any confirmed choices in the decision log and product specification. No app implementation is authorised or started.
