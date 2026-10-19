@@ -80,6 +80,15 @@ A weekly review distinguishes daily target-met days, partial days, and above-tar
 
 After partial progress, Dayseed may offer a short, time-limited sequence of optional motivational tips over the following week. Content should explain how small steps can support habit formation, acknowledge the recorded progress accurately, and offer practical next steps without guilt, pressure, or assumptions about the user's feelings or circumstances. Avoid intrusive repetition; allow dismissal/opt-out. Exact cadence, trigger, thresholds, and copy remain open.
 
+### H7 — Personalised reminders and outcome-aware encouragement
+Plan for complementary in-app messages and optional Android notifications. Messages should reflect the actual habit/day state: Partial, Goal met, Above goal, or a scheduled opportunity that remains unrecorded. Keep these distinct from neutral rest/non-scheduled days, paused periods, the inactivity-based Comeback Flow, and the short encouragement sequence after partial progress.
+
+Explore local pattern-based timing. If a user repeatedly logs a habit around a particular time, Dayseed may suggest a reminder when the habit remains unrecorded after that usual window, followed by an optional later-day check-in. Treat learned timing as a tentative pattern, not certainty. Provide a manual schedule as an alternative and let the user edit or disable learned reminders.
+
+Reminders must be non-shaming, deduplicated, rate-limited, and suppressed when the relevant activity is recorded or the user has dismissed the prompt. Respect Android notification permission, quiet hours, per-habit settings, and user-defined frequency. In-app messages remain available when phone notifications are disabled. Use only the minimum local activity metadata required; do not infer absence reasons or mine journal text for behavioural predictions.
+
+The reminder defaults, learning window/confidence, quiet hours, end-of-day definition, notification caps, opt-in UX, and whether all learning stays on-device remain open. Feasibility and privacy must be reviewed before implementation.
+
 ## Quality requirements
 - Successful writes survive app restart.
 - Date handling is consistent across timezone changes and daylight-saving changes where relevant.
@@ -99,4 +108,4 @@ After partial progress, Dayseed may offer a short, time-limited sequence of opti
 8. Delete personal data and verify it is absent from app views and the database according to the documented deletion policy.
 
 ## Open requirements
-Resolve before Gate A: detailed schedule/history model; date and timezone policy; journal-entry cardinality; edit/delete retention and export; reminder behaviour; exact progress-level thresholds and labels; undo/duplicate semantics; default week start; and whether XP/rank has sufficient value to justify inclusion. Online leaderboards remain deferred pending separate approval.
+Resolve before Gate A: detailed schedule/history model; date and timezone policy; journal-entry cardinality; edit/delete retention and export; reminder behaviour and personalised reminder learning policy; exact progress-level thresholds and labels; undo/duplicate semantics; default week start; and whether XP/rank has sufficient value to justify inclusion. Online leaderboards remain deferred pending separate approval.
