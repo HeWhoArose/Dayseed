@@ -49,6 +49,8 @@
 | D-033 | XP, discreet rank, and leaderboard concept | Proposed; not approved | Explore whether a restrained, optional rank/XP system adds useful long-term context without turning Dayseed into a game. A rank could sit quietly near the profile and announce rank-ups respectfully. Online leaderboards/streak comparisons are a separate higher-risk option and must not be assumed for v1; privacy, consent, online identity/sync, safety, and value require research. No XP formula or leaderboard is approved. | Research utility and risks; compare private personal rank vs opt-in social comparison; preserve core habit/journal access and nonjudgmental tone |
 
 
+| D-040 | Partial, met, and above-target progress | Approved direction | For duration/quantity habits, compare actual daily total with target and show distinct states: Partial, Goal met, and Above goal. Preserve the actual amount; partial activity is meaningful progress but is not full target completion. Weekly review distinguishes daily states from flexible weekly-target progress. Offer a short, optional sequence of supportive tips after partial progress, emphasising small steps without guilt or pressure. | Define thresholds, tip cadence/opt-out, flexible weekly-target interaction, and above-target presentation |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
