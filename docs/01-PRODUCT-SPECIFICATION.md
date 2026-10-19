@@ -87,7 +87,7 @@ Explore local pattern-based timing. If a user repeatedly logs a habit around a p
 
 Reminders must be non-shaming, deduplicated, rate-limited, and suppressed when the relevant activity is recorded or the user has dismissed the prompt. Respect Android notification permission, quiet hours, per-habit settings, and user-defined frequency. In-app messages remain available when phone notifications are disabled. Use only the minimum local activity metadata required; do not infer absence reasons or mine journal text for behavioural predictions.
 
-The reminder defaults, learning window/confidence, quiet hours, end-of-day definition, notification caps, opt-in UX, and whether all learning stays on-device remain open. Feasibility and privacy must be reviewed before implementation.
+On first-run setup, ask whether the user wants reminders. If yes, create a conservative default reminder plan only when no custom reminder is already configured; if no, create no reminders. A pre-existing/saved custom reminder takes precedence and must not trigger the generic reminder question again. Users can later edit, replace, or disable reminders. Exact default time/frequency, handling of Android notification permission, learning window/confidence, quiet hours, end-of-day definition, notification caps, and whether learning stays on-device remain open. Feasibility and privacy must be reviewed before implementation.
 
 ## Quality requirements
 - Successful writes survive app restart.
