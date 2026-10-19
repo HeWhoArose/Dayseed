@@ -99,4 +99,12 @@ Planning safeguards:
 - A learned pattern is not a fixed schedule and must be explainable/editable by the user. Provide a simple manual schedule as an alternative.
 - Keep this reminder system distinct from the inactivity-based Comeback Flow and the one-week partial-progress encouragement sequence, while coordinating them to avoid message overload.
 
+
+### Reminder opt-in during onboarding (owner-approved direction)
+- Ask during startup/onboarding whether the user wants reminders, but only if no custom reminder is already configured.
+- If the user chooses **Yes**, create a conservative default reminder plan. The number of reminders and exact time(s) still need a product decision.
+- If the user chooses **No**, create no reminders.
+- A saved custom reminder takes precedence: do not ask the generic yes/no question again and do not overwrite the user's custom times with defaults.
+- Users can later review, customise, or disable reminders in Settings. Android notification permission is a separate platform permission and must be handled clearly; declining it must not block app use.
+
 Open: minimum observations and confidence before personalisation; initial default reminders; exact reminder windows; quiet hours and end-of-day definition; notification cadence; copy variants; and whether pattern learning remains entirely on-device. These require product, privacy, UX, and technical review before implementation.
