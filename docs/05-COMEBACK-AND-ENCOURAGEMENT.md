@@ -69,9 +69,34 @@ After partial progress, Dayseed may offer a short sequence of optional motivatio
 
 - Do not confuse daily goal met with a flexible weekly target being met; show both clearly when relevant.
 - Above-target activity can be recognised without pressuring the user to do more next time.
-- Avoid a notification campaign by default. Decide whether tips appear in-app, through optional notifications, or both; respect notification permissions and settings.
+- The owner prefers both in-app encouragement and optional phone notifications. Keep notifications configurable and permission-respecting; use in-app messages as the fallback when notification permission is denied or reminders are disabled.
 - Limit repetition, allow dismissal/opt-out, and do not block core functionality.
 - At weekly review, distinguish met days, partial days, above-target days, totals, neutral rest/non-scheduled days, and excluded paused periods.
 - Define behaviour when partial activity occurs repeatedly, the weekly target is reached early, an entry is edited, or a target changes midweek.
 
 The exact one-week schedule, thresholds, number of tips, copy, and controls remain open and need review before implementation.
+
+
+## 9. Personalised reminders and outcome-aware messages
+
+**Status:** Approved direction; exact policy and feasibility remain planning work.
+
+Dayseed should explore a gentle reminder system that can learn from the user's own completion patterns over time. For example, if a habit is often completed around 3 p.m. and remains unrecorded by a later chosen/check-in time, Dayseed may offer a reminder around 4 p.m. This must be treated as a pattern-based suggestion, not a certainty or a judgement. Sparse data should not create false confidence.
+
+The intended experience has complementary surfaces:
+- **In-app:** when the user opens Dayseed, show a context-matched, brief message based on the recorded state for the relevant habit/day.
+- **Optional notification:** send a timely reminder or encouragement when allowed by Android permissions and user settings.
+- **Earlier reminder:** if a habit remains unrecorded around a time the user commonly completes it, a gentle prompt may help.
+- **Later-day check-in:** near the end of the user's configured day or chosen reminder window, optionally surface an unrecorded scheduled habit or acknowledge what was recorded.
+- **Outcome-aware acknowledgement:** partial progress receives encouragement; meeting the target receives a proportionate congratulations; above-target activity receives a restrained acknowledgement; a missed scheduled opportunity gets a supportive invitation without shame. Rest/non-scheduled days and paused habits should not be treated as missed.
+
+Planning safeguards:
+- No repeated "you missed a day" notifications or guilt-inducing wording.
+- User controls for enabling reminders, per-habit participation, preferred windows/quiet hours, frequency, and disabling notifications.
+- Respect Android notification permission; in-app feedback remains available when permission is denied.
+- Rate limits, deduplication, and suppression when the user has already logged the activity or dismissed the prompt.
+- Learning uses only the minimum local activity metadata needed; do not infer sensitive reasons or analyse journal text to predict routines.
+- A learned pattern is not a fixed schedule and must be explainable/editable by the user. Provide a simple manual schedule as an alternative.
+- Keep this reminder system distinct from the inactivity-based Comeback Flow and the one-week partial-progress encouragement sequence, while coordinating them to avoid message overload.
+
+Open: minimum observations and confidence before personalisation; initial default reminders; exact reminder windows; quiet hours and end-of-day definition; notification cadence; copy variants; and whether pattern learning remains entirely on-device. These require product, privacy, UX, and technical review before implementation.
