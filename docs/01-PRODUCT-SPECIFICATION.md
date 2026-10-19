@@ -73,6 +73,13 @@ Users can choose their preferred first day of the week (for example Saturday, Su
 ### H5 — XP, rank, and social comparison (exploration only)
 A discreet optional rank/XP concept may be researched as a secondary profile detail, with restrained rank-up feedback. No XP formula, progression system, leaderboard, online identity, or social feature is approved for v1. Any future XP must avoid shaming missed days, privileging streak perfection, or making the product feel game-first. Online leaderboards require a separate explicit product decision and privacy/safety review; they are not part of the current local-first v1 scope.
 
+### H6 — Partial progress and weekly reflection
+For duration and quantity habits, preserve the actual amount and distinguish at least three outcomes against the applicable target: **Partial** (some activity, below target), **Goal met** (target reached), and **Above goal** (target exceeded). These are factual progress states, not judgements about the user's effort or worth. No record is not the same as a recorded zero; an intentional zero is shown distinctly from no record. Partial activity is meaningful progress but must not be silently counted as a fully met daily target.
+
+A weekly review distinguishes daily target-met days, partial days, and above-target days, while separately summarising totals and flexible weekly-target progress. A weekly target may be met across several days even if some individual days are partial; the UI must not conflate daily goal completion with weekly target achievement.
+
+After partial progress, Dayseed may offer a short, time-limited sequence of optional motivational tips over the following week. Content should explain how small steps can support habit formation, acknowledge the recorded progress accurately, and offer practical next steps without guilt, pressure, or assumptions about the user's feelings or circumstances. Avoid intrusive repetition; allow dismissal/opt-out. Exact cadence, trigger, thresholds, and copy remain open.
+
 ## Quality requirements
 - Successful writes survive app restart.
 - Date handling is consistent across timezone changes and daylight-saving changes where relevant.
