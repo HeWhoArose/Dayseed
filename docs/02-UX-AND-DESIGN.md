@@ -62,7 +62,7 @@ Each Today habit row/card should make the habit name, measurement mode, usual ta
 
 For duration/quantity habits, the detailed flow should distinguish the usual target from the actual amount and derive a progress label from actual amount versus target. The label must not imply that Dayseed knows how hard the user tried or how they felt. For completion-only habits, do not show numeric controls or effort-level scales.
 
-A quick action must not force navigation to the full detail page. The detailed flow should be available when users want precision, context, or corrections. An optional habit/date note is distinct from the broader daily journal; neither should be required to log a habit. The exact relationship between multiple activity entries and a single daily note remains open.
+A quick action must not force navigation to the full detail page. The detailed flow should be available when users want precision, context, or corrections. An optional habit/date note is distinct from the broader daily journal; neither should be required to log a habit. Support both an optional habit/date note as the default and optional entry-specific notes. Both remain distinct from the general journal. Allow undo of recent actions and later correction/deletion of individual entries; prevent accidental duplicate quick taps without blocking legitimate repeat sessions. Weekly calendar and summaries follow the user's chosen week-start day.
 
 The card must distinguish no record, explicit numeric zero, partial amount, usual target reached, and amount above target. Progress summaries must state their denominator and period. Schedule edits do not rewrite existing activity records; explicit corrections are separate.
 
@@ -101,3 +101,10 @@ The accompanying dashboard mockups are illustrative planning artifacts only. The
 Approved information architecture and navigation rationale; wireframes for primary flows; design tokens and component inventory in DESIGN.md; theme and contrast checks; content inventory including comeback variants; reviewed prototype; usability test plan and findings; completed design review checklist.
 
 Do not begin app UI implementation until the planning gate is approved.
+
+
+## XP and rank — exploration only
+
+The owner is exploring a quiet optional rank/XP indicator near the profile, with restrained rank-up feedback rather than a prominent gamified dashboard. This is not approved for v1. If researched further, it must support the product promise, remain secondary to habit/journal tasks, avoid shame or streak pressure, and have accessible feedback that can be dismissed or reduced.
+
+Online leaderboards and viewing other people's streaks are a separate deferred idea. They would change the local-first/privacy model and require explicit consent, account/network architecture, visibility controls, and safety/moderation research. Do not design them as committed v1 screens.
