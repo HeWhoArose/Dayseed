@@ -101,10 +101,11 @@ Planning safeguards:
 
 
 ### Reminder opt-in during onboarding (owner-approved direction)
-- Ask during startup/onboarding whether the user wants reminders, but only if no custom reminder is already configured.
-- If the user chooses **Yes**, create a conservative default reminder plan. The number of reminders and exact time(s) still need a product decision.
-- If the user chooses **No**, create no reminders.
-- A saved custom reminder takes precedence: do not ask the generic yes/no question again and do not overwrite the user's custom times with defaults.
-- Users can later review, customise, or disable reminders in Settings. Android notification permission is a separate platform permission and must be handled clearly; declining it must not block app use.
+- Ask once during first-run onboarding whether the user wants reminders.
+- If the user chooses **Yes**, suggest one default daily reminder time and let them change it. If the user chooses **No**, create no reminders.
+- Do not repeat the global yes/no question for each newly created habit.
+- Habit creation/editing includes a small reminder/timer control. The current default is used unless the user explicitly selects a different time for that habit.
+- A saved custom reminder takes precedence and must not be overwritten by defaults. Users can review, change, or disable reminders in Settings.
+- Dayseed may later suggest changing reminder times based on observed completion patterns, but must not silently alter them. Android notification permission is separate and declining it must not block app use.
 
-Open: minimum observations and confidence before personalisation; initial default reminders; exact reminder windows; quiet hours and end-of-day definition; notification cadence; copy variants; and whether pattern learning remains entirely on-device. These require product, privacy, UX, and technical review before implementation.
+Open: how to choose the suggested default time; per-habit override/reset semantics; minimum observations and confidence before personalisation; quiet hours and end-of-day definition; notification caps and copy variants; and whether pattern learning remains entirely on-device. These require product, privacy, UX, and technical review before implementation.
