@@ -51,6 +51,8 @@
 
 | D-040 | Partial, met, and above-target progress | Approved direction | For duration/quantity habits, compare actual daily total with target and show distinct states: Partial, Goal met, and Above goal. Preserve the actual amount; partial activity is meaningful progress but is not full target completion. Weekly review distinguishes daily states from flexible weekly-target progress. Offer a short, optional sequence of supportive tips after partial progress, emphasising small steps without guilt or pressure. | Define thresholds, tip cadence/opt-out, flexible weekly-target interaction, and above-target presentation |
 
+| D-041 | Personalised reminders and outcome-aware encouragement | Approved direction | Explore reminders based on each user's chosen schedule and observed in-app completion patterns, plus context-matched in-app messages and optional notifications for Partial, Goal met, Above goal, and missed scheduled opportunities. Use a quiet earlier reminder when a habit is commonly completed around a time and remains unrecorded, and optionally a later-day check-in; avoid claiming certainty from sparse data. Notifications are permission-respecting, configurable, non-shaming, rate-limited, and distinct from inactivity-based Comeback Flow. | Define opt-in/defaults, learning window and confidence, quiet hours, reminder caps, rest/paused handling, notification copy, and opt-out controls; validate feasibility in planning |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
