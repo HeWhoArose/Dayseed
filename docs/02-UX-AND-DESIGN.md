@@ -108,3 +108,11 @@ Do not begin app UI implementation until the planning gate is approved.
 The owner is exploring a quiet optional rank/XP indicator near the profile, with restrained rank-up feedback rather than a prominent gamified dashboard. This is not approved for v1. If researched further, it must support the product promise, remain secondary to habit/journal tasks, avoid shame or streak pressure, and have accessible feedback that can be dismissed or reduced.
 
 Online leaderboards and viewing other people's streaks are a separate deferred idea. They would change the local-first/privacy model and require explicit consent, account/network architecture, visibility controls, and safety/moderation research. Do not design them as committed v1 screens.
+
+## Partial progress and weekly review
+
+Show measured outcomes distinctly: **Partial**, **Goal met**, and **Above goal**. Use text and accessible visual indicators, not colour alone. Preserve the exact recorded amount. Do not confuse a missing record with an explicit zero, and do not describe partial progress as full completion.
+
+The weekly review should distinguish days where the daily target was met, days with partial activity, and days above target. Also show weekly-target status separately, since a flexible weekly target may be reached even when some days were partial. Rest/non-scheduled days are neutral and paused periods are excluded.
+
+A short, optional series of supportive tips may follow partial progress during the next week. Keep it separate from the inactivity-based Comeback Flow. Tips should reinforce the value of small steps and suggest a practical next action without guilt, assumptions, or pressure. Cadence, surfaces, opt-out, and exact copy remain open.
