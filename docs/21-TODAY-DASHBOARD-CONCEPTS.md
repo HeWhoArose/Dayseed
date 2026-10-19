@@ -679,11 +679,11 @@ The owner approved a two-level interaction model. This is a product/UX requireme
 - **Complete** is the quick path. For duration and quantity habits, it records the configured usual target by default. For completion-only habits, it records completion.
 - **Record** opens the detailed entry flow for that habit/date. The user can enter or correct the actual amount, use target-derived quick choices, choose a custom amount, review same-day entries, and optionally add a short note about that habit/date.
 - Quick completion must not require navigating to the full detail page. Avoid accidental duplicate completions and provide a clear correction path.
-- A note is optional and must not itself mark a habit complete. A habit/date note is distinct from the broader daily journal. Whether notes attach to the day or individual entries remains open.
+- A note is optional and must not itself mark a habit complete. A habit/date note is distinct from the broader daily journal. Provide both: an optional habit/date note as the default, plus optional notes on individual entries. These remain distinct from the general daily journal.
 - For duration habits, quick choices may be in minutes/hours; for quantity habits, choices use the configured unit. Custom entries must preserve the approved numeric rules.
 - The interface distinguishes no record from explicit zero, partial activity, usual target reached, and above-target activity. Do not treat an absent record as zero.
 - Progress labels are calculated from the actual amount versus the user's usual target. They describe measured progress, not self-reported emotion or moral worth. Exact thresholds and intermediate labels remain open.
-- Multiple numeric entries on the same local date sum into a daily total. Duration sessions should also sum to a daily duration total; this behavior needs to be specified in the data contract.
+- Multiple numeric entries on the same local date sum into a daily total. Duration sessions also sum to a daily duration total; each session remains individually inspectable and correctable.
 
 ### Interaction states to design
 
@@ -699,3 +699,10 @@ The owner approved a two-level interaction model. This is a product/UX requireme
 10. Partial target, usual target reached, above-target amount, rest day, paused habit, and missed opportunity.
 
 These interaction states should be designed and reviewed before any feature implementation. Mockups are not working app functionality.
+
+
+### Weekly calendar and restrained rank
+
+- Weekly summaries and calendar groupings follow the user's chosen week-start day. The initial setting should use the device/locale convention when available and remain user-configurable.
+- Undo a recent accidental quick action and support later correction/deletion of an individual entry. Avoid duplicate quick-tap records while allowing multiple legitimate sessions.
+- XP/rank is exploratory only, not approved for v1. If later approved, keep it discreet near the profile and celebrate rank changes without pressure. Online leaderboards and other users' streaks are deferred pending a separate privacy, safety, identity, and networking decision.
