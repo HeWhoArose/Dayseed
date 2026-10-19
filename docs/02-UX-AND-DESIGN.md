@@ -116,3 +116,12 @@ Show measured outcomes distinctly: **Partial**, **Goal met**, and **Above goal**
 The weekly review should distinguish days where the daily target was met, days with partial activity, and days above target. Also show weekly-target status separately, since a flexible weekly target may be reached even when some days were partial. Rest/non-scheduled days are neutral and paused periods are excluded.
 
 A short, optional series of supportive tips may follow partial progress during the next week. Keep it separate from the inactivity-based Comeback Flow. Tips should reinforce the value of small steps and suggest a practical next action without guilt, assumptions, or pressure. Cadence, surfaces, opt-out, and exact copy remain open.
+
+
+## Personalised reminders and outcome-aware feedback
+
+Plan two coordinated surfaces: quiet in-app messages when the user opens Dayseed and optional Android notifications when a useful reminder is due. Match wording to actual state: Partial gets supportive encouragement; Goal met gets proportionate congratulations; Above goal gets a restrained acknowledgement; an unrecorded scheduled opportunity gets a gentle invitation. Never frame neutral rest/non-scheduled days or paused periods as missed tasks.
+
+A future personalisation concept may learn from repeated local completion times. For example, if the user usually records a habit around 3 p.m. but it remains unrecorded by a later check-in time, Dayseed may send a gentle reminder. Show that the timing is an estimate, let users edit or disable it, and provide a manual schedule alternative. Include a later-day check-in only within user settings and avoid piling up reminders with partial-progress tips or Comeback Flow messages.
+
+Design settings for notification permission, per-habit reminders, preferred time windows/quiet hours, frequency limits, dismissal, and disable controls. When phone notifications are unavailable, keep in-app messages available. Exact timing, defaults, and copy remain open until the reminder policy is agreed.
