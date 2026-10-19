@@ -102,6 +102,8 @@ The head-to-head comparison is in [docs/14-STACK-COMPARISON.md](14-STACK-COMPARI
 
 - The owner prefers both in-app encouragement and optional phone notifications. Plan outcome-aware messages for partial, goal-met, above-goal, and still-unrecorded scheduled habits, plus a later-day check-in. Explore learning a user's common completion times over repeated observations, with manual controls, quiet hours, rate limits, opt-out, and privacy safeguards. Learning thresholds, timing defaults, and reminder coordination remain open; this is planning only.
 
+- Reminder onboarding decision: ask whether reminders are wanted only when no custom reminder is already configured. Yes creates a conservative default plan; No creates none. A saved custom reminder takes precedence and skips the generic question. Users can change settings later. Default frequency/times and Android permission handling remain open.
+
 Continue in planning. Do not implement these ideas or start the architecture audit until the remaining product decisions, screen blueprint, cross-screen contracts, and planning consistency review are complete.
 
 ## Implementation reality audit (2026-10-18)
