@@ -61,6 +61,18 @@ Creating/editing habits, recording outcomes, journaling, viewing history, and di
 ### P1 — Privacy controls
 Explain local storage, export, deletion, and platform backup behaviour. Do not send journal text or personal habit records to analytics or ad providers. No cloud sync in v1 unless explicitly re-approved.
 
+### H4 — Entries, notes, undo, and weekly calendar
+Duration sessions and quantity entries are individually recorded and can be reviewed/corrected. Multiple sessions for the same habit and local calendar date sum into that date's total; different habits always remain separate (for example, reading pages, jogging distance, and cups of water are separate goals with their own units and totals). Store a canonical numeric unit internally and display the user's chosen unit consistently.
+
+Support an optional **habit/date note** as the default context note, plus optional **entry-specific notes** for individual sessions. These are distinct from the general daily journal, and neither notes nor journal entries imply habit completion. Users can edit/delete notes according to the documented data-retention policy.
+
+Users can undo a recent accidental action and later correct or delete an individual entry. The UI must communicate what is being changed and update derived totals and insights. Duplicate quick taps should not create unintended duplicate completions, but legitimate repeated sessions/entries must remain possible. Exact undo window and duplicate semantics remain to be specified.
+
+Users can choose their preferred first day of the week (for example Saturday, Sunday, or Monday). Weekly target progress, weekly summaries, and calendar displays must use this setting consistently. The initial default should follow the device/locale convention where available, with a user override.
+
+### H5 — XP, rank, and social comparison (exploration only)
+A discreet optional rank/XP concept may be researched as a secondary profile detail, with restrained rank-up feedback. No XP formula, progression system, leaderboard, online identity, or social feature is approved for v1. Any future XP must avoid shaming missed days, privileging streak perfection, or making the product feel game-first. Online leaderboards require a separate explicit product decision and privacy/safety review; they are not part of the current local-first v1 scope.
+
 ## Quality requirements
 - Successful writes survive app restart.
 - Date handling is consistent across timezone changes and daylight-saving changes where relevant.
@@ -80,4 +92,4 @@ Explain local storage, export, deletion, and platform backup behaviour. Do not s
 8. Delete personal data and verify it is absent from app views and the database according to the documented deletion policy.
 
 ## Open requirements
-Resolve before Gate A: schedule model; missed/skipped/rest semantics; date and timezone policy; whether multiple journal entries per day are allowed; edit/delete retention behaviour; export format; reminder behaviour; and whether effort-level names are fixed or customisable.
+Resolve before Gate A: detailed schedule/history model; date and timezone policy; journal-entry cardinality; edit/delete retention and export; reminder behaviour; exact progress-level thresholds and labels; undo/duplicate semantics; default week start; and whether XP/rank has sufficient value to justify inclusion. Online leaderboards remain deferred pending separate approval.
