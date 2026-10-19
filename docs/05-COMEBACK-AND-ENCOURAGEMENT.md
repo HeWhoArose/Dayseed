@@ -59,3 +59,19 @@ Avoid:
 
 ## 7. Open decisions
 Approve the inactivity source (last app open, meaningful action, or separate signals); exact threshold boundaries; whether first return after installation gets a welcome rather than comeback message; dismissal persistence; and how users control encouragement frequency.
+## 8. Partial-progress encouragement (separate from comeback flow)
+
+**Status:** Approved direction; trigger details and copy remain open.
+
+This is distinct from the Comeback Flow: it responds to a recorded partial result, not app inactivity. For duration or quantity habits, compare the recorded daily total with the target and distinguish Partial, Goal met, and Above goal. Keep the actual amount visible and accurate. Partial is not full daily-target completion, but it is real progress; do not label it failure or silently round it up.
+
+After partial progress, Dayseed may offer a short sequence of optional motivational tips over the following week. The intent is to reinforce that small, repeated steps can help build a habit and offer a practical next step. Tips must be supportive, brief, grounded in the recorded activity, and nonjudgmental. They must not diagnose the user, guess why they did less, imply disappointment, or demand that they make up the difference.
+
+- Do not confuse daily goal met with a flexible weekly target being met; show both clearly when relevant.
+- Above-target activity can be recognised without pressuring the user to do more next time.
+- Avoid a notification campaign by default. Decide whether tips appear in-app, through optional notifications, or both; respect notification permissions and settings.
+- Limit repetition, allow dismissal/opt-out, and do not block core functionality.
+- At weekly review, distinguish met days, partial days, above-target days, totals, neutral rest/non-scheduled days, and excluded paused periods.
+- Define behaviour when partial activity occurs repeatedly, the weekly target is reached early, an entry is edited, or a target changes midweek.
+
+The exact one-week schedule, thresholds, number of tips, copy, and controls remain open and need review before implementation.
