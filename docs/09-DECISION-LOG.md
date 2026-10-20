@@ -63,6 +63,9 @@
 
 | D-045 | Catch-up delivery for missed weekly reflections | Approved direction | If the scheduled 9:00 a.m. local week-start reflection is missed because the device/app cannot deliver it, deliver it at the next suitable notification opportunity, even if a day or more late. Deliver at most once for that configured week; persist/deduplicate delivery so retries, app restarts, and rescheduling do not create duplicate notifications. Preserve the previous week's final result for the message and avoid presenting an outdated reflection as if it were for a different week. | Define local-time-zone changes, stale-message handling across multiple missed weeks, and acceptance tests. Detailed behaviour: [Weekly Goal Reminders](23-WEEKLY-GOAL-REMINDERS.md) |
 
+
+| D-046 | Multiple missed weekly reflections | Approved direction | If the device/app is unavailable across multiple configured weeks, do not deliver a backlog of old weekly reflections and do not combine multiple old weeks into one catch-up notification. Deliver only one outcome-aware reflection for the most recently completed week at the next suitable notification opportunity, then resume the normal current-week schedule. Keep delivery deduplicated. | Define stale-message handling when the latest completed week is no longer relevant and test multi-week gaps. Detailed behaviour: [Weekly Goal Reminders](23-WEEKLY-GOAL-REMINDERS.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
