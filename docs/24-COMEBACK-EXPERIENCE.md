@@ -10,7 +10,7 @@
 - The message should invite the user to resume an existing goal when useful, without forcing a reset or automatically changing goal records.
 - App inactivity must not automatically modify active goals: preserve their active status, schedules, progress, and historical records unchanged. Let the user decide whether to continue, pause, or edit a goal. Do not automatically mark days as missed or reset progress merely because Dayseed was not opened.
 - Distinguish app inactivity from lack of recorded habit progress: being away from Dayseed does not prove that a habit was abandoned or that no progress occurred.
-- Show each qualifying comeback experience at most once per inactivity episode. Once the user acknowledges or dismisses it, or chooses an offered action, suppress that experience until a new inactivity period qualifies. Do not re-show it on every subsequent app opening.
+- Keep the two-week comeback intentionally simple: show a brief, warm welcome and one action to continue into Dayseed. Goal management remains available from the normal dashboard; do not force a goal review or add goal-management shortcuts to this welcome. Show each qualifying comeback experience at most once per inactivity episode. Once the user acknowledges/dismisses it or continues into Dayseed, suppress it until a new inactivity period qualifies. Do not re-show it on every subsequent app opening.
 
 Example: “We missed you! 🌱 How have things been? Whenever you're ready, we can pick up where you left off.”
 
