@@ -90,6 +90,9 @@
 
 | D-054 | Preserve active goals during app inactivity | Approved direction | App inactivity alone must not modify active goals: preserve their active status, schedules, progress, and historical records unchanged. Let the user decide whether to continue, pause, or edit a goal. Do not automatically mark days as missed or reset progress merely because Dayseed was not opened. | Specify active daily/weekly goal presentation on return and acceptance tests confirming no unintended status/progress/history changes. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+
+| D-055 | Simple two-week comeback welcome | Approved direction | The two-week comeback shows a brief, warm welcome with one action to continue into Dayseed. Goal management remains available from the normal dashboard; do not force a review or add goal-management shortcuts to this welcome. After the user acknowledges/dismisses the message or continues, suppress it for that inactivity episode. | Finalise copy, accessibility/localization, and acceptance tests for once-per-episode presentation. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
