@@ -96,6 +96,9 @@
 
 | D-056 | Adaptive comeback choices | Approved direction | Adapt the one-month welcome-back choices to available data. If eligible paused or archived habits exist, offer the user the option to review and explicitly reactivate one. If none exist, omit the resume option and show only “Create a new habit” and “Continue into Dayseed.” Never show an empty/broken option or pressure the user to create a habit; preserve historical records and do not reactivate habits automatically. | Finalise copy and accessibility/localization details; add acceptance tests for both available and unavailable resume states. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+
+| D-057 | Optional reflection on one-month comeback | Approved direction | On the one-month welcome-back screen, “What's new?” is an invitation, not a required question. Offer an optional text field or journal link; the user may skip reflection and continue immediately. Never require a journal entry or explanation before proceeding. | Finalise exact copy and interaction/accessibility/localization details; add tests proving reflection can be skipped without blocking continuation. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
