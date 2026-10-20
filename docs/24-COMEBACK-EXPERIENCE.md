@@ -15,7 +15,7 @@ Example: “We missed you! 🌱 How have things been? Whenever you're ready, we 
 
 ## Longer inactivity / no active goals
 
-A separate, broader welcome-back experience is approved when either condition applies: (1) the user has not opened Dayseed for 30 consecutive days, or (2) the user has had no active habits or goals for 30 days, even if they continue opening the app. It should invite the user to reflect on what is new and optionally resume an existing habit or create a new one. If both this trigger and the two-week comeback qualify, show only the broader one-month experience rather than stacking both. The precise screen flow and copy still need to be specified.
+A separate, broader welcome-back experience is approved when either condition applies: (1) the user has not opened Dayseed for 30 consecutive days, or (2) the user has had no active habits or goals for 30 days, even if they continue opening the app. It should invite the user to reflect on what is new and optionally resume an existing habit or create a new one. If both this trigger and the two-week comeback qualify, show only the broader one-month experience rather than stacking both. Use a gentle choice screen. Welcome the user, ask what's new, and offer three clear actions: (1) resume an existing habit, (2) create a new habit, or (3) continue into the app without making changes. Do not force a journal entry, demand an explanation for the absence, or automatically reactivate/change habits. The user remains in control.
 
 Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up an old habit or plant a new one?”
 
@@ -24,4 +24,4 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
 - How to handle active daily and weekly goals without confusing app inactivity with missed habit days.
 - Exact handling of goal activation/archive dates, how to count the 30-day no-active-goal period, and repeat suppression. The one-month experience takes precedence over the two-week comeback when both qualify.
-- Accessibility, localization, privacy-conscious message copy, and acceptance tests.
+- Final copy and interaction details for the choice screen, including what happens when there are no existing habits to resume; accessibility, localization, privacy-conscious wording, and acceptance tests.
