@@ -66,6 +66,9 @@
 
 | D-046 | Multiple missed weekly reflections | Approved direction | If the device/app is unavailable across multiple configured weeks, do not deliver a backlog of old weekly reflections and do not combine multiple old weeks into one catch-up notification. Deliver only one outcome-aware reflection for the most recently completed week at the next suitable notification opportunity, then resume the normal current-week schedule. Keep delivery deduplicated. | Define stale-message handling when the latest completed week is no longer relevant and test multi-week gaps. Detailed behaviour: [Weekly Goal Reminders](23-WEEKLY-GOAL-REMINDERS.md) |
 
+
+| D-047 | Two-week comeback experience | Approved direction | After 14 days of inactivity, show a gentle comeback message only when the user next opens Dayseed; do not send a separate notification while they are away. The message should invite them to resume if useful, avoid assumptions or guilt, and must not treat app inactivity as proof that habit progress did not occur. Suppress repeated presentation after acknowledgement/dismissal for the same inactivity period. | Define the exact inactivity signal, interaction with active goals, and repeat-suppression acceptance tests. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
