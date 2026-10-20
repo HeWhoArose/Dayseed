@@ -78,6 +78,9 @@
 
 | D-050 | One-month comeback choice screen | Approved direction | The one-month welcome-back experience uses a gentle choice screen: welcome the user, ask what's new, and offer three actions—resume an existing habit, create a new habit, or continue into the app without changes. Do not force journaling, demand an explanation for absence, or automatically reactivate/change habits. If no habit exists to resume, the screen must still provide a clear path to create a habit or continue. | Finalise exact copy and interactions, accessibility/localization, and acceptance tests. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+
+| D-051 | Comeback repeat suppression | Approved direction | Show each qualifying comeback experience once per inactivity episode. After it is acknowledged, dismissed, or an offered action is chosen, suppress it until a new inactivity period qualifies. If the two-week and one-month triggers both qualify, the one-month experience takes precedence and only that experience is shown. | Define the precise inactivity episode reset/boundary logic and add repeat-suppression acceptance tests. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
