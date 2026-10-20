@@ -8,6 +8,7 @@
 - Do not send a separate notification while the user is away for this two-week comeback trigger.
 - Keep the message warm and nonjudgmental. Do not assume why the user was away, imply failure, or require an explanation.
 - The message should invite the user to resume an existing goal when useful, without forcing a reset or automatically changing goal records.
+- App inactivity must not automatically modify active goals: preserve their active status, schedules, progress, and historical records unchanged. Let the user decide whether to continue, pause, or edit a goal. Do not automatically mark days as missed or reset progress merely because Dayseed was not opened.
 - Distinguish app inactivity from lack of recorded habit progress: being away from Dayseed does not prove that a habit was abandoned or that no progress occurred.
 - Show each qualifying comeback experience at most once per inactivity episode. Once the user acknowledges or dismisses it, or chooses an offered action, suppress that experience until a new inactivity period qualifies. Do not re-show it on every subsequent app opening.
 
@@ -22,6 +23,6 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
-- How to handle active daily and weekly goals without confusing app inactivity with missed habit days.
+- Exact return-screen handling for active daily and weekly goals; the approved invariant is that app inactivity alone never changes their status, schedules, progress, or history and never automatically marks days missed or resets progress.
 - Exact date-boundary and timezone handling for the 30-day no-active-goal period, including how goal status changes are timestamped. The trigger and reset rules are approved: start when the last active goal becomes completed, paused, archived, or deleted with no other active goal remaining; creating/reactivating a goal resets the timer. Repeat suppression is approved: each experience appears once per qualifying inactivity episode, and the one-month experience takes precedence when both triggers qualify.
 - Final copy and interaction details for the choice screen, including what happens when there are no eligible paused/archived habits to resume and how deliberately restarting a completed habit is presented; accessibility, localization, privacy-conscious wording, and acceptance tests.
