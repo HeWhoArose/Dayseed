@@ -4,7 +4,7 @@
 
 ## Weekly rhythm
 
-- At the beginning of each user-configured week, review the previous week's final result before resetting current-week progress.
+- At 9:00 a.m. local time on the first day of each user-configured week, review the previous week's final result before resetting current-week progress, then send the outcome-aware fresh-start message. Use the device's current local time zone. If the scheduled time is missed because the device was unavailable, deliver at the next suitable opportunity without duplicating the message.
 - Send a fresh-start message informed by that result: celebrate a completed goal, acknowledge partial progress without shame, or offer a gentle invitation to begin again if no progress was recorded.
 - When a weekly goal reaches its target, immediately send one small congratulations, regardless of which day it happens. Stop all inactivity reminders for that goal for the remainder of the week.
 - At the end of the week, close out the result for the next week's reflection. Do not send a redundant second congratulations solely because the target was already reached; the next week-start message provides the fuller reflection and fresh start.
@@ -26,6 +26,6 @@
 
 ## Still to specify
 
-- Exact local-time delivery for week-start and week-end transitions.
+- Exact week-start scheduling edge cases, including missed delivery while the device is unavailable and local-time-zone changes. The approved week-start delivery time is 9:00 a.m. local time on the user's configured first day of the week.
 - Interaction with other notification categories and Android scheduling constraints.
 - Copy variants, duplicate prevention, clock/timezone changes, and edge-case acceptance tests.
