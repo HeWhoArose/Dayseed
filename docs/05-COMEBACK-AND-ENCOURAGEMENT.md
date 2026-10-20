@@ -74,6 +74,8 @@ After partial progress, Dayseed may offer a short sequence of optional motivatio
 - At weekly review, distinguish met days, partial days, above-target days, totals, neutral rest/non-scheduled days, and excluded paused periods.
 - Define behaviour when partial activity occurs repeatedly, the weekly target is reached early, an entry is edited, or a target changes midweek.
 
+Offer one optional evening check-in when a scheduled habit remains unrecorded; suppress it after logging/dismissal and respect user settings, quiet hours, and notification limits. Learning thresholds, the meaning of 28-day solidification, undo/revert behaviour, and reminder controls still need definition before implementation.
+
 The exact one-week schedule, thresholds, number of tips, copy, and controls remain open and need review before implementation.
 
 
@@ -102,10 +104,10 @@ Planning safeguards:
 
 ### Reminder opt-in during onboarding (owner-approved direction)
 - Ask once during first-run onboarding whether the user wants reminders.
-- If the user chooses **Yes**, suggest 9:00 a.m. in the user's local time as the default daily reminder and let them change it. If the user chooses **No**, create no reminders.
+- If the user chooses **Yes**, enable reminders. If the user chooses **No**, create no reminders. Each habit form displays a reminder-time control defaulted to 9:00 a.m. local time; the habit uses that time unless the user changes it.
 - Do not repeat the global yes/no question for each newly created habit.
 - Habit creation/editing includes a small reminder/timer control. The current default is used unless the user explicitly selects a different time for that habit.
 - A saved custom reminder takes precedence and must not be overwritten by defaults. Users can review, change, or disable reminders in Settings.
-- Dayseed may later suggest changing reminder times based on observed completion patterns, but must not silently alter them. Android notification permission is separate and declining it must not block app use.
+- For times left on the system default, Dayseed may automatically adjust after 14 days of sufficient observations, then use a further 28 days to solidify the adjustment. If the user manually edits a time, routine changes can prompt suggestions only; never automatically change a manually selected time. Android notification permission is separate and declining it must not block app use.
 
 Open: how to choose the suggested default time; per-habit override/reset semantics; minimum observations and confidence before personalisation; quiet hours and end-of-day definition; notification caps and copy variants; and whether pattern learning remains entirely on-device. These require product, privacy, UX, and technical review before implementation.
