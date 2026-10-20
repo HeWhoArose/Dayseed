@@ -102,7 +102,7 @@ Planning safeguards:
 
 ### Reminder opt-in during onboarding (owner-approved direction)
 - Ask once during first-run onboarding whether the user wants reminders.
-- If the user chooses **Yes**, suggest one default daily reminder time and let them change it. If the user chooses **No**, create no reminders.
+- If the user chooses **Yes**, suggest 9:00 a.m. in the user's local time as the default daily reminder and let them change it. If the user chooses **No**, create no reminders.
 - Do not repeat the global yes/no question for each newly created habit.
 - Habit creation/editing includes a small reminder/timer control. The current default is used unless the user explicitly selects a different time for that habit.
 - A saved custom reminder takes precedence and must not be overwritten by defaults. Users can review, change, or disable reminders in Settings.
