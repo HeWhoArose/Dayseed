@@ -11,6 +11,7 @@
 - If a weekly goal is below target and has had no recorded progress for two full days, send a gentle inactivity check-in. If progress occurs before the reminder is due, cancel/reset the timer. If no progress occurs, another check-in may be sent after each further two full days, up to three inactivity reminders per configured week.
 - Stop inactivity reminders when the target is met or the configured week ends. Reset weekly reminder counts at the next configured week boundary.
 - The user's chosen first day of week determines all weekly boundaries. At week transition, capture/finalise the previous result before beginning the new week's progress.
+- When the weekly fresh-start message and daily habit reminders are due together, combine them into one notification where practical. Summarise both clearly and make the tap destination useful for the combined content (for example, a relevant Today/dashboard view). If a meaningful combined notification is not practical, stagger or separate the reminders while respecting quiet hours and shared notification limits. Never silently drop a reminder's essential information.
 - Respect the global onboarding reminder opt-in, Android notification permission, quiet hours, and notification limits. Coordinate with daily-habit reminders to avoid overlapping or excessive notifications.
 - Never imply an inactive day is a failure, infer the reason for inactivity, or pressure users who exceeded a target to repeat or beat that performance.
 
@@ -27,5 +28,5 @@
 ## Still to specify
 
 - Exact week-start scheduling edge cases, including missed delivery while the device is unavailable and local-time-zone changes. The approved week-start delivery time is 9:00 a.m. local time on the user's configured first day of the week.
-- Interaction with other notification categories and Android scheduling constraints.
+- Exact notification-combination rules, tap destination when combined content covers multiple screens, and Android scheduling constraints.
 - Copy variants, duplicate prevention, clock/timezone changes, and edge-case acceptance tests.
