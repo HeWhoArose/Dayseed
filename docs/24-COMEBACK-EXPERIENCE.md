@@ -9,13 +9,13 @@
 - Keep the message warm and nonjudgmental. Do not assume why the user was away, imply failure, or require an explanation.
 - The message should invite the user to resume an existing goal when useful, without forcing a reset or automatically changing goal records.
 - Distinguish app inactivity from lack of recorded habit progress: being away from Dayseed does not prove that a habit was abandoned or that no progress occurred.
-- Prevent the same comeback experience from repeatedly appearing after it has been acknowledged or dismissed for the relevant inactivity period.
+- Show each qualifying comeback experience at most once per inactivity episode. Once the user acknowledges or dismisses it, or chooses an offered action, suppress that experience until a new inactivity period qualifies. Do not re-show it on every subsequent app opening.
 
 Example: “We missed you! 🌱 How have things been? Whenever you're ready, we can pick up where you left off.”
 
 ## Longer inactivity / no active goals
 
-A separate, broader welcome-back experience is approved when either condition applies: (1) the user has not opened Dayseed for 30 consecutive days, or (2) the user has had no active habits or goals for 30 days, even if they continue opening the app. It should invite the user to reflect on what is new and optionally resume an existing habit or create a new one. If both this trigger and the two-week comeback qualify, show only the broader one-month experience rather than stacking both. Use a gentle choice screen. Welcome the user, ask what's new, and offer three clear actions: (1) resume an existing habit, (2) create a new habit, or (3) continue into the app without making changes. Do not force a journal entry, demand an explanation for the absence, or automatically reactivate/change habits. The user remains in control.
+A separate, broader welcome-back experience is approved when either condition applies: (1) the user has not opened Dayseed for 30 consecutive days, or (2) the user has had no active habits or goals for 30 days, even if they continue opening the app. It should invite the user to reflect on what is new and optionally resume an existing habit or create a new one. If both this trigger and the two-week comeback qualify, show only the broader one-month experience rather than stacking both. Show each qualifying experience at most once per inactivity episode; after acknowledgement, dismissal, or an action choice, suppress it until a new inactivity period qualifies. Use a gentle choice screen. Welcome the user, ask what's new, and offer three clear actions: (1) resume an existing habit, (2) create a new habit, or (3) continue into the app without making changes. Do not force a journal entry, demand an explanation for the absence, or automatically reactivate/change habits. The user remains in control.
 
 Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up an old habit or plant a new one?”
 
@@ -23,5 +23,5 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
 - How to handle active daily and weekly goals without confusing app inactivity with missed habit days.
-- Exact handling of goal activation/archive dates, how to count the 30-day no-active-goal period, and repeat suppression. The one-month experience takes precedence over the two-week comeback when both qualify.
+- Exact handling of goal activation/archive dates and how to count the 30-day no-active-goal period. Repeat suppression is approved: each experience appears once per qualifying inactivity episode, and the one-month experience takes precedence when both triggers qualify.
 - Final copy and interaction details for the choice screen, including what happens when there are no existing habits to resume; accessibility, localization, privacy-conscious wording, and acceptance tests.
