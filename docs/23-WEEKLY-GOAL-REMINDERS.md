@@ -4,7 +4,7 @@
 
 ## Weekly rhythm
 
-- At 9:00 a.m. local time on the first day of each user-configured week, review the previous week's final result before resetting current-week progress, then send the outcome-aware fresh-start message. Use the device's current local time zone. If the scheduled time is missed because the device was unavailable, deliver the reflection at the next suitable notification opportunity, even if a day or more late, but only once. Persist/deduplicate the week-specific delivery so retries, app restarts, and rescheduling cannot send duplicates.
+- At 9:00 a.m. local time on the first day of each user-configured week, review the previous week's final result before resetting current-week progress, then send the outcome-aware fresh-start message. Use the device's current local time zone. If the scheduled message is missed, deliver it at the next suitable notification opportunity, even if a day or more late, but only once. If multiple weekly reflections were missed across consecutive weeks, send only one reflection for the most recently completed week; do not send a backlog or combine several old weekly reflections. Persist/deduplicate delivery so retries, app restarts, and rescheduling cannot send duplicates.
 - Send a fresh-start message informed by that result: celebrate a completed goal, acknowledge partial progress without shame, or offer a gentle invitation to begin again if no progress was recorded.
 - When a weekly goal reaches its target, immediately send one small congratulations, regardless of which day it happens. Stop all inactivity reminders for that goal for the remainder of the week.
 - At the end of the week, close out the result for the next week's reflection. Do not send a redundant second congratulations solely because the target was already reached; the next week-start message provides the fuller reflection and fresh start.
@@ -27,6 +27,6 @@
 
 ## Still to specify
 
-- Exact week-start scheduling edge cases, including local-time-zone changes. The approved delivery time is 9:00 a.m. local time on the user's configured first day of the week; missed messages should be delivered at the next suitable opportunity, even if a day or more late, with week-specific deduplication.
+- Exact week-start scheduling edge cases, including local-time-zone changes. The approved delivery time is 9:00 a.m. local time on the user's configured first day of the week; missed messages should be delivered at the next suitable opportunity, with only the most recently completed week's reflection delivered after a multi-week gap.
 - Exact notification-combination rules, tap destination when combined content covers multiple screens, and Android scheduling constraints.
 - Copy variants, duplicate prevention, clock/timezone changes, and edge-case acceptance tests.
