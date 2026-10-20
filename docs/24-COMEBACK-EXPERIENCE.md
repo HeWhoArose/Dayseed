@@ -4,7 +4,7 @@
 
 ## Two-week comeback
 
-- After 14 days of inactivity, show a gentle comeback message only when the user next opens Dayseed.
+- Define the 14-day inactivity trigger as no app opening for 14 consecutive days. Any opening of Dayseed resets the timer, including opening only to read the journal, browse history, or check insights. After the 14-day threshold is reached, show the gentle comeback message only when the user next opens Dayseed.
 - Do not send a separate notification while the user is away for this two-week comeback trigger.
 - Keep the message warm and nonjudgmental. Do not assume why the user was away, imply failure, or require an explanation.
 - The message should invite the user to resume an existing goal when useful, without forcing a reset or automatically changing goal records.
@@ -21,7 +21,7 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 
 ## Still to specify
 
-- What counts as inactivity for the 14-day trigger (last app open, meaningful interaction, and/or progress records).
+- Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
 - How to handle active daily and weekly goals without confusing app inactivity with missed habit days.
 - The one-month return and no-active-goal conditions, precedence when both triggers qualify, and repeat suppression.
 - Accessibility, localization, privacy-conscious message copy, and acceptance tests.
