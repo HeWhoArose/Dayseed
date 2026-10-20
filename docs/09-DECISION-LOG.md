@@ -75,6 +75,9 @@
 
 | D-049 | One-month welcome-back eligibility | Approved direction | Show the broader one-month welcome-back experience if either condition applies: (1) the user has not opened Dayseed for 30 consecutive days, or (2) the user has had no active habits or goals for 30 days, even if they continue opening the app. If the one-month and two-week comeback triggers both qualify, show only the broader one-month experience rather than stacking both. The experience should invite reflection and optionally resuming an old habit or creating a new one, without guilt. | Define precise active-goal/date calculations, repeat suppression, and final screen flow/copy. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+
+| D-050 | One-month comeback choice screen | Approved direction | The one-month welcome-back experience uses a gentle choice screen: welcome the user, ask what's new, and offer three actions—resume an existing habit, create a new habit, or continue into the app without changes. Do not force journaling, demand an explanation for absence, or automatically reactivate/change habits. If no habit exists to resume, the screen must still provide a clear path to create a habit or continue. | Finalise exact copy and interactions, accessibility/localization, and acceptance tests. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
