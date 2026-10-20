@@ -87,6 +87,9 @@
 
 | D-053 | User-controlled habit reactivation | Approved direction | From the one-month comeback screen, let the user choose an eligible paused or archived habit, review its settings, and explicitly reactivate it. Completed habits remain in history unless the user deliberately chooses to start one again. Preserve historical records and never reactivate or alter habits automatically. The user can instead create a new habit or continue into the app without changes. | Define eligible status edge cases, deliberate restart flow for completed habits, and acceptance tests. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+
+| D-054 | Preserve active goals during app inactivity | Approved direction | App inactivity alone must not modify active goals: preserve their active status, schedules, progress, and historical records unchanged. Let the user decide whether to continue, pause, or edit a goal. Do not automatically mark days as missed or reset progress merely because Dayseed was not opened. | Specify active daily/weekly goal presentation on return and acceptance tests confirming no unintended status/progress/history changes. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
