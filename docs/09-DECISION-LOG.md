@@ -93,6 +93,9 @@
 
 | D-055 | Simple two-week comeback welcome | Approved direction | The two-week comeback shows a brief, warm welcome with one action to continue into Dayseed. Goal management remains available from the normal dashboard; do not force a review or add goal-management shortcuts to this welcome. After the user acknowledges/dismisses the message or continues, suppress it for that inactivity episode. | Finalise copy, accessibility/localization, and acceptance tests for once-per-episode presentation. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+
+| D-056 | Adaptive comeback choices | Approved direction | Adapt the one-month welcome-back choices to available data. If eligible paused or archived habits exist, offer the user the option to review and explicitly reactivate one. If none exist, omit the resume option and show only “Create a new habit” and “Continue into Dayseed.” Never show an empty/broken option or pressure the user to create a habit; preserve historical records and do not reactivate habits automatically. | Finalise copy and accessibility/localization details; add acceptance tests for both available and unavailable resume states. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
