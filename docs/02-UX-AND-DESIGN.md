@@ -60,13 +60,18 @@ Each Today habit row/card should make the habit name, measurement mode, usual ta
 - **Complete:** a lightweight quick action. For duration/quantity habits it records the usual target; for completion-only habits it records completion. The interaction must avoid accidental duplicates and offer a clear way to correct an inaccurate quick record.
 - **Record:** opens the detailed recording flow for the selected habit and date. It supports the actual duration/quantity, appropriate quick choices derived from the habit's target, a custom amount, review/correction of existing entries, and an optional note about that habit on that date.
 
-For duration/quantity habits, the detailed flow should distinguish the usual target from the actual amount and derive a progress label from actual amount versus target. The label must not imply that Dayseed knows how hard the user tried or how they felt. For completion-only habits, do not show numeric controls or effort-level scales.
+For duration/quantity habits, the detailed flow should distinguish the usual target from the actual amount and derive a progress label from actual amount versus target: Tiny (>0% and <25%), Small (25% to <50%), Halfway (50% to <75%), Nearly there (75% to <100%), Goal met (exactly 100%), Extra (>100% through 150%), and Huge (>150%). Skip intermediate labels when a small target makes them nonsensical, always show the actual amount, and use distinct, enthusiastic but non-pressuring feedback for Huge. Labels must not imply that Dayseed knows how hard the user tried or how they felt. For completion-only habits, do not show numeric controls or this progress scale.
 
 A quick action must not force navigation to the full detail page. The detailed flow should be available when users want precision, context, or corrections. An optional habit/date note is distinct from the broader daily journal; neither should be required to log a habit. Support both an optional habit/date note as the default and optional entry-specific notes. Both remain distinct from the general journal. Allow undo of recent actions and later correction/deletion of individual entries; prevent accidental duplicate quick taps without blocking legitimate repeat sessions. Weekly calendar and summaries follow the user's chosen week-start day.
 
 The card must distinguish no record, explicit numeric zero, partial amount, usual target reached, and amount above target. Progress summaries must state their denominator and period. Schedule edits do not rewrite existing activity records; explicit corrections are separate.
 
 The accompanying dashboard mockups are illustrative planning artifacts only. They do not demonstrate working persistence or imply that app UI implementation has been authorised.
+
+
+### Retrospective journal prompt for a missed day
+
+When a user returns after a day without a journal entry, Dayseed may offer a gentle, optional prompt to write about that previous day. Open the editor with the missed date clearly shown and save the entry against that date, so it appears in the journal/calendar history. Do not infer why the day was missed; never mark a habit complete because a note was added. Dismissal must not cause repeated nagging about that same day. The prompt may also be relevant when habits were logged but no journal entry exists, provided it remains unobtrusive. Exact eligibility, frequency, and calendar styling remain open design details.
 
 ## Content and voice
 
