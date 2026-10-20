@@ -84,6 +84,9 @@
 
 | D-052 | Thirty-day no-active-goal trigger | Approved direction | Trigger the one-month welcome-back experience after zero active habits/goals persist for 30 consecutive days, even if the user continues opening Dayseed. Start the timer when the last active goal becomes completed, paused, archived, or deleted, provided no other active goal remains. Creating or reactivating any goal resets the no-active-goal timer. This condition is separate from the independent 30-day no-app-opening trigger. | Define date-boundary/time-zone behaviour and timestamping of goal-state changes; add acceptance tests. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+
+| D-053 | User-controlled habit reactivation | Approved direction | From the one-month comeback screen, let the user choose an eligible paused or archived habit, review its settings, and explicitly reactivate it. Completed habits remain in history unless the user deliberately chooses to start one again. Preserve historical records and never reactivate or alter habits automatically. The user can instead create a new habit or continue into the app without changes. | Define eligible status edge cases, deliberate restart flow for completed habits, and acceptance tests. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
