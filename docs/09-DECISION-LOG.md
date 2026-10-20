@@ -99,6 +99,9 @@
 
 | D-057 | Optional reflection on one-month comeback | Approved direction | On the one-month welcome-back screen, “What's new?” is an invitation, not a required question. Offer an optional text field or journal link; the user may skip reflection and continue immediately. Never require a journal entry or explanation before proceeding. | Finalise exact copy and interaction/accessibility/localization details; add tests proving reflection can be skipped without blocking continuation. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+
+| D-058 | Preserve unsaved comeback reflection drafts | Approved direction | If a user types an optional reflection on the one-month comeback screen, preserve it as a local unsaved draft so accidentally closing or leaving the screen does not erase it. A draft is not a journal entry until the user explicitly saves it through the normal journal flow. | Define draft retention, resumption, and deletion behaviour, including privacy expectations; add acceptance tests for accidental closure and explicit save. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
