@@ -72,6 +72,9 @@
 
 | D-048 | Definition of 14-day inactivity | Approved direction | The two-week comeback trigger is 14 consecutive days without opening Dayseed. Any app opening resets the timer, including opening only to read the journal, browse history, or check insights. Once the threshold is reached, show the comeback message only on the user's next app opening; do not send a separate notification while they are away. | Define exact day-boundary/time-zone behaviour and first-launch tracking; ensure this does not classify individual habit days as missed solely because the app was not opened. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+
+| D-049 | One-month welcome-back eligibility | Approved direction | Show the broader one-month welcome-back experience if either condition applies: (1) the user has not opened Dayseed for 30 consecutive days, or (2) the user has had no active habits or goals for 30 days, even if they continue opening the app. If the one-month and two-week comeback triggers both qualify, show only the broader one-month experience rather than stacking both. The experience should invite reflection and optionally resuming an old habit or creating a new one, without guilt. | Define precise active-goal/date calculations, repeat suppression, and final screen flow/copy. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
