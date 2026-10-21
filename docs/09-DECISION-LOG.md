@@ -104,6 +104,8 @@
 
 | D-059 | Unsaved comeback reflection draft retention | Approved | Keep each unsaved comeback reflection draft locally until the user explicitly saves it through the normal journal flow, deletes it, or chooses to discard it. App closure, phone restart, and returning later must not erase it; unresolved drafts do not auto-expire or get automatically replaced. A draft remains separate from a saved journal entry, and is not uploaded or shared automatically. | Specify draft identity/resumption UI, explicit discard/delete confirmation where appropriate, local storage lifecycle, and acceptance tests for app/process/device restart and save/delete/discard paths. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+| D-060 | Comeback reflection draft resumption | Approved | When a user reopens the same comeback reflection, restore the existing unsaved draft directly into its text field without an extra confirmation step. Keep it unsaved and separate from the journal until the user explicitly saves it; do not silently replace an unresolved draft. | Define draft identity and lifecycle edge cases, and test automatic restoration after leaving/reopening the screen and after app/process/device restart. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
