@@ -116,6 +116,8 @@
 
 | D-065 | Discoverability of unsaved comeback drafts in v1 | Approved | Keep the unresolved comeback reflection draft quietly in local storage and restore it automatically only when the same comeback reflection is reopened. In v1, do not add a dashboard card, notification, or Journal-list entry for the draft. | Test that the draft survives app/device restarts and restores on reopening the comeback reflection, while remaining absent from dashboard and saved Journal lists. Revisit discoverability only if future user evidence supports it. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+| D-066 | Unsaved draft survival after app-data clearing/uninstall | Approved | Local comeback reflection drafts must survive normal app closure, process death, phone restart, and later return. Clearing Dayseed's app data through Android settings or uninstalling the app may permanently erase an unsaved draft; v1 does not promise recovery after these destructive actions. Drafts remain local and are not automatically uploaded or shared. | Document this limitation in appropriate privacy/help copy without alarming users; test ordinary restart persistence and verify the product makes no unsupported recovery promise after app-data clearing/uninstall. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
