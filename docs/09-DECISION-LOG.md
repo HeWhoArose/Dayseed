@@ -118,6 +118,8 @@
 
 | D-066 | Unsaved draft survival after app-data clearing/uninstall | Approved | Local comeback reflection drafts must survive normal app closure, process death, phone restart, and later return. Clearing Dayseed's app data through Android settings or uninstalling the app may permanently erase an unsaved draft; v1 does not promise recovery after these destructive actions. Drafts remain local and are not automatically uploaded or shared. | Document this limitation in appropriate privacy/help copy without alarming users; test ordinary restart persistence and verify the product makes no unsupported recovery promise after app-data clearing/uninstall. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+| D-067 | Include unsaved comeback drafts in Android backup | Approved | Exclude unsaved comeback-reflection drafts from Android/platform backup in v1. Do not promise draft recovery through device migration or backup restore. This is separate from the existing rule that clearing app data or uninstalling may erase a draft. | Keep unfinished reflections device-local; ensure backup configuration does not include these drafts and document the limitation accurately. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
