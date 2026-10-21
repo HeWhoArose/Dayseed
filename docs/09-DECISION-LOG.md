@@ -106,6 +106,8 @@
 
 | D-060 | Comeback reflection draft resumption | Approved | When a user reopens the same comeback reflection, restore the existing unsaved draft directly into its text field without an extra confirmation step. Keep it unsaved and separate from the journal until the user explicitly saves it; do not silently replace an unresolved draft. | Define draft identity and lifecycle edge cases, and test automatic restoration after leaving/reopening the screen and after app/process/device restart. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+| D-061 | Reuse unresolved comeback reflection draft | Approved | If another comeback reflection would otherwise begin while an unresolved comeback-reflection draft exists, reuse and restore that existing draft instead of creating a second comeback-reflection draft. Never silently replace the draft's text; it remains unsaved until the user explicitly saves, deletes, or discards it. | Specify how the existing draft is associated with the comeback reflection and test repeated comeback eligibility without draft loss or duplicate draft creation. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
