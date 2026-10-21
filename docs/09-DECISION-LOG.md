@@ -110,6 +110,8 @@
 
 | D-062 | Draft cleanup after successful journal save | Approved | After the normal journal flow confirms that a comeback reflection was saved successfully, remove its unsaved-draft copy. If saving fails or success is not confirmed, retain the draft unchanged so the user can retry. | Specify atomicity/recovery expectations and test successful save, failed save, interrupted save, and retry paths to ensure no text is lost. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+| D-063 | Confirmation before discarding a comeback draft | Approved | When the user chooses “Discard,” show a confirmation prompt explaining that the unsaved reflection will be permanently deleted and cannot be recovered. Delete only after explicit confirmation; leaving or closing the screen is never a discard action. | Finalise concise accessible confirmation copy and test cancel/confirm paths, including preservation after accidental screen closure. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
