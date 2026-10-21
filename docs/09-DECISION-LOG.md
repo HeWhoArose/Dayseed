@@ -114,6 +114,8 @@
 
 | D-064 | Cancel discard confirmation | Approved | If the user cancels the discard confirmation, close the prompt and return to the reflection field with the unsaved draft unchanged, ready for continued editing. | Test cancel leaves all draft text intact and returns focus to the reflection; verify no deletion or journal save occurs. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+| D-065 | Discoverability of unsaved comeback drafts in v1 | Approved | Keep the unresolved comeback reflection draft quietly in local storage and restore it automatically only when the same comeback reflection is reopened. In v1, do not add a dashboard card, notification, or Journal-list entry for the draft. | Test that the draft survives app/device restarts and restores on reopening the comeback reflection, while remaining absent from dashboard and saved Journal lists. Revisit discoverability only if future user evidence supports it. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
