@@ -108,6 +108,8 @@
 
 | D-061 | Reuse unresolved comeback reflection draft | Approved | If another comeback reflection would otherwise begin while an unresolved comeback-reflection draft exists, reuse and restore that existing draft instead of creating a second comeback-reflection draft. Never silently replace the draft's text; it remains unsaved until the user explicitly saves, deletes, or discards it. | Specify how the existing draft is associated with the comeback reflection and test repeated comeback eligibility without draft loss or duplicate draft creation. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+| D-062 | Draft cleanup after successful journal save | Approved | After the normal journal flow confirms that a comeback reflection was saved successfully, remove its unsaved-draft copy. If saving fails or success is not confirmed, retain the draft unchanged so the user can retry. | Specify atomicity/recovery expectations and test successful save, failed save, interrupted save, and retry paths to ensure no text is lost. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
