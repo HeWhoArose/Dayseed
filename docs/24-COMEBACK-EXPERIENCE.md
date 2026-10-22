@@ -75,6 +75,12 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Ignoring or skipping a prompt has no penalty and does not affect habit progress, streaks, ranks, or comeback eligibility.
 - Keep prompts short, gentle, and nonjudgmental. Exact prompt rotation, selection rules, and presentation remain to be specified.
 
+## Daily writing-prompt selection
+
+- Select one daily writing prompt for each local calendar date. Reopening the journal on the same date must show the same selected prompt rather than rotating automatically.
+- Prompt selection works offline using bundled prompts. Define and test deterministic date-based selection so the prompt remains stable throughout the day and changes only when the next local calendar date begins.
+- The prompt remains optional; users may skip it or write freely, and it has no effect on habit progress, streaks, ranks, or comeback eligibility.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
