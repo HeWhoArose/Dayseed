@@ -145,6 +145,8 @@
 
 | D-080 | Primary and secondary mood selection | Approved | Each journal entry may have one primary mood and one optional secondary mood to represent mixed feelings. Mood tagging remains optional; use word-based gradations rather than a numeric intensity rating. | Test primary-only, primary-plus-secondary, and no-mood entries; ensure mood selection remains quick and optional. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+| D-081 | Show mood labels in journal search results | Approved | Search results show the primary mood and optional secondary mood, when present, alongside the date and matching text preview. Untagged entries remain searchable and display normally. Mood is not a search filter in this decision. | Test results for primary-only, two-mood, and untagged entries; verify labels supplement rather than replace date and text preview. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
