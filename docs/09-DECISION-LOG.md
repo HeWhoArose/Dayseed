@@ -137,6 +137,8 @@
 
 | D-076 | Optional daily writing prompt | Approved | Provide an optional short, gentle daily writing prompt from bundled content so it works offline. Users may ignore or skip it and write freely; no penalty or effect on habit progress, streaks, ranks, or comeback eligibility. Prompt rotation and presentation remain to be specified. | Test prompt availability offline and verify skipping/ignoring prompts never blocks journaling or changes progress. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+| D-077 | Daily writing-prompt rotation | Approved | Select one prompt per local calendar date and keep it unchanged when the journal is reopened that day. Prompt selection is offline and date-based; it changes with the next local calendar date. Prompts remain optional and have no progress effects. | Test same-day stability, date rollover, offline behavior, and no effect on habit progress or comeback eligibility. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
