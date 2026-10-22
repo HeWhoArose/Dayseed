@@ -95,6 +95,12 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Mood words are self-description, not a diagnosis. Keep the feature private and local-first; do not infer a mental-health condition or make clinical claims from a selected mood.
 - Exact mood taxonomy, starter ten, wording/translations, whether one or multiple moods can be selected per entry, and the visual interaction remain to be specified.
 
+## Number of moods per journal entry
+
+- Allow one primary mood per journal entry and an optional secondary mood to capture mixed feelings without making mood tagging feel like a questionnaire.
+- The secondary mood is optional; users can select only the primary mood or skip mood tagging entirely.
+- Keep both choices within the same curated mood vocabulary and emotional-family picker. Do not add a numeric mood-intensity rating; use meaningful mood words and gradations instead.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
