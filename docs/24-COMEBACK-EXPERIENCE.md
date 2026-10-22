@@ -33,6 +33,18 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Delete the entry only after the user explicitly confirms. Cancelling returns the user to the journal without changing the entry.
 - This confirmation rule is for saved journal entries; unsaved comeback drafts have their separately specified discard confirmation.
 
+## Handling confirmed journal-entry removal
+
+- After the user confirms removal, remove the saved journal entry permanently. v1 has no recycle bin, recovery window, or post-removal undo action.
+- The confirmation prompt is the safeguard against accidental removal; do not retain the removed reflection for later recovery.
+
+## General journal entries and habit links
+
+- Users can create, save, edit, and delete standalone journal entries without recording or linking a habit.
+- A journal entry may optionally be linked to a habit when that connection is useful to the user; linking is never mandatory.
+- Keep journal writing independent from habit tracking so users can write on days when they record no habit activity.
+- Saved-entry editing and deletion follow the separately approved same-entry edit and confirmed permanent-removal rules.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
