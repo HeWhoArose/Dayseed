@@ -135,6 +135,8 @@
 
 | D-075 | Daily journal-entry limit | Approved | Users may create unlimited separate journal entries on the same local calendar day in v1. Entry count is independent of habit records, numeric habit totals, and optional habit links. | Test multiple same-day entries and ensure journal-entry counts do not affect habit tracking. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+| D-076 | Optional daily writing prompt | Approved | Provide an optional short, gentle daily writing prompt from bundled content so it works offline. Users may ignore or skip it and write freely; no penalty or effect on habit progress, streaks, ranks, or comeback eligibility. Prompt rotation and presentation remain to be specified. | Test prompt availability offline and verify skipping/ignoring prompts never blocks journaling or changes progress. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
