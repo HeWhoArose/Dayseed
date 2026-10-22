@@ -56,6 +56,13 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Untitled entries remain easy to recognize through their date and a preview of the entry text.
 - Keep title entry lightweight so adding a quick reflection does not become a multi-field chore.
 
+## Journal search
+
+- Provide an offline search for saved journal entries by matching text in the optional title and entry body.
+- Search includes titled and untitled saved entries and does not require a habit link.
+- Only saved entries appear in results; unresolved unsaved comeback-reflection drafts are not journal entries and are excluded.
+- Keep v1 search focused on text matching; advanced filters such as date ranges or habit filters are outside this decision's scope.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
