@@ -133,6 +133,8 @@
 
 | D-074 | Offline search for journal entries | Approved | Search saved journal entries offline by matching the optional title and entry body. Include titled and untitled entries; exclude unsaved comeback drafts. Advanced date-range and habit filters are not included in this decision's v1 scope. | Test title/body matches, untitled entries, offline operation, and exclusion of unsaved drafts. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+| D-075 | Daily journal-entry limit | Approved | Users may create unlimited separate journal entries on the same local calendar day in v1. Entry count is independent of habit records, numeric habit totals, and optional habit links. | Test multiple same-day entries and ensure journal-entry counts do not affect habit tracking. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
