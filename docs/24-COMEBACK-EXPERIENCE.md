@@ -81,6 +81,11 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Prompt selection works offline using bundled prompts. Define and test deterministic date-based selection so the prompt remains stable throughout the day and changes only when the next local calendar date begins.
 - The prompt remains optional; users may skip it or write freely, and it has no effect on habit progress, streaks, ranks, or comeback eligibility.
 
+## Daily prompt visibility
+
+- Keep the daily writing prompt available in the journal experience, but make it easy to dismiss or ignore for that session.
+- In v1, do not add a setting to disable prompts entirely. Users can simply skip the prompt and write freely; showing or ignoring it never affects habit progress, streaks, ranks, or comeback eligibility.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
