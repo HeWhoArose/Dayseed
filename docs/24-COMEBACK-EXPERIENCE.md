@@ -50,6 +50,12 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Journal entries are text-only in v1. Do not support photo attachments or embedded images in journal entries.
 - Keep this scope focused on a lightweight, offline-friendly writing experience. Photo support may be reconsidered for a later version without being implied as a v1 capability.
 
+## Journal entry titles
+
+- Journal entries support an optional user-written title. A title is never required to save an entry.
+- Untitled entries remain easy to recognize through their date and a preview of the entry text.
+- Keep title entry lightweight so adding a quick reflection does not become a multi-field chore.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
