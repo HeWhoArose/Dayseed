@@ -63,6 +63,11 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Only saved entries appear in results; unresolved unsaved comeback-reflection drafts are not journal entries and are excluded.
 - Keep v1 search focused on text matching; advanced filters such as date ranges or habit filters are outside this decision's scope.
 
+## Daily journal-entry limits
+
+- Users may create as many separate journal entries as they want on the same local calendar day; there is no daily entry limit in v1.
+- Journal-entry count is independent of habit records, numeric habit totals, and the optional links between journal entries and habits.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
