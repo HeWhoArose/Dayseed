@@ -127,6 +127,8 @@
 | D-070 | Recovery after confirmed journal-entry deletion | Approved | After explicit confirmation, permanently remove the saved entry. v1 has no recycle bin, recovery period, or post-deletion undo; do not retain the deleted reflection for recovery. | Test that cancellation preserves the entry and confirmation permanently removes it. |
 | D-071 | Standalone journal entries and optional habit links | Approved | Users may create, save, edit, and delete standalone journal entries without logging a habit. Entries may optionally link to a habit, but the link is never required. Journal writing remains independent of habit tracking. | Test standalone create/edit/delete and optional habit linking, including days with no habit records. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+| D-072 | Photo attachments in journal entries | Approved | Journal entries are text-only in v1. Do not support photo attachments or embedded images; photo support can be reconsidered in a later version. | Keep v1 journal UI and storage text-only; do not imply photo support. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
