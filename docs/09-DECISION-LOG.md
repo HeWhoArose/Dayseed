@@ -147,6 +147,8 @@
 
 | D-081 | Show mood labels in journal search results | Approved | Search results show the primary mood and optional secondary mood, when present, alongside the date and matching text preview. Untagged entries remain searchable and display normally. Mood is not a search filter in this decision. | Test results for primary-only, two-mood, and untagged entries; verify labels supplement rather than replace date and text preview. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+| D-082 | Local mood history summaries | Approved | Provide simple neutral summaries generated on-device from moods actually recorded in saved journal entries. Do not diagnose, judge moods, claim causation, or correlate moods with habit completion in v1. Because mood tags are optional, summaries describe recorded tags rather than the user's full emotional experience. | Test counts against saved tagged entries, offline operation, neutral wording, and exclusion of unsupported causal claims. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
