@@ -26,6 +26,13 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Keep the entry's original date during ordinary text edits. Changing the date, if supported, must be a deliberate user action rather than a side effect of editing.
 - This rule applies to saved journal entries; an unsaved comeback draft remains separate until the normal journal flow confirms a successful save.
 
+## Deleting a saved journal entry
+
+- Deleting a saved journal entry requires a confirmation prompt before deletion.
+- The prompt must explain plainly that the saved reflection will be permanently deleted and cannot be recovered.
+- Delete the entry only after the user explicitly confirms. Cancelling returns the user to the journal without changing the entry.
+- This confirmation rule is for saved journal entries; unsaved comeback drafts have their separately specified discard confirmation.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
