@@ -121,6 +121,12 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Keep individual mood tags visible on their journal entries and in journal search results as already specified. Insights provides the aggregated view; it does not replace access to the original entries.
 - Mood summaries remain neutral, optional-data-based, on-device, and available offline.
 
+## Mood Insights time periods
+
+- Provide two summary periods: **This week** and **This month**.
+- Keep both summaries neutral and based only on mood tags recorded in saved journal entries during the relevant period. Do not imply that optional mood tags represent every day or the user's complete emotional experience.
+- Keep the summaries on-device and available offline. This decision does not introduce mood/habit correlations or diagnostic claims.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
