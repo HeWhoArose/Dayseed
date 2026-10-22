@@ -122,6 +122,8 @@
 
 | D-068 | Editing a saved journal reflection | Approved | Ordinary edits update the existing saved journal entry instead of creating a duplicate or a new version. Preserve the original entry date during ordinary text edits; any date change must be deliberate. Unsaved comeback drafts remain separate until a normal journal save is confirmed successful. | Implement editing as an update to the same entry, with explicit date-change behavior if date editing is supported; test no duplicate creation and draft/save separation. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+| D-069 | Deleting a saved journal entry | Approved | Require an explicit confirmation before deleting a saved journal entry. Explain that deletion is permanent and the reflection cannot be recovered. Delete only after confirmation; cancelling leaves the entry unchanged. Unsaved comeback drafts retain their separately specified discard-confirmation flow. | Test confirm and cancel paths, ensuring cancellation preserves the saved entry and confirmation is required before deletion. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
