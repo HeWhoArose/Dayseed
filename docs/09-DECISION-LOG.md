@@ -124,6 +124,9 @@
 
 | D-069 | Deleting a saved journal entry | Approved | Require an explicit confirmation before deleting a saved journal entry. Explain that deletion is permanent and the reflection cannot be recovered. Delete only after confirmation; cancelling leaves the entry unchanged. Unsaved comeback drafts retain their separately specified discard-confirmation flow. | Test confirm and cancel paths, ensuring cancellation preserves the saved entry and confirmation is required before deletion. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+| D-070 | Recovery after confirmed journal-entry deletion | Approved | After explicit confirmation, permanently remove the saved entry. v1 has no recycle bin, recovery period, or post-deletion undo; do not retain the deleted reflection for recovery. | Test that cancellation preserves the entry and confirmation permanently removes it. |
+| D-071 | Standalone journal entries and optional habit links | Approved | Users may create, save, edit, and delete standalone journal entries without logging a habit. Entries may optionally link to a habit, but the link is never required. Journal writing remains independent of habit tracking. | Test standalone create/edit/delete and optional habit linking, including days with no habit records. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
