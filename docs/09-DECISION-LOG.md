@@ -120,6 +120,8 @@
 
 | D-067 | Include unsaved comeback drafts in Android backup | Approved | Exclude unsaved comeback-reflection drafts from Android/platform backup in v1. Do not promise draft recovery through device migration or backup restore. This is separate from the existing rule that clearing app data or uninstalling may erase a draft. | Keep unfinished reflections device-local; ensure backup configuration does not include these drafts and document the limitation accurately. Detailed behaviour: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+| D-068 | Editing a saved journal reflection | Approved | Ordinary edits update the existing saved journal entry instead of creating a duplicate or a new version. Preserve the original entry date during ordinary text edits; any date change must be deliberate. Unsaved comeback drafts remain separate until a normal journal save is confirmed successful. | Implement editing as an update to the same entry, with explicit date-change behavior if date editing is supported; test no duplicate creation and draft/save separation. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
