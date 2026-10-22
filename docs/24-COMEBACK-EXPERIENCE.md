@@ -45,6 +45,11 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Keep journal writing independent from habit tracking so users can write on days when they record no habit activity.
 - Saved-entry editing and deletion follow the separately approved same-entry edit and confirmed permanent-removal rules.
 
+## Journal media scope for v1
+
+- Journal entries are text-only in v1. Do not support photo attachments or embedded images in journal entries.
+- Keep this scope focused on a lightweight, offline-friendly writing experience. Photo support may be reconsidered for a later version without being implied as a v1 capability.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
