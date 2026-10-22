@@ -129,6 +129,8 @@
 
 | D-072 | Photo attachments in journal entries | Approved | Journal entries are text-only in v1. Do not support photo attachments or embedded images; photo support can be reconsidered in a later version. | Keep v1 journal UI and storage text-only; do not imply photo support. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+| D-073 | Optional journal entry titles | Approved | Journal entries may have a user-written title, but a title is never required. Untitled entries are identified by date and a preview of the text. | Test saving, editing, and listing both titled and untitled entries without adding friction to quick journaling. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
