@@ -143,6 +143,8 @@
 
 | D-079 | Optional nuanced mood tags in journal | Approved direction | Journal entries may optionally include a mood tag. Use a broad, curated mood vocabulary with meaningful word-based gradations, not just a small basic list plus a numeric intensity score. Show up to ten fixed system-selected common moods first, with a “More” action opening a broader vocabulary organized into emotional families/spectrums. Mood choice is private self-description, not diagnosis. Taxonomy, exact starter set, single vs multiple selection, localization, and interaction details remain to be specified. | Design and test the vocabulary and picker for clear, nonjudgmental wording, offline/local-first behavior, and optional use. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+| D-080 | Primary and secondary mood selection | Approved | Each journal entry may have one primary mood and one optional secondary mood to represent mixed feelings. Mood tagging remains optional; use word-based gradations rather than a numeric intensity rating. | Test primary-only, primary-plus-secondary, and no-mood entries; ensure mood selection remains quick and optional. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
