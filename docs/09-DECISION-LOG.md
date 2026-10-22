@@ -141,6 +141,8 @@
 
 | D-078 | Disable or dismiss daily writing prompts | Approved | Keep daily writing prompts available in the journal, but make them easy to dismiss or ignore for the session. v1 has no setting to disable prompts entirely. Skipping remains optional and has no progress effects. | Test prompt dismissal/ignoring and ensure users can continue writing freely without changing habit progress or comeback eligibility. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+| D-079 | Optional nuanced mood tags in journal | Approved direction | Journal entries may optionally include a mood tag. Use a broad, curated mood vocabulary with meaningful word-based gradations, not just a small basic list plus a numeric intensity score. Show up to ten fixed system-selected common moods first, with a “More” action opening a broader vocabulary organized into emotional families/spectrums. Mood choice is private self-description, not diagnosis. Taxonomy, exact starter set, single vs multiple selection, localization, and interaction details remain to be specified. | Design and test the vocabulary and picker for clear, nonjudgmental wording, offline/local-first behavior, and optional use. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
