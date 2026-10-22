@@ -68,6 +68,13 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Users may create as many separate journal entries as they want on the same local calendar day; there is no daily entry limit in v1.
 - Journal-entry count is independent of habit records, numeric habit totals, and the optional links between journal entries and habits.
 
+## Optional daily writing prompt
+
+- Offer an optional daily writing prompt to help users who want a starting point. Users may ignore or skip it and write freely instead; responding is never required.
+- Prompts are bundled with the app and work offline; v1 does not depend on an API or network connection to provide them.
+- Ignoring or skipping a prompt has no penalty and does not affect habit progress, streaks, ranks, or comeback eligibility.
+- Keep prompts short, gentle, and nonjudgmental. Exact prompt rotation, selection rules, and presentation remain to be specified.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
