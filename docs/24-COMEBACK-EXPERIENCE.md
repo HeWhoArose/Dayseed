@@ -86,6 +86,15 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Keep the daily writing prompt available in the journal experience, but make it easy to dismiss or ignore for that session.
 - In v1, do not add a setting to disable prompts entirely. Users can simply skip the prompt and write freely; showing or ignoring it never affects habit progress, streaks, ranks, or comeback eligibility.
 
+## Optional mood tagging for journal entries
+
+- Journal entries may include an optional mood tag. Users can save an entry without choosing a mood; mood tagging is never required.
+- Prefer a curated vocabulary of distinct mood words across a broad emotional range instead of a small list such as only happy, sad, and angry plus a separate numeric intensity rating. Include meaningful gradations where natural, such as irritated, angry, and furious, while avoiding the assumption that every emotion is simply a stronger or weaker version of another.
+- The mood picker initially shows a fixed, system-curated set of up to ten broadly recognizable moods. This starter set is not ranked by an individual user's behavior or by live user-frequency analytics.
+- Provide a “More” action that opens the broader mood vocabulary organized into understandable emotional families or spectrums. Within a family, offer more specific words that help users describe what they feel, including milder and stronger expressions where appropriate.
+- Mood words are self-description, not a diagnosis. Keep the feature private and local-first; do not infer a mental-health condition or make clinical claims from a selected mood.
+- Exact mood taxonomy, starter ten, wording/translations, whether one or multiple moods can be selected per entry, and the visual interaction remain to be specified.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
