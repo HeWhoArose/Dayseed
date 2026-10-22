@@ -139,6 +139,8 @@
 
 | D-077 | Daily writing-prompt rotation | Approved | Select one prompt per local calendar date and keep it unchanged when the journal is reopened that day. Prompt selection is offline and date-based; it changes with the next local calendar date. Prompts remain optional and have no progress effects. | Test same-day stability, date rollover, offline behavior, and no effect on habit progress or comeback eligibility. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+| D-078 | Disable or dismiss daily writing prompts | Approved | Keep daily writing prompts available in the journal, but make them easy to dismiss or ignore for the session. v1 has no setting to disable prompts entirely. Skipping remains optional and has no progress effects. | Test prompt dismissal/ignoring and ensure users can continue writing freely without changing habit progress or comeback eligibility. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
