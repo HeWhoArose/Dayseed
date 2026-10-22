@@ -101,6 +101,12 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - The secondary mood is optional; users can select only the primary mood or skip mood tagging entirely.
 - Keep both choices within the same curated mood vocabulary and emotional-family picker. Do not add a numeric mood-intensity rating; use meaningful mood words and gradations instead.
 
+## Mood labels in journal search results
+
+- Journal search results show the entry's primary mood label when one is present, and also show its optional secondary mood label when present.
+- Keep the date and matching text preview visible; mood labels supplement these details and do not replace the search match or entry identification.
+- Entries without mood tags remain fully searchable and display normally without mood labels. Mood is not a search filter in this decision.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
