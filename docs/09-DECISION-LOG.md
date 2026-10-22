@@ -131,6 +131,8 @@
 
 | D-073 | Optional journal entry titles | Approved | Journal entries may have a user-written title, but a title is never required. Untitled entries are identified by date and a preview of the text. | Test saving, editing, and listing both titled and untitled entries without adding friction to quick journaling. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+| D-074 | Offline search for journal entries | Approved | Search saved journal entries offline by matching the optional title and entry body. Include titled and untitled entries; exclude unsaved comeback drafts. Advanced date-range and habit filters are not included in this decision's v1 scope. | Test title/body matches, untitled entries, offline operation, and exclusion of unsaved drafts. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
