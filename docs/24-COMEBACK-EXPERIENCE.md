@@ -107,6 +107,14 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Keep the date and matching text preview visible; mood labels supplement these details and do not replace the search match or entry identification.
 - Entries without mood tags remain fully searchable and display normally without mood labels. Mood is not a search filter in this decision.
 
+## Local mood history and summaries
+
+- In v1, provide simple, neutral mood-history summaries based only on moods the user has actually recorded in saved journal entries.
+- Summaries are generated on-device and work offline. For example, Dayseed may say, "Hopeful appeared in 6 entries this month," when that count is accurate for the selected period.
+- Do not infer that one mood caused a habit outcome, diagnose a mental-health condition, label a mood as good or bad, or present a pattern as a certainty beyond the recorded entries.
+- Mood tagging remains optional, so summaries must make clear that they describe recorded mood tags, not the user's complete emotional experience. Entries without mood tags are not evidence of any particular mood.
+- Cross-analysis or correlations between moods and habit completion are outside this decision's v1 scope.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
