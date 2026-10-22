@@ -115,6 +115,12 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Mood tagging remains optional, so summaries must make clear that they describe recorded mood tags, not the user's complete emotional experience. Entries without mood tags are not evidence of any particular mood.
 - Cross-analysis or correlations between moods and habit completion are outside this decision's v1 scope.
 
+## Placement of mood history
+
+- Place mood-history summaries in the existing Insights area rather than creating a separate main-navigation destination for mood history.
+- Keep individual mood tags visible on their journal entries and in journal search results as already specified. Insights provides the aggregated view; it does not replace access to the original entries.
+- Mood summaries remain neutral, optional-data-based, on-device, and available offline.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
