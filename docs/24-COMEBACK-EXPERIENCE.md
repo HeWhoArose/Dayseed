@@ -20,6 +20,12 @@ A separate, broader welcome-back experience is approved when either condition ap
 
 Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up an old habit or plant a new one?”
 
+## Saved reflection editing
+
+- Editing an already-saved journal reflection updates the existing entry rather than creating a duplicate or a new version.
+- Keep the entry's original date during ordinary text edits. Changing the date, if supported, must be a deliberate user action rather than a side effect of editing.
+- This rule applies to saved journal entries; an unsaved comeback draft remains separate until the normal journal flow confirms a successful save.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
