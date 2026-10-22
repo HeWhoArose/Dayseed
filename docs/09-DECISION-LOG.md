@@ -149,6 +149,7 @@
 
 | D-082 | Local mood history summaries | Approved | Provide simple neutral summaries generated on-device from moods actually recorded in saved journal entries. Do not diagnose, judge moods, claim causation, or correlate moods with habit completion in v1. Because mood tags are optional, summaries describe recorded tags rather than the user's full emotional experience. | Test counts against saved tagged entries, offline operation, neutral wording, and exclusion of unsupported causal claims. Detailed direction: [Comeback Experience](24-COMEBACK-EXPERIENCE.md) |
 
+| D-083 | Where mood-history summaries appear | C — Show aggregated mood-history summaries in Insights; keep individual mood tags visible in journal entries and search results. | Approved | 2026-10-22 |
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
