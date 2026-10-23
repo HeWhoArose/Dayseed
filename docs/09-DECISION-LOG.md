@@ -171,6 +171,7 @@
 | D-101 | Conflicting unfinished comeback drafts | A — Preserve both conflicting draft versions intact for later review without interrupting the restore or silently discarding either. | Approved | 2026-10-23 |
 | D-102 | Corrupt or incompatible backup files | A — Validate integrity, completeness, and compatibility before changes; stop without partial restore if safety cannot be established. | Approved | 2026-10-23 |
 
+| D-103 | Backup save destination | A — Use Android's system file picker so users choose where to save the portable backup. | Approved | 2026-10-23 |
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
