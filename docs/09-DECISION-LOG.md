@@ -167,6 +167,10 @@
 | D-097 | Resolving journal-entry merge conflicts | A — Show both versions and let the user keep the backup version, keep the current version, or preserve both as separate entries. | Approved direction; other record types pending | 2026-10-23 |
 | D-098 | Resolving habit-tracking merge conflicts | A — Preserve conflicting tracking records for review; allow keeping backup/current or both where supported, and never automatically add conflicting numeric totals. | Approved direction; record-specific limits pending | 2026-10-23 |
 | D-099 | Resolving habit-definition and schedule conflicts | A — Compare differing definitions side by side and let the user choose; allow preserving both as separate habits where appropriate, without rewriting history. | Approved direction; field-level details pending | 2026-10-23 |
+| D-100 | Conflicting preferences during restore | A — Compare differing backup and current preference values and let the user choose; do not silently prefer either source. | Approved | 2026-10-23 |
+| D-101 | Conflicting unfinished comeback drafts | A — Preserve both conflicting draft versions intact for later review without interrupting the restore or silently discarding either. | Approved | 2026-10-23 |
+| D-102 | Corrupt or incompatible backup files | A — Validate integrity, completeness, and compatibility before changes; stop without partial restore if safety cannot be established. | Approved | 2026-10-23 |
+
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
