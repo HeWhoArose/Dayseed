@@ -262,6 +262,68 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Restoring from a portable backup must leave the source backup file untouched.
 - Do not rename, modify, move, or delete the source file as part of restoration. The user may keep it as a fallback or remove it manually.
 
+## Offline backup creation, format, and verification
+
+### 64. Confirming a backup password
+
+- **Approved decision:** A — Enter the password twice and confirm it before creating the encrypted backup.
+- **Rationale:** Catch mistyped passwords before the user relies on a backup that may later be impossible to decrypt.
+- **Acceptance checks:** Test matching and mismatching password entries; a mismatch must block encrypted backup creation.
+
+### 65. Incorrect password during restoration
+
+- **Approved decision:** A — Allow retries with a clear error; do not modify existing data before successful decryption and validation.
+- **Rationale:** Give users another chance without risking live data from a failed decryption attempt.
+- **Acceptance checks:** Test wrong-password retries and confirm no existing data changes before successful decryption and validation.
+
+### 66. Backup file format
+
+- **Approved decision:** A — Use a dedicated Dayseed format with an app-specific extension, version metadata, and integrity metadata.
+- **Rationale:** Make portable backups identifiable and support explicit format/version and integrity checks.
+- **Acceptance checks:** Test extension recognition, version metadata, integrity metadata, and rejection of unsupported or damaged files.
+
+### 67. Default backup filename
+
+- **Approved decision:** A — Use a date-and-time filename, for example `Dayseed-Backup-2026-10-23-1245`.
+- **Rationale:** Make multiple backups easy to distinguish without requiring a custom name.
+- **Acceptance checks:** Test generated names include date and time and avoid unintended overwrites when backups are created close together.
+
+### 68. Backup contents summary
+
+- **Approved decision:** A — Show a pre-creation summary of habits, tracking history, saved journal entries, moods, preferences, and included drafts.
+- **Rationale:** Let users understand what the complete backup contains before saving it.
+- **Acceptance checks:** Verify summary counts/categories match the data included in the produced backup, including draft inclusion status.
+
+### 69. Excluding data from a backup
+
+- **Approved decision:** A — v1 creates complete backups only; users cannot exclude individual data categories.
+- **Rationale:** Keep backups complete and predictable and reduce accidental omission of important data.
+- **Acceptance checks:** Verify all approved backup categories are included and no category-exclusion controls are presented in v1.
+
+### 70. Backup creation failure
+
+- **Approved decision:** A — Fail safely, report the failure, never present an incomplete file as valid, and leave Dayseed data untouched.
+- **Rationale:** A failed export must not be mistaken for a usable backup or damage the source data.
+- **Acceptance checks:** Simulate write/storage failures; verify clear failure feedback, no success state for partial output, and unchanged live data.
+
+### 71. Verifying a newly created backup
+
+- **Approved decision:** A — Verify integrity and readability after writing; report success only if verification passes.
+- **Rationale:** Confirm the saved artifact is usable rather than treating a successful write call as sufficient.
+- **Acceptance checks:** Test successful verification and corrupted/unreadable output; success must only appear after verification passes.
+
+### 72. Backup history
+
+- **Approved decision:** A — List backups Dayseed can reliably identify, with date, size, and verification status where available.
+- **Rationale:** Help users distinguish known backup files without claiming visibility into files the app cannot reliably track.
+- **Acceptance checks:** Test available metadata, unavailable verification status, and backups moved or deleted outside Dayseed; never claim exhaustive device-wide history.
+
+### 73. Reminder to create backups
+
+- **Approved decision:** A — Offer an opt-in local reminder; never upload data or nag users who decline.
+- **Rationale:** Support backup hygiene while respecting user choice and the offline-first privacy promise.
+- **Acceptance checks:** Verify reminder is opt-in, runs locally, sends no data, and remains suppressed after the user declines.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
