@@ -133,6 +133,12 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Use simple counts or a restrained visual chart. Do not reduce the whole period to a single defining mood, infer moods on untagged entries, or imply that the distribution represents the user's complete emotional experience.
 - Keep the summary neutral, on-device, and available offline. This does not add mood/habit correlations or diagnostic claims.
 
+## Primary versus secondary moods in Mood Insights
+
+- Mood distributions for both **This week** and **This month** count **primary moods only**, using the primary mood recorded on each saved journal entry.
+- Secondary mood tags remain visible on their journal entries and in journal search results, but are excluded from the Mood Insights distribution in v1.
+- Do not infer a primary mood when an entry has no mood tag. Keep summaries neutral, on-device, and available offline.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
