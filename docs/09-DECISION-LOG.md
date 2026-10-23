@@ -152,6 +152,7 @@
 | D-083 | Where mood-history summaries appear | C — Show aggregated mood-history summaries in Insights; keep individual mood tags visible in journal entries and search results. | Approved | 2026-10-22 |
 | D-084 | Mood Insights time periods | B — Provide both This week and This month summaries, based only on mood tags recorded in saved journal entries. | Approved | 2026-10-22 |
 | D-085 | Mood Insights summary format | B — Show a distribution of recorded primary moods and how often each appeared, using simple counts or a restrained chart. | Approved | 2026-10-23 |
+| D-086 | Secondary moods in Mood Insights | A — Count primary moods only in the weekly and monthly distributions; keep secondary moods visible in journal entries and search results. | Approved | 2026-10-23 |
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
