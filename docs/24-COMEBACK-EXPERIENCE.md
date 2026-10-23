@@ -198,6 +198,12 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - When matching records genuinely conflict, do not silently overwrite either version. Detect and surface the conflict for a safe, explicit resolution path.
 - Exact conflict rules and resolution UX for each record type remain to be specified before implementation. Merge must preserve the pre-restore safety backup and must not mutate existing data if validation or conflict handling fails.
 
+## Handling genuine merge conflicts
+
+- If matching records genuinely conflict, preserve both versions intact and mark the conflict for later user review.
+- Do not interrupt the entire restore to demand a decision for every conflict. Complete the restore safely while retaining both versions and making unresolved conflicts discoverable.
+- Do not silently select a winner, overwrite either version, or delete a conflicting version. The conflict-review interface and record-specific resolution rules remain to be specified.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
