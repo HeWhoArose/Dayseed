@@ -177,6 +177,13 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - **Premium online backup and syncing:** Cloud backup and cross-device sync are planned as premium capabilities. Keep the app's core offline functionality usable without an account, cloud connection, or paid subscription. Online backup and sync must not be implied to exist in v1 until their scope and rollout are confirmed.
 - Keep readable export distinct from full backup: the former is for reading/sharing journal content, while backup/restore is intended to preserve app data for moving devices.
 
+## Offline backup contents
+
+- A portable offline backup should preserve the user's complete personal Dayseed experience: habit definitions and schedules, all habit-tracking history, saved journal entries and their mood tags, relevant user preferences, and unresolved comeback reflection drafts where technically feasible.
+- Treat unresolved drafts as important user writing: include them in the backup when supported and restore them as drafts, not as saved journal entries. Do not silently replace an existing draft during restore.
+- Do not include account credentials, secrets, or premium purchase verification data in the portable backup. These must be handled separately and securely.
+- The exact backup schema, version compatibility, and restore conflict/replacement behavior still require decisions before implementation.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
