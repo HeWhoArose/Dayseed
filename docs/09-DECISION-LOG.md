@@ -173,6 +173,7 @@
 
 | D-103 | Backup save destination | A — Use Android's system file picker so users choose where to save the portable backup. | Approved | 2026-10-23 |
 | D-104 | Optional password protection for offline backups | A — Offer optional password protection and clearly warn that a forgotten password may make an encrypted backup unrecoverable. | Approved direction; encryption details pending | 2026-10-23 |
+| D-105 | Preserve source backup after restore | A — Leave the original backup file untouched after restoration; users decide whether to keep or delete it. | Approved | 2026-10-23 |
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
