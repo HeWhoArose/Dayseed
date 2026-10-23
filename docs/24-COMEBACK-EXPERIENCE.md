@@ -204,6 +204,12 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Do not interrupt the entire restore to demand a decision for every conflict. Complete the restore safely while retaining both versions and making unresolved conflicts discoverable.
 - Do not silently select a winner, overwrite either version, or delete a conflicting version. The conflict-review interface and record-specific resolution rules remain to be specified.
 
+## Finding unresolved merge conflicts
+
+- List unresolved backup-restore merge conflicts in a **Backup & Restore** section within Settings so users can review them whenever convenient.
+- Do not add a dashboard notice or require immediate conflict review after restoration. Keep the conflict list discoverable until each conflict is resolved.
+- Preserve both versions until the user completes an explicit resolution. Exact review and resolution interactions remain to be specified.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
