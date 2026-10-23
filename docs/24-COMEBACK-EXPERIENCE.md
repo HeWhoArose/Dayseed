@@ -257,6 +257,11 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Explain clearly that password protection encrypts the backup and that forgetting the password may make its contents unrecoverable; do not promise password recovery unless a separately designed secure recovery mechanism exists.
 - Make it clear whether a backup is password-protected, and require the correct password before restoring an encrypted backup. Keep unprotected backup creation available as an explicit user choice.
 
+## Preserve source backup after restore
+
+- Restoring from a portable backup must leave the source backup file untouched.
+- Do not rename, modify, move, or delete the source file as part of restoration. The user may keep it as a fallback or remove it manually.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
