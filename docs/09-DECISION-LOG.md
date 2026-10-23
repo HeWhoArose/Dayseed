@@ -172,6 +172,7 @@
 | D-102 | Corrupt or incompatible backup files | A — Validate integrity, completeness, and compatibility before changes; stop without partial restore if safety cannot be established. | Approved | 2026-10-23 |
 
 | D-103 | Backup save destination | A — Use Android's system file picker so users choose where to save the portable backup. | Approved | 2026-10-23 |
+| D-104 | Optional password protection for offline backups | A — Offer optional password protection and clearly warn that a forgotten password may make an encrypted backup unrecoverable. | Approved direction; encryption details pending | 2026-10-23 |
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
