@@ -139,6 +139,13 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Secondary mood tags remain visible on their journal entries and in journal search results, but are excluded from the Mood Insights distribution in v1.
 - Do not infer a primary mood when an entry has no mood tag. Keep summaries neutral, on-device, and available offline.
 
+## Mood Insights with limited or no data
+
+- Adapt the presentation to the amount of recorded primary-mood data in the selected period.
+- When records are limited, show a small, factual count rather than implying a meaningful trend. Use a distribution when the available records make that presentation useful; do not impose a fixed minimum-record threshold for displaying any information.
+- When no primary-mood records exist in the period, show a gentle, neutral empty state that explains mood summaries appear when the user chooses to record moods. Do not infer moods from untagged entries or frame the empty state as failure.
+- Apply this behavior to both **This week** and **This month**, on-device and offline.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
