@@ -159,6 +159,7 @@
 | D-090 | Mood comparison control | A — Put a simple “Compare with previous period” control directly in Insights; reveal the comparison only when selected. | Approved | 2026-10-23 |
 | D-090 | Mood comparison control | A — Put a simple “Compare with previous period” control directly in Insights; comparison stays hidden until activated. | Approved | 2026-10-23 |
 | D-091 | Journal export, offline backup/restore, and premium sync direction | Readable journal export is supported; users should also be able to create a local backup and restore it on a new phone. Online backup and cross-device sync are intended as premium capabilities, while core offline use remains available without an account or subscription. Detailed backup coverage and restore-conflict behavior remain open. | Approved direction; details pending | 2026-10-23 |
+| D-092 | Offline backup contents | A — Preserve habit definitions/schedules, all tracking history, saved journal entries and mood tags, relevant preferences, and unresolved comeback drafts where feasible; exclude credentials, secrets, and premium purchase verification. | Approved direction; technical details pending | 2026-10-23 |
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
