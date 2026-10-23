@@ -163,6 +163,7 @@
 | D-093 | Restore onto an installation with existing data | B — Offer explicit Replace or Merge choices, explain consequences, and create/verify a safety backup before either operation; stop if safety backup fails. Merge-conflict rules remain open. | Approved direction; details pending | 2026-10-23 |
 | D-094 | Merge duplicate and conflicting records | A — Use stable IDs and reliable keys to deduplicate logical records, preserve distinct records, and flag genuine conflicts rather than silently overwriting either version. | Approved direction; record-specific rules pending | 2026-10-23 |
 | D-095 | Genuine merge conflict handling | A — Preserve both conflicting versions intact, mark them for later review, and do not interrupt the entire restore for each conflict. | Approved direction; review UX pending | 2026-10-23 |
+| D-096 | Finding unresolved merge conflicts | A — List unresolved conflicts in Settings under Backup & Restore; no dashboard reminder or forced immediate review. | Approved direction; resolution UX pending | 2026-10-23 |
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
