@@ -191,6 +191,13 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Create a safety backup of the current local Dayseed data before either operation and verify that it was created successfully before proceeding. If safety-backup creation fails, stop the restore and leave existing data unchanged.
 - The exact merge rules for duplicate or conflicting records, and the handling of unsupported backup versions, must be defined before implementation.
 
+## Merge rules for duplicate and conflicting records
+
+- Use stable record IDs and reliable type-specific keys to recognize records that already exist in both the backup and current installation. Do not create duplicate copies of the same logical record.
+- Preserve distinct records from both datasets.
+- When matching records genuinely conflict, do not silently overwrite either version. Detect and surface the conflict for a safe, explicit resolution path.
+- Exact conflict rules and resolution UX for each record type remain to be specified before implementation. Merge must preserve the pre-restore safety backup and must not mutate existing data if validation or conflict handling fails.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
