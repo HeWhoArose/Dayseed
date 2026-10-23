@@ -164,6 +164,12 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Keep the comparison hidden until the user chooses the control; do not add a permanent comparison panel or require a Settings change.
 - The control compares the selected period with its immediately preceding equivalent period (week-to-week or month-to-month), following the neutral and limited-data rules above.
 
+## Mood comparison control
+
+- Place a simple **Compare with previous period** control directly in Insights.
+- Keep the comparison hidden until the user activates the control; do not make comparisons automatic or require users to visit Settings to enable them.
+- When activated, compare the current week with the previous week or the current month with the previous month, using recorded primary-mood counts/distributions and neutral wording as specified above.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
