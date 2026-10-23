@@ -184,6 +184,13 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Do not include account credentials, secrets, or premium purchase verification data in the portable backup. These must be handled separately and securely.
 - The exact backup schema, version compatibility, and restore conflict/replacement behavior still require decisions before implementation.
 
+## Restore behavior when Dayseed already contains data
+
+- When restoring a portable backup onto an installation that already has personal data, offer two explicit choices: **Replace existing data** or **Merge with existing data**.
+- Explain the consequences of each choice in plain language before the user commits to the operation. Do not silently replace or merge data.
+- Create a safety backup of the current local Dayseed data before either operation and verify that it was created successfully before proceeding. If safety-backup creation fails, stop the restore and leave existing data unchanged.
+- The exact merge rules for duplicate or conflicting records, and the handling of unsupported backup versions, must be defined before implementation.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
