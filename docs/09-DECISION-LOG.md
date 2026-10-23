@@ -165,6 +165,7 @@
 | D-095 | Genuine merge conflict handling | A — Preserve both conflicting versions intact, mark them for later review, and do not interrupt the entire restore for each conflict. | Approved direction; review UX pending | 2026-10-23 |
 | D-096 | Finding unresolved merge conflicts | A — List unresolved conflicts in Settings under Backup & Restore; no dashboard reminder or forced immediate review. | Approved direction; resolution UX pending | 2026-10-23 |
 | D-097 | Resolving journal-entry merge conflicts | A — Show both versions and let the user keep the backup version, keep the current version, or preserve both as separate entries. | Approved direction; other record types pending | 2026-10-23 |
+| D-098 | Resolving habit-tracking merge conflicts | A — Preserve conflicting tracking records for review; allow keeping backup/current or both where supported, and never automatically add conflicting numeric totals. | Approved direction; record-specific limits pending | 2026-10-23 |
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
