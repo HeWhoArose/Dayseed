@@ -146,6 +146,12 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - When no primary-mood records exist in the period, show a gentle, neutral empty state that explains mood summaries appear when the user chooses to record moods. Do not infer moods from untagged entries or frame the empty state as failure.
 - Apply this behavior to both **This week** and **This month**, on-device and offline.
 
+## Opening journal entries from Mood Insights
+
+- Tapping a primary mood in the weekly or monthly Mood Insights distribution opens the saved journal entries whose **primary mood** matches that mood within the selected period.
+- Keep the period constraint (This week or This month) when opening the matching entries. Do not include entries based only on a matching secondary mood.
+- This is a direct route from the summary to the original writing; it does not change entries, mood tags, or the existing journal-search behavior.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
