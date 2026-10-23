@@ -152,6 +152,12 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Keep the period constraint (This week or This month) when opening the matching entries. Do not include entries based only on a matching secondary mood.
 - This is a direct route from the summary to the original writing; it does not change entries, mood tags, or the existing journal-search behavior.
 
+## Optional comparison with the previous mood period
+
+- Let users optionally compare the current Mood Insights period with the immediately preceding equivalent period: this week versus the previous week, or this month versus the previous month.
+- Compare only recorded primary-mood counts or distributions for each period. Do not frame changes as good or bad, diagnose the user, infer causation, or imply that optional mood tags capture the user's complete emotional experience.
+- Keep the comparison opt-in rather than automatically adding it to every view. If one or both periods have insufficient recorded data, explain the limitation neutrally and do not imply a meaningful trend.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
