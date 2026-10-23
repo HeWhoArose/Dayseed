@@ -324,6 +324,68 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - **Rationale:** Support backup hygiene while respecting user choice and the offline-first privacy promise.
 - **Acceptance checks:** Verify reminder is opt-in, runs locally, sends no data, and remains suppressed after the user declines.
 
+## Backup history, restore safety, and automatic backups
+
+### Decision 74 — Managing old backups
+
+- **Approved decision:** A — Keep backups until the user deletes them.
+- **Rationale:** Users retain control over backup retention; Dayseed does not automatically remove old backup files.
+- **Acceptance checks:** Verify backups are not automatically deleted or pruned.
+
+### Decision 75 — Actions in backup history
+
+- **Approved decision:** A — Offer restore and Android share/open options where supported.
+- **Rationale:** Let users restore a known backup or access platform-supported sharing/opening actions without assuming every provider supports every action.
+- **Acceptance checks:** Verify restore and supported share/open actions; gracefully handle unavailable actions.
+
+### Decision 76 — Confirming a Replace restore
+
+- **Approved decision:** A — Explain that current app data will be replaced and require explicit final confirmation after the safety backup succeeds.
+- **Rationale:** Make destructive consequences clear and ensure a verified safety backup exists before the final Replace action.
+- **Acceptance checks:** Verify Replace cannot proceed without a successful safety backup and explicit final confirmation.
+
+### Decision 77 — Restore preview
+
+- **Approved decision:** A — Show backup date, format/version, and counts of included data categories before restore.
+- **Rationale:** Give users a concise view of what they are about to restore without overwhelming the initial restore flow.
+- **Acceptance checks:** Verify preview metadata and category counts match the validated backup.
+
+### Decision 78 — Safety-backup failure
+
+- **Approved decision:** A — Stop restore, explain the failure, and leave existing data untouched if the safety backup cannot be created or verified.
+- **Rationale:** A restore must not proceed when its required rollback safeguard is unavailable.
+- **Acceptance checks:** Simulate safety-backup creation and verification failures; verify restore stops and current data remains unchanged.
+
+### Decision 79 — Restore progress and interruption
+
+- **Approved decision:** C — Where technically safe, resume or recover cleanly after interruption; never leave a partial restore presented as complete.
+- **Rationale:** Protect data integrity across app closure, process termination, or device restart while avoiding unsafe partial application.
+- **Acceptance checks:** Test interruption at restore stages, clean recovery or safe rollback, and truthful completion status.
+
+### Decision 80 — Backup compatibility
+
+- **Approved decision:** A — Restore only when compatibility can be established; otherwise stop without changing existing data.
+- **Rationale:** Do not risk existing data when backup format or schema compatibility is uncertain.
+- **Acceptance checks:** Test supported older versions, unsupported newer versions, and unknown versions; unsafe cases must stop before mutation.
+
+### Decision 81 — Duplicate backups
+
+- **Approved decision:** A — List each identifiable backup file separately; do not assume separate files are duplicates.
+- **Rationale:** Distinct files may be intentional copies; avoid hiding files or implying equivalence without reliable evidence.
+- **Acceptance checks:** Verify distinct backup files remain separately accessible and are never automatically deleted as duplicates.
+
+### Decision 82 — Automatic backup frequency
+
+- **Approved decision:** A — Offer daily, every 2 days, weekly, monthly, or every 6 months; users need not choose a weekday or calendar date. Manual backup remains available.
+- **Rationale:** Provide a simple interval selector while keeping manual backup available regardless of the automatic schedule.
+- **Acceptance checks:** Verify all five intervals, schedule persistence, manual backup availability, and no weekday/date picker requirement.
+
+### Decision 83 — Auto Backup setup and default location
+
+- **Approved decision:** A — Under Settings → Backup & Restore, users can enable Auto Backup, choose a destination folder, and select a frequency; manual backup remains available.
+- **Rationale:** Keep backup controls in one predictable place and let users choose where automatic backup files are stored.
+- **Acceptance checks:** Verify opt-in enablement, folder selection, frequency configuration, manual backup, and clear handling when the chosen location is unavailable.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
