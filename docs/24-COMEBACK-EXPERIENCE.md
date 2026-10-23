@@ -224,6 +224,12 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Never automatically add conflicting numeric totals together. A conflict is not evidence that the values are separate valid contributions.
 - Preserve the safety backup and the original conflicting values until the user explicitly resolves the conflict. Exact handling for record types that cannot safely coexist remains to be specified.
 
+## Resolving habit-definition and schedule conflicts
+
+- When the backup and current installation contain conflicting definitions or schedules for the same habit, show the differing settings side by side and let the user choose which definition to keep.
+- Where appropriate, also allow the user to preserve both definitions as separate habits. Do not automatically prefer the latest edit or silently replace the current or backup definition.
+- Resolving a definition conflict must not rewrite historical tracking records or retroactively change the meaning of past records. Exact field-by-field comparison and resolution details remain to be specified.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
