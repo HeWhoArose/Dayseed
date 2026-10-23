@@ -156,6 +156,7 @@
 | D-087 | Mood Insights with limited or no data | B — Adapt presentation to available data: factual count when limited, distribution when useful, and a gentle neutral empty state when none exists. | Approved | 2026-10-23 |
 | D-088 | Opening journal entries from Mood Insights | A — Tapping a primary mood opens saved entries with that primary mood within the selected week or month. | Approved | 2026-10-23 |
 | D-089 | Comparing mood periods | B — Offer an optional neutral comparison with the immediately previous equivalent week or month, based on recorded primary-mood counts/distributions. | Approved | 2026-10-23 |
+| D-090 | Mood comparison control | A — Put a simple “Compare with previous period” control directly in Insights; reveal the comparison only when selected. | Approved | 2026-10-23 |
 ## Evidence and research links
 
 - [Stack Comparison](14-STACK-COMPARISON.md)
