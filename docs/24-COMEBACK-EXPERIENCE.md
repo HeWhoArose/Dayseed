@@ -127,6 +127,12 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Keep both summaries neutral and based only on mood tags recorded in saved journal entries during the relevant period. Do not imply that optional mood tags represent every day or the user's complete emotional experience.
 - Keep the summaries on-device and available offline. This decision does not introduce mood/habit correlations or diagnostic claims.
 
+## Mood Insights summary format
+
+- For both **This week** and **This month**, show a mood distribution: the primary moods actually recorded in saved journal entries and how often each was recorded during the selected period.
+- Use simple counts or a restrained visual chart. Do not reduce the whole period to a single defining mood, infer moods on untagged entries, or imply that the distribution represents the user's complete emotional experience.
+- Keep the summary neutral, on-device, and available offline. This does not add mood/habit correlations or diagnostic claims.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
