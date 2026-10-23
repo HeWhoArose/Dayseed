@@ -158,6 +158,12 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Compare only recorded primary-mood counts or distributions for each period. Do not frame changes as good or bad, diagnose the user, infer causation, or imply that optional mood tags capture the user's complete emotional experience.
 - Keep the comparison opt-in rather than automatically adding it to every view. If one or both periods have insufficient recorded data, explain the limitation neutrally and do not imply a meaningful trend.
 
+## Mood comparison control in Insights
+
+- Place a simple **Compare with previous period** control directly in Mood Insights.
+- Keep the comparison hidden until the user chooses the control; do not add a permanent comparison panel or require a Settings change.
+- The control compares the selected period with its immediately preceding equivalent period (week-to-week or month-to-month), following the neutral and limited-data rules above.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
