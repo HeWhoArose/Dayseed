@@ -230,6 +230,21 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Where appropriate, also allow the user to preserve both definitions as separate habits. Do not automatically prefer the latest edit or silently replace the current or backup definition.
 - Resolving a definition conflict must not rewrite historical tracking records or retroactively change the meaning of past records. Exact field-by-field comparison and resolution details remain to be specified.
 
+## Resolving conflicting preferences during restore
+
+- When backup and current-installation preferences differ, show the differing values and let the user choose which value to keep.
+- Do not silently prefer the backup or current installation. Keep the restore review clear and preserve unrelated preferences.
+
+## Resolving conflicting unfinished comeback drafts
+
+- When the backup and current installation contain different versions of the same unresolved comeback reflection draft, preserve both versions intact and mark them for later review.
+- Do not interrupt the whole restore to demand an immediate choice, and do not silently replace or discard either draft. Keep both represented as unresolved drafts until the user explicitly resolves the conflict.
+
+## Validating backup integrity and compatibility
+
+- Validate the backup's integrity, completeness, and compatibility before applying any restore or merge changes.
+- If the backup is corrupt, incomplete, or from a version whose compatibility cannot be established safely, stop the restore and explain the issue. Do not partially apply changes or modify existing data.
+- Partial recovery is not permitted under this decision. Preserve the existing data and its pre-restore safety backup.
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
