@@ -210,6 +210,13 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Do not add a dashboard notice or require immediate conflict review after restoration. Keep the conflict list discoverable until each conflict is resolved.
 - Preserve both versions until the user completes an explicit resolution. Exact review and resolution interactions remain to be specified.
 
+## Resolving journal-entry merge conflicts
+
+- For a genuine conflict between two versions of a journal entry, show both versions clearly so the user can compare them.
+- Offer three explicit outcomes: **Keep backup version**, **Keep current version**, or **Keep both as separate journal entries**.
+- Do not discard either version until the user chooses an outcome. If keeping both, create distinct entries without falsely presenting them as one entry or silently changing their original content. Preserve relevant dates and mood tags with the correct version where possible.
+- The review must be available from Settings → Backup & Restore. Exact behavior for other record types remains to be specified.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
