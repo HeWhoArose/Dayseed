@@ -245,6 +245,12 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Validate the backup's integrity, completeness, and compatibility before applying any restore or merge changes.
 - If the backup is corrupt, incomplete, or from a version whose compatibility cannot be established safely, stop the restore and explain the issue. Do not partially apply changes or modify existing data.
 - Partial recovery is not permitted under this decision. Preserve the existing data and its pre-restore safety backup.
+## Choosing a backup save destination
+
+- When creating a portable offline backup, use Android's system file picker so the user chooses where the backup file is saved.
+- Support destinations exposed by the picker, such as device storage, an SD card, or another compatible document provider. Do not assume every destination is available on every device.
+- Saving the backup must not move or delete the live Dayseed data.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
