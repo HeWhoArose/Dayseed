@@ -170,6 +170,13 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Keep the comparison hidden until the user activates the control; do not make comparisons automatic or require users to visit Settings to enable them.
 - When activated, compare the current week with the previous week or the current month with the previous month, using recorded primary-mood counts/distributions and neutral wording as specified above.
 
+## Export, local backup/restore, and premium cloud sync
+
+- **Readable journal export (v1):** Users can export saved journal entries in a human-readable file, including entry dates and recorded primary/secondary mood tags where present. Use Android's share/save flow. Exporting does not delete or alter the originals.
+- **Offline backup and restore:** Users can create a portable local backup file and restore it on another phone, so moving devices does not require an account or internet connection. The backup/restore format and exact data coverage must be specified before implementation. Restoring must not silently overwrite existing data; conflict and replacement behavior remains to be decided.
+- **Premium online backup and syncing:** Cloud backup and cross-device sync are planned as premium capabilities. Keep the app's core offline functionality usable without an account, cloud connection, or paid subscription. Online backup and sync must not be implied to exist in v1 until their scope and rollout are confirmed.
+- Keep readable export distinct from full backup: the former is for reading/sharing journal content, while backup/restore is intended to preserve app data for moving devices.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
