@@ -251,6 +251,12 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Support destinations exposed by the picker, such as device storage, an SD card, or another compatible document provider. Do not assume every destination is available on every device.
 - Saving the backup must not move or delete the live Dayseed data.
 
+## Optional password protection for offline backups
+
+- Offer optional password protection when creating a portable offline backup.
+- Explain clearly that password protection encrypts the backup and that forgetting the password may make its contents unrecoverable; do not promise password recovery unless a separately designed secure recovery mechanism exists.
+- Make it clear whether a backup is password-protected, and require the correct password before restoring an encrypted backup. Keep unprotected backup creation available as an explicit user choice.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
