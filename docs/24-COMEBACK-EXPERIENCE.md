@@ -217,6 +217,13 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Do not discard either version until the user chooses an outcome. If keeping both, create distinct entries without falsely presenting them as one entry or silently changing their original content. Preserve relevant dates and mood tags with the correct version where possible.
 - The review must be available from Settings → Backup & Restore. Exact behavior for other record types remains to be specified.
 
+## Resolving habit-tracking merge conflicts
+
+- When backup and current-installation habit-tracking records genuinely conflict, preserve the competing records for user review rather than silently choosing a winner.
+- Offer the user these outcomes: **Keep backup record**, **Keep current record**, or **Keep both as distinct records** where the data model supports this without corrupting history.
+- Never automatically add conflicting numeric totals together. A conflict is not evidence that the values are separate valid contributions.
+- Preserve the safety backup and the original conflicting values until the user explicitly resolves the conflict. Exact handling for record types that cannot safely coexist remains to be specified.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
