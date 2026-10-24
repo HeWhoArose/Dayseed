@@ -446,6 +446,66 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - **Rationale:** Prioritize recoverability and avoid automatic pruning or replacement in v1.
 - **Acceptance checks:** Verify successful runs create distinct files, existing backups are not replaced or pruned, and deletion is user-initiated only.
 
+### Decision 94 — When a scheduled backup is due
+
+- **Approved decision:** A — Calculate the next automatic backup interval from the last successful backup.
+- **Rationale:** Failed attempts should not silently shift the schedule forward and extend the time since the last usable backup.
+- **Acceptance checks:** Verify the next due time is based on the last successful backup; failed attempts do not count as successful completion or reset the interval.
+
+### Decision 95 — Auto Backup after device restart
+
+- **Approved decision:** A — Let Android reschedule eligible background work after restart.
+- **Rationale:** Use the platform's supported background scheduling rather than inventing a parallel scheduler.
+- **Acceptance checks:** Verify eligible work is scheduled using an Android-supported mechanism after reboot, subject to platform restrictions; do not promise an exact execution time.
+
+### Decision 96 — Revoked destination access
+
+- **Approved decision:** A — Report the access problem and ask the user to select the destination again.
+- **Rationale:** Make a broken destination understandable and restore access only through an explicit user choice.
+- **Acceptance checks:** Simulate revoked or expired access; show a clear status, do not write elsewhere, and provide a path to reselect the destination.
+
+### Decision 97 — Backup when data has not changed
+
+- **Approved decision:** A — Skip creating a new file only when unchanged data can be reliably detected.
+- **Rationale:** Avoid unnecessary duplicate backups when equivalence is known without compromising recovery confidence.
+- **Acceptance checks:** Verify reliably unchanged data can be skipped with visible status; if change detection is unavailable or uncertain, do not incorrectly claim the backup was refreshed.
+
+### Decision 98 — Successful Auto Backup status
+
+- **Approved decision:** A — Show a quiet status in Settings → Backup & Restore, including the last-success date.
+- **Rationale:** Give users confidence that automatic protection is working without interrupting them after every run.
+- **Acceptance checks:** Verify the last-success status updates only after a completed and verified backup; failures must not update it as though successful.
+
+### Decision 99 — Low battery during Auto Backup
+
+- **Approved decision:** A — Let Android apply its background-work and battery restrictions.
+- **Rationale:** Respect system-managed battery behavior and avoid introducing an extra battery-threshold setting in v1.
+- **Acceptance checks:** Verify scheduling uses supported Android background behavior and the UI does not promise execution during system deferral.
+
+### Decision 100 — Repeated automatic backup failures
+
+- **Approved decision:** A — Show failure status in Backup & Restore; do not send repeated failure notifications.
+- **Rationale:** Keep failures discoverable without generating recurring notification noise.
+- **Acceptance checks:** Verify failures are visible in the backup screen and repeated failures do not produce repeated notifications.
+
+### Decision 101 — Disabling Auto Backup
+
+- **Approved decision:** A — Stop future scheduled runs and leave all existing backup files untouched.
+- **Rationale:** Disabling a schedule must not unexpectedly remove the user's recovery copies.
+- **Acceptance checks:** Verify disabling prevents future scheduled runs and does not delete or modify existing backups.
+
+### Decision 102 — Manual backup while Auto Backup is enabled
+
+- **Approved decision:** A — Always allow “Back up now”; a successful manual backup does not reset or disable the configured automatic schedule.
+- **Rationale:** Preserve user control for an immediate backup without making the schedule unpredictable.
+- **Acceptance checks:** Verify manual backup remains available with Auto Backup enabled and does not alter the configured interval or disable scheduling.
+
+### Decision 103 — Displaying the next scheduled run
+
+- **Approved decision:** A — Show an estimated next-run time and explain that Android may defer background work.
+- **Rationale:** Make the schedule understandable without falsely promising exact execution under operating-system control.
+- **Acceptance checks:** Verify the estimate reflects the configured interval and last successful backup, is refreshed when relevant settings change, and is labelled as an estimate rather than a guarantee.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
