@@ -506,6 +506,66 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - **Rationale:** Make the schedule understandable without falsely promising exact execution under operating-system control.
 - **Acceptance checks:** Verify the estimate reflects the configured interval and last successful backup, is refreshed when relevant settings change, and is labelled as an estimate rather than a guarantee.
 
+### Decision 104 — Calculating 14 days of app inactivity
+
+- **Approved decision:** A — Use 14 complete elapsed calendar days in the device's local time zone.
+- **Rationale:** Make the threshold understandable in ordinary calendar terms while consistently using the current local date.
+- **Acceptance checks:** Verify the 14-day threshold uses local calendar-day boundaries and does not fire before 14 complete calendar days have elapsed.
+
+### Decision 105 — Time-zone changes during inactivity
+
+- **Approved decision:** A — Recalculate using the current local calendar date and avoid duplicate comeback displays.
+- **Rationale:** Keep the experience aligned with the user's current calendar without showing the same qualifying episode repeatedly because of a time-zone change.
+- **Acceptance checks:** Test time-zone changes across dates; verify the qualifying state is recalculated consistently and an already-shown episode is not shown again solely because the time zone changed.
+
+### Decision 106 — Starting inactivity measurement
+
+- **Approved decision:** A — Record the first successful app opening and begin counting inactivity from then.
+- **Rationale:** Do not treat time before the user has ever opened Dayseed as an absence from the app.
+- **Acceptance checks:** Verify installation alone does not trigger a comeback experience; the first successful opening establishes the initial activity timestamp.
+
+### Decision 107 — Thirty days without active habits
+
+- **Approved decision:** A — Start the period when the last active habit becomes completed, paused, archived, or deleted and no other active habits remain.
+- **Rationale:** Base the experience on the absence of active habits rather than the absence of historical records or recent logging.
+- **Acceptance checks:** Verify the timer starts only when no active habits remain and the last active habit enters one of the approved states.
+
+### Decision 108 — Creating or reactivating a habit during the no-active-habit period
+
+- **Approved decision:** A — Reset the no-active-habit timer; begin a new period if all active habits later end.
+- **Rationale:** A newly active habit means the user has returned to maintaining an active habit, so the previous no-active-habit period no longer applies.
+- **Acceptance checks:** Verify creating or reactivating an active habit resets the timer; if all active habits later end, a fresh 30-day period begins.
+
+### Decision 109 — Language about progress during an absence
+
+- **Approved decision:** A — Do not assume what happened during the absence; invite the user to continue when ready.
+- **Rationale:** Keep the Comeback Flow nonjudgmental and avoid claiming that progress was missed or lost when the app cannot know the user's circumstances.
+- **Acceptance checks:** Review copy for guilt, blame, or unsupported claims about missed progress; provide a clear, welcoming next step.
+
+### Decision 110 — Required comeback reflection
+
+- **Approved decision:** A — Reflection is optional and can be skipped.
+- **Rationale:** Keep returning to Dayseed low-friction and avoid making journaling a prerequisite for resuming.
+- **Acceptance checks:** Verify the user can continue without entering or saving a reflection and that optional draft preservation rules remain in effect.
+
+### Decision 111 — Comeback screen when no habit is available to resume
+
+- **Approved decision:** A — Offer create-new and continue options only; omit resume.
+- **Rationale:** Avoid presenting a nonfunctional resume action when there is no eligible active habit.
+- **Acceptance checks:** Verify the no-eligible-habit state offers create-new and continue, with no resume action or empty resume list.
+
+### Decision 112 — Dismissing a comeback experience
+
+- **Approved decision:** A — Suppress that experience for the current qualifying inactivity episode.
+- **Rationale:** Respect dismissal without permanently disabling future comeback experiences for later episodes.
+- **Acceptance checks:** Verify dismissal prevents repeated display during the same qualifying episode and a later distinct qualifying episode can be evaluated normally.
+
+### Decision 113 — Simultaneous 14-day and 30-day comeback triggers
+
+- **Approved decision:** A — Show only the broader 30-day welcome-back experience when both triggers qualify.
+- **Rationale:** Prevent stacked or duplicate comeback screens and give precedence to the more comprehensive experience.
+- **Acceptance checks:** Verify when both triggers qualify, only the 30-day experience is shown for that episode; no 14-day screen is queued behind it.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
