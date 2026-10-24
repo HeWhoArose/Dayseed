@@ -386,6 +386,66 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - **Rationale:** Keep backup controls in one predictable place and let users choose where automatic backup files are stored.
 - **Acceptance checks:** Verify opt-in enablement, folder selection, frequency configuration, manual backup, and clear handling when the chosen location is unavailable.
 
+### Decision 84 — Auto Backup opt-in timing
+
+- **Approved decision:** B — Ask the user about enabling Auto Backup during setup.
+- **Rationale:** Make the automatic protection choice visible during onboarding rather than silently enabling it or leaving it undiscovered.
+- **Acceptance checks:** Verify setup asks whether to enable Auto Backup, records the choice, and allows the user to decline without losing access to manual backup.
+
+### Decision 85 — First automatic backup timing
+
+- **Approved decision:** A — Run the first automatic backup at the next scheduled interval, not immediately after setup.
+- **Rationale:** Keep the setup action distinct from the configured schedule and avoid an unexpected immediate backup.
+- **Acceptance checks:** Verify setup alone does not trigger an immediate backup and the first run follows the selected interval.
+
+### Decision 86 — Destination unavailable
+
+- **Approved decision:** B — Require the user to choose a destination again when the configured destination is unavailable.
+- **Rationale:** Avoid silently redirecting personal backup data to a location the user did not choose.
+- **Acceptance checks:** Simulate a missing or inaccessible destination; automatic backup must not write elsewhere without the user selecting a new destination.
+
+### Decision 87 — Scheduled backup failure
+
+- **Approved decision:** A — Report the failure and wait until the next scheduled run; do not automatically retry in v1.
+- **Rationale:** Keep v1 scheduling behavior predictable and avoid repeated background attempts after a failed run.
+- **Acceptance checks:** Verify a failed scheduled run is reported, no retry loop starts, and the next configured schedule remains intact.
+
+### Decision 88 — Insufficient storage
+
+- **Approved decision:** B — Warn in advance where possible when storage may be insufficient.
+- **Rationale:** Help users address storage constraints before a scheduled backup fails, without risking existing backup files.
+- **Acceptance checks:** Where platform information permits, show a clear advance warning; never delete existing backups automatically to free space.
+
+### Decision 89 — Password-protected automatic backups
+
+- **Approved decision:** A — In v1, password protection is available for manual backups only; Auto Backup uses the standard backup mode.
+- **Rationale:** Avoid requiring a stored or repeatedly entered password for unattended scheduled runs in v1.
+- **Acceptance checks:** Verify manual backup can use the approved password-protection flow and Auto Backup does not silently claim password protection.
+
+### Decision 90 — Changing the backup destination
+
+- **Approved decision:** A — Changing the configured destination leaves existing files in the old location untouched; no automatic migration or copy is offered in v1.
+- **Rationale:** Avoid unexpected file movement, duplication, or deletion when changing where future backups are stored.
+- **Acceptance checks:** Verify changing the destination affects future runs only and leaves old backup files unchanged.
+
+### Decision 91 — Auto Backup while the app is closed
+
+- **Approved decision:** A — Use Android background scheduling, subject to operating-system restrictions.
+- **Rationale:** Support unattended backups while being honest that Android may defer background work because of battery, permission, or system constraints.
+- **Acceptance checks:** Verify scheduling uses an Android-supported background mechanism and the UI does not promise exact execution times that the OS cannot guarantee.
+
+### Decision 92 — Backup filename collisions
+
+- **Approved decision:** A — Generate a unique filename suffix rather than overwrite an existing backup.
+- **Rationale:** Preserve every existing backup and avoid destructive collision prompts during unattended operation.
+- **Acceptance checks:** Create backups with the same base timestamp/name and verify each remains a separate identifiable file with no overwrite.
+
+### Decision 93 — Automatic backup retention
+
+- **Approved decision:** A — Create a new backup file for every automatic run; users manage deletion themselves.
+- **Rationale:** Prioritize recoverability and avoid automatic pruning or replacement in v1.
+- **Acceptance checks:** Verify successful runs create distinct files, existing backups are not replaced or pruned, and deletion is user-initiated only.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
