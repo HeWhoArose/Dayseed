@@ -109,3 +109,14 @@ Continue in planning. Do not implement these ideas or start the architecture aud
 ## Implementation reality audit (2026-10-18)
 
 The current repository contains a native Kotlin/Jetpack Compose Android app and SQLite persistence code; the older planning-only status is stale. Source presence is not build/test verification. Read [Implementation Reality Audit](22-IMPLEMENTATION-REALITY-AUDIT.md) before changing architecture or adding features. Gradle build, tests, APK install, and device validation remain unverified by this audit. AI Studio is the active AI-assisted development environment; GitHub `main` remains canonical.
+
+
+## Planning reconciliation — 2026-10-26
+
+- Added `docs/25-DECISION-REGISTER-AND-RECONCILIATION.md` to centralise approved decisions, delegated defaults, owner-only decisions, and cross-document conflicts. Commit: `e721ed18ba50fde55169ec7057eb24e0f791a204`.
+- Updated `docs/19-AI-STUDIO-GITHUB-WORKFLOW.md` so it no longer assumes React Native/Expo while D-009 is unresolved. It requires an explicit owner-approved stack and prohibits an assumed rewrite. Commit: `fb4c8cab16811d7a63c058437141c11fb921583d`.
+- Corrected the historical stack comparison's link to `docs/22-IMPLEMENTATION-REALITY-AUDIT.md`. Commit: `1ec1ca523ce8341748783cf8b85dad3181dfc6e1`.
+- Clarified that 9:00 a.m. local time on the configured week-start day is approved for weekly reflection; remaining reminder questions concern delivery edge cases, not the chosen time. Commit: `5c381230c6bff8194a6c6948684868bf3d022edc`.
+- Re-fetched and verified each changed file after writing.
+- No application code was changed; no implementation audit or build/test run was started.
+- Outstanding owner decision: D-009 — continue the observed native Kotlin + Jetpack Compose project, or explicitly approve a stack change. Other major scope conflict: local-only/offline v1 versus the newer approved direction for premium online backup/cross-device sync (D-091). These must be resolved before implementation.
