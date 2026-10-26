@@ -13,8 +13,8 @@
 | Growth Mark becomes arbitrary gamification | Product promise contradicted; users misread score | Tie every visual change to explainable recorded evidence; compare against plain summary | Open |
 | Archive layout makes retrieval difficult | Users cannot revisit older reflections quickly | Test timeline, calendar, and hybrid with known-date tasks | Open |
 | Typography or colour fails in real use | Small-screen readability and accessibility failures | Compare device samples; test all actual light/dark contrast pairs and large text | Open |
-| Proposed stack lacks required platform support | Rework or release delay | Compare stack choices; verify official docs and build spike | Open |
-| Replit agent creates web app rather than native app | Wrong deliverable, wasted quota, unreliable build assumptions | Explicit native-app prompt; verify APK/device install; use workflow in docs/19 | Open |
+| Native Kotlin/Compose implementation readiness is unverified | Build or platform issues may require rework | Keep native stack decision (D-009); inspect compatibility and run the authorised build/test spike only after the planning gate | Evidence required |
+| AI-assisted workflow drifts from native Android scope | Wrong deliverable or overwritten work | Keep AI Studio instructions explicit about native Kotlin/Compose; GitHub `main` is canonical; no implementation before the planning gate | Controlled; monitor |
 | Cross-environment changes overwrite newer work | Lost code or broken history | GitHub is canonical; pull before resuming Replit; reconcile branches rather than blind overwrite | Open |
 | Monetisation damages trust or violates policy | User harm, policy/store risk | Consider no ads; privacy review before SDK choice | Open |
 | Scope expands before core flows are reliable | Delayed release and complexity | Enforce v1 non-goals and phase exit gates | Open |
@@ -24,17 +24,17 @@
 
 ## 2. Open product questions
 
-1. Which schedule types are required in v1: daily, selected weekdays, weekly target, flexible frequency?
-2. What are the exact meanings and UI treatments of completed, skipped, planned rest, and no record?
-3. Can users customise Tiny/Usual/Extra labels and targets?
-4. Can a habit have multiple completions per day?
-5. Can a day have multiple journal entries?
-6. What is the policy for timezone travel, manual clock changes, and backdated records?
-7. What does deleting a habit do to its history, and can the user choose?
-8. Which export formats and restore behaviours are required?
-9. Should encouragement be configurable, and what is its dismissal persistence?
-10. Which reminder patterns and quiet hours are supported?
-11. Is any monetisation appropriate for v1, or should the first release be ad-free?
+1. **Schedule types — mostly resolved:** daily/selected-day schedules and flexible weekly targets are documented in D-024/D-030. Remaining work is to verify the full set of supported schedule combinations and historical edits in the data contract.
+2. **Outcome semantics — partially resolved:** explicit zero differs from no record (D-023); rest/non-scheduled days, paused periods, and missed opportunities are defined in D-027. The distinct meaning and user-facing handling of an explicit “skipped” action still needs final specification.
+3. **Progress labels:** thresholds and labels are documented in D-040; user-customisable labels remain open and should not be assumed for v1.
+4. **Multiple records — resolved:** legitimate multiple numeric entries/duration sessions can occur on one local date and are summed; retries of the same logical action must remain idempotent (D-023, D-031, D-032).
+5. **Journal multiplicity — resolved in the planning baseline:** multiple journal entries per date are allowed; confirm create/edit/delete and draft behavior in the detailed data contract.
+6. **Date/time policy — open:** specify timezone travel, manual clock changes, local-date keys, backdated entries, and reminder/catch-up behaviour in one central date policy.
+7. **Habit deletion — open:** define whether deletion is destructive or offers archive/preserve-history choices; align confirmation copy, export/backup, and derived summaries.
+8. **Backup/export — scope largely approved; technical contract open:** readable journal export and a versioned complete portable backup are required. Replace/Merge, safety backup, integrity checks, password-protection direction, and conflict preservation are recorded in D-091–D-135. Finish exact schema/version compatibility, conflict review/resolution UX, and Android platform-backup policy.
+9. **Encouragement — partially resolved:** outcome-aware and comeback behaviors have specific decisions; remaining optional-tip cadence, opt-out, and per-message dismissal rules must be reconciled against those decisions.
+10. **Reminders — core rules approved; edge cases open:** onboarding opt-in, per-habit default time, weekly reflection, and inactivity caps are recorded. Finalise quiet hours, global/per-habit controls, Android permission denial, timezone changes, and delivery deduplication.
+11. **Monetisation — no v1 model approved:** do not add ads, rewarded extras, purchases, or subscriptions to initial v1 without an explicit owner decision. Future premium cloud scope is gated separately.
 12. Which visual direction best balances distinctiveness, legibility, and calm?
 13. Which events qualify for Growth Mark, and should the first release use a simple count rather than an illustration?
 14. Should comeback prompts appear once per absence episode, as a non-blocking card, or not at all by default?
@@ -44,7 +44,7 @@
 
 ## 3. Technical and operational questions
 
-- Which stack best meets Android quality, offline persistence, notifications, accessibility, and future iOS needs?
+- - **Stack direction resolved (D-009):** continue native Kotlin + Jetpack Compose. Build, test, APK-install, and device readiness remain unverified and must wait for explicit validation authorisation.
 - What database and migration library are supported by the selected stack at implementation time?
 - How will Android platform backup and device-to-device transfer interact with the privacy promise, separately from the user-controlled local backup file?
 - Before any later premium online backup/cross-device sync release, what provider, consent UX, security/threat model, data-flow, deletion/retention, conflict-resolution, recovery, and monetisation design is approved? This is explicitly outside initial v1.
