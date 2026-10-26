@@ -19,7 +19,7 @@
 
 ## 1A. Proposed persistence model — owner review required
 
-The detailed candidate schema lives in `03-TECHNICAL-ARCHITECTURE.md` and is **proposed, not approved for implementation**. It separates stable habit identity from effective-dated habit configuration, numeric/duration entries from daily non-numeric outcomes, date-level notes from per-entry notes, saved journal entries from drafts, and reminder delivery deduplication from UI state.
+The detailed candidate schema lives in `03-TECHNICAL-ARCHITECTURE.md` and remains **proposed, not approved for implementation**. Owner decision A is approved: use effective-dated habit configuration snapshots so historical targets, schedules, tracking modes, and other configuration retain their meaning for past dates; changes apply prospectively, and past versions remain unchanged. This is a partial schema decision only. The model separates stable habit identity from effective-dated habit configuration, numeric/duration entries from daily non-numeric outcomes, date-level notes from per-entry notes, saved journal entries from drafts, and reminder delivery deduplication from UI state. Remaining schema choices still require owner review.
 
 Until the owner approves the model:
 - Do not assume a final table layout, foreign-key cascade, idempotency-index implementation, or migration plan.
