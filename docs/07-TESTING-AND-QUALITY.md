@@ -41,6 +41,12 @@ Protect personal data, prevent loss of history, keep core flows usable offline, 
 - Archive a habit and confirm its history remains accessible; perform any separately authorised permanent deletion flow and confirm independent journal entries remain intact.
 - Backdate and correct a specific entry; confirm only the selected record and dependent calculations change.
 
+- Confirm no screen or data action allows users to manually mark a scheduled day as missed.
+- For a scheduled day that has not passed, verify absent activity remains unrecorded; after the day passes with no qualifying activity, verify the missed status is derived from the applicable schedule and source records.
+- Add a journal memo to a missed day and verify its status and habit totals do not change; memo text is never treated as activity evidence.
+- Add genuine quantity/duration activity with explicit past-date selection and verify the historical day's result and dependent summaries recalculate using the configuration effective on that date, while unrelated dates remain unchanged.
+- Verify completion-only and effort-aware habits use valid backdated outcomes for their mode; journal entries alone never create these outcomes.
+
 ### Proposed data-model acceptance coverage — pending owner approval
 
 - Validate each schema constraint and foreign key, including a habit with many entries on one date and many journal entries on one date.
