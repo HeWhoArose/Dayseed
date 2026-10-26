@@ -75,6 +75,8 @@ These are not micro-decisions and must not be silently delegated:
 | R-005 | The weekly reminder spec approved 9:00 a.m. local week-start delivery, while its remaining section ambiguously said the timing remained to be specified. | Corrected | The spec now states that 9:00 a.m. local time is approved; timezone/clock-change, deduplication, combination, and test edge cases remain open. |
 | R-006 | Repository files and past notes mention source and schema, but there is no current build/test/device evidence in this document. | Unverified | Do not claim the app builds, installs, or passes tests until authorised verification produces evidence. |
 | R-007 | Android platform backup, Dayseed portable local backup, and provider-backed file syncing could be mistaken for one another. | Partially reconciled | Keep Android platform backup distinct from Dayseed's portable local backup and Dayseed-managed online sync. The system file picker may offer cloud-backed providers; tell users the selected provider may upload/sync a file. Verify each data path separately. |
+| R-008 | The architecture proposal incorrectly imposed one record per habit/date and left multiple journal entries per date open, conflicting with approved decisions. | Corrected in documentation | Updated `03-TECHNICAL-ARCHITECTURE.md` to model multiple stable-ID numeric/duration entries per date, explicit zero/no-record distinctions, and multiple independent journal entries. Exact schema, idempotency implementation, date policy, and migration strategy remain open. |
+| R-009 | The testing strategy had out-of-order regression numbering and did not explicitly enumerate several approved multi-entry and backup edge cases. | Corrected in documentation | Reordered and expanded the regression list in `07-TESTING-AND-QUALITY.md`; this is a plan only, not evidence that tests have run or passed. |
 
 ## Documentation authority and update order
 
@@ -94,7 +96,8 @@ When a decision changes, update the decision log and every affected document in 
 - [x] Resolve R-004 cloud/premium scope conflict: initial v1 is offline/account-free for core use with readable journal export and local backup/restore; premium online backup/sync remain future scope behind a separate approval gate.
 - [ ] Reconcile product specification, privacy, monetisation, and roadmap with approved decisions.
 - [ ] Finish UX/navigation, design tokens, archive, Growth Mark, and research evidence.
-- [ ] Define the data/date model, migration safety, local backup/restore, and Android platform-backup policy.
+- [x] Align the architecture's data-model proposal with approved multiple-entry and journal semantics; reconcile the regression-test list with those decisions.
+- [ ] Finish the exact schema, idempotency/transaction design, central date/time policy, migration safety, and Android platform-backup inclusion/exclusion policy.
 - [ ] Complete notification and journaling edge-case acceptance tests.
 - [x] Correct the known broken stack-comparison link and normalise decision-log rows with traceability; remove the duplicate D-090 without renumbering later IDs.
 - [ ] Reconcile the handover and roadmap against the actual latest repository state.
