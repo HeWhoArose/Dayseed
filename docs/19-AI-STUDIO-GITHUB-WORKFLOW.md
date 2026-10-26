@@ -92,7 +92,7 @@ For every issue: reproduce → identify root cause → implement the smallest sa
 - Planning gate decision: **Not approved**
 - Owner approval date:
 - Approved scope/version:
-- Stack decision D-009:
+- Stack decision D-009: **Approved — continue the existing native Kotlin + Jetpack Compose Android project** (2026-10-26). This is not planning-gate approval or authorisation to implement features.
 - UX/design decision D-008:
 - Accepted blockers/deferred questions:
 - Reviewer notes:
