@@ -21,7 +21,7 @@ The decision log (`09-DECISION-LOG.md`) remains the detailed record of owner cho
 | Area | Current status | Operational interpretation |
 |---|---|---|
 | Product promise | Approved direction | “Your progress is more than your streak.” Preserve progress and make returning ordinary; avoid shame and perfection pressure. |
-| Android-first, offline-first | Approved direction for offline core; Android-first target | Core habit tracking, journaling, history, insights, and comeback flows must work without network. The exact app architecture is still a separate gate. |
+| Android-first, offline-first | Approved direction for offline core; Android-first target | Core habit tracking, journaling, history, insights, and comeback flows must work without network. The approved stack direction is native Kotlin + Jetpack Compose; build/test/device readiness remains unverified. |
 | Personal data and privacy | Approved direction, details open | Local-first by default. Do not claim “never leaves the device” until platform backup, export, SDKs, and data flows are verified. |
 | Habit tracking | Approved | Keep numeric, completion-only, and effort-aware modes semantically distinct. Numeric entries are whole numbers; explicit zero differs from no record; multiple legitimate entries can be summed without retry double-counting. |
 | Daily vs weekly targets | Approved | Daily goals apply to selected days; flexible weekly goals accumulate across the configured week and do not judge inactive days as daily misses. Week-start is user-selectable. |
@@ -56,7 +56,7 @@ These are conservative defaults for routine details. They do not authorise new p
 
 These are not micro-decisions and must not be silently delegated:
 
-1. **Architecture/stack (D-009, D-015):** current `main` contains Kotlin + Jetpack Compose with `SQLiteOpenHelper`, repository, ViewModel/StateFlow, and Compose screens. This is observed code, not a verified build. Decide whether to continue the native Kotlin baseline or approve a rewrite. Do not follow the old Expo spike instructions until this is resolved.
+1. **Build readiness (D-015):** D-009 is resolved: the owner approved continuing the existing native Kotlin + Jetpack Compose project. The observed code is not a verified build. Keep the active plan native; build, tests, APK installation, and device behaviour remain unverified and must wait for explicit planning-gate/technical-validation authorisation.
 2. **Privacy and network scope (D-004, D-011, D-091):** local-first v1/cloud sync deferred language conflicts with the newer approved direction that online backup and cross-device sync may be premium. Resolve the exact v1 boundary and consent/data-flow requirements before implementation.
 3. **Monetisation (D-010, D-014, D-091):** ads/rewarded extras/supporter pack are not approved; subscription is not proposed for v1. Premium online backup/sync direction needs a consistent product and monetisation decision.
 4. **Visual identity and navigation (D-008, D-016–D-021):** final visual direction, Growth Mark definition, archive navigation, typography/colour and competitor findings remain to be validated. Do not treat concepts as approved UI.
@@ -68,7 +68,7 @@ These are not micro-decisions and must not be silently delegated:
 
 | ID | Finding | Status | Required action |
 |---|---|---|---|
-| R-001 | `03-TECHNICAL-ARCHITECTURE.md` records native Kotlin/Compose as the observed baseline; the workflow previously prescribed React Native + Expo despite D-009 remaining unresolved. | Corrected in docs; stack decision still open | `19-AI-STUDIO-GITHUB-WORKFLOW.md` now requires the owner-approved stack and forbids an assumed Expo rewrite. Owner still needs to confirm whether to continue native Kotlin or approve a stack change. |
+| R-001 | Active workflow and architecture instructions previously conflicted with the native project by preserving an assumed Expo path. | Corrected; D-009 approved | D-009 now explicitly approves continuing native Kotlin + Jetpack Compose. Architecture/workflow docs now align; build and test status remain unverified. |
 | R-002 | `14-STACK-COMPARISON.md` previously linked to the wrong implementation-reality-audit filename. | Corrected | Link now points to `22-IMPLEMENTATION-REALITY-AUDIT.md`; historical stack research remains available. |
 | R-003 | `09-DECISION-LOG.md` has inconsistent table shapes around D-083 onward and a duplicate D-090 identifier. | Documentation defect | Preserve decision meaning; later tidy the formatting and duplicate ID with explicit traceability rather than silently renumbering references. |
 | R-004 | Earlier product/privacy documents describe cloud sync as excluded from v1, while D-091 approves a direction toward premium online backup and cross-device sync. | Conflict / owner decision | Clarify whether this is a future direction only or an approved v1 scope change; update charter, spec, privacy, monetisation, roadmap and tests together after owner confirmation. |
@@ -90,7 +90,7 @@ When a decision changes, update the decision log and every affected document in 
 
 ## Planning gate checklist
 
-- [ ] Resolve R-001 stack decision and remove contradictory workflow instructions.
+- [x] Resolve R-001 / D-009 stack decision: continue native Kotlin + Jetpack Compose; remove contradictory Expo instructions from active workflow and architecture guidance.
 - [ ] Resolve R-004 cloud/premium scope conflict.
 - [ ] Reconcile product specification, privacy, monetisation, and roadmap with approved decisions.
 - [ ] Finish UX/navigation, design tokens, archive, Growth Mark, and research evidence.
