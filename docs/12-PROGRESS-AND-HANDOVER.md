@@ -212,6 +212,12 @@ The current repository contains a native Kotlin/Jetpack Compose Android app and 
 - Re-fetched each changed document after writing and verified the decision/policy text and the corrected persistence-test wording.
 - Planning only. No app features were implemented; no build, automated tests, APK installation, device validation, or implementation audit was started. Schema/index/transaction/idempotency design, migration safety, and clock/timezone/reminder edge-case evidence remain unverified and must wait for explicit technical-validation authorisation.
 
+## Proposed schema decision — separate activity and daily outcome storage
+
+- Owner approved the partial schema choice to store quantity/duration sessions in `habit_entries` and completion-only/effort-aware selections in `habit_day_outcomes` (D-189). Numeric sessions remain individually correctable and multiple distinct entries per habit/date are allowed; explicit zero is a recorded numeric entry. The domain must validate each write against the effective-dated tracking mode and reject contradictory numeric/non-numeric states.
+- Updated the proposed model and affected architecture, screen/data contract, planned acceptance coverage, risk/open-question status, and decision register. The complete schema remains proposed; note cardinality, UUID/idempotency details, and exact schedule columns still require owner review.
+- Each file was fetched from `main` before its update and re-fetched immediately after. Planning only: no implementation, build, tests, APK/device validation, or implementation audit.
+
 ## Proposed v1 data model — 2026-10-26
 
 - Added a concrete candidate relational schema to `docs/03-TECHNICAL-ARCHITECTURE.md`, explicitly marked proposed and awaiting owner review. Candidate entities cover stable habit identity, effective-dated habit configuration, numeric/duration entries, daily non-numeric outcomes, date-level habit notes, saved journal entries, separate drafts, typed app settings, and reminder-delivery deduplication.
