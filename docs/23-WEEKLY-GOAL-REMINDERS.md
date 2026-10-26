@@ -27,6 +27,6 @@
 
 ## Still to specify
 
-- Exact week-start scheduling edge cases, including local-time-zone changes. The approved delivery time is 9:00 a.m. local time on the user's configured first day of the week; missed messages should be delivered at the next suitable opportunity, with only the most recently completed week's reflection delivered after a multi-week gap.
+- Week-start scheduling edge cases remain to be tested, especially local-time-zone changes and clock changes. The approved delivery time is 9:00 a.m. local time on the user's configured first day of the week. Missed messages should be delivered at the next suitable opportunity, with only the most recently completed week's reflection delivered after a multi-week gap. The time itself is not an open decision.
 - Exact notification-combination rules, tap destination when combined content covers multiple screens, and Android scheduling constraints.
 - Copy variants, duplicate prevention, clock/timezone changes, and edge-case acceptance tests.
