@@ -56,10 +56,10 @@ When the user returns after inactivity, offer a brief, dismissible, nonjudgmenta
 Reminders are optional and require clear consent. Users can change or disable them. Denying permission must not block core features. Exact scheduling, quiet hours, and rescheduling rules remain open.
 
 ### O1 — Offline operation
-Creating/editing habits, recording outcomes, journaling, viewing history, and displaying Comeback Flow must work without network access. Future network-dependent features must fail gracefully and never block local records.
+Creating/editing habits, recording outcomes, journaling, viewing history, displaying Comeback Flow, readable journal export, and local backup/restore must be designed around offline-first operation. Core use requires no account or network. Online backup and cross-device sync are premium future capabilities and are not included in the initial v1 release; any later release requires a separate privacy/security, consent, data-flow, deletion/retention, conflict-resolution, and monetisation gate. Network absence must never block local records.
 
 ### P1 — Privacy controls
-Explain local storage, export, deletion, and platform backup behaviour. Do not send journal text or personal habit records to analytics or ad providers. No cloud sync in v1 unless explicitly re-approved.
+Explain local storage, readable journal export, local backup/restore, deletion, and Android platform-backup behaviour. Do not send journal text or personal habit records to analytics or ad providers. Initial v1 has no accounts, online backup, or cross-device sync. Treat premium online backup/sync as future scope requiring separate explicit approval and privacy/security review.
 
 ### H4 — Entries, notes, undo, and weekly calendar
 Duration sessions and quantity entries are individually recorded and can be reviewed/corrected. Multiple sessions for the same habit and local calendar date sum into that date's total; different habits always remain separate (for example, reading pages, jogging distance, and cups of water are separate goals with their own units and totals). Store a canonical numeric unit internally and display the user's chosen unit consistently.
@@ -108,4 +108,4 @@ Ask once during first-run setup whether reminders are wanted. Yes enables remind
 8. Delete personal data and verify it is absent from app views and the database according to the documented deletion policy.
 
 ## Open requirements
-Resolve before Gate A: detailed schedule/history model; date and timezone policy; journal-entry cardinality; edit/delete retention and export; reminder behaviour and personalised reminder learning policy; exact progress-level thresholds and labels; undo/duplicate semantics; default week start; and whether XP/rank has sufficient value to justify inclusion. Online leaderboards remain deferred pending separate approval.
+Resolve before Gate A: detailed schedule/history model; date and timezone policy; journal-entry cardinality; edit/delete retention and export; local backup/restore and Android platform-backup policy; reminder behaviour and personalised reminder learning policy; exact progress-level thresholds and labels; undo/duplicate semantics; default week start; and whether XP/rank has sufficient value to justify inclusion. Premium online backup/sync remains outside initial v1 and requires a separate approval gate before any future implementation. Online leaderboards remain deferred pending separate approval.
