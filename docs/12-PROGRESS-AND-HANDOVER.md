@@ -19,7 +19,7 @@ Canonical branch: `main`. GitHub is the source of truth for planning and future 
 - DESIGN.md is now specified as the sole authoritative token/component reference; candidate values remain unapproved.
 - Competitor screenshot evidence for Loop Habit Tracker and Daylio is recorded in [docs/18-COMPETITOR-SCREENSHOT-AUDIT.md](18-COMPETITOR-SCREENSHOT-AUDIT.md). Public listing screenshots were inspected; current live app flows have not been tested.
 - AI Studio/GitHub workflow and native-app feasibility-spike acceptance criteria are in [docs/19-AI-STUDIO-GITHUB-WORKFLOW.md](19-AI-STUDIO-GITHUB-WORKFLOW.md).
-- Data/privacy baseline and portable-backup decisions are substantially documented. Still open: Android platform-backup inclusion/exclusion policy, central date/time policy, final deletion/export wording, and implementation-level validation.
+- Data/privacy baseline and portable-backup decisions are substantially documented. Android platform Auto Backup/device-transfer policy is resolved by D-186 (exclude sensitive Dayseed data by default); technical verification of the actual rules and supported transfer paths remains open. Other remaining items include final deletion/export wording and implementation-level validation.
 - Monetisation remains a hypothesis; no provider/SDK selected.
 - Existing app source is present on `main`, but the current workflow remains in planning and feature work is not authorised. Do not claim a clean build or verified implementation without evidence.
 - Automated tests/build: none run in this planning continuation. Native Android app source exists on `main`; its build, tests, APK installation, and device behavior remain unverified.
@@ -61,7 +61,7 @@ Updated references: README.md, DESIGN.md, docs/02-UX-AND-DESIGN.md, docs/08-IMPL
 ## Next actions
 
 1. Audit all documentation for contradictions, dead links, duplicates, stale claims, and missing acceptance criteria.
-2. Reconcile the remaining high-impact edge cases: explicit skipped-state semantics, local date/time policy, habit deletion/history, Android platform backup, and exact export/delete/privacy wording. Treat approved schedule, journal multiplicity, backup scope, and reminder rules as baselines, not fresh open questions.
+2. Reconcile the remaining high-impact edge cases: explicit skipped-state semantics, local date/time policy, habit deletion/history, technical verification of the approved D-186 Android platform-backup exclusion, and exact export/delete/privacy wording. Treat approved schedule, journal multiplicity, backup scope, platform-backup policy, and reminder rules as baselines, not fresh open questions.
 3. Create comparable low-fidelity screen samples or wireframes for Today, Growth Mark, comeback return, journal archive, and settings/privacy; do not create app code as a substitute.
 4. Inspect current live competitor flows on an Android device where possible; until then, keep conclusions limited to publisher screenshots/listing copy.
 5. Run typography/contrast and enlarged-text checks on prototype screens; update DESIGN.md only when a token is approved.
@@ -195,3 +195,12 @@ The current repository contains a native Kotlin/Jetpack Compose Android app and 
 - No app code changed. No build, automated tests, APK installation, device validation, or implementation audit was run.
 
 - Updated Phase 3 in `docs/08-IMPLEMENTATION-ROADMAP.md` to include the cross-screen contract and require the Android Auto Backup/device-transfer owner decision to be explicitly resolved or consciously deferred with a safe documented rule. Re-fetched and verified. Commit: `5afee35c5803e0ae1a071e04e7fd6a681fe69b7d`.
+
+
+## Android platform-backup policy resolved — 2026-10-26
+
+- Owner decision D-186 is recorded in `docs/09-DECISION-LOG.md`: exclude sensitive Dayseed app data from Android platform Auto Backup/device transfer by default in initial v1. Users should use the clearly explained Dayseed portable backup/restore flow for phone migration. This is distinct from the app's opt-in file-based Auto Backup to a user-selected destination.
+- Updated and re-fetched `docs/04-DATA-AND-PRIVACY.md`, `docs/03-TECHNICAL-ARCHITECTURE.md`, `docs/26-SCREEN-AND-DATA-CONTRACTS.md`, `docs/01-PRODUCT-SPECIFICATION.md`, `docs/25-DECISION-REGISTER-AND-RECONCILIATION.md`, `docs/08-IMPLEMENTATION-ROADMAP.md`, and `docs/24-COMEBACK-EXPERIENCE.md` to remove the unresolved owner-choice wording and carry D-186 through privacy, UX, architecture, and planning gates.
+- Updated `docs/07-TESTING-AND-QUALITY.md` with a specific acceptance scenario to verify manifest/data-extraction rules and representative supported OS/device-transfer paths separately from Dayseed portable backup. Re-fetched again after an initially stale read; current file contains the updated scenario. These are planned tests, not executed tests.
+- Verified changed file contents after writes. Commits: decision log `54867ec87069e7acbb33688a5df28e2af546ab2b`; privacy `5a116f73cf362d1136dbb35e4364da966238fcb2`; architecture `24fce3481bc0cf82f40f18ac31c2c4830a9133a5`; screen/data contract `2fc5aed98ae3f60d45ec057b8524da9e36e79c3f`; product spec `e68a34bea0d2cdb53722cf2e4378f4a9cb830b83`; register `64c0ac0479fb10bae8b4347af6d0fcd708a44b5b`; roadmap `941c035ad6023be86901379bebab2836a55b5d79`; comeback document `501e5551962bfb8472c065525ec158eba133db28`; testing plan `80d5bd8d2d0752d48423bbbbc87be0ae7b1f41e0`.
+- No app code changed. No build, automated tests, APK installation, physical-device validation, or implementation audit was run. Technical verification of the actual Android backup configuration remains pending and must wait for the authorised validation gate.
