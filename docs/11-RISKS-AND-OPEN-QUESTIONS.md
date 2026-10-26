@@ -19,7 +19,7 @@
 | Monetisation damages trust or violates policy | User harm, policy/store risk | Consider no ads; privacy review before SDK choice | Open |
 | Scope expands before core flows are reliable | Delayed release and complexity | Enforce v1 non-goals and phase exit gates | Open |
 | Accessibility is treated as polish | Some users cannot complete core tasks | Include accessibility in design and release gates | Open |
-| Local-only data is unexpectedly backed up | Privacy promise becomes misleading | Inspect and test Android backup and transfer behaviour | Open |
+| Local data is unexpectedly included in Android backup/device transfer | Privacy promise becomes misleading | Inspect and test Android backup and transfer behaviour separately from the user-controlled local backup feature | Open |
 | Metrics encourage perfectionism | Product contradicts its promise | Explain metrics; never make streak the only success signal | Open |
 
 ## 2. Open product questions
@@ -46,7 +46,8 @@
 
 - Which stack best meets Android quality, offline persistence, notifications, accessibility, and future iOS needs?
 - What database and migration library are supported by the selected stack at implementation time?
-- How will Android backup and device-to-device transfer interact with the privacy promise?
+- How will Android platform backup and device-to-device transfer interact with the privacy promise, separately from the user-controlled local backup file?
+- Before any later premium online backup/cross-device sync release, what provider, consent UX, security/threat model, data-flow, deletion/retention, conflict-resolution, recovery, and monetisation design is approved? This is explicitly outside initial v1.
 - Is database encryption needed for the threat model, and what are the usability/recovery costs?
 - How will exports be versioned and validated?
 - What happens when storage is nearly full or writes fail?
