@@ -185,3 +185,11 @@ The current repository contains a native Kotlin/Jetpack Compose Android app and 
 - Added R-011 and R-012 to the reconciliation register for the date/time contract and cross-screen contract; re-fetched and verified. Commit: `5c7f02be65b4f03f72283de22b1e271d2f99d528`.
 - No app code changed. No build, automated tests, APK installation, physical-device validation, or implementation audit was run.
 - Next: complete cross-document review of reminder/privacy/backup details, verify requirement-to-test traceability and remaining stale wording, then produce the planning completeness review. The implementation gate remains closed.
+
+
+## Cross-document backup consistency pass — 2026-10-26
+
+- Found and corrected a stale paragraph in `docs/24-COMEBACK-EXPERIENCE.md` that still described portable-backup coverage and restore conflicts as undecided despite approved D-091–D-145 decisions. It now points to the approved backup/restore contract and explicitly keeps Android platform-backup inclusion as a separate owner decision. Re-fetched and verified. Commit: `a2e1b2d215e3fbdc6878e28244883e19a6e9fec0`.
+- Added R-013 to `docs/25-DECISION-REGISTER-AND-RECONCILIATION.md` and re-fetched/verified. Commit: `a4502873fb65f429da5bafab5aa2b357c0b2fc56`.
+- A follow-up edit to the persistence-test wording in `docs/07-TESTING-AND-QUALITY.md` was not applied because the repository update was rejected; that one line still needs correction to specify identity/idempotency constraints without a blanket unique habit/date constraint. No claim is made that it changed.
+- No app code changed. No build, automated tests, APK installation, device validation, or implementation audit was run.
