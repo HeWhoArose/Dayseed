@@ -686,6 +686,58 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - **Rationale:** Duplicate submissions must not inflate progress or distort insights.
 - **Acceptance checks:** Repeated submission of the same logical entry is idempotent or rejected safely; distinct legitimate numeric entries remain separate and are counted according to the approved aggregation rules.
 
+## Decisions 134–143 — Numeric records and tracking-mode semantics
+
+### Decision 134 — Explicit zero versus no record
+- **Approved decision:** A — Treat an explicit numeric value of zero as a recorded value, distinct from having no record.
+- **Rationale:** Zero can be a meaningful measurement and must not be confused with missing data.
+- **Acceptance checks:** A saved zero is displayed and stored as a real record; a date with no entry remains unrecorded; insights distinguish both states.
+
+### Decision 135 — Multiple numeric entries on one habit date
+- **Approved decision:** A — Sum distinct valid numeric entries for the same habit and local calendar date.
+- **Rationale:** Separate sessions or entries should contribute to one daily total without losing their individual identity.
+- **Acceptance checks:** Each distinct entry remains individually addressable; the daily total equals the sum of valid entries for that local date; entries on other dates are excluded.
+
+### Decision 136 — Editing a numeric entry
+- **Approved decision:** A — Update the specific selected entry and recalculate the daily total and dependent insights.
+- **Rationale:** Corrections should replace the mistaken value rather than inflate progress by adding the corrected amount.
+- **Acceptance checks:** Only the selected entry changes; its identity is preserved; daily totals and dependent insights reflect the corrected value.
+
+### Decision 137 — Removing an accidental numeric entry
+- **Approved decision:** A — Provide explicit deletion of the selected entry and recalculate totals.
+- **Rationale:** Users need a direct way to remove accidental input without falsifying it as a zero.
+- **Acceptance checks:** Deleting one entry removes only that entry; remaining entries are preserved; daily totals and dependent insights recalculate; a zero-valued record is not used as a substitute for deletion.
+
+### Decision 138 — Retried numeric submission
+- **Approved decision:** A — Detect retries of the same logical submission and prevent double-counting.
+- **Rationale:** Repeated taps or uncertain saves must not inflate a total, while legitimate separate entries must remain possible.
+- **Acceptance checks:** Retrying the same logical submission is idempotent or safely rejected; a distinct intentional entry is retained separately; totals count each logical entry once.
+
+### Decision 139 — Completion-only tracking semantics
+- **Approved decision:** A — Store completion state explicitly and keep it distinct from numeric amounts and missing records.
+- **Rationale:** Completion-only habits have different meaning from numeric measurement, including a numeric value of one or an absent record.
+- **Acceptance checks:** Completion-only records use an explicit completion state; they are not silently represented as numeric quantity 1; missing records remain distinguishable.
+
+### Decision 140 — Effort-aware tracking semantics
+- **Approved decision:** A — Store the selected effort level explicitly, distinct from numeric quantity and completion-only state.
+- **Rationale:** An effort rating communicates a qualitative level and should not be converted into an invented quantity.
+- **Acceptance checks:** The selected effort value is preserved as its own tracking mode/value; it is not summed as a numeric amount; insights interpret it according to effort-aware rules.
+
+### Decision 141 — Scheduled day with no tracking record
+- **Approved decision:** A — Keep “no recorded completion” distinct from explicit zero and an explicitly recorded miss.
+- **Rationale:** The app must not invent user activity or turn missing data into a measurement.
+- **Acceptance checks:** A scheduled day with no record remains unrecorded; explicit zero remains a numeric record; an explicit miss, where supported, remains a separate state; no completion is inferred from previous days.
+
+### Decision 142 — Numeric amount above target
+- **Approved decision:** A — Accept valid amounts above target and show progress above 100% without capping the stored value.
+- **Rationale:** Actual effort or quantity should remain truthful even when it exceeds the planned target.
+- **Acceptance checks:** Values above target are saved unchanged; progress may exceed 100%; target display or insight calculations do not overwrite the recorded amount.
+
+### Decision 143 — Negative value for a non-negative counter
+- **Approved decision:** A — Reject a negative amount with a clear validation message and preserve existing entries.
+- **Rationale:** Non-negative counters must not accept values that violate their defined domain, and invalid input must not corrupt valid data.
+- **Acceptance checks:** Negative input is rejected before saving; the user receives a clear explanation; existing entries and totals remain unchanged.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
