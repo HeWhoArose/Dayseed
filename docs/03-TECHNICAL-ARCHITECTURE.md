@@ -39,7 +39,22 @@ Domain logic should be testable without rendering UI or requiring network access
 Exact schema, indexes, transaction boundaries, cascade behaviour, stable-ID/idempotency strategy, and migration strategy require a reviewed data design. The current SQLiteOpenHelper schema is version 1 with a placeholder upgrade handler; no migration is verified.
 
 ## Date and time policy
-Separate timestamps (instants) from local calendar dates. Habit completion usually belongs to the user's chosen local day, not a UTC date. Approved comeback decisions define local-calendar eligibility for specific triggers, but a complete shared policy for travel, timezone changes, device date changes, backdated records, and historical edits remains open. Centralise date logic and test boundaries.
+Separate timestamps (instants) from local calendar dates. Habit completion belongs to the local calendar date explicitly selected/confirmed for the record, never to a UTC date merely because the timestamp converts to that date. Use one injectable clock/date-policy service for all date-sensitive rules.
+
+### Provisional date/time contract (planning baseline)
+
+- **Canonical day key:** store a local calendar date (YYYY-MM-DD) separately from event timestamps. A record's day key is the date the user intentionally chose when recording; store creation/update instants separately for ordering and recovery.
+- **Default date for a new entry:** the current device-local date when the user starts/commits the action. If the user explicitly selects a past/future date in a supported flow, use that selected date and make it visible before save. Do not silently move records when the device time zone changes.
+- **Travel/time-zone changes:** use the current device-local calendar for new default dates, Today, week labels, and future local reminder scheduling. Preserve existing date keys and event instants; do not reinterpret historical records just because the current zone changed.
+- **Week boundaries:** derive week start/end from the user's saved week-start preference; use the device/locale convention as the initial default where available. Apply the same helper to weekly targets, reminders, insights, and calendar UI.
+- **Backdating:** allow explicit historical corrections and retrospective journal entries where the product flow supports them. Require explicit save; update only the selected record/entry and dependent summaries. A journal date change must never move habit records.
+- **Clock changes / uncertain time:** do not fabricate elapsed time or shift stored records. If timestamps appear inconsistent, preserve user data, avoid duplicate comeback/reminder events, and use conservative eligibility until time confidence is re-established. Do not claim a precise absence duration without sufficient evidence.
+- **Daylight-saving changes:** use platform time-zone rules for local date boundaries; store instants independently and test skipped/repeated local clock times where the relevant time zone observes DST. Do not use fixed 24-hour arithmetic for calendar-day logic.
+- **Scheduled reminders:** compute eligibility from local calendar/week policy and persist a stable delivery key for each logical reminder occurrence. Respect explicit reminder opt-in, OS permission, quiet hours and approved caps. On zone changes/restarts, recalculate future delivery without duplicating an already-delivered occurrence. Android may defer delivery.
+- **Comeback timing:** preserve the specific approved rules in D-146–D-160 (including full local-calendar-day thresholds and no duplicate display after zone changes). This shared policy does not override their trigger-specific rules.
+- **Historical schedule/target interpretation:** preserve the settings effective for each historical date. Schedule/target edits apply prospectively using the approved effective-date choice; they do not silently rewrite past records or create missed records retroactively.
+
+This is the recommended default contract for implementation-ready planning; reconcile any trigger-specific decision against it before implementation. Exact storage columns/indexes, migration and test fixtures remain to be finalised.
 
 ## Offline-first rules
 - No network request is required for core actions.
