@@ -34,8 +34,8 @@ Each phase must produce evidence and pass its exit gate before the next phase be
 ## Phase 3 — Planning handoff gate
 
 **Prerequisites:** Phases 0–2 reviewed; design and architecture decisions either approved or explicitly deferred with safe defaults.  
-**Deliverables:** consistent documentation set, implementation prompt, repository workflow, scoped feasibility-spike acceptance criteria, release test plan, approval record.  
-**Acceptance:** no unresolved high-impact contradiction about data semantics, privacy, date handling, native-app target, or scope. Remaining open questions have owners and are safe to defer.  
+**Deliverables:** consistent documentation set including `docs/26-SCREEN-AND-DATA-CONTRACTS.md`, shared date/time policy, implementation prompt, repository workflow, scoped feasibility-spike acceptance criteria, release test plan, and approval record. The Android Auto Backup/device-transfer inclusion decision must be explicitly resolved by the owner or clearly deferred with a safe, documented release-blocking rule.  
+**Acceptance:** no unresolved high-impact contradiction about data semantics, privacy, date handling, native-app target, backup recovery, or scope. Remaining open questions have named owners and are safe to defer; any owner-level privacy/recovery choice is explicitly recorded rather than silently defaulted.  
 **Tests/review:** cross-document link check, contradiction/duplicate/outdated-plan audit, requirement-to-test traceability review, and owner walkthrough.  
 **Risks:** implementation agent silently fills gaps or creates a website instead of the mobile app.  
 **Exit gate:** explicit owner approval recorded in docs/09-DECISION-LOG.md and docs/19-AI-STUDIO-GITHUB-WORKFLOW.md.
