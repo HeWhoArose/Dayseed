@@ -40,8 +40,11 @@ Protect personal data, prevent loss of history, keep core flows usable offline, 
 - Reject outcomes that do not match the effective tracking mode and reject contradictory numeric-entry/day-outcome combinations; a rejected write leaves prior records and totals unchanged.
 - Resolve the effective-dated habit configuration for the selected local date before validating activity or deriving daily status; historical configuration changes must not reinterpret past entries.
 - A scheduled day without qualifying activity is derived as missed only after the day has passed; no manual miss outcome is stored, and a journal memo alone never changes habit status.
+- After the same-day edit rule is approved, verify repeated Apply-today configuration changes preserve one unambiguous effective configuration per date and do not alter dates before the effective date.
+- After the deletion rule is defined, verify permanent habit deletion handles pending habit reminders and habit-linked delivery-ledger rows consistently, without deleting independent journal entries or global reminders.
+- Verify that an explicit skipped state is persisted only if separately approved; otherwise no skip outcome is accepted and missed status remains derived.
 
-These are planned acceptance cases for the proposed schema, not test results. The schema remains proposed pending the remaining owner decisions and separate authorisation for technical validation. D-190 approves stable UUID identity and nullable unique idempotency keys; this approval does not mean these cases have been executed.
+These are planned acceptance cases for the proposed schema, not test results. The complete schema still awaits owner approval, and technical validation requires separate explicit authorisation. D-190 approves stable UUID identity and nullable unique idempotency keys; this approval does not mean these cases have been executed. Before finalising acceptance coverage, define the stable weekday-mask encoding, repeated Apply-today edits when a version for the current date already exists, habit-linked reminder-delivery cleanup on permanent deletion, and whether an explicit skipped action is in v1.
 
 ## Date/history acceptance coverage (D-187)
 
@@ -64,7 +67,7 @@ These are planned acceptance cases for the proposed schema, not test results. Th
 - Verify same-key retries create/count once, while a new idempotency key preserves a distinct intentional entry even when its value and timestamp are similar.
 - Verify entity IDs remain stable after edits and across backup/restore; retrying the same logical submission reuses its idempotency key and cannot create a duplicate, while a distinct intentional submission uses a new key and remains a separate entry.
 - (D-191) Verify `DAILY` schedules every local day; `SELECTED_WEEKDAYS` requires and obeys its weekday mask; and `FLEXIBLE_WEEKLY_TARGET` has no required weekdays, with preferred weekdays treated only as guidance.
-- Verify `target_period` is `DAY` for daily schedules and `WEEK` for flexible weekly targets; reject invalid schedule-kind/period/mask combinations.
+- Verify `target_period` is `DAY` for both `DAILY` and `SELECTED_WEEKDAYS` schedules and `WEEK` for `FLEXIBLE_WEEKLY_TARGET`; reject invalid schedule-kind/period/mask combinations.
 - Verify weekly boundaries use the saved week-start preference consistently across targets, summaries, calendar and reminders; locale is used only to choose the initial default.
 - Verify numeric/duration weekly totals sum compatible units, while completion-only/effort-aware weekly goals count qualifying completed dates without fabricating numeric values. Schedule edits take effect on the selected effective date and do not rewrite past configuration or records.
 - Verify a non-null idempotency key cannot be assigned to two logical submissions, while records with no retry key remain valid where allowed.
