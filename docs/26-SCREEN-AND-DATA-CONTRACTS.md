@@ -57,7 +57,7 @@
 - Historical views show the settings/target that applied at the time; current-target comparisons must be labelled separately.
 - Corrections are explicit and local to the selected entity. Do not recalculate unrelated records as a side effect.
 - Rest/non-scheduled days are neutral; paused periods are excluded from scheduled opportunities; no record is not an explicit miss or zero.
-- Date/time behaviour follows the shared provisional contract in `03-TECHNICAL-ARCHITECTURE.md`.
+- Date/time behaviour follows the approved D-187 baseline in `03-TECHNICAL-ARCHITECTURE.md`: stable local-date keys separate from event instants, explicit backdating, conservative clock-change handling, saved week-start consistency, and no implicit historical rewrite.
 
 ### Insights
 
