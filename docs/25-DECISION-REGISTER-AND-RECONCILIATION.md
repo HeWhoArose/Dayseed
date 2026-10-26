@@ -38,7 +38,7 @@ The decision log (`09-DECISION-LOG.md`) remains the detailed record of owner cho
 
 | Area | Status | Current proposal / next action |
 |---|---|---|
-| Exact v1 SQLite schema | Proposed; partial owner decision recorded; not approved for implementation | Candidate tables and invariants are documented in `03-TECHNICAL-ARCHITECTURE.md`. Owner approved effective-dated habit configuration snapshots (option A), preserving historical target, schedule, tracking-mode, and other configuration meaning while applying changes prospectively. Remaining owner review: separate numeric entries/day outcomes, note cardinality, UUID/idempotency approach, and exact schedule fields. D-188 resolves explicit-miss replacement: missed is derived, not user-entered. |
+| Exact v1 SQLite schema | Proposed; partial owner decisions recorded; not approved for implementation | Candidate tables and invariants are documented in `03-TECHNICAL-ARCHITECTURE.md`. Owner approved effective-dated habit configuration snapshots and separate numeric/duration entries from single-per-day completion-only/effort-aware outcomes (D-189). Domain validation must enforce effective tracking mode and prevent contradictory states. Remaining owner review: note cardinality, UUID/idempotency approach, and exact schedule fields. D-188 resolves explicit-miss replacement: missed is derived, not user-entered. |
 | Transaction/index/cascade design | Proposed; technically unverified | Review constraints and transaction boundaries against the existing version-1 schema after the planning decision; no migration or implementation is authorised. |
 | Data-model acceptance tests | Planned, not executed | `07-TESTING-AND-QUALITY.md` records required cases; these are not test results. |
 
