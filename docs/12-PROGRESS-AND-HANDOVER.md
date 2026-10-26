@@ -157,3 +157,13 @@ The current repository contains a native Kotlin/Jetpack Compose Android app and 
 - Updated the decision register to mark R-003 corrected and the formatting checklist complete; re-fetched and verified it. Commit: `c4cd44111703e8a548aeb43c96a96703b0c1dc0b`.
 - This is a documentation-format correction only: decision IDs were not renumbered, and no product decision was changed. No app code changed; no build, tests, APK installation, device validation, or implementation audit was run.
 - Next planning task: reconcile the implementation roadmap and screen/data contracts with the latest approved decisions, then perform the planning completeness review. Owner approval is still required before technical validation or implementation.
+
+
+## Architecture and quality-plan reconciliation — 2026-10-26
+
+- Updated `docs/03-TECHNICAL-ARCHITECTURE.md` to remove the incorrect one-record-per-habit/date uniqueness rule and the claim that journal-entry multiplicity is undecided. It now reflects approved multiple numeric/duration entries and multiple independent journal entries, while explicitly leaving exact schema, idempotency, date policy, and migration details open. Commit: `a7d9cd86fa461af1809754e8bcd9473380532898`.
+- Updated `docs/08-IMPLEMENTATION-ROADMAP.md` so monetisation is not part of initial v1 unless a separate explicit owner decision approves it. Commit: `1c4f0b3762ca4fc2d3e31c406390a9ee8ce985b8`.
+- Reordered and expanded the regression checklist in `docs/07-TESTING-AND-QUALITY.md` to cover multi-entry records, independent journal entries, zero/no-record semantics, backup/restore safety, privacy boundaries, and migrations. Commit: `9867c42ad061b8e620832ba2a60514bbd5cd71ab`.
+- Added R-008/R-009 to the decision register and split the data-model checklist into completed alignment versus remaining schema/date/migration/platform-backup work. Commit: `5205d47ec20c6518a9258c89bc081c5f811c70b8`.
+- Re-fetched and verified every changed document after writing. These are planning-document changes only. No app code, build, tests, APK installation, device validation, or implementation audit was performed.
+- Next: reconcile remaining duplicate requirement identifiers and stale product-specification wording, then review screen/data contracts and complete the planning completeness pass. The planning gate remains closed pending explicit owner approval.
