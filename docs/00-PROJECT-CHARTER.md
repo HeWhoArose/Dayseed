@@ -30,11 +30,11 @@ Android users who want to build or maintain personal habits, especially people w
 - History and local weekly summaries.
 - Comeback Flow after app or habit inactivity.
 - Optional local reminders, subject to explicit permission and scheduling decisions.
-- Local data export and deletion, with backup behaviour documented before release.
+- Human-readable journal export, complete user-controlled local backup/restore for phone migration, and data deletion. Online backup and cross-device sync are premium future capabilities, not part of the initial v1 release.
 - Optional monetisation experiments that never block core functionality.
 
 ## Explicit v1 non-goals
-Unless the decision log is deliberately revised: cloud accounts and sync; AI-generated analysis; public profiles, feeds, social competition, or leaderboards; virtual pets and elaborate gamification; a large paid content library; and claims to diagnose or treat mental-health conditions.
+Unless the decision log is deliberately revised: cloud accounts, online backup, and cross-device sync in the initial v1 release; AI-generated analysis; public profiles, feeds, social competition, or leaderboards; virtual pets and elaborate gamification; a large paid content library; and claims to diagnose or treat mental-health conditions. Online backup/sync may be considered later as premium capabilities after a separate privacy, security, consent, data-flow, and monetisation approval gate.
 
 ## Success criteria to validate
 Do not set arbitrary numerical targets without a baseline. Research should establish whether users understand effort levels; whether returning after a lapse feels supportive; whether logging is quick; whether local storage and deletion are understood; whether offline use is reliable; and whether monetisation harms trust.
