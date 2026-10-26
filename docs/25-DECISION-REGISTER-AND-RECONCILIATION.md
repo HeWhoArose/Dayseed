@@ -26,6 +26,7 @@ The decision log (`09-DECISION-LOG.md`) remains the detailed record of owner cho
 | Habit tracking | Approved | Keep numeric, completion-only, and effort-aware modes semantically distinct. Numeric entries are whole numbers; explicit zero differs from no record; multiple legitimate entries can be summed without retry double-counting. |
 | Daily vs weekly targets | Approved | Daily goals apply to selected days; flexible weekly goals accumulate across the configured week and do not judge inactive days as daily misses. Week-start is user-selectable. |
 | Historical data and date policy (D-187) | Approved baseline; technical verification pending | Preserve local-date keys across timezone changes; handle manual clock uncertainty conservatively; require explicit backdating; use the saved week-start consistently; apply schedule/target changes prospectively; archive habits by default while preserving accessible history; keep permanent deletion separate and explicit. |
+| Missed-day status and late activity (D-188) | Approved policy; technical verification pending | Do not offer manual mark-as-missed. Derive missed status after a scheduled day passes without qualifying activity; genuine explicitly backdated activity recalculates that date; journal memos alone never change habit status. Rest/non-scheduled and paused days remain neutral/excluded. |
 | Journaling | Approved | Journal writing is independent of habit completion; text-only in v1; multiple entries per date allowed; titles and mood tags are optional. Save/edit/delete and draft behaviour follow the latest decision log. |
 | Progress language | Approved | Actual amount is preserved; partial, goal-met, above-target, and Tiny-to-Huge labels are factual progress states, not moral judgements. |
 | Comeback experiences | Approved direction with detailed rules | Two-week and one-month triggers have defined precedence and suppression rules. Do not infer why the user was away. See `24-COMEBACK-EXPERIENCE.md`. |
@@ -37,7 +38,7 @@ The decision log (`09-DECISION-LOG.md`) remains the detailed record of owner cho
 
 | Area | Status | Current proposal / next action |
 |---|---|---|
-| Exact v1 SQLite schema | Proposed, not approved | Candidate tables and invariants are documented in `03-TECHNICAL-ARCHITECTURE.md`; owner must approve effective-dated habit configuration, separate numeric entries/day outcomes, note cardinality, UUID/idempotency approach, and explicit-miss replacement behaviour before implementation. |
+| Exact v1 SQLite schema | Proposed, not approved | Candidate tables and invariants are documented in `03-TECHNICAL-ARCHITECTURE.md`; owner must approve effective-dated habit configuration, separate numeric entries/day outcomes, note cardinality, UUID/idempotency approach, and exact schedule fields before implementation. D-188 resolves explicit-miss replacement: missed is derived, not user-entered. |
 | Transaction/index/cascade design | Proposed; technically unverified | Review constraints and transaction boundaries against the existing version-1 schema after the planning decision; no migration or implementation is authorised. |
 | Data-model acceptance tests | Planned, not executed | `07-TESTING-AND-QUALITY.md` records required cases; these are not test results. |
 
