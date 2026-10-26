@@ -61,12 +61,12 @@ Creating/editing habits, recording outcomes, journaling, viewing history, displa
 ### P1 — Privacy controls
 Explain local storage, readable journal export, local backup/restore, deletion, and Android platform-backup behaviour. Do not send journal text or personal habit records to analytics or ad providers. Initial v1 has no accounts, online backup, or cross-device sync. Treat premium online backup/sync as future scope requiring separate explicit approval and privacy/security review.
 
-### H4 — Entries, notes, undo, and weekly calendar
+### H4b — Entries, notes, undo, and weekly calendar
 Duration sessions and quantity entries are individually recorded and can be reviewed/corrected. Multiple sessions for the same habit and local calendar date sum into that date's total; different habits always remain separate (for example, reading pages, jogging distance, and cups of water are separate goals with their own units and totals). Store a canonical numeric unit internally and display the user's chosen unit consistently.
 
 Support an optional **habit/date note** as the default context note, plus optional **entry-specific notes** for individual sessions. These are distinct from the general daily journal, and neither notes nor journal entries imply habit completion. Users can edit/delete notes according to the documented data-retention policy.
 
-Users can undo a recent accidental action and later correct or delete an individual entry. The UI must communicate what is being changed and update derived totals and insights. Duplicate quick taps should not create unintended duplicate completions, but legitimate repeated sessions/entries must remain possible. Exact undo window and duplicate semantics remain to be specified.
+Users can undo a recent accidental action and later correct or delete an individual entry. The UI must communicate what is being changed and update derived totals and insights. Duplicate quick taps should not create unintended duplicate completions, but legitimate repeated sessions/entries must remain possible. The exact undo window and user-facing recovery interaction remain to be specified; idempotency for retries of the same logical submission and support for legitimate repeated entries are approved requirements.
 
 Users can choose their preferred first day of the week (for example Saturday, Sunday, or Monday). Weekly target progress, weekly summaries, and calendar displays must use this setting consistently. The initial default should follow the device/locale convention where available, with a user override.
 
