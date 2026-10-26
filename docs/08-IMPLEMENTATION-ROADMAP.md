@@ -25,7 +25,7 @@ Each phase must produce evidence and pass its exit gate before the next phase be
 ## Phase 2 — Technical and privacy feasibility
 
 **Prerequisites:** Phase 0 scope; Phase 1 may run in parallel where appropriate.  
-**Deliverables:** audit the existing Kotlin/Jetpack Compose project, verify Gradle toolchain/build/test/device evidence, reconcile data schema with owner-approved product rules, and document privacy/date/backup/deletion/notification gaps. The old Expo comparison is historical only.  
+**Deliverables:** audit the existing Kotlin/Jetpack Compose project only after the planning gate authorises technical validation; verify Gradle toolchain/build/test/device evidence, reconcile data schema with owner-approved product rules, and document privacy/date/local-backup/Android-platform-backup/deletion/notification gaps. Initial v1 excludes accounts, online backup, and cross-device sync; premium online backup/sync is future scope requiring a separate approval gate. The old Expo comparison is historical only.  
 **Acceptance:** core platform choices supported by official-documentation evidence and a bounded technical spike.  
 **Tests/review:** Android release-build experiment, persistence/migration experiment, offline and export/delete checks.  
 **Risks:** platform limitations, backup surprises, date errors.  
@@ -70,7 +70,7 @@ Each phase must produce evidence and pass its exit gate before the next phase be
 ## Phase 7 — Micro-journal and privacy controls
 
 **Prerequisites:** Phase 5; data design approved.  
-**Deliverables:** reflection flow, edit/delete entry, export and delete controls, archive pattern selected through research.  
+**Deliverables:** reflection flow, edit/delete entry, readable journal export, local backup/restore and delete controls, archive pattern selected through research. Android platform backup must be evaluated separately; online backup/cross-device sync remain outside initial v1.  
 **Acceptance:** journal works offline and independently of habit outcomes; sensitive text never enters logs.  
 **Tests:** save/reopen, long text, deletion, export scope, backup behaviour, known-date archive retrieval.  
 **Risks:** accidental disclosure or data loss.  
