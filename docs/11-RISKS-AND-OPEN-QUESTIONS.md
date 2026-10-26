@@ -6,7 +6,7 @@
 
 | Risk | Impact | Mitigation | Owner/status |
 |---|---|---|---|
-| Ambiguous missed/rest semantics | Users misunderstand progress; inconsistent summaries | Define outcomes and schedules before implementation; test scenarios | Open |
+| Missed/rest semantics implemented inconsistently | Users misunderstand progress; inconsistent summaries | D-188 defines missed as derived from schedule plus absence of qualifying activity after a scheduled day passes; no manual miss control; journal memos do not alter status; genuine backdated activity can recalculate the date. Add acceptance coverage and verify after the planning gate. | Policy approved; technical verification pending |
 | Incorrect date/time handling | Records appear on wrong day; comeback messages wrong | Apply approved D-187 local-date/history contract; verify central date service and boundary cases after the planning gate | Policy approved; technical verification pending |
 | Accidental loss or disclosure of journal data | High trust and privacy impact | Data-flow review, backup tests, deletion/export tests, no sensitive logs | Open |
 | Comeback copy feels shaming or intrusive | Users avoid returning | Test copy with users; dismissal control; no assumed reasons | Open |
@@ -24,7 +24,7 @@
 
 ## Data-model design status
 
-**Exact v1 relational schema: proposed, awaiting owner approval.** A concrete candidate has been added to `03-TECHNICAL-ARCHITECTURE.md`. The key choices needing confirmation are effective-dated habit configuration snapshots; separate numeric/duration entries and single-per-day non-numeric outcomes; distinct date-level and entry-level notes; stable UUIDs and nullable unique idempotency keys; and the state transition when an explicit miss is replaced by later numeric activity. The proposed schedule columns must also be reconciled with approved schedule decisions. Do not implement the candidate or migrate the existing version-1 database until owner approval and a separate technical-validation authorisation.
+**Exact v1 relational schema: proposed, awaiting owner approval.** A concrete candidate has been added to `03-TECHNICAL-ARCHITECTURE.md`. The key choices still needing confirmation are effective-dated habit configuration snapshots; separate numeric/duration entries and single-per-day non-numeric outcomes; distinct date-level and entry-level notes; stable UUIDs and nullable unique idempotency keys; and exact schedule columns reconciled with approved schedule decisions. D-188 resolves the prior explicit-miss transition question: do not store a user-entered miss; derive missed status after a scheduled day passes without qualifying activity, allow genuine backdated activity to recalculate that date, and never let journal memos change habit status. Do not implement the candidate or migrate the existing version-1 database until owner approval and a separate technical-validation authorisation.
 
 ## 2. Open product questions
 
