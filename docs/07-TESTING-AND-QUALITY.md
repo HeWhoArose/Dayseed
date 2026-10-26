@@ -19,7 +19,7 @@ Protect personal data, prevent loss of history, keep core flows usable offline, 
 2. A journal entry can be saved independently of habit completion.
 3. Multiple journal entries on one date remain distinct; editing preserves identity, and changing an entry date does not modify habit records.
 4. Multiple numeric entries/duration sessions for one habit and local date sum correctly; distinct entries remain individually editable.
-5. Explicit zero, completion-only state, effort-aware state, explicit miss, and no record remain distinguishable.
+5. Explicit zero, completion-only state, effort-aware state, derived missed status, and no record remain distinguishable; no user-entered miss outcome or manual mark-as-missed action exists.
 6. A past record edit updates all dependent summaries without changing unrelated records.
 7. Archive preserves history; deletion follows the approved deletion policy and does not accidentally erase independent journal entries.
 8. Repeated taps or retries of the same logical action do not create duplicate records, while legitimate repeated sessions remain possible.
@@ -52,7 +52,7 @@ Protect personal data, prevent loss of history, keep core flows usable offline, 
 - Validate each schema constraint and foreign key, including a habit with many entries on one date and many journal entries on one date.
 - Confirm effective-dated configuration chooses the right target/schedule for dates before, on, and after a change; editing a future version must not rewrite past records.
 - Verify same-key retries create/count once, while a new idempotency key preserves a distinct intentional entry even when its value and timestamp are similar.
-- Verify numeric zero, no row, explicit miss, completion-only completion, and effort-aware selection remain distinct; reject contradictory or mode-incompatible states.
+- Verify numeric zero, no row, derived missed status, completion-only completion, and effort-aware selection remain distinct; reject contradictory or mode-incompatible states. A missed status is derived after a scheduled day passes without qualifying activity, genuine backdated activity can recalculate that date, and journal memos alone never change status.
 - Verify archive preserves accessible history; permanent habit deletion removes only the explicitly covered habit-owned data and never independent journal entries/drafts.
 - Verify all multi-row operations roll back completely on injected failure; success is never shown before commit.
 - Verify migration/backup compatibility and restore failure recovery only after the owner approves the data model and the technical-validation gate is explicitly authorised. These are planned tests, not executed results.
