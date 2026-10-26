@@ -31,4 +31,4 @@ A one-time purchase should be optional, clearly priced, and restorable where the
 Before approval, compare user trust, implementation cost, expected maintenance, store policy requirements, privacy impact, and accessibility. Do not invent revenue projections or conversion rates without evidence. A no-ads release is a valid outcome.
 
 ## 7. Decision gate
-No monetisation SDK, ad placement, or purchase implementation begins until the product owner approves the model and the privacy review is complete.
+Online backup and cross-device sync are intended as premium future capabilities, but they are not in the initial v1 release and do not imply an approved subscription, price, purchase provider, or monetisation model. No monetisation SDK, ad placement, cloud service, or purchase implementation begins until the product owner approves the model and the relevant privacy/security review is complete.
