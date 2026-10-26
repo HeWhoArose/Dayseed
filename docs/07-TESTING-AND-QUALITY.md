@@ -29,7 +29,7 @@ Protect personal data, prevent loss of history, keep core flows usable offline, 
 12. Notification denial, disabled notifications, quiet hours, and OS restrictions do not break core tasks or bypass reminder opt-in.
 13. Readable journal export and local backup/restore work without an account or Dayseed cloud service; validate backup integrity, password retry behavior, Replace/Merge safety, conflict preservation, and recovery from interruption.
 14. Initial v1 core flows do not require network access and do not transmit journal/habit data to a Dayseed cloud service; inspect actual SDK and data paths before making privacy claims.
-15. Android platform backup/device transfer is tested and documented separately from Dayseed's user-controlled portable backup file.
+15. Verify D-186's Android platform-backup/device-transfer exclusion separately from Dayseed's user-controlled portable backup file: inspect manifest/data-extraction rules and representative supported OS/transfer paths; confirm sensitive app records/drafts are excluded and portable backup still contains its approved complete coverage.
 16. Large fonts, TalkBack, contrast, reduced motion, small-screen layout, and keyboard entry remain usable.
 17. Schema migration preserves records and can recover safely from failure; test the current version-1 placeholder upgrade path only after technical validation is authorised.
 
