@@ -7,7 +7,7 @@
 | Risk | Impact | Mitigation | Owner/status |
 |---|---|---|---|
 | Ambiguous missed/rest semantics | Users misunderstand progress; inconsistent summaries | Define outcomes and schedules before implementation; test scenarios | Open |
-| Incorrect date/time handling | Records appear on wrong day; comeback messages wrong | Central date service, local-date policy, boundary tests | Open |
+| Incorrect date/time handling | Records appear on wrong day; comeback messages wrong | Apply approved D-187 local-date/history contract; verify central date service and boundary cases after the planning gate | Policy approved; technical verification pending |
 | Accidental loss or disclosure of journal data | High trust and privacy impact | Data-flow review, backup tests, deletion/export tests, no sensitive logs | Open |
 | Comeback copy feels shaming or intrusive | Users avoid returning | Test copy with users; dismissal control; no assumed reasons | Open |
 | Growth Mark becomes arbitrary gamification | Product promise contradicted; users misread score | Tie every visual change to explainable recorded evidence; compare against plain summary | Open |
@@ -29,8 +29,8 @@
 3. **Progress labels:** thresholds and labels are documented in D-040; user-customisable labels remain open and should not be assumed for v1.
 4. **Multiple records — resolved:** legitimate multiple numeric entries/duration sessions can occur on one local date and are summed; retries of the same logical action must remain idempotent (D-023, D-031, D-032).
 5. **Journal multiplicity — resolved in the planning baseline:** multiple journal entries per date are allowed; confirm create/edit/delete and draft behavior in the detailed data contract.
-6. **Date/time policy — open:** specify timezone travel, manual clock changes, local-date keys, backdated entries, and reminder/catch-up behaviour in one central date policy.
-7. **Habit deletion — open:** define whether deletion is destructive or offers archive/preserve-history choices; align confirmation copy, export/backup, and derived summaries.
+6. **Date/time policy — baseline approved (D-187):** local date keys are separate from event instants; preserve historical dates across timezone travel; handle clock uncertainty conservatively; allow explicit backdating; and use the saved week-start consistently. Remaining work is technical edge-case verification for clock/timezone changes, reminder/catch-up deduplication, and date boundaries—not another owner policy choice.
+7. **Habit lifecycle — baseline approved (D-187):** archive by default to preserve accessible history; permanent deletion is a separate, clearly explained action. Remaining work is to finalise deletion confirmation/retention wording and verify export/backup and derived-summary behaviour; independent journal entries must remain intact.
 8. **Backup/export — scope largely approved; technical contract open:** readable journal export and a versioned complete portable backup are required. Replace/Merge, safety backup, integrity checks, password-protection direction, and conflict preservation are recorded in D-091–D-135. Finish exact schema/version compatibility, conflict review/resolution UX, and Android platform-backup policy.
 9. **Encouragement — partially resolved:** outcome-aware and comeback behaviors have specific decisions; remaining optional-tip cadence, opt-out, and per-message dismissal rules must be reconciled against those decisions.
 10. **Reminders — core rules approved; edge cases open:** onboarding opt-in, per-habit default time, weekly reflection, and inactivity caps are recorded. Finalise quiet hours, global/per-habit controls, Android permission denial, timezone changes, and delivery deduplication.
