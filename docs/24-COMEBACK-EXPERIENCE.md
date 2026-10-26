@@ -626,6 +626,66 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - **Rationale:** Keep unsaved writing private and unobtrusive until the user chooses to save it.
 - **Acceptance checks:** Leaving or closing the screen does not discard the draft; it remains absent from Journal and the dashboard until explicitly saved through the normal journal flow.
 
+### Decision 124 — Saving journal entries
+
+- **Approved decision:** A — A journal entry becomes permanent only after the user explicitly saves it.
+- **Rationale:** Keep unsaved writing distinct from saved journal history and avoid unexpected entries.
+- **Acceptance checks:** Leaving the editor or closing the app does not create a saved journal entry; explicit save is required, and unfinished drafts follow the existing local draft-preservation rules.
+
+### Decision 125 — Editing an existing journal entry
+
+- **Approved decision:** A — Update the existing entry after explicit save; preserve its identity and creation timestamp.
+- **Rationale:** Edits should not silently create duplicates or make an old entry appear newly created.
+- **Acceptance checks:** Saving edits updates the same entry; its stable identity and original creation timestamp remain unchanged.
+
+### Decision 126 — Deleting a journal entry
+
+- **Approved decision:** A — Require confirmation before permanent deletion.
+- **Rationale:** Protect personal writing from accidental destructive actions.
+- **Acceptance checks:** Cancel leaves the entry unchanged; permanent deletion occurs only after explicit confirmation and is communicated clearly.
+
+### Decision 127 — Changing a journal entry's date
+
+- **Approved decision:** A — Change the entry date only after explicit save; do not silently rewrite habit records.
+- **Rationale:** Journal dates and habit-tracking records are distinct data with independent histories.
+- **Acceptance checks:** Unsaved date edits do not persist; saved changes affect the journal entry date only and do not move or modify habit records.
+
+### Decision 128 — Multiple journal entries on one date
+
+- **Approved decision:** A — Allow multiple entries for the same date; each remains distinct.
+- **Rationale:** Let users capture separate reflections without merging or overwriting their writing.
+- **Acceptance checks:** Multiple entries can coexist on one date, retain distinct identities and text, and appear individually in journal history.
+
+### Decision 129 — Blank journal entries
+
+- **Approved decision:** A — Do not save an entry containing only whitespace.
+- **Rationale:** Avoid empty entries cluttering journal history.
+- **Acceptance checks:** Empty or whitespace-only content cannot be saved as a journal entry; existing drafts remain intact when save is rejected.
+
+### Decision 130 — Journal entries associated with an archived or deleted habit
+
+- **Approved decision:** A — Keep the journal entry and its text intact.
+- **Rationale:** Habit lifecycle changes must not erase independent personal writing.
+- **Acceptance checks:** Archiving or deleting a habit leaves related journal entries and their content intact and accessible according to normal journal rules.
+
+### Decision 131 — Correcting historical habit tracking
+
+- **Approved decision:** A — Let the user explicitly correct a specific record, then recalculate affected insights from the corrected data.
+- **Rationale:** Support accurate history while avoiding automatic changes to neighboring dates.
+- **Acceptance checks:** Corrections target the selected record, are persisted explicitly, and update dependent insights without silently changing unrelated records.
+
+### Decision 132 — Editing a habit target or schedule after history exists
+
+- **Approved decision:** A — Apply changes prospectively; preserve past records and their historical interpretation.
+- **Rationale:** Current settings should not rewrite what a past day meant under its historical target or schedule.
+- **Acceptance checks:** Changes have a defined effective date; prior records and historical completion status remain based on the settings applicable to those dates.
+
+### Decision 133 — Accidental duplicate habit-tracking records
+
+- **Approved decision:** A — Prevent duplicates for the same logical entry; never silently add duplicate numeric totals.
+- **Rationale:** Duplicate submissions must not inflate progress or distort insights.
+- **Acceptance checks:** Repeated submission of the same logical entry is idempotent or rejected safely; distinct legitimate numeric entries remain separate and are counted according to the approved aggregation rules.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
