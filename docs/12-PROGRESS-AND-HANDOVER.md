@@ -87,7 +87,7 @@ The repository tree confirms a native Kotlin/Compose Android project and applica
 
 ## Research follow-up — 2026-10-17
 
-The head-to-head comparison is in [docs/14-STACK-COMPARISON.md](14-STACK-COMPARISON.md). The five new research and workflow documents are linked above. D-008 (visual direction), D-009 (stack), D-016 (Growth Mark), D-017 (comeback), D-018 (journal archive), D-019 (typography/colour), D-021 (competitor evidence), and D-022 (AI Studio/GitHub workflow) remain open or proposed. No design or implementation approval has been recorded.
+The head-to-head comparison is in [docs/14-STACK-COMPARISON.md](14-STACK-COMPARISON.md). The five new research and workflow documents are linked above. D-009 (native Kotlin + Jetpack Compose) is now approved. D-008 (visual direction), D-016 (Growth Mark), D-017 (comeback), D-018 (journal archive), D-019 (typography/colour), D-021 (competitor evidence), and D-022 (AI Studio/GitHub workflow) remain open or proposed. No design or implementation approval has been recorded.
 
 
 ## Additional planning decisions confirmed — 2026-10-19
@@ -114,12 +114,12 @@ The current repository contains a native Kotlin/Jetpack Compose Android app and 
 ## Planning reconciliation — 2026-10-26
 
 - Added `docs/25-DECISION-REGISTER-AND-RECONCILIATION.md` to centralise approved decisions, delegated defaults, owner-only decisions, and cross-document conflicts. Commit: `e721ed18ba50fde55169ec7057eb24e0f791a204`.
-- Updated `docs/19-AI-STUDIO-GITHUB-WORKFLOW.md` so it no longer assumes React Native/Expo while D-009 is unresolved. It requires an explicit owner-approved stack and prohibits an assumed rewrite. Commit: `fb4c8cab16811d7a63c058437141c11fb921583d`.
+- Updated `docs/19-AI-STUDIO-GITHUB-WORKFLOW.md` to align with the owner-approved native Kotlin + Jetpack Compose stack. Commit: `fdeb80fbbc96b220dc8ab0cbd79c649789b8c590`.
 - Corrected the historical stack comparison's link to `docs/22-IMPLEMENTATION-REALITY-AUDIT.md`. Commit: `1ec1ca523ce8341748783cf8b85dad3181dfc6e1`.
 - Clarified that 9:00 a.m. local time on the configured week-start day is approved for weekly reflection; remaining reminder questions concern delivery edge cases, not the chosen time. Commit: `5c381230c6bff8194a6c6948684868bf3d022edc`.
 - Re-fetched and verified each changed file after writing.
 - No application code was changed; no implementation audit or build/test run was started.
-- Outstanding owner decision: D-009 — continue the observed native Kotlin + Jetpack Compose project, or explicitly approve a stack change. Other major scope conflict: local-only/offline v1 versus the newer approved direction for premium online backup/cross-device sync (D-091). These must be resolved before implementation.
+- D-009 is resolved: continue the existing native Kotlin + Jetpack Compose project. Remaining major scope conflict: earlier local-only/offline v1 language versus D-091's approved direction for premium online backup/cross-device sync. Resolve that scope and privacy conflict before implementation.
 
 
 ## D-009 stack decision — 2026-10-26
