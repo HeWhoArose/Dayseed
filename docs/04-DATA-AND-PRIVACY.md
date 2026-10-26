@@ -34,7 +34,8 @@ Accounts, online backup, cross-device sync, AI analysis, and server-side process
 ## 9. Privacy acceptance checklist
 - [ ] Data inventory and data-flow diagram approved.
 - [ ] Permissions justified and explained in context.
-- [ ] Local file backup/restore tested separately from Android platform backup inclusion/exclusion on target Android versions.
+- [ ] Product owner explicitly chooses whether Android Auto Backup/device transfer includes sensitive Dayseed data, with documented restore expectations and recovery trade-offs.
+- [ ] Local file backup/restore tested separately from Android platform backup inclusion/exclusion on target Android versions. Do not silently select a platform-backup policy: inclusion improves device migration convenience but may create OS/provider copies; exclusion reduces unintended copies but can leave users without recovery if they only rely on Android transfer.
 - [ ] Confirm no initial-v1 Dayseed-managed account, cloud-backup, or sync service is present; privacy wording matches the actual SDK and platform configuration.
 - [ ] Explain that a user-selected Android file provider may upload/sync an exported or backed-up file, without implying Dayseed itself provides online sync.
 - [ ] Export includes only the selected scope and warns about sensitive content.
