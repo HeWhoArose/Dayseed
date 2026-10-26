@@ -566,6 +566,66 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - **Rationale:** Prevent stacked or duplicate comeback screens and give precedence to the more comprehensive experience.
 - **Acceptance checks:** Verify when both triggers qualify, only the 30-day experience is shown for that episode; no 14-day screen is queued behind it.
 
+### Decision 114 — Exact 14-day comeback eligibility boundary
+
+- **Approved decision:** A — Qualify at the start of the local date after 14 complete local calendar days have elapsed.
+- **Rationale:** Use a predictable calendar-day threshold while ensuring the full approved period has elapsed.
+- **Acceptance checks:** Test across month/year boundaries and local date changes; do not trigger before 14 complete local calendar days have elapsed.
+
+### Decision 115 — Uncertain or changed device clock
+
+- **Approved decision:** A — Recalculate from available local timestamps, avoid duplicate displays, and never invent certainty.
+- **Rationale:** Clock changes can make elapsed-time calculations uncertain; the app should handle this conservatively and transparently.
+- **Acceptance checks:** Test clock changes and inconsistent timestamps; avoid duplicate comeback displays and do not claim a precise absence duration when it cannot be established.
+
+### Decision 116 — Start of the 30-day no-active-habit timer
+
+- **Approved decision:** A — Use the recorded local date/time when the last active habit becomes inactive and no active habits remain.
+- **Rationale:** Anchor the period to the actual status change rather than delaying it until a later app opening.
+- **Acceptance checks:** Verify the event timestamp is recorded when the last active habit becomes completed, paused, archived, or deleted while no other active habits remain.
+
+### Decision 117 — Time-zone changes during the no-active-habit period
+
+- **Approved decision:** A — Preserve the recorded event timestamp and evaluate eligibility using the current local calendar.
+- **Rationale:** Do not restart or freeze an inactivity period merely because the device's time zone changes.
+- **Acceptance checks:** Test time-zone changes and ensure the original event timestamp is retained while current local-calendar eligibility is recalculated consistently.
+
+### Decision 118 — Repeated habit-status changes during the no-active-habit period
+
+- **Approved decision:** A — Recompute from the latest valid state; active habits reset the timer, and a new no-active period begins only when none remain active.
+- **Rationale:** Keep eligibility aligned with current habit state rather than stale earlier status changes.
+- **Acceptance checks:** Test completing, pausing, archiving, deleting, creating, and reactivating habits in different orders; only a period with no active habits can qualify.
+
+### Decision 119 — Restarting a completed habit from the comeback choice screen
+
+- **Approved decision:** A — Offer a clear optional “Start again” choice without implying previous progress is erased.
+- **Rationale:** Support a fresh attempt while preserving historical tracking and the user's control.
+- **Acceptance checks:** Verify restart is explicit, prior records remain intact, and the copy does not imply that restarting deletes or rewrites history.
+
+### Decision 120 — Comeback reflection draft after unexpected app closure
+
+- **Approved decision:** A — Keep the draft locally and restore it automatically when that reflection is reopened.
+- **Rationale:** Prevent accidental loss of personal writing and avoid unnecessary confirmation steps.
+- **Acceptance checks:** Verify draft survives app closure and phone restart, is restored directly into the field, and is not shown as a saved journal entry.
+
+### Decision 121 — Failed or uncertain comeback reflection save
+
+- **Approved decision:** A — Keep the draft unchanged until saving is confirmed; do not create a duplicate journal entry.
+- **Rationale:** Preserve user-authored text and avoid duplicate entries when the result of a save operation is uncertain.
+- **Acceptance checks:** Simulate failed and uncertain saves; retain the draft unchanged until success is confirmed and ensure retry/recovery does not duplicate the journal entry.
+
+### Decision 122 — Discarding a comeback reflection draft
+
+- **Approved decision:** A — Require explicit confirmation that permanent deletion cannot be undone.
+- **Rationale:** Protect personal writing from accidental destructive actions.
+- **Acceptance checks:** The confirmation explains deletion is permanent; cancel returns to the unchanged draft, and deletion occurs only after explicit confirmation.
+
+### Decision 123 — Leaving an unfinished comeback reflection
+
+- **Approved decision:** A — Preserve it as a local draft without adding it to Journal or showing a dashboard reminder.
+- **Rationale:** Keep unsaved writing private and unobtrusive until the user chooses to save it.
+- **Acceptance checks:** Leaving or closing the screen does not discard the draft; it remains absent from Journal and the dashboard until explicitly saved through the normal journal flow.
+
 ## Still to specify
 
 - Exact boundary calculation for 14 consecutive days, including clock/time-zone changes and first-launch tracking.
