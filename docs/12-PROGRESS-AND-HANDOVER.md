@@ -119,7 +119,7 @@ The current repository contains a native Kotlin/Jetpack Compose Android app and 
 - Clarified that 9:00 a.m. local time on the configured week-start day is approved for weekly reflection; remaining reminder questions concern delivery edge cases, not the chosen time. Commit: `5c381230c6bff8194a6c6948684868bf3d022edc`.
 - Re-fetched and verified each changed file after writing.
 - No application code was changed; no implementation audit or build/test run was started.
-- D-009 is resolved: continue the existing native Kotlin + Jetpack Compose project. Remaining major scope conflict: earlier local-only/offline v1 language versus D-091's approved direction for premium online backup/cross-device sync. Resolve that scope and privacy conflict before implementation.
+- D-009 is resolved: continue the existing native Kotlin + Jetpack Compose project. R-004 is reconciled in planning docs: initial v1 includes readable journal export and local backup/restore, while online backup/cross-device sync are premium future capabilities outside initial v1. A later cloud release requires a separate explicit privacy/security, consent, data-flow, recovery/conflict, retention/deletion, and monetisation gate.
 
 
 ## D-009 stack decision — 2026-10-26
@@ -127,4 +127,4 @@ The current repository contains a native Kotlin/Jetpack Compose Android app and 
 - Owner decision: continue the existing native Kotlin + Jetpack Compose Android project. The active stack direction is approved; do not scaffold a second app or rewrite to React Native/Expo without a new explicit decision.
 - Updated the decision log, technical architecture, AI Studio workflow, and decision register to align with D-009.
 - This approval does not authorise feature implementation or an implementation audit. Build/test/APK/device status remains unverified. Continue planning and wait for explicit approval of the planning gate before technical validation.
-- Remaining high-impact planning conflict: local-only/offline v1 language versus D-091's approved direction for premium online backup and cross-device sync. Resolve the scope and privacy implications before implementation.
+- R-004 cloud/premium scope conflict is reconciled: initial v1 remains offline/account-free for core use, includes readable journal export and local backup/restore, and excludes online backup/cross-device sync. The future premium direction is recorded but not authorised for implementation.
