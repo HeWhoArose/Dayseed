@@ -79,6 +79,13 @@ Use synthetic test data. Do not use real journal entries in fixtures, screenshot
 ## 5. Performance and reliability
 Define measurable budgets only after selecting the stack and measuring a baseline on representative devices. Test launch, Today rendering, history navigation, database growth, and longer use. Include lower-end Android hardware and constrained storage/network conditions.
 
+## Proposed schema acceptance coverage — habit notes (D-192; not executed)
+
+- Allow an optional note on an individual quantity/duration activity entry; editing or deleting that note must not alter the entry's value, identity, or totals.
+- Allow at most one optional habit/date context note per habit and local date, independent of the number of activity entries; create/edit/delete it without changing activity entries or calculated habit status.
+- Allow both note levels to coexist on the same date and display them distinctly; neither is the general journal, and journal content must not affect habit outcomes.
+- Verify note ownership and date association across archive/restore, backup/restore, and any supported habit deletion flow before implementation is authorised.
+
 ## 6. Release gate
 A release candidate must have:
 - all required automated tests passing;
