@@ -211,3 +211,11 @@ The current repository contains a native Kotlin/Jetpack Compose Android app and 
 - Recorded D-187 in `docs/09-DECISION-LOG.md` and reconciled `docs/03-TECHNICAL-ARCHITECTURE.md`, `docs/04-DATA-AND-PRIVACY.md`, `docs/26-SCREEN-AND-DATA-CONTRACTS.md`, `docs/07-TESTING-AND-QUALITY.md`, `docs/01-PRODUCT-SPECIFICATION.md`, `docs/08-IMPLEMENTATION-ROADMAP.md`, and `docs/25-DECISION-REGISTER-AND-RECONCILIATION.md`.
 - Re-fetched each changed document after writing and verified the decision/policy text and the corrected persistence-test wording.
 - Planning only. No app features were implemented; no build, automated tests, APK installation, device validation, or implementation audit was started. Schema/index/transaction/idempotency design, migration safety, and clock/timezone/reminder edge-case evidence remain unverified and must wait for explicit technical-validation authorisation.
+
+## Proposed v1 data model — 2026-10-26
+
+- Added a concrete candidate relational schema to `docs/03-TECHNICAL-ARCHITECTURE.md`, explicitly marked proposed and awaiting owner review. Candidate entities cover stable habit identity, effective-dated habit configuration, numeric/duration entries, daily non-numeric outcomes, date-level habit notes, saved journal entries, separate drafts, typed app settings, and reminder-delivery deduplication.
+- Updated `docs/26-SCREEN-AND-DATA-CONTRACTS.md`, `docs/07-TESTING-AND-QUALITY.md`, and `docs/11-RISKS-AND-OPEN-QUESTIONS.md` to reference the proposal, state the key invariants, and list acceptance coverage that has not been executed. The decision register records owner approval as pending.
+- Owner approval is still needed for: effective-dated configuration snapshots; separate numeric entries and daily outcomes; note cardinality; stable UUIDs plus nullable unique idempotency keys; explicit-miss replacement by later numeric activity; and exact schedule fields consistent with prior decisions.
+- Fetched each changed file before updating and re-fetched after each update; post-write checks confirmed the expected proposed/pending status.
+- Planning only: no application code, schema, migration, build, test, APK, or device behaviour was changed or validated. Do not implement or migrate until the owner approves the model and separately authorises technical validation.
