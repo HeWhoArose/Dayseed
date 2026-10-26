@@ -17,6 +17,16 @@
 9. **Restore safety:** validate backup integrity and compatibility before mutating live data. A failed/uncertain restore must not appear complete. Replace restore requires a verified safety backup and final confirmation. Restore conflict rules in D-100–D-102 take precedence.
 10. **Privacy:** no initial-v1 account, Dayseed-managed cloud backup, cross-device sync, AI processing, or implicit upload of personal text. A user-selected file provider may sync a file under that provider's terms.
 
+## 1A. Proposed persistence model — owner review required
+
+The detailed candidate schema lives in `03-TECHNICAL-ARCHITECTURE.md` and is **proposed, not approved for implementation**. It separates stable habit identity from effective-dated habit configuration, numeric/duration entries from daily non-numeric outcomes, date-level notes from per-entry notes, saved journal entries from drafts, and reminder delivery deduplication from UI state.
+
+Until the owner approves the model:
+- Do not assume a final table layout, foreign-key cascade, idempotency-index implementation, or migration plan.
+- Preserve the approved invariants above: multiple numeric/duration entries per habit/date, multiple journal entries per date, no record differs from explicit zero or explicit miss, and journal data is independent from habit deletion.
+- Any schema proposal must specify which configuration applies to a historical date, how a retry differs from a distinct intentional entry, and how permanent habit deletion leaves independent journal data untouched.
+- Explicit-miss replacement and its interaction with numeric activity remains a required owner-visible rule before implementation.
+
 ## 2. Screen contracts
 
 ### Today
