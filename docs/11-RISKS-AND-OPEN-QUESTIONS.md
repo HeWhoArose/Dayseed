@@ -22,6 +22,10 @@
 | Local data is unexpectedly included in Android backup/device transfer | Privacy promise becomes misleading | Inspect and test Android backup and transfer behaviour separately from the user-controlled local backup feature | Open |
 | Metrics encourage perfectionism | Product contradicts its promise | Explain metrics; never make streak the only success signal | Open |
 
+## Data-model design status
+
+**Exact v1 relational schema: proposed, awaiting owner approval.** A concrete candidate has been added to `03-TECHNICAL-ARCHITECTURE.md`. The key choices needing confirmation are effective-dated habit configuration snapshots; separate numeric/duration entries and single-per-day non-numeric outcomes; distinct date-level and entry-level notes; stable UUIDs and nullable unique idempotency keys; and the state transition when an explicit miss is replaced by later numeric activity. The proposed schedule columns must also be reconciled with approved schedule decisions. Do not implement the candidate or migrate the existing version-1 database until owner approval and a separate technical-validation authorisation.
+
 ## 2. Open product questions
 
 1. **Schedule types — mostly resolved:** daily/selected-day schedules and flexible weekly targets are documented in D-024/D-030. Remaining work is to verify the full set of supported schedule combinations and historical edits in the data contract.
