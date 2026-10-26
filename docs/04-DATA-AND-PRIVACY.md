@@ -3,7 +3,7 @@
 **Status:** Proposed privacy baseline; legal and platform details require review before release.
 
 ## 1. Privacy promise
-Dayseed v1 should be local-first. Habit names, daily outcomes, and journal text should remain on the device unless the user explicitly initiates an export or a future separately approved feature changes this model. Do not describe data as “never leaves the device” until Android backup, crash reporting, analytics, advertising SDKs, and OS sharing behaviour have been inspected and configured.
+Dayseed's initial v1 is local-first and requires no account. Habit names, daily outcomes, and journal text remain in local app storage during ordinary use; the user may deliberately export journal content or create a local backup. Online backup and cross-device sync are premium future capabilities, not included in initial v1, and cannot be added without a separate explicit privacy/security and product approval. Do not describe data as “never leaves the device” until Android backup, crash reporting, analytics, advertising SDKs, and OS sharing behaviour have been inspected and configured.
 
 ## 2. Data minimisation
 Collect only what is required for the app to work. Do not require account details, contacts, precise location, microphone, camera, or unrelated permissions for core functionality. Reminders may require notification permission. Explain any additional permission in context.
@@ -29,12 +29,13 @@ Provide separate, understandable options for deleting a journal entry, deleting 
 Default proposal: no third-party analytics in the first release until a concrete need is demonstrated. If crash reporting is later adopted, review SDK collection, data residency, retention, identifiers, opt-out, and log scrubbing. Never attach database contents or journal text to crash reports. Do not use journal text to personalise ads.
 
 ## 8. Future network features
-Cloud sync, accounts, AI analysis, and server-side processing are out of v1 scope. Each requires a separate decision, threat model, data-flow diagram, consent UX, retention/deletion policy, and review of provider terms before implementation.
+Accounts, online backup, cross-device sync, AI analysis, and server-side processing are out of initial v1 scope. Online backup and cross-device sync may be considered as premium capabilities in a later release only after a separate decision, threat model, data-flow diagram, clear opt-in/consent UX, retention/deletion policy, conflict/recovery design, provider-terms review, and monetisation approval. Premium status does not itself authorise collection or transfer of personal data.
 
 ## 9. Privacy acceptance checklist
 - [ ] Data inventory and data-flow diagram approved.
 - [ ] Permissions justified and explained in context.
-- [ ] Backup inclusion/exclusion tested on target Android versions.
+- [ ] Local file backup/restore tested separately from Android platform backup inclusion/exclusion on target Android versions.
+- [ ] Confirm no initial-v1 account, cloud-backup, or sync network path is present; privacy wording matches the actual SDK and platform configuration.
 - [ ] Export includes only the selected scope and warns about sensitive content.
 - [ ] Delete flows verified against database, caches, and UI.
 - [ ] Logs contain no journal text or unnecessary personal data.
