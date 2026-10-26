@@ -43,7 +43,7 @@ Separate timestamps (instants) from local calendar dates. Habit completion usual
 - No network request is required for core actions.
 - A successful save means data is committed locally.
 - Network absence must not prevent navigation, writing, editing, or history viewing.
-- Future sync requires a separate privacy, conflict-resolution, and migration gate.
+- Initial v1 has no account, online backup, or cross-device sync service. Premium online backup/sync is a future capability only and requires a separate explicit product, privacy/security, consent, data-flow, retention/deletion, conflict-resolution, and migration gate.
 - Ads, if approved, load asynchronously and never delay core UI.
 
 ## Failure handling
