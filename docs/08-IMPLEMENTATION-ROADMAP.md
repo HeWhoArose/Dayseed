@@ -94,14 +94,14 @@ Each phase must produce evidence and pass its exit gate before the next phase be
 **Risks:** unreliable OS scheduling and inaccessible controls.  
 **Exit gate:** accessibility and reminder checklist passes.
 
-## Phase 10 — Monetisation evaluation (optional)
+## Phase 10 — Monetisation (not part of initial v1 unless separately approved)
 
-**Prerequisites:** privacy review and core app acceptance.  
-**Deliverables:** evidence-based decision on no ads, ads, or one-time supporter purchase; provider and policy review if applicable.  
-**Acceptance:** core features remain ungated and no sensitive data reaches ad systems.  
-**Tests:** offline failure, no intrusive placement, consent and privacy review.  
-**Risks:** trust damage, policy violations, SDK bloat.  
-**Exit gate:** explicit approval; otherwise document “no monetisation in v1”.
+**Prerequisites:** initial v1 core flows are accepted; privacy and store-policy review is complete; the product owner explicitly opens a separate monetisation decision.  
+**Deliverables:** evidence-based proposal for whether any future release should use no monetisation, ads, rewarded extras, a one-time supporter purchase, or another model; provider/SDK and policy review if applicable.  
+**Acceptance:** this phase does not add monetisation to initial v1 by default. Core habit, journal, history, insights, export, and backup/restore remain ungated. Journal text and personal habit records are never used for ad targeting or sent to ad systems.  
+**Tests:** privacy/data-flow review, offline behavior, consent and store-policy checks, accessibility, and confirmation that no core feature is paywalled.  
+**Risks:** trust damage, policy violations, SDK bloat, unexpected data collection.  
+**Exit gate:** explicit owner approval of a specific monetisation model and its data flows; otherwise initial v1 remains without ads, purchases, or subscriptions.
 
 ## Phase 11 — Beta and release readiness
 
