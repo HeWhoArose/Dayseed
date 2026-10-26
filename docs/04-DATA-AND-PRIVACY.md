@@ -44,3 +44,12 @@ Accounts, online backup, cross-device sync, AI analysis, and server-side process
 - [ ] Network inspection confirms core features make no required calls.
 - [ ] Privacy wording matches observed behaviour and platform settings.
 - [ ] Release privacy disclosures match actual SDKs and behaviour.
+
+## Date and history integrity (D-187)
+
+- Store the user-intended local calendar date separately from creation/update instants. Travel or a timezone change must not silently move existing habit records or journal entries to another date.
+- Use the current device-local date as the default for a new record unless the user explicitly selects another date. Preserve the selected date on save and show it clearly for backdated entries.
+- Manual clock changes and uncertain timestamps must not silently rewrite records, fabricate elapsed time, or duplicate reminder/comeback events. Apply conservative eligibility until time confidence is sufficient.
+- Target and schedule changes apply prospectively; preserve historical records and the target/schedule interpretation applicable to each past date. Explicit corrections affect only the selected record and dependent calculations.
+- Archive habits by default to remove them from active use without erasing accessible history. Permanent deletion is a separate explicit action. Habit lifecycle changes must not delete independent journal entries.
+- This is an approved product policy baseline, not evidence of implementation. Technical verification of schema, date boundaries, migrations, deletion, export, and backup behaviour remains gated by explicit owner approval of technical validation.
