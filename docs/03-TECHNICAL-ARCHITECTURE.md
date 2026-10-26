@@ -11,8 +11,8 @@
 - Minimal collection of personal data.
 - A realistic path to iOS later without compromising Android v1.
 
-## Stack candidate
-**Observed implementation:** Kotlin + Jetpack Compose with Android `SQLiteOpenHelper`, a repository, ViewModel/StateFlow, and Compose screens. This reflects current source files, not a claim that the architecture has passed a build/test audit. The current database schema is version 1 and its upgrade handler is a placeholder; migration safety needs implementation and tests.
+## Approved stack direction
+**Owner decision D-009:** Continue the existing native Android project using Kotlin + Jetpack Compose. The observed baseline includes Android `SQLiteOpenHelper`, a repository, ViewModel/StateFlow, and Compose screens. This is approval of the stack direction, not a claim that the project builds, passes tests, or is ready for feature work. The current database schema is version 1 and its upgrade handler is a placeholder; migration safety remains a planning/verification requirement.
 
 No implementation should start based solely on this proposal.
 
@@ -63,8 +63,8 @@ The older Expo/Kotlin comparison was a planning artefact and does not describe t
 
 Room is not currently used in the observed implementation: persistence uses platform `SQLiteOpenHelper`. Consider Room only as a future architectural decision after reviewing migration cost and project needs; do not describe it as installed or implemented.
 
-Exact SDK and library versions are intentionally not specified yet. Once the planning gate is approved, select a compatible SDK family, resolve Expo package versions with Expo's installer, check with Expo Doctor, lock versions, and prove persistence, migration, notifications, and real-device APK install in a bounded spike. No web output is an acceptable substitute for the native app.
+Exact Android Gradle Plugin, Gradle, Kotlin, Android SDK, and library versions must be read from the existing project and documented before technical validation. Do not upgrade versions or add dependencies by default; first establish the current wrapper/toolchain and compatibility constraints. After the planning gate is explicitly approved, validate the existing project with reproducible Gradle build/test and physical-device evidence. No web preview or second application scaffold is an acceptable substitute for the native Android app.
 
-### Current package-version caution
+### Dependency and migration caution
 
-Current official docs are versioned and can move independently: Expo's SQLite install instructions use SDK-aware package resolution, while Android's Room docs now distinguish the Room 2.x line from Room 3.0's `androidx.room3` artifacts and Kotlin/KSP/coroutine-first APIs. Do not copy package versions from old examples or combine “latest” dependencies independently. See [the stack comparison](14-STACK-COMPARISON.md) for the sources and required compatibility matrix.
+Do not introduce Room or replace `SQLiteOpenHelper` merely because Room is available. Evaluate that migration as a separate architectural change only if the evidence and maintenance needs justify it. Use compatible, pinned dependency versions and avoid independently upgrading “latest” packages. The historical [stack comparison](14-STACK-COMPARISON.md) is research context, not the active stack instruction.
