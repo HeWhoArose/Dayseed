@@ -50,7 +50,7 @@ Protect personal data, prevent loss of history, keep core flows usable offline, 
 ### Proposed data-model acceptance coverage — pending owner approval
 
 - Validate each schema constraint and foreign key, including a habit with many entries on one date and many journal entries on one date.
-- Confirm effective-dated configuration chooses the right target/schedule for dates before, on, and after a change; editing a future version must not rewrite past records.
+- **Approved policy, planned test only:** effective-dated configuration chooses the correct target, schedule, tracking mode, and other applicable settings for dates before, on, and after a change; editing a future version must not rewrite past records. This owner decision does not mean the schema or tests are implemented or executed.
 - Verify same-key retries create/count once, while a new idempotency key preserves a distinct intentional entry even when its value and timestamp are similar.
 - Verify numeric zero, no row, derived missed status, completion-only completion, and effort-aware selection remain distinct; reject contradictory or mode-incompatible states. A missed status is derived after a scheduled day passes without qualifying activity, genuine backdated activity can recalculate that date, and journal memos alone never change status.
 - Verify archive preserves accessible history; permanent habit deletion removes only the explicitly covered habit-owned data and never independent journal entries/drafts.
