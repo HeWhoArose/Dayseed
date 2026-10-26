@@ -41,6 +41,16 @@ Protect personal data, prevent loss of history, keep core flows usable offline, 
 - Archive a habit and confirm its history remains accessible; perform any separately authorised permanent deletion flow and confirm independent journal entries remain intact.
 - Backdate and correct a specific entry; confirm only the selected record and dependent calculations change.
 
+### Proposed data-model acceptance coverage — pending owner approval
+
+- Validate each schema constraint and foreign key, including a habit with many entries on one date and many journal entries on one date.
+- Confirm effective-dated configuration chooses the right target/schedule for dates before, on, and after a change; editing a future version must not rewrite past records.
+- Verify same-key retries create/count once, while a new idempotency key preserves a distinct intentional entry even when its value and timestamp are similar.
+- Verify numeric zero, no row, explicit miss, completion-only completion, and effort-aware selection remain distinct; reject contradictory or mode-incompatible states.
+- Verify archive preserves accessible history; permanent habit deletion removes only the explicitly covered habit-owned data and never independent journal entries/drafts.
+- Verify all multi-row operations roll back completely on injected failure; success is never shown before commit.
+- Verify migration/backup compatibility and restore failure recovery only after the owner approves the data model and the technical-validation gate is explicitly authorised. These are planned tests, not executed results.
+
 ## 4. Test data and privacy
 Use synthetic test data. Do not use real journal entries in fixtures, screenshots, logs, or issue reports. Scrub sensitive values from crash reports and automated test output. Initial v1 excludes accounts, online backup, and cross-device sync; premium future sync must not be added under this test plan without a separate approved privacy/security and product gate.
 
