@@ -28,16 +28,18 @@ Domain logic should be testable without rendering UI or requiring network access
 ## Local data model proposal
 **Habit:** identifier, name, optional description, tracking mode, schedule, optional reminder configuration, created/updated timestamps, archived timestamp, and version metadata as appropriate.
 
-**HabitRecord:** identifier, habit identifier, local date key, outcome, optional effort level, optional note, created/updated timestamps. Enforce the approved uniqueness rule for a habit/date in the database, not only in UI.
+**HabitRecord / tracking entry:** stable identifier, habit identifier, local date key, mode-specific value/outcome, optional effort level, optional entry-specific note, created/updated timestamps, and retry/idempotency metadata where needed. A habit may have multiple legitimate numeric/duration entries on one local date; sum distinct valid entries into the daily total while retaining each entry for correction. Do not impose a blanket unique constraint on habit + date. Protect against duplicate submission of the same logical entry with stable identity/idempotency rules. Explicit zero, completion-only state, effort-aware state, explicit miss, and no record must remain distinguishable.
 
-**JournalEntry:** identifier, local date key, body, optional prompt identifier, created/updated timestamps. Whether one or multiple entries per day are supported is open.
+**JournalEntry:** stable identifier, local date key, body, optional title, primary mood and optional secondary mood where present, optional prompt identifier, created/updated timestamps. Multiple entries per date are approved (D-170); editing preserves entry identity, and changing a journal date does not modify habit records. Unfinished drafts remain distinct from saved entries.
+
+**Daily habit state / schedule interpretation:** define how scheduled, rest/non-scheduled, paused, explicit miss, zero, partial, goal-met, and unrecorded states are represented or derived. Do not use a single uniqueness constraint to erase multiple entries or treat missing data as zero.
 
 **Preferences:** explicit user settings such as theme, onboarding completion, and reminder preferences. Avoid storing derived metrics as source of truth if they can safely be recalculated.
 
-Exact schema, indexes, cascade behaviour, and migration strategy require a reviewed data design.
+Exact schema, indexes, transaction boundaries, cascade behaviour, stable-ID/idempotency strategy, and migration strategy require a reviewed data design. The current SQLiteOpenHelper schema is version 1 with a placeholder upgrade handler; no migration is verified.
 
 ## Date and time policy
-Separate timestamps (instants) from local calendar dates. Habit completion usually belongs to the user's chosen local day, not a UTC date. Decide behaviour for travel, timezone changes, device date changes, and editing past records. Centralise date logic and test boundaries.
+Separate timestamps (instants) from local calendar dates. Habit completion usually belongs to the user's chosen local day, not a UTC date. Approved comeback decisions define local-calendar eligibility for specific triggers, but a complete shared policy for travel, timezone changes, device date changes, backdated records, and historical edits remains open. Centralise date logic and test boundaries.
 
 ## Offline-first rules
 - No network request is required for core actions.
