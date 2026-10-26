@@ -175,3 +175,13 @@ The current repository contains a native Kotlin/Jetpack Compose Android app and 
 - Renamed the second H4 section in `docs/01-PRODUCT-SPECIFICATION.md` to H4b and clarified that retry idempotency and legitimate repeated entries are approved, while the exact undo window/recovery interaction remains open. Re-fetched and verified the product spec; requirement-heading IDs are unique. Commit: `89684eb5e35aef184d711aa80a6313f2b366c7b3`.
 - Added R-010 to the decision register and verified it. Commit: `75c5ddb128d4754e4a2c24657af5b8e3a2ce9d87`.
 - Documentation only; no app code, build, tests, APK installation, device validation, or implementation audit was performed.
+
+
+## Date/time and cross-screen contract pass — 2026-10-26
+
+- Added a provisional shared date/time contract to `docs/03-TECHNICAL-ARCHITECTURE.md`: separate local date keys from event instants, preserve historical date keys across travel/time-zone changes, use the selected week-start consistently, handle backdated records explicitly, avoid fixed-24-hour calendar arithmetic, and deduplicate reminder/comeback occurrences. Trigger-specific approved decisions D-146–D-160 remain authoritative. Commit: `41f026348e9e4b3a0068f6960c86fab96127ff35`.
+- Updated `docs/04-DATA-AND-PRIVACY.md` and the decision register to require an explicit owner choice on Android Auto Backup/device-transfer inclusion of sensitive data. This trade-off was deliberately not silently decided: inclusion can ease recovery but may create additional copies; exclusion can reduce unintended copies but may impair device migration. Commits: `3c5a20b8f2cdc381f96a6b1996bf6fec7525fafe`, `ec39a2179364b6a7274f6cca3fa02dfcea247df7`.
+- Created `docs/26-SCREEN-AND-DATA-CONTRACTS.md` covering Today, record detail/edit, journal, history/calendar, insights, comeback, reminders, backup/restore, privacy, shared data invariants, failure states, and remaining owner/technical gates. Re-fetched and verified the full file. Commit: `0a2e844095b9f58714872daee1e8d68035bff48f`.
+- Added R-011 and R-012 to the reconciliation register for the date/time contract and cross-screen contract; re-fetched and verified. Commit: `5c7f02be65b4f03f72283de22b1e271d2f99d528`.
+- No app code changed. No build, automated tests, APK installation, physical-device validation, or implementation audit was run.
+- Next: complete cross-document review of reminder/privacy/backup details, verify requirement-to-test traceability and remaining stale wording, then produce the planning completeness review. The implementation gate remains closed.
