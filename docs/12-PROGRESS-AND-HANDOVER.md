@@ -120,3 +120,11 @@ The current repository contains a native Kotlin/Jetpack Compose Android app and 
 - Re-fetched and verified each changed file after writing.
 - No application code was changed; no implementation audit or build/test run was started.
 - Outstanding owner decision: D-009 — continue the observed native Kotlin + Jetpack Compose project, or explicitly approve a stack change. Other major scope conflict: local-only/offline v1 versus the newer approved direction for premium online backup/cross-device sync (D-091). These must be resolved before implementation.
+
+
+## D-009 stack decision — 2026-10-26
+
+- Owner decision: continue the existing native Kotlin + Jetpack Compose Android project. The active stack direction is approved; do not scaffold a second app or rewrite to React Native/Expo without a new explicit decision.
+- Updated the decision log, technical architecture, AI Studio workflow, and decision register to align with D-009.
+- This approval does not authorise feature implementation or an implementation audit. Build/test/APK/device status remains unverified. Continue planning and wait for explicit approval of the planning gate before technical validation.
+- Remaining high-impact planning conflict: local-only/offline v1 language versus D-091's approved direction for premium online backup and cross-device sync. Resolve the scope and privacy implications before implementation.
