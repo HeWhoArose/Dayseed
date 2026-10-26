@@ -193,3 +193,5 @@ The current repository contains a native Kotlin/Jetpack Compose Android app and 
 - Added R-013 to `docs/25-DECISION-REGISTER-AND-RECONCILIATION.md` and re-fetched/verified. Commit: `a4502873fb65f429da5bafab5aa2b357c0b2fc56`.
 - A follow-up edit to the persistence-test wording in `docs/07-TESTING-AND-QUALITY.md` was not applied because the repository update was rejected; that one line still needs correction to specify identity/idempotency constraints without a blanket unique habit/date constraint. No claim is made that it changed.
 - No app code changed. No build, automated tests, APK installation, device validation, or implementation audit was run.
+
+- Updated Phase 3 in `docs/08-IMPLEMENTATION-ROADMAP.md` to include the cross-screen contract and require the Android Auto Backup/device-transfer owner decision to be explicitly resolved or consciously deferred with a safe documented rule. Re-fetched and verified. Commit: `5afee35c5803e0ae1a071e04e7fd6a681fe69b7d`.
