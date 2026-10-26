@@ -22,14 +22,14 @@ Required before coding:
 - documentation links, duplicate/outdated plans, contradictions, and unsupported claims audited;
 - owner reviews and explicitly approves the planning gate.
 
-### Stage B — Bounded native-app feasibility spike
+### Stage B — Bounded stack-specific feasibility validation
 
-This is not the full feature implementation. After Stage A approval, test the proposed React Native + Expo + TypeScript + SQLite candidate in a separate, minimal native app scaffold.
+This is not full feature implementation. Stage B must validate the stack explicitly approved by the owner in D-009; do not assume React Native/Expo or authorise a rewrite based on historical research. The current observed baseline in `main` is native Kotlin + Jetpack Compose with `SQLiteOpenHelper`, a repository, ViewModel/StateFlow, and Compose screens. First inspect the current source and available build evidence. If the owner approves continuing native Kotlin, validate that native project. If the owner explicitly approves a stack change, design a bounded spike for that selected stack before replacing the existing app.
 
 Acceptance:
-1. The project is demonstrably an Android/iOS React Native app project, not a website. Confirm the expected app config, native build path, and Android application artifact.
-2. Install dependencies cleanly with SDK-compatible versions and commit a lockfile.
-3. Build an APK or development build and install it on a physical Android device.
+1. Confirm the project type, platform build path, and installable Android artifact for the owner-approved stack; do not substitute a website or preview for the Android app.
+2. Install dependencies/toolchain cleanly using compatible, locked versions appropriate to the approved stack.
+3. Build the approved Android artifact and install it on a physical Android device.
 4. Prove local SQLite data survives app force-stop and restart.
 5. Test a versioned schema migration with seeded synthetic records.
 6. Test notification permission denial, schedule/cancel, restart behaviour, and device restart where practical. Do not promise exact timing without evidence.
@@ -50,7 +50,7 @@ AI Studio is the active AI-assisted development environment for Dayseed. Treat t
 
 ### Required operating instructions for AI Studio
 
-> Read README.md, DESIGN.md, docs/09-DECISION-LOG.md, docs/11-RISKS-AND-OPEN-QUESTIONS.md, docs/12-PROGRESS-AND-HANDOVER.md, docs/14-STACK-COMPARISON.md, and this workflow before changing files. Use the latest owner-approved scope and decisions recorded in GitHub. Build a native React Native + Expo mobile application targeting Android first; do not create a website, web dashboard, or web app as a substitute. Follow DESIGN.md as the sole authoritative design-token/component reference. Follow the approved product specification and architecture. If a requirement is unresolved, stop and report the question rather than inventing a product decision. Work in small, testable phases. Commit to GitHub frequently, keep main usable, run targeted tests and the full available suite, and report exact build/test evidence. Do not put secrets or private journal data in the repository.
+> Read README.md, DESIGN.md, docs/09-DECISION-LOG.md, docs/11-RISKS-AND-OPEN-QUESTIONS.md, docs/12-PROGRESS-AND-HANDOVER.md, docs/14-STACK-COMPARISON.md, and this workflow before changing files. Use the latest owner-approved scope and decisions recorded in GitHub. Continue the currently observed native Kotlin + Jetpack Compose Android project unless the owner explicitly approves a stack change in D-009. Do not create a website, web dashboard, or web app as a substitute. Do not start a rewrite or stack-specific spike while D-009 remains unresolved. Follow DESIGN.md as the sole authoritative design-token/component reference. Follow the approved product specification and architecture. If a requirement is unresolved, stop and report the question rather than inventing a product decision. Work in small, testable phases. Commit to GitHub frequently, keep main usable, run targeted tests and the full available suite, and report exact build/test evidence. Do not put secrets or private journal data in the repository.
 
 Do not use an agent-generated preview page as proof of native app success. A QR preview may be useful for development but is not a replacement for a built Android artifact and physical-device checks.
 
@@ -63,7 +63,7 @@ When session or context ends:
 2. Check `git status`, current branch, latest commit, and remote.
 3. Push the current branch to GitHub and verify the commit appears remotely. If unable to push, export a patch or bundle and record the exact uncommitted state before switching environments.
 4. Continue from a fresh clone or pull of the GitHub branch using a local development environment or another authorised coding agent.
-5. Install dependencies from the committed lockfile; do not silently regenerate versions.
+5. Install dependencies from the committed lockfile where one exists; do not silently regenerate versions or switch frameworks.
 6. Run the project's documented checks and tests before modifying anything.
 7. Make small commits and push them to GitHub.
 8. Before continuing in AI Studio after a context/session reset, refresh from the latest GitHub state and reconcile local changes. Never push an older workspace over newer GitHub commits.
