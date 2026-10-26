@@ -16,7 +16,7 @@ Required before coding:
 - journal archive direction researched and test plan written;
 - design tokens and component rules centralised in DESIGN.md, with approval status clear;
 - competitor claims traceable to actual inspected sources/screenshots;
-- technical/privacy/data/date/backup/export/delete approach reviewed;
+- technical/privacy/data/date/local-backup/Android-platform-backup/export/delete approach reviewed, with initial v1 explicitly excluding accounts, online backup, and cross-device sync;
 - accessibility and test strategy defined;
 - implementation roadmap, acceptance criteria, and release gates reconciled;
 - documentation links, duplicate/outdated plans, contradictions, and unsupported claims audited;
@@ -38,7 +38,7 @@ Acceptance:
 9. Run static checks, dependency checks, and all available tests.
 10. Record exact toolchain/package versions, device model, Android version, commands, logs, artefact location, and limitations.
 
-Do not add analytics, advertising, billing, cloud sync, or AI APIs during the spike. Do not put private journal content, secrets, signing keys, API keys, or local machine paths containing personal information in Git.
+Do not add analytics, advertising, billing, cloud backup, cross-device sync, or AI APIs during the spike. Initial v1 remains account-free and offline-first for core use; premium online backup/sync is future scope and requires a separate approval gate. Do not put private journal content, secrets, signing keys, API keys, or local machine paths containing personal information in Git.
 
 ### Stage C — Feature implementation
 
