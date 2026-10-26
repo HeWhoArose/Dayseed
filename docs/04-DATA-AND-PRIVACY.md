@@ -19,8 +19,8 @@ Collect only what is required for the app to work. Do not require account detail
 ## 4. Device backup and encryption
 Investigate Android Auto Backup and device-to-device transfer behaviour for the selected platform and storage mechanism. Decide whether private data should be included in backups, excluded, or protected through a documented design. Assess whether database encryption is necessary and feasible; do not claim encryption at rest unless implemented and verified. Document threat model, device compromise limitations, and recovery trade-offs in plain language.
 
-## 5. Export
-Define a human-readable and machine-readable export format before release. Export must be user-initiated, explain what is included, avoid accidental public sharing, and use the Android share sheet or a save destination chosen by the user. Consider JSON for complete restoration and CSV for tabular records, with journal export clearly labelled as sensitive.
+## 5. Export and user-controlled local backup
+Define a human-readable journal export and a versioned, integrity-checked portable backup format before release. Export/backup must be user-initiated or follow the separately approved local Auto Backup settings, explain what is included, avoid accidental public sharing, and use the Android system file picker or share sheet where appropriate. Journal export must be clearly labelled as sensitive. A file picker may expose provider-backed destinations (including providers that sync files online); disclose that the chosen provider may upload/sync the saved file. This is user-directed file handling, not a Dayseed-managed cloud account, online backup service, or cross-device sync feature.
 
 ## 6. Deletion
 Provide separate, understandable options for deleting a journal entry, deleting a habit and its associated history, and deleting all app data. Confirm destructive actions. After deletion, verify records are removed from the active database and any derived caches. Explain that copies already exported or included in OS/device backups may require separate deletion.
@@ -35,7 +35,8 @@ Accounts, online backup, cross-device sync, AI analysis, and server-side process
 - [ ] Data inventory and data-flow diagram approved.
 - [ ] Permissions justified and explained in context.
 - [ ] Local file backup/restore tested separately from Android platform backup inclusion/exclusion on target Android versions.
-- [ ] Confirm no initial-v1 account, cloud-backup, or sync network path is present; privacy wording matches the actual SDK and platform configuration.
+- [ ] Confirm no initial-v1 Dayseed-managed account, cloud-backup, or sync service is present; privacy wording matches the actual SDK and platform configuration.
+- [ ] Explain that a user-selected Android file provider may upload/sync an exported or backed-up file, without implying Dayseed itself provides online sync.
 - [ ] Export includes only the selected scope and warns about sensitive content.
 - [ ] Delete flows verified against database, caches, and UI.
 - [ ] Logs contain no journal text or unnecessary personal data.
