@@ -35,16 +35,16 @@ Schedule edits offer an effective choice of **Apply today** or **Apply tomorrow*
 Distinguish:
 - **Rest/non-scheduled day:** neutral, not a failure or missed opportunity.
 - **Paused period:** excluded from scheduled opportunities.
-- **Scheduled but not completed:** a missed opportunity, never a moral judgement.
-- **No record:** unknown/unrecorded activity, not automatically an explicit zero or proof that the user did nothing.
+- **Scheduled but not completed:** after the scheduled local day has passed, derive a missed opportunity when no qualifying activity was recorded; this is a neutral description of missing recorded evidence, never a moral judgement. Do not offer a manual “mark as missed” action.
+- **No record:** before the relevant day has passed, activity is simply unrecorded. After the scheduled day passes with no qualifying activity record, the derived status is missed; it is not an explicit zero and does not prove the user did nothing.
 
-A record is associated with a habit and the local calendar date on which it was intentionally recorded. Prevent accidental duplicate actions while supporting multiple numeric entries per day and transparent corrections. Follow the approved D-187 date/history baseline: preserve saved date keys across timezone changes, handle clock uncertainty conservatively, use the saved week-start consistently, and require explicit date selection for backdated records. Editing a target or schedule applies prospectively and must not silently create, delete, or reinterpret historical records.
+A record is associated with a habit and the local calendar date on which the user says the activity actually occurred. Prevent accidental duplicate actions while supporting multiple numeric entries per day and transparent corrections. Follow the approved D-187 date/history baseline: preserve saved date keys across timezone changes, handle clock uncertainty conservatively, use the saved week-start consistently, and require explicit date selection for backdated records. Allow genuine activity to be recorded against a past date; recalculate that date's result from qualifying activity and the configuration effective on that date. Editing a target or schedule applies prospectively and must not silently create, delete, or reinterpret historical records. A journal memo can explain an unrecorded day but must never change habit status or count as proof of completion.
 
 ### H4 — History
 Show past records and allow correction. Corrections must update summaries consistently. Archiving preserves history. Deleting a habit needs a clear explanation of whether associated records are deleted or retained; recommended default is explicit deletion of the habit and its associated personal data, with confirmation.
 
 ### J1 — Micro-journal
-Offer low-friction daily reflection with an optional prompt and free text. Journaling is optional and must not be treated as proof that a habit was completed. Users can edit and delete entries. An entry can exist on a day with no habit completions.
+Offer low-friction daily reflection with an optional prompt and free text. Journaling is optional and must not be treated as proof that a habit was completed or as a way to change a missed-day result. A memo may explain that activity happened but was not recorded; only an actual habit activity record, including a user-entered backdated record, affects the derived result. Users can edit and delete entries. An entry can exist on a day with no habit completions.
 
 ### I1 — Insights
 Provide simple local summaries such as completed actions, effort-level distribution, active days, and weekly reflection prompts. Explain each metric. Do not infer diagnoses, motivation, personality, or causes from sparse data. Avoid using streaks as the sole or dominant measure.
