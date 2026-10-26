@@ -23,7 +23,7 @@ The detailed candidate schema lives in `03-TECHNICAL-ARCHITECTURE.md` and is **p
 
 Until the owner approves the model:
 - Do not assume a final table layout, foreign-key cascade, idempotency-index implementation, or migration plan.
-- Preserve the approved invariants above: multiple numeric/duration entries per habit/date, multiple journal entries per date, no record differs from explicit zero or explicit miss, and journal data is independent from habit deletion.
+- Preserve the approved invariants above: multiple numeric/duration entries per habit/date, multiple journal entries per date, no record differs from explicit zero; missed status is derived from schedule and qualifying activity records, and journal data is independent from habit deletion.
 - Any schema proposal must specify which configuration applies to a historical date, how a retry differs from a distinct intentional entry, and how permanent habit deletion leaves independent journal data untouched.
 - D-188 resolves missed-day semantics: do not offer a manual mark-as-missed control or store a user-entered miss outcome. Derive a missed status after a scheduled day passes without qualifying activity; permit genuine explicitly backdated activity to recalculate that date. A journal memo alone never changes habit status.
 
