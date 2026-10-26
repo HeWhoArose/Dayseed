@@ -95,7 +95,7 @@
 - Replace requires a verified safety backup and final confirmation. Merge/Replace conflict decisions D-091–D-105 govern; source backup remains untouched.
 - Auto Backup is opt-in, uses the chosen destination, follows the approved intervals, creates new files, and never automatically prunes old backups. Android may defer scheduled work.
 - If the chosen destination is unavailable/revoked, stop and ask the user to choose again; never silently redirect.
-- **Owner decision still required:** whether Android Auto Backup/device transfer includes sensitive Dayseed data. Do not assume this from the portable backup rules.
+- **Approved policy D-186:** exclude sensitive Dayseed app data from Android platform Auto Backup/device transfer by default. Explain before migration that Android's own transfer may not carry private Dayseed records and direct users to create a complete Dayseed portable backup. Keep platform backup separate from the app's own opt-in file-based Auto Backup; verify actual OS rules before claiming exclusion is effective.
 
 ### Settings → Privacy and data
 
@@ -120,7 +120,7 @@ All affected screens must implement the following state distinctions:
 
 ## 4. Open items that must not be silently defaulted
 
-1. Android Auto Backup/device-transfer inclusion policy for sensitive app data — **owner decision required** because privacy and recovery convenience conflict.
+1. Android Auto Backup/device-transfer exclusion under D-186 — **decision resolved; technical verification remains required** to confirm the manifest/data-extraction configuration excludes private records on supported Android versions and transfer paths.
 2. Exact schema, indexes, transaction boundaries, stable ID/idempotency strategy, and migration from the current version-1 SQLite schema.
 3. Exact undo window and user-facing recovery interaction.
 4. Final delete-all wording and any retention details required for exported/OS backup copies.
