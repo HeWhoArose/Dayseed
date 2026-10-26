@@ -33,6 +33,14 @@ The decision log (`09-DECISION-LOG.md`) remains the detailed record of owner cho
 | AI analysis, social features, leaderboards | Deferred unless explicitly re-approved | Do not add AI processing, accounts, public profiles, or leaderboards implicitly. |
 | Visual identity and navigation | Unverified / proposed | Design exploration and mockups are not final approval. `DESIGN.md` should remain the authoritative design-token/component reference. |
 
+## Proposed data model — owner approval pending
+
+| Area | Status | Current proposal / next action |
+|---|---|---|
+| Exact v1 SQLite schema | Proposed, not approved | Candidate tables and invariants are documented in `03-TECHNICAL-ARCHITECTURE.md`; owner must approve effective-dated habit configuration, separate numeric entries/day outcomes, note cardinality, UUID/idempotency approach, and explicit-miss replacement behaviour before implementation. |
+| Transaction/index/cascade design | Proposed; technically unverified | Review constraints and transaction boundaries against the existing version-1 schema after the planning decision; no migration or implementation is authorised. |
+| Data-model acceptance tests | Planned, not executed | `07-TESTING-AND-QUALITY.md` records required cases; these are not test results. |
+
 ## Delegated defaults
 
 These are conservative defaults for routine details. They do not authorise new product scope, collection/sharing of personal data, or irreversible behaviour.
