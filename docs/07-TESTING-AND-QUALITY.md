@@ -41,7 +41,7 @@ Protect personal data, prevent loss of history, keep core flows usable offline, 
 - Resolve the effective-dated habit configuration for the selected local date before validating activity or deriving daily status; historical configuration changes must not reinterpret past entries.
 - A scheduled day without qualifying activity is derived as missed only after the day has passed; no manual miss outcome is stored, and a journal memo alone never changes habit status.
 
-These are planned acceptance cases for the proposed schema, not test results. The schema remains proposed pending the remaining owner decisions and separate authorisation for technical validation.
+These are planned acceptance cases for the proposed schema, not test results. The schema remains proposed pending the remaining owner decisions and separate authorisation for technical validation. D-190 approves stable UUID identity and nullable unique idempotency keys; this approval does not mean these cases have been executed.
 
 ## Date/history acceptance coverage (D-187)
 
@@ -62,6 +62,8 @@ These are planned acceptance cases for the proposed schema, not test results. Th
 - Validate each schema constraint and foreign key, including a habit with many entries on one date and many journal entries on one date.
 - **Approved policy, planned test only:** effective-dated configuration chooses the correct target, schedule, tracking mode, and other applicable settings for dates before, on, and after a change; editing a future version must not rewrite past records. This owner decision does not mean the schema or tests are implemented or executed.
 - Verify same-key retries create/count once, while a new idempotency key preserves a distinct intentional entry even when its value and timestamp are similar.
+- Verify entity IDs remain stable after edits and across backup/restore; retrying the same logical submission reuses its idempotency key and cannot create a duplicate, while a distinct intentional submission uses a new key and remains a separate entry.
+- Verify a non-null idempotency key cannot be assigned to two logical submissions, while records with no retry key remain valid where allowed.
 - Verify numeric zero, no row, derived missed status, completion-only completion, and effort-aware selection remain distinct; reject contradictory or mode-incompatible states. A missed status is derived after a scheduled day passes without qualifying activity, genuine backdated activity can recalculate that date, and journal memos alone never change status.
 - Verify archive preserves accessible history; permanent habit deletion removes only the explicitly covered habit-owned data and never independent journal entries/drafts.
 - Verify all multi-row operations roll back completely on injected failure; success is never shown before commit.
