@@ -148,3 +148,12 @@ The current repository contains a native Kotlin/Jetpack Compose Android app and 
 - Reconciled `docs/11-RISKS-AND-OPEN-QUESTIONS.md` with existing approved decisions so resolved items (schedule direction, multiple entries, backup scope, and native stack) are no longer presented as wholly unanswered. Remaining edge cases stay open. Commit: `ae8161fb733dca6870d6de57ae1da2a4027d29db`.
 - Re-fetched and verified each updated document after writing. No app code changed. No build, tests, APK install, device validation, or implementation audit was run.
 - Next: finish the broader decision-log row audit, align the handover and roadmap to the reconciled state, then continue the planning completeness review. Do not cross the implementation gate without explicit owner approval.
+
+
+## Decision-log structure audit completed — 2026-10-26
+
+- Completed the broader decision-log structure pass. Normalised D-106–D-185 to the standard five-column schema, preserving the chosen behaviour in Current position and retaining rationale/acceptance criteria plus decision date in Next action. D-083–D-090 were already normalised in the preceding pass.
+- Re-fetched `docs/09-DECISION-LOG.md` after the update and verified every Markdown table row has the expected five fields (six pipe characters including row boundaries), with exactly one D-090 row. Commit: `f96cd3ede7b618ab262efcf64828d02944021d4d`.
+- Updated the decision register to mark R-003 corrected and the formatting checklist complete; re-fetched and verified it. Commit: `c4cd44111703e8a548aeb43c96a96703b0c1dc0b`.
+- This is a documentation-format correction only: decision IDs were not renumbered, and no product decision was changed. No app code changed; no build, tests, APK installation, device validation, or implementation audit was run.
+- Next planning task: reconcile the implementation roadmap and screen/data contracts with the latest approved decisions, then perform the planning completeness review. Owner approval is still required before technical validation or implementation.
