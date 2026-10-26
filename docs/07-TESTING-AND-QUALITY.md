@@ -1,6 +1,6 @@
 # Testing and Quality
 
-**Status:** Required test strategy; exact tooling is pending stack approval.
+**Status:** Required test strategy for the approved native Kotlin + Jetpack Compose direction; implementation and validation remain unauthorised until the planning gate is approved.
 
 ## 1. Quality goals
 Protect personal data, prevent loss of history, keep core flows usable offline, ensure dates behave predictably, and verify that the app remains supportive after interruptions.
@@ -21,6 +21,9 @@ Protect personal data, prevent loss of history, keep core flows usable offline, 
 5. Repeated taps or retries do not create duplicate records.
 6. App process termination does not lose acknowledged writes.
 7. Offline operation does not show endless loading or require sign-in.
+13. Readable journal export and local backup/restore work without an account or cloud service; validate backup integrity and recovery safety.
+14. Initial v1 core flows do not require network access and do not transmit journal/habit data to a cloud service; test offline behaviour and inspect actual SDK/data paths.
+15. Android platform backup/device transfer is tested and documented separately from Dayseed's user-controlled local backup file.
 8. Comeback thresholds and dismissal work at boundary dates.
 9. Missing or invalid clock data does not generate shaming or fabricated messages.
 10. Notification denial, disabled notifications, and OS restrictions do not break core tasks.
@@ -28,7 +31,7 @@ Protect personal data, prevent loss of history, keep core flows usable offline, 
 12. Schema migration preserves records and can recover safely from failure.
 
 ## 4. Test data and privacy
-Use synthetic test data. Do not use real journal entries in fixtures, screenshots, logs, or issue reports. Scrub sensitive values from crash reports and automated test output.
+Use synthetic test data. Do not use real journal entries in fixtures, screenshots, logs, or issue reports. Scrub sensitive values from crash reports and automated test output. Initial v1 excludes accounts, online backup, and cross-device sync; premium future sync must not be added under this test plan without a separate approved privacy/security and product gate.
 
 ## 5. Performance and reliability
 Define measurable budgets only after selecting the stack and measuring a baseline on representative devices. Test launch, Today rendering, history navigation, database growth, and longer use. Include lower-end Android hardware and constrained storage/network conditions.
