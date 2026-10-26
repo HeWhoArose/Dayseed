@@ -25,7 +25,7 @@ Until the owner approves the model:
 - Do not assume a final table layout, foreign-key cascade, idempotency-index implementation, or migration plan.
 - Preserve the approved invariants above: multiple numeric/duration entries per habit/date, multiple journal entries per date, no record differs from explicit zero or explicit miss, and journal data is independent from habit deletion.
 - Any schema proposal must specify which configuration applies to a historical date, how a retry differs from a distinct intentional entry, and how permanent habit deletion leaves independent journal data untouched.
-- Explicit-miss replacement and its interaction with numeric activity remains a required owner-visible rule before implementation.
+- D-188 resolves missed-day semantics: do not offer a manual mark-as-missed control or store a user-entered miss outcome. Derive a missed status after a scheduled day passes without qualifying activity; permit genuine explicitly backdated activity to recalculate that date. A journal memo alone never changes habit status.
 
 ## 2. Screen contracts
 
@@ -67,7 +67,7 @@ Until the owner approves the model:
 - Historical views show the settings/target that applied at the time; current-target comparisons must be labelled separately.
 - Corrections are explicit and local to the selected entity. Do not recalculate unrelated records as a side effect.
 - Rest/non-scheduled days are neutral; paused periods are excluded from scheduled opportunities; no record is not an explicit miss or zero.
-- Date/time behaviour follows the approved D-187 baseline in `03-TECHNICAL-ARCHITECTURE.md`: stable local-date keys separate from event instants, explicit backdating, conservative clock-change handling, saved week-start consistency, and no implicit historical rewrite.
+- Date/time behaviour follows approved D-187 and D-188 in `03-TECHNICAL-ARCHITECTURE.md`: stable local-date keys separate from event instants, explicit date selection for genuine backdated activity, conservative clock-change handling, saved week-start consistency, no implicit historical rewrite, derived missed status for past scheduled days with no qualifying activity, and no habit-status changes from journal memos.
 
 ### Insights
 
