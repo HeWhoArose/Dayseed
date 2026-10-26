@@ -33,7 +33,17 @@ Protect personal data, prevent loss of history, keep core flows usable offline, 
 16. Large fonts, TalkBack, contrast, reduced motion, small-screen layout, and keyboard entry remain usable.
 17. Schema migration preserves records and can recover safely from failure; test the current version-1 placeholder upgrade path only after technical validation is authorised.
 
-### Date/history acceptance coverage (D-187)
+### Proposed schema acceptance coverage — not executed
+
+- Numeric/duration modes accept multiple distinct entries for the same habit/date and calculate totals from those entries; an explicit zero is retained as a record and differs from no record.
+- Completion-only and effort-aware modes store their outcome in the day-outcome model, not as invented numeric values; enforce at most one current outcome per habit/date.
+- Reject outcomes that do not match the effective tracking mode and reject contradictory numeric-entry/day-outcome combinations; a rejected write leaves prior records and totals unchanged.
+- Resolve the effective-dated habit configuration for the selected local date before validating activity or deriving daily status; historical configuration changes must not reinterpret past entries.
+- A scheduled day without qualifying activity is derived as missed only after the day has passed; no manual miss outcome is stored, and a journal memo alone never changes habit status.
+
+These are planned acceptance cases for the proposed schema, not test results. The schema remains proposed pending the remaining owner decisions and separate authorisation for technical validation.
+
+## Date/history acceptance coverage (D-187)
 
 - Travel across time zones and confirm existing habit/journal local-date keys do not change; new entries default to the current device-local date unless another date is explicitly selected.
 - Change the device clock forward/backward and simulate uncertain time; confirm no historical rewrite, fabricated elapsed time, duplicate logical record, or duplicate reminder/comeback delivery.
