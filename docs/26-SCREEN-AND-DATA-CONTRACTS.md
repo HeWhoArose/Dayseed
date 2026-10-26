@@ -66,7 +66,7 @@ Until the owner approves the model:
 - Use the saved week-start preference consistently for weekly views.
 - Historical views show the settings/target that applied at the time; current-target comparisons must be labelled separately.
 - Corrections are explicit and local to the selected entity. Do not recalculate unrelated records as a side effect.
-- Rest/non-scheduled days are neutral; paused periods are excluded from scheduled opportunities; no record is not an explicit miss or zero.
+- Rest/non-scheduled days are neutral; paused periods are excluded from scheduled opportunities. Before a scheduled day has passed, no record is unrecorded rather than zero. After a scheduled day passes without qualifying activity, missed status is derived; users cannot manually mark a day missed. Genuine backdated activity can recalculate the result, but a journal memo alone cannot change habit status.
 - Date/time behaviour follows approved D-187 and D-188 in `03-TECHNICAL-ARCHITECTURE.md`: stable local-date keys separate from event instants, explicit date selection for genuine backdated activity, conservative clock-change handling, saved week-start consistency, no implicit historical rewrite, derived missed status for past scheduled days with no qualifying activity, and no habit-status changes from journal memos.
 
 ### Insights
