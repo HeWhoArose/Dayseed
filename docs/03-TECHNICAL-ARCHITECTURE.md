@@ -61,6 +61,7 @@ This is the recommended default contract for implementation-ready planning; reco
 - A successful save means data is committed locally.
 - Network absence must not prevent navigation, writing, editing, or history viewing.
 - Initial v1 has no account, online backup, or cross-device sync service. Premium online backup/sync is a future capability only and requires a separate explicit product, privacy/security, consent, data-flow, retention/deletion, conflict-resolution, and migration gate.
+- **Android platform backup (D-186):** exclude sensitive Dayseed app data from Android Auto Backup/device-transfer by default. Implement and verify explicit backup/data-extraction rules for private records and drafts. This is distinct from Dayseed's user-controlled portable backup and opt-in file-based Auto Backup to a selected destination. Do not claim the exclusion is effective until configuration and supported OS/device-transfer paths have been inspected and tested.
 - Ads, if approved, load asynchronously and never delay core UI.
 
 ## Failure handling
