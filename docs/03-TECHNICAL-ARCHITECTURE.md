@@ -41,7 +41,7 @@ Exact schema, indexes, transaction boundaries, cascade behaviour, stable-ID/idem
 ## Date and time policy
 Separate timestamps (instants) from local calendar dates. Habit completion belongs to the local calendar date explicitly selected/confirmed for the record, never to a UTC date merely because the timestamp converts to that date. Use one injectable clock/date-policy service for all date-sensitive rules.
 
-### Provisional date/time contract (planning baseline)
+### Approved date/time and history contract (D-187 planning baseline)
 
 - **Canonical day key:** store a local calendar date (YYYY-MM-DD) separately from event timestamps. A record's day key is the date the user intentionally chose when recording; store creation/update instants separately for ordering and recovery.
 - **Default date for a new entry:** the current device-local date when the user starts/commits the action. If the user explicitly selects a past/future date in a supported flow, use that selected date and make it visible before save. Do not silently move records when the device time zone changes.
@@ -53,8 +53,10 @@ Separate timestamps (instants) from local calendar dates. Habit completion belon
 - **Scheduled reminders:** compute eligibility from local calendar/week policy and persist a stable delivery key for each logical reminder occurrence. Respect explicit reminder opt-in, OS permission, quiet hours and approved caps. On zone changes/restarts, recalculate future delivery without duplicating an already-delivered occurrence. Android may defer delivery.
 - **Comeback timing:** preserve the specific approved rules in D-146–D-160 (including full local-calendar-day thresholds and no duplicate display after zone changes). This shared policy does not override their trigger-specific rules.
 - **Historical schedule/target interpretation:** preserve the settings effective for each historical date. Schedule/target edits apply prospectively using the approved effective-date choice; they do not silently rewrite past records or create missed records retroactively.
+- **Habit lifecycle:** archive is the default non-destructive way to remove a habit from active use; archived history remains accessible. Permanent deletion is a separate, clearly explained user action and must not delete independent journal entries.
+- **Manual clock changes:** do not use wall-clock jumps alone to infer activity, absence, or elapsed reminder intervals. Preserve saved dates and values, deduplicate logical events, and use conservative eligibility when time confidence is uncertain.
 
-This is the recommended default contract for implementation-ready planning; reconcile any trigger-specific decision against it before implementation. Exact storage columns/indexes, migration and test fixtures remain to be finalised.
+This is the approved v1 planning baseline under D-187; trigger-specific approved decisions remain authoritative where more specific. It does not prove implementation correctness. Exact storage columns/indexes, transaction boundaries, migration safety, and test fixtures remain to be finalised and technically verified after the planning gate.
 
 ## Offline-first rules
 - No network request is required for core actions.
