@@ -128,3 +128,14 @@ The current repository contains a native Kotlin/Jetpack Compose Android app and 
 - Updated the decision log, technical architecture, AI Studio workflow, and decision register to align with D-009.
 - This approval does not authorise feature implementation or an implementation audit. Build/test/APK/device status remains unverified. Continue planning and wait for explicit approval of the planning gate before technical validation.
 - R-004 cloud/premium scope conflict is reconciled: initial v1 remains offline/account-free for core use, includes readable journal export and local backup/restore, and excludes online backup/cross-device sync. The future premium direction is recorded but not authorised for implementation.
+
+
+## Cloud/premium scope reconciliation — 2026-10-26
+
+- Reconciled R-004 across the project charter, product specification, technical architecture, data/privacy, monetisation, testing, roadmap, decision log, workflow, risk register, decision register, and this handover.
+- Initial v1: core habit/journal use is offline and account-free; include readable journal export and user-controlled portable local backup/restore. Exclude Dayseed-managed accounts, online backup, and cross-device sync.
+- Future direction: online backup/cross-device sync may be premium later, but no service, price, purchase provider, or monetisation model is approved. A later release needs a separate explicit product, privacy/security, consent, data-flow, recovery/conflict, retention/deletion, and monetisation gate.
+- Clarified that Dayseed's portable backup is distinct from Android/platform backup. A user-selected Android file provider may itself sync a file online; privacy copy must disclose that possibility without implying Dayseed provides that service.
+- Verified after writes: charter `8ee2b1ca9be10e2af4331bd98e6db00c4abff514`; product spec `895612ca99de2eb0f1c8038cb911c219a10bd555`; architecture `f4011b8dbadb2c6f9254d3cc864b42ff8123bce8`; privacy `ac65182f95c04ae4a2db3eae0a4890b2736845be`; monetisation `8212243adbf76cace936fb3da793587bd2e8ec4c`; testing `a79d684b81a67a73de0852a7945a45dc0207fcca`; roadmap `c5483589d06c6ef82597a80208c83d98251b227f`; workflow `26b485aff636389801a71f32409a23af89d4b3dd`; decision log latest backup/privacy clarification `beb7eb06b291696ecf9bc89ae7b00c284317448e`; decision register `3e94adc3d814bec85acf5f6492cd583296e2553b`; risk register `7c4279caadb8e0714d32ab7950081dd9b158516a`.
+- Planning only: no app code changed; no build, tests, APK install, device validation, or implementation audit run.
+- Next: continue the remaining planning reconciliation and open UX/data decisions, then perform a planning completeness review. Wait for the owner's explicit approval before technical validation or implementation.
