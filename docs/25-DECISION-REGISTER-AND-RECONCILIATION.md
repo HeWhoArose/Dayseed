@@ -70,7 +70,7 @@ These are not micro-decisions and must not be silently delegated:
 |---|---|---|---|
 | R-001 | Active workflow and architecture instructions previously conflicted with the native project by preserving an assumed Expo path. | Corrected; D-009 approved | D-009 now explicitly approves continuing native Kotlin + Jetpack Compose. Architecture/workflow docs now align; build and test status remain unverified. |
 | R-002 | `14-STACK-COMPARISON.md` previously linked to the wrong implementation-reality-audit filename. | Corrected | Link now points to `22-IMPLEMENTATION-REALITY-AUDIT.md`; historical stack research remains available. |
-| R-003 | `09-DECISION-LOG.md` has inconsistent table shapes around D-083 onward and a duplicate D-090 identifier. | Documentation defect | Preserve decision meaning; later tidy the formatting and duplicate ID with explicit traceability rather than silently renumbering references. |
+| R-003 | `09-DECISION-LOG.md` has inconsistent column semantics in later decision rows and a duplicate D-090 identifier. | Partially corrected | Normalised D-083–D-090 to the standard columns and removed the duplicate D-090 without renumbering later decisions. A broader audit of later rows is still required; retain traceability and do not silently renumber IDs. |
 | R-004 | Earlier product/privacy documents excluded cloud sync from v1 while D-091 described premium online backup and cross-device sync. | Reconciled in planning docs | Initial v1 includes readable journal export and local backup/restore only; online backup/sync are premium future capabilities and remain outside initial v1. Reopen only through a separate explicit approval gate. |
 | R-005 | The weekly reminder spec approved 9:00 a.m. local week-start delivery, while its remaining section ambiguously said the timing remained to be specified. | Corrected | The spec now states that 9:00 a.m. local time is approved; timezone/clock-change, deduplication, combination, and test edge cases remain open. |
 | R-006 | Repository files and past notes mention source and schema, but there is no current build/test/device evidence in this document. | Unverified | Do not claim the app builds, installs, or passes tests until authorised verification produces evidence. |
@@ -96,7 +96,8 @@ When a decision changes, update the decision log and every affected document in 
 - [ ] Finish UX/navigation, design tokens, archive, Growth Mark, and research evidence.
 - [ ] Define the data/date model, migration safety, local backup/restore, and Android platform-backup policy.
 - [ ] Complete notification and journaling edge-case acceptance tests.
-- [ ] Correct broken links and decision-log formatting/identifier anomalies with traceability.
+- [x] Correct the known broken stack-comparison link and remove the duplicate D-090 row with traceability.
+- [ ] Complete a broader decision-log column-semantics audit for rows after D-090; preserve all decision meaning and do not silently renumber IDs.
 - [ ] Reconcile the handover and roadmap against the actual latest repository state.
 - [ ] Owner explicitly approves Gates A–D before implementation begins.
 
