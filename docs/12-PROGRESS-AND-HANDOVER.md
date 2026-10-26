@@ -167,3 +167,11 @@ The current repository contains a native Kotlin/Jetpack Compose Android app and 
 - Added R-008/R-009 to the decision register and split the data-model checklist into completed alignment versus remaining schema/date/migration/platform-backup work. Commit: `5205d47ec20c6518a9258c89bc081c5f811c70b8`.
 - Re-fetched and verified every changed document after writing. These are planning-document changes only. No app code, build, tests, APK installation, device validation, or implementation audit was performed.
 - Next: reconcile remaining duplicate requirement identifiers and stale product-specification wording, then review screen/data contracts and complete the planning completeness pass. The planning gate remains closed pending explicit owner approval.
+
+
+## Product requirement identifier cleanup — 2026-10-26
+
+- Re-fetched the product specification and decision log and checked requirement/decision IDs for duplicates. The decision log now has 179 decision rows with no duplicate D-IDs.
+- Renamed the second H4 section in `docs/01-PRODUCT-SPECIFICATION.md` to H4b and clarified that retry idempotency and legitimate repeated entries are approved, while the exact undo window/recovery interaction remains open. Re-fetched and verified the product spec; requirement-heading IDs are unique. Commit: `89684eb5e35aef184d711aa80a6313f2b366c7b3`.
+- Added R-010 to the decision register and verified it. Commit: `75c5ddb128d4754e4a2c24657af5b8e3a2ce9d87`.
+- Documentation only; no app code, build, tests, APK installation, device validation, or implementation audit was performed.
