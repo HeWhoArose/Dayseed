@@ -1,6 +1,6 @@
 # Progress and Handover
 
-**Last updated:** 2026-10-18  
+**Last updated:** 2026-10-26  
 **Status:** Planning phase; planning gate not approved; feature implementation is not authorised. Existing source files/preview are evidence for the later audit, not proof of a verified build or approval to add features.
 
 ## Repository status
@@ -19,10 +19,10 @@ Canonical branch: `main`. GitHub is the source of truth for planning and future 
 - DESIGN.md is now specified as the sole authoritative token/component reference; candidate values remain unapproved.
 - Competitor screenshot evidence for Loop Habit Tracker and Daylio is recorded in [docs/18-COMPETITOR-SCREENSHOT-AUDIT.md](18-COMPETITOR-SCREENSHOT-AUDIT.md). Public listing screenshots were inspected; current live app flows have not been tested.
 - AI Studio/GitHub workflow and native-app feasibility-spike acceptance criteria are in [docs/19-AI-STUDIO-GITHUB-WORKFLOW.md](19-AI-STUDIO-GITHUB-WORKFLOW.md).
-- Data/privacy baseline is drafted; Android backup behaviour, exact date policy, and export/delete details still need decisions.
+- Data/privacy baseline and portable-backup decisions are substantially documented. Still open: Android platform-backup inclusion/exclusion policy, central date/time policy, final deletion/export wording, and implementation-level validation.
 - Monetisation remains a hypothesis; no provider/SDK selected.
 - Existing app source is present on `main`, but the current workflow remains in planning and feature work is not authorised. Do not claim a clean build or verified implementation without evidence.
-- Automated tests/build: none run; there is no app source in this planning package.
+- Automated tests/build: none run in this planning continuation. Native Android app source exists on `main`; its build, tests, APK installation, and device behavior remain unverified.
 
 
 ## Planning decisions confirmed — 2026-10-18
@@ -37,14 +37,14 @@ The owner has confirmed the following product rules in conversation and they are
 - Habit measurement mode is selected by the user: duration, quantity, or completion-only. For measured modes, progress labels are derived from actual amounts relative to the usual target, not from self-reported feelings.
 - Today cards expose separate quick Complete and detailed Record actions. Quick Complete defaults to the usual target for measured habits; Record supports actual amounts, corrections, and an optional habit/date note.
 
-The current phase remains **planning**. Continue documenting product rules, the eight-screen blueprint, navigation, data contracts, and edge cases. Do not start feature implementation. The existing native app source and preview are evidence for the later implementation-reality audit, not proof that implementation is approved or verified. Exact progress-level thresholds, week boundaries, note cardinality, duplicate/undo behavior, and the detailed historical schedule model remain open.
+The current phase remains **planning**. Continue documenting product rules, the eight-screen blueprint, navigation, data contracts, and edge cases. Do not start feature implementation. The existing native app source and preview are evidence for the later implementation-reality audit, not proof that implementation is approved or verified. The progress bands, user-selected week start, multiple journal entries, multiple numeric/duration records, and duplicate/undo direction have since been recorded as decisions. Remaining work is to formalise their edge cases in cross-screen/data contracts and tests; do not describe already-decided rules as undecided.
 
 ## Cumulative research inventory and audit — 2026-10-17
 
 - Added [Cumulative Research Inventory and Documentation Audit](20-CUMULATIVE-RESEARCH-INVENTORY-AND-AUDIT.md) to distinguish documented hypotheses from completed evidence and approved decisions.
 - Enumerated all 26 Markdown files on `main`; checked relative Markdown file targets and found no missing target files. Heading anchors, external URLs, and claim-level citations still need deeper review.
 - Confirmed the competitor research document is a plan, not a completed market study; public listing screenshots are not hands-on competitor tests.
-- The audit prioritises day-record semantics, date/time policy, journal cardinality, reminders, privacy/export/deletion, representative usability validation, and the owner approval gate.
+- The audit prioritises remaining day-record edge cases, date/time policy, backup/restore and platform backup verification, reminder delivery edge cases, representative usability validation, and the owner approval gate.
 - This was a structural/status pass, not a complete line-by-line source and contradiction audit. No app code was created and no implementation is authorised.
 
 ## Latest research package
@@ -61,7 +61,7 @@ Updated references: README.md, DESIGN.md, docs/02-UX-AND-DESIGN.md, docs/08-IMPL
 ## Next actions
 
 1. Audit all documentation for contradictions, dead links, duplicates, stale claims, and missing acceptance criteria.
-2. Resolve or explicitly defer high-impact product questions: daily outcome semantics, schedule/missed-day rules, local date/time policy, journal multiplicity, data backup/export/delete, and reminder behaviour.
+2. Reconcile the remaining high-impact edge cases: explicit skipped-state semantics, local date/time policy, habit deletion/history, Android platform backup, and exact export/delete/privacy wording. Treat approved schedule, journal multiplicity, backup scope, and reminder rules as baselines, not fresh open questions.
 3. Create comparable low-fidelity screen samples or wireframes for Today, Growth Mark, comeback return, journal archive, and settings/privacy; do not create app code as a substitute.
 4. Inspect current live competitor flows on an Android device where possible; until then, keep conclusions limited to publisher screenshots/listing copy.
 5. Run typography/contrast and enlarged-text checks on prototype screens; update DESIGN.md only when a token is approved.
@@ -119,7 +119,7 @@ The current repository contains a native Kotlin/Jetpack Compose Android app and 
 - Clarified that 9:00 a.m. local time on the configured week-start day is approved for weekly reflection; remaining reminder questions concern delivery edge cases, not the chosen time. Commit: `5c381230c6bff8194a6c6948684868bf3d022edc`.
 - Re-fetched and verified each changed file after writing.
 - No application code was changed; no implementation audit or build/test run was started.
-- D-009 is resolved: continue the existing native Kotlin + Jetpack Compose project. R-004 is reconciled in planning docs: initial v1 includes readable journal export and local backup/restore, while online backup/cross-device sync are premium future capabilities outside initial v1. A later cloud release requires a separate explicit privacy/security, consent, data-flow, recovery/conflict, retention/deletion, and monetisation gate.
+- D-009 is resolved: continue the existing native Kotlin + Jetpack Compose project. R-004 is reconciled: initial v1 includes readable journal export and user-controlled portable local backup/restore, while online backup/cross-device sync remain future premium direction outside v1 and require a separate explicit approval gate.
 
 
 ## D-009 stack decision — 2026-10-26
@@ -139,3 +139,12 @@ The current repository contains a native Kotlin/Jetpack Compose Android app and 
 - Verified after writes: charter `8ee2b1ca9be10e2af4331bd98e6db00c4abff514`; product spec `895612ca99de2eb0f1c8038cb911c219a10bd555`; architecture `f4011b8dbadb2c6f9254d3cc864b42ff8123bce8`; privacy `ac65182f95c04ae4a2db3eae0a4890b2736845be`; monetisation `8212243adbf76cace936fb3da793587bd2e8ec4c`; testing `a79d684b81a67a73de0852a7945a45dc0207fcca`; roadmap `c5483589d06c6ef82597a80208c83d98251b227f`; workflow `26b485aff636389801a71f32409a23af89d4b3dd`; decision log latest backup/privacy clarification `beb7eb06b291696ecf9bc89ae7b00c284317448e`; decision register `bc91e23f4349e060e2e3ce40ab7befedba046d63`; risk register `7c4279caadb8e0714d32ab7950081dd9b158516a`.
 - Planning only: no app code changed; no build, tests, APK install, device validation, or implementation audit run.
 - Next: continue the remaining planning reconciliation and open UX/data decisions, then perform a planning completeness review. Wait for the owner's explicit approval before technical validation or implementation.
+
+
+## Planning reconciliation continuation — 2026-10-26
+
+- Normalised the mood-insight decision rows D-083–D-090 in `docs/09-DECISION-LOG.md` to the standard column semantics and removed a duplicate D-090 row. No later decision IDs were renumbered; the broader audit of decision rows after D-090 remains open. Commit: `c9292807c1eac245da95bd14c39d50249073455a`.
+- Updated `docs/25-DECISION-REGISTER-AND-RECONCILIATION.md` to record that R-003 is partially corrected, with the remaining column-semantics audit explicitly tracked. Commit: `b6afc0768842aead18be70f7c178fbf8422c8b56`.
+- Reconciled `docs/11-RISKS-AND-OPEN-QUESTIONS.md` with existing approved decisions so resolved items (schedule direction, multiple entries, backup scope, and native stack) are no longer presented as wholly unanswered. Remaining edge cases stay open. Commit: `ae8161fb733dca6870d6de57ae1da2a4027d29db`.
+- Re-fetched and verified each updated document after writing. No app code changed. No build, tests, APK install, device validation, or implementation audit was run.
+- Next: finish the broader decision-log row audit, align the handover and roadmap to the reconciled state, then continue the planning completeness review. Do not cross the implementation gate without explicit owner approval.
