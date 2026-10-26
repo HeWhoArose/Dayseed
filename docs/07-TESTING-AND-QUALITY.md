@@ -14,21 +14,24 @@ Protect personal data, prevent loss of history, keep core flows usable offline, 
 - **Release checks:** signed Android build, installation/upgrade path, crash-free core flows, privacy disclosures.
 
 ## 3. Essential regression scenarios
-1. Tiny, Usual, Extra, and completion-only semantics remain correct.
+
+1. Tiny, Usual, Extra, and completion-only semantics remain correct; actual values above target are preserved.
 2. A journal entry can be saved independently of habit completion.
-3. A past record edit updates all dependent summaries.
-4. Archive preserves history; deletion follows the approved deletion policy.
-5. Repeated taps or retries do not create duplicate records.
-6. App process termination does not lose acknowledged writes.
-7. Offline operation does not show endless loading or require sign-in.
-13. Readable journal export and local backup/restore work without an account or cloud service; validate backup integrity and recovery safety.
-14. Initial v1 core flows do not require network access and do not transmit journal/habit data to a cloud service; test offline behaviour and inspect actual SDK/data paths.
-15. Android platform backup/device transfer is tested and documented separately from Dayseed's user-controlled local backup file.
-8. Comeback thresholds and dismissal work at boundary dates.
-9. Missing or invalid clock data does not generate shaming or fabricated messages.
-10. Notification denial, disabled notifications, and OS restrictions do not break core tasks.
-11. Large fonts, TalkBack, contrast, and reduced motion remain usable.
-12. Schema migration preserves records and can recover safely from failure.
+3. Multiple journal entries on one date remain distinct; editing preserves identity, and changing an entry date does not modify habit records.
+4. Multiple numeric entries/duration sessions for one habit and local date sum correctly; distinct entries remain individually editable.
+5. Explicit zero, completion-only state, effort-aware state, explicit miss, and no record remain distinguishable.
+6. A past record edit updates all dependent summaries without changing unrelated records.
+7. Archive preserves history; deletion follows the approved deletion policy and does not accidentally erase independent journal entries.
+8. Repeated taps or retries of the same logical action do not create duplicate records, while legitimate repeated sessions remain possible.
+9. App process termination does not lose acknowledged writes; failed or uncertain saves preserve drafts and do not create duplicate journal entries.
+10. Offline operation does not show endless loading or require sign-in.
+11. Comeback thresholds, local-date boundaries, and dismissal work at boundary dates; changed or uncertain clocks do not create duplicate or fabricated messages.
+12. Notification denial, disabled notifications, quiet hours, and OS restrictions do not break core tasks or bypass reminder opt-in.
+13. Readable journal export and local backup/restore work without an account or Dayseed cloud service; validate backup integrity, password retry behavior, Replace/Merge safety, conflict preservation, and recovery from interruption.
+14. Initial v1 core flows do not require network access and do not transmit journal/habit data to a Dayseed cloud service; inspect actual SDK and data paths before making privacy claims.
+15. Android platform backup/device transfer is tested and documented separately from Dayseed's user-controlled portable backup file.
+16. Large fonts, TalkBack, contrast, reduced motion, small-screen layout, and keyboard entry remain usable.
+17. Schema migration preserves records and can recover safely from failure; test the current version-1 placeholder upgrade path only after technical validation is authorised.
 
 ## 4. Test data and privacy
 Use synthetic test data. Do not use real journal entries in fixtures, screenshots, logs, or issue reports. Scrub sensitive values from crash reports and automated test output. Initial v1 excludes accounts, online backup, and cross-device sync; premium future sync must not be added under this test plan without a separate approved privacy/security and product gate.
