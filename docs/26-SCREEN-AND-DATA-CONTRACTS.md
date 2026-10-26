@@ -64,6 +64,7 @@ Until the owner approves the model:
 ### History / calendar
 
 - Use the saved week-start preference consistently for weekly views.
+- Show a derived missed label on a past scheduled date when no qualifying activity was recorded, without requiring a manual action or creating a journal entry. Opening that date may offer a separate optional journal memo; the memo does not alter habit status.
 - Historical views show the settings/target that applied at the time; current-target comparisons must be labelled separately.
 - Corrections are explicit and local to the selected entity. Do not recalculate unrelated records as a side effect.
 - Rest/non-scheduled days are neutral; paused periods are excluded from scheduled opportunities. Before a scheduled day has passed, no record is unrecorded rather than zero. After a scheduled day passes without qualifying activity, missed status is derived; users cannot manually mark a day missed. Genuine backdated activity can recalculate the result, but a journal memo alone cannot change habit status.
