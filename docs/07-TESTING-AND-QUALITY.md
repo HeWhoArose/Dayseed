@@ -7,7 +7,7 @@ Protect personal data, prevent loss of history, keep core flows usable offline, 
 
 ## 2. Test layers
 - **Domain unit tests:** effort levels, schedules, outcomes, summary calculations, comeback bands, date boundaries.
-- **Persistence tests:** inserts, updates, uniqueness constraints, transactions, migrations, deletion, export/import if supported.
+- **Persistence tests:** inserts, updates, stable identity, idempotency for retries of the same logical submission, legitimate multiple entries per habit/date, transactions, migrations, deletion, and export/import if supported. Do not impose a blanket unique constraint on habit + date; distinct valid entries must remain separate.
 - **Application tests:** use cases with fake repositories and deterministic clocks.
 - **UI tests:** first launch, logging, journaling, history correction, privacy settings, reminders, comeback dismissal.
 - **Device tests:** offline mode, force-stop/restart, low storage, permission denial, timezone/date changes, accessibility settings.
@@ -32,6 +32,14 @@ Protect personal data, prevent loss of history, keep core flows usable offline, 
 15. Verify D-186's Android platform-backup/device-transfer exclusion separately from Dayseed's user-controlled portable backup file: inspect manifest/data-extraction rules and representative supported OS/transfer paths; confirm sensitive app records/drafts are excluded and portable backup still contains its approved complete coverage.
 16. Large fonts, TalkBack, contrast, reduced motion, small-screen layout, and keyboard entry remain usable.
 17. Schema migration preserves records and can recover safely from failure; test the current version-1 placeholder upgrade path only after technical validation is authorised.
+
+### Date/history acceptance coverage (D-187)
+
+- Travel across time zones and confirm existing habit/journal local-date keys do not change; new entries default to the current device-local date unless another date is explicitly selected.
+- Change the device clock forward/backward and simulate uncertain time; confirm no historical rewrite, fabricated elapsed time, duplicate logical record, or duplicate reminder/comeback delivery.
+- Change a habit target/schedule and confirm changes apply prospectively while past records retain their historical interpretation.
+- Archive a habit and confirm its history remains accessible; perform any separately authorised permanent deletion flow and confirm independent journal entries remain intact.
+- Backdate and correct a specific entry; confirm only the selected record and dependent calculations change.
 
 ## 4. Test data and privacy
 Use synthetic test data. Do not use real journal entries in fixtures, screenshots, logs, or issue reports. Scrub sensitive values from crash reports and automated test output. Initial v1 excludes accounts, online backup, and cross-device sync; premium future sync must not be added under this test plan without a separate approved privacy/security and product gate.
