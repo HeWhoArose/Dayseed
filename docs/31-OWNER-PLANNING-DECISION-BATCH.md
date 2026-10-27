@@ -54,12 +54,12 @@ Still to reconcile before asking for schema approval:
 - Learn only from local habit-record timestamps; never inspect journal text/moods or send timing data over the network. Proposed threshold: at least seven positive activity timestamps on at least five dates in 14 days, 70% in a two-hour band; candidate time is median plus 30 minutes rounded up to a 15-minute boundary. Never auto-override a manually chosen time. Validate for 28 days, and revert if a stable cluster is no longer supported.
 - Optional partial-progress tips: at most three over the following seven days, at least 24 hours apart, maximum one/day; suppress after target-met, dismissal or opt-out. Phone tips require a separate setting.
 
-- [ ] Accept these defaults for planning.
+- [ ] Accept these defaults for planning, including confirmation of the weekly reflection time separately from the per-habit 9:00 a.m. default.
 - [ ] Accept with changes (specify which).
 - [ ] Defer personalised timing and/or partial-progress tips from initial v1.
 - [ ] Explicitly defer the complete reminder enhancement until a later version, retaining only already-approved simple reminders/weekly-goal rules.
 
-These defaults are not approved, and Android delivery/reboot/permission behaviour remains unverified.
+These defaults are not approved, the weekly reflection time remains to be separately confirmed, and Android delivery/reboot/permission behaviour remains unverified.
 
 ### D. Retrospective journal prompt (D-042)
 
