@@ -21,7 +21,7 @@
 
 ## 2. Owner review: accept, modify, or defer these proposals
 
-These are recommendations, **not approved policy**. The owner can accept the proposal, specify a change, or defer the corresponding feature/rule from v1 where safe.
+The batch separates **owner-level choices** from **delegated defaults**. The schema proposal and material design, privacy and scope choices require owner review. Undo, reminder coordination and retrospective-prompt cadence use the documented conservative defaults under D-196; they are not separate approval blockers, though the owner may override or safely defer them in this same review.
 
 ### A. Complete relational schema proposal
 
