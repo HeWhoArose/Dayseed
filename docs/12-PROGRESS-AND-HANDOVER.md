@@ -60,13 +60,14 @@ Updated references: README.md, DESIGN.md, docs/02-UX-AND-DESIGN.md, docs/08-IMPL
 
 ## Next actions
 
-1. Audit all documentation for contradictions, dead links, duplicates, stale claims, and missing acceptance criteria.
-2. Reconcile the remaining high-impact edge cases: local date/time policy, habit deletion/history, technical verification of the approved D-186 Android platform-backup exclusion, and exact export/delete/privacy wording. D-193 resolves the habit-day Skip question for v1: no explicit Skip action/outcome. Treat approved schedule, journal multiplicity, backup scope, platform-backup policy, and reminder rules as baselines, not fresh open questions.
-3. Create comparable low-fidelity screen samples or wireframes for Today, Growth Mark, comeback return, journal archive, and settings/privacy; do not create app code as a substitute.
-4. Inspect current live competitor flows on an Android device where possible; until then, keep conclusions limited to publisher screenshots/listing copy.
-5. Run typography/contrast and enlarged-text checks on prototype screens; update DESIGN.md only when a token is approved.
-6. Complete the planning gate and record explicit owner approval before authorising the bounded native-app feasibility spike.
-7. After the spike passes and stack approval is explicit, begin feature implementation in small testable phases.
+Use [Planning Completeness Review](27-PLANNING-COMPLETENESS-REVIEW.md) as the current checklist; it supersedes older next-action lists in this historical handover where they describe resolved decisions as open.
+
+1. Close the written schema proposal: keys, nullability/check constraints, foreign keys/indexes, transaction/rollback, deletion ownership, and migration/backup compatibility.
+2. Finalise or safely defer the remaining reminder/notification, retrospective-journal-prompt, partial-tip, and undo/recovery details.
+3. Prepare the primary navigation/wireframe and visual-design approval pack, including Growth Mark, archive pattern, typography/colour/theme, and accessibility.
+4. Build the requirement-to-screen/data-rule/acceptance-test traceability matrix and run the current cross-document claim/link/anchor review.
+5. Present the genuine owner choices and safe deferrals together; keep the planning gate closed until the owner explicitly approves it.
+6. Only after separate authorisation, run the bounded native technical-validation stage. Do not treat repository source presence as proof of a clean build or verified behaviour.
 
 ## Rules for the next AI or contributor
 
