@@ -86,6 +86,21 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - Keep the daily writing prompt available in the journal experience, but make it easy to dismiss or ignore for that session.
 - In v1, do not add a setting to disable prompts entirely. Users can simply skip the prompt and write freely; showing or ignoring it never affects habit progress, streaks, ranks, or comeback eligibility.
 
+## Optional retrospective prompt for the previous day (D-042)
+
+**Status:** Optional retrospective journaling is an approved direction. The following is a conservative delegated planning proposal for cadence and interaction; the owner must accept it or explicitly defer it before Gate A. It is not an approved implementation contract.
+
+- On the first eligible app opening of a local calendar day, Dayseed may show one small, non-blocking in-app invitation to reflect on the **most recent fully completed local calendar day** only if that date has no saved journal entry.
+- This does not depend on whether any habit was logged. A journal-only gap is not evidence of inactivity or a bad day; do not infer a reason or use guilt language.
+- Offer the prompt at most once for that target date. If the user opens the editor, presses “Not now,” dismisses it, or simply leaves the screen, record that it was shown and do not prompt again for that same date. A later deliberate Journal action remains available.
+- Do not send an OS notification for this prompt, do not build a backlog of older dates, and do not show more than one retrospective prompt per app opening. If a 14-/30-day comeback experience is shown, it takes precedence for that opening; suppress the retrospective prompt rather than stacking experiences or resurfacing it later as a stale backlog.
+- Open the normal journal editor with the target local date visibly selected. Explicit Save is required. The saved entry is an ordinary independent journal entry and must not mark a habit complete, change any habit status, or affect habit totals.
+- If an unresolved journal draft already exists for the target date, reuse that draft rather than creating a duplicate draft. Leaving the editor must preserve entered draft text according to the journal draft contract; a failed/uncertain save leaves the draft unchanged.
+- If the target date already has a saved journal entry, do not show the prompt. A dismissed/shown marker is keyed by the target local date, not the current timezone; date-key changes caused by travel must not cause it to be offered again.
+- When there is insufficient/corrupt date information, prefer no prompt over a fabricated date. Prompt eligibility uses local calendar dates, not a fixed 24-hour elapsed timer.
+
+Planned checks must cover no prior entry, an existing prior entry, habit activity but no journal entry, repeated app opens/dismissal, multiple missing older dates with no backlog, timezone travel, an existing draft, save failure, and collision with a comeback screen. These tests are plans only.
+
 ## Optional mood tagging for journal entries
 
 - Journal entries may include an optional mood tag. Users can save an entry without choosing a mood; mood tagging is never required.
