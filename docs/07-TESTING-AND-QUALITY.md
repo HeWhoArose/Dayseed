@@ -136,6 +136,31 @@ Expected results when week-start is Monday:
 - Repeat the boundary assertions with Sunday as the configured week-start; only period membership changes, not stored dates or the primary-versus-secondary rule.
 - Verify correction/deletion of J1 updates distribution and selected-mood results from source data without altering J2/J3 or unrelated entries. No real journal text is used in fixtures.
 
+### Measured progress-band boundary fixtures — AC-002 (planned, not executed)
+
+Classify with the exact actual/target ratio before rounding any displayed percentage. Fixtures below verify labels and stored values; they are a test plan, not test results.
+
+| Positive integer target | Actual value(s) | Expected label |
+|---:|---|---|
+| 100 | 1, 24 | Tiny |
+| 100 | 25, 49 | Small |
+| 100 | 50, 74 | Halfway |
+| 100 | 75, 99 | Nearly there |
+| 100 | 100 | Goal met |
+| 100 | 101, 150 | Extra |
+| 100 | 151 | Huge |
+| 10 | 1, 2 | Tiny |
+| 10 | 3, 4 | Small |
+| 10 | 5, 6, 7 | Halfway |
+| 10 | 8, 9 | Nearly there |
+| 10 | 10 | Goal met |
+| 10 | 11, 15 | Extra |
+| 10 | 16 | Huge |
+| 1 | 1 | Goal met; intermediate bands are unreachable |
+| 1 | 2 | Huge (200%); do not misclassify from rounded display |
+
+Also verify: actual zero is retained as an explicit saved record but does not receive the positive-progress Tiny label; no record remains a separate state; actual amounts are never capped or changed; rounded percentage display cannot change the classification; units/targets validate as positive whole-number targets while recorded numeric values may be zero. These cases must eventually be implemented as deterministic acceptance tests after the planning gate and technical-validation authorisation; they have not been run.
+
 ## 4. Test data and privacy
 Use synthetic test data. Do not use real journal entries in fixtures, screenshots, logs, or issue reports. Scrub sensitive values from crash reports and automated test output. Initial v1 excludes accounts, online backup, and cross-device sync; premium future sync must not be added under this test plan without a separate approved privacy/security and product gate.
 
