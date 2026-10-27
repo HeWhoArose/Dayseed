@@ -5,6 +5,8 @@
 **Purpose:** Reconcile planning documents with files that actually exist in the repository.  
 **Scope:** Read-only source/tree inspection plus documentation updates. No application code was changed, and no Gradle build, tests, APK install, or physical-device validation was run during this audit.
 
+**Current-status note (2026-10-27):** This is a dated source/tree snapshot from 2026-10-18, not a fresh implementation audit. D-009 has since been approved: continue the existing native Kotlin + Jetpack Compose project. The approved product schedule vocabulary is now D-191/D-195: DAILY, SELECTED_WEEKDAYS with the fixed weekday mask, and FLEXIBLE_WEEKLY_TARGET. The older mention below of every-N-days patterns and optional start dates was a proposal from that audit, not a current approved v1 requirement. Do not add those patterns unless the decision log is explicitly revised. See the current [Planning Completeness Review](27-PLANNING-COMPLETENESS-REVIEW.md) and [Requirement Traceability](28-REQUIREMENT-TRACEABILITY.md) for current planning status.
+
 ## Executive summary
 
 The repository is **not planning-only**. The current tree contains a native Android project using Kotlin and Jetpack Compose, with screens, a ViewModel, repository, and SQLite persistence. Older planning documents incorrectly described Expo/React Native as the active preferred stack and said implementation had not started. Those claims have been corrected where found.
@@ -25,7 +27,7 @@ Source existence is not proof of build correctness, functional completeness, acc
 
 1. **SQLite schema migration:** `DayseedDatabaseHelper` declares database version 1 and a placeholder `onUpgrade`. This is a high-priority risk before adding new record shapes or shipping updates.
 2. **Numeric multi-entry tracking is not represented by the current record model:** current `DailyRecord` and the `daily_records` table use one row per habit/date with a uniqueness constraint on that pair. The owner-approved rule requires multiple numeric entries per habit/date and a summed daily total. A migration/data-model plan is required; do not try to squeeze multiple entries into the current uniqueness rule.
-3. **Schedule model is incomplete:** the current habit model represents selected weekdays. Owner-approved progressive scheduling also includes optional start date, weekly targets, every-N-days patterns, and a schedule-edit prompt asking whether changes apply today or tomorrow. These need explicit model and UX work.
+3. **Schedule model is incomplete:** at the time of this audit, the source represented selected weekdays. The active owner-approved v1 schedule vocabulary is now D-191/D-195: DAILY, SELECTED_WEEKDAYS with the fixed 7-bit weekday mask, and FLEXIBLE_WEEKLY_TARGET with optional preferred days as guidance only. The earlier every-N-days and optional start-date ideas in this audit are not approved v1 requirements. D-194 now defines repeated same-day Apply-today handling. Actual source implementation and migration still require later authorised technical verification.
 4. **Tracking-mode contract:** effort-level, completion-only, and numeric tracking need explicit types, validation, target/unit semantics, and separate display behaviours.
 5. **History preservation:** schedule changes, unit changes, edits, pause/archive, and deletion must not silently rewrite or erase records. Existing code paths need targeted review and regression tests against the approved decisions.
 6. **Tests/build evidence:** source contains Compose test tags, but no test source tree appeared in the repository tree. This does not prove tests cannot exist elsewhere; verify the complete checkout and Gradle tasks before concluding no tests exist. Build/test/device state remains **unverified**.
@@ -35,7 +37,7 @@ Source existence is not proof of build correctness, functional completeness, acc
 
 - `docs/03-TECHNICAL-ARCHITECTURE.md`: now describes the observed native implementation and calls out migration risk.
 - `docs/08-IMPLEMENTATION-ROADMAP.md`: now starts with auditing and validating the existing native app rather than scaffolding an Expo app.
-- `docs/09-DECISION-LOG.md`: D-009 now records the observed Kotlin/Compose implementation as requiring owner confirmation; D-022 now names AI Studio/GitHub.
+- `docs/09-DECISION-LOG.md`: D-009 later received owner approval to continue the existing native Kotlin/Compose implementation; the decision remains distinct from build/test/device verification. D-022 names AI Studio/GitHub.
 - `docs/12-PROGRESS-AND-HANDOVER.md`: stale planning-only statements corrected.
 - `docs/13-ANDROID-PLATFORM-RESEARCH.md` and `docs/14-STACK-COMPARISON.md`: Expo-specific recommendation is explicitly historical, not active architecture guidance.
 - `DESIGN.md`: platform rendering note updated to Jetpack Compose.
@@ -52,7 +54,7 @@ Source existence is not proof of build correctness, functional completeness, acc
 ### Gate 1 — Align domain and persistence with owner decisions
 - Define versioned schema migrations before changing database structures.
 - Model numeric entries as individual rows with stable IDs, habit ID, local-date key, quantity, unit/target context as decided, and creation/update metadata. Derive daily totals by summing entries; do not store duplicate totals unless consistency is guaranteed transactionally.
-- Model schedule patterns distinctly: selected weekdays, weekly target, every-N-days, start date, and effective-date choice for edits.
+- Model only the currently approved v1 schedule kinds from D-191/D-195 (DAILY, SELECTED_WEEKDAYS, FLEXIBLE_WEEKLY_TARGET) and the effective-date behavior in D-194. Do not add every-N-days or start-date schedule forms without a new explicit owner decision.
 - Specify local-date/time-zone behaviour, decimal/zero rules, target snapshots, and unit-change policy before implementation.
 - Add migration tests and data-preservation regression cases.
 
