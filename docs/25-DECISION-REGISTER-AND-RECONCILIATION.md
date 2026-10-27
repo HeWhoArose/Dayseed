@@ -103,6 +103,7 @@ These are not micro-decisions and must not be silently delegated:
 6. `19-AI-STUDIO-GITHUB-WORKFLOW.md` — workflow and explicit implementation gate.
 7. `12-PROGRESS-AND-HANDOVER.md` — factual status, verified commits, tests and next task.
 8. `27-PLANNING-COMPLETENESS-REVIEW.md` — current readiness snapshot and planning/post-gate checklist; it does not supersede the decision log.
+8. `27-PLANNING-COMPLETENESS-REVIEW.md` — current readiness snapshot and planning/post-gate checklist; it does not supersede the decision log.
 
 When a decision changes, update the decision log and every affected document in one traceable reconciliation batch. Fetch each current file immediately before writing it, preserve unrelated content, then re-fetch and verify the result.
 
@@ -133,6 +134,8 @@ When a decision changes, update the decision log and every affected document in 
 - [ ] Inspect current Gradle/toolchain/source and the actual version-1 SQLite schema; run build/test validation only after separate owner authorisation.
 - [ ] Verify migration, offline persistence, notification lifecycle, export/delete/restore, and the D-186 Android backup/data-extraction exclusion using synthetic data.
 - [ ] Install and verify the native app on a physical Android device; record exact versions, commands, results and limitations.
+
+**Boundary:** This register records planning state only. It does not authorise code changes, an implementation audit, technical validation, migration, or a release-readiness claim.
 
 **Boundary:** This register records planning state only. It does not authorise code changes, an implementation audit, technical validation, migration, or a release-readiness claim.
 
