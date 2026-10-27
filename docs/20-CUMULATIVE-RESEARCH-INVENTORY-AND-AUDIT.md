@@ -4,14 +4,16 @@
 **Repository:** `HeWhoArose/Dayseed`, branch `main`  
 **Status:** Initial repository-wide inventory completed; planning gate remains closed. This is a documentation audit, not an approval to build the app.
 
+**Current-status note (2026-10-27):** This is a dated snapshot, not the live open-question register. Since this audit, owner decisions D-186–D-195 resolved several items listed here (including Android platform-backup policy, date/history baseline, missed-day/skip semantics, schedule fields, same-day configuration edits, and weekday-mask encoding). Use [`25-DECISION-REGISTER-AND-RECONCILIATION.md`](25-DECISION-REGISTER-AND-RECONCILIATION.md), [`12-PROGRESS-AND-HANDOVER.md`](12-PROGRESS-AND-HANDOVER.md), and the current [`27-PLANNING-COMPLETENESS-REVIEW.md`](27-PLANNING-COMPLETENESS-REVIEW.md) for current status. Native Kotlin/Compose source exists, but build/test/device readiness remains unverified; the planning gate remains closed.
+
 ## Purpose
 
 This document distinguishes research that is recorded, research that is only a proposed method, and work that still needs evidence or owner decisions. A document existing in Git does not mean its recommendations have been validated or approved.
 
 ## Audit method and limits
 
-- Enumerated the repository tree on `main` and reviewed the headings, status statements, and open-question language in the 26 Markdown files currently present.
-- Checked relative Markdown file links in all 26 files against the repository file inventory. **No missing relative file targets were found.** This check validates target-file existence, not every heading anchor or external URL.
+- At the audit date, enumerated the repository tree on `main` and reviewed headings, status statements, and open-question language in the 26 Markdown files then present.
+- Checked relative Markdown file links in those 26 files against the repository file inventory. **No missing relative file targets were found.** This check validates target-file existence, not every heading anchor or external URL.
 - Compared the documented state across the README, charter, product specification, design references, architecture, decision log, risk register, roadmap, research plan, and handover.
 - This pass was a structural and status audit, not a complete line-by-line semantic review of every claim or a fresh independent verification of every external source. That deeper audit remains a planning task.
 - Competitor evidence currently includes public Google Play listing/screenshot material. It does not claim hands-on testing of installed competitor apps or user research with Dayseed's target audience.
@@ -40,7 +42,7 @@ This document distinguishes research that is recorded, research that is only a p
 | AI Studio/GitHub workflow | `19-AI-STUDIO-GITHUB-WORKFLOW.md` | GitHub-canonical workflow and synchronization guidance documented | Use only after owner opens implementation gate; verify real native Android install, not a web preview |
 | Governance and open decisions | Decision log, risks, roadmap, handover | Status vocabulary and approval gate documented | Reconcile each open question to a decision ID, owner, evidence need, safe default, and revisit trigger |
 | Research sources and reproducibility | Individual research documents and source sections | Some official and vendor sources recorded; evidence depth varies by topic | Audit source URLs, publication/update dates, primary-source preference, exact support for claims and links; add source log where absent |
-| Repository navigation and relative links | 26 Markdown files on `main` | Relative Markdown file-target check passed: no missing targets found | Run heading-anchor checks and a deeper content-level consistency audit; re-run after documentation edits |
+| Repository navigation and relative links | 26 Markdown files at the 2026-10-17 snapshot | Relative Markdown file-target check passed at that time: no missing targets found | Re-run after the later documentation edits; heading-anchor checks and content-level consistency also remain needed |
 | App implementation/build | Native Android source exists on main | Source implementation exists; build/test/APK/device status is **unverified** | Audit and validate existing app; do not scaffold a competing stack. Follow current owner authorization for further implementation |
 
 ## Priority order for remaining work
@@ -76,7 +78,7 @@ This document distinguishes research that is recorded, research that is only a p
 - The competitor research plan and screenshot audit are distinct artifacts. The latter is partial evidence and does not complete the former.
 - The roadmap includes both pre-implementation planning and later implementation phases. The later phases are future work, not current authorisation.
 - The research documents contain concrete recommendations, but those recommendations must not silently become product decisions.
-- No missing relative Markdown file targets were found in the 26-file inventory. Heading fragments, external links, claim-level source support, and full semantic consistency still require a dedicated follow-up pass.
+- No missing relative Markdown file targets were found in the 26-file inventory at that time. Heading fragments, external links, claim-level source support, and full semantic consistency still require a dedicated follow-up pass.
 - The decision log and risk register should be treated as the authoritative unresolved-work ledgers; update them whenever evidence or owner decisions change.
 
 ## Planning-gate exit checklist
