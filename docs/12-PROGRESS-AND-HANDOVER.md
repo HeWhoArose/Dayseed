@@ -296,6 +296,6 @@ See [Planning Completeness Review](27-PLANNING-COMPLETENESS-REVIEW.md) for the c
 1. Complete the written schema proposal (constraints/indexes, transactions/rollback, deletion ownership and migration compatibility).
 2. Resolve or explicitly defer reminder, retrospective prompt, partial-tip and undo/recovery edge cases.
 3. Prepare the navigation, screen-flow and design approval pack.
-4. Build the requirement-to-screen/data-rule/test traceability matrix and complete the current cross-document/link/claim audit.
+4. Close the remaining gaps in `docs/28-REQUIREMENT-TRACEABILITY.md` and complete the current cross-document/link/claim audit.
 5. Present the remaining owner choices in one batch; keep the gate closed until the owner explicitly approves it.
 6. Only after separate authorisation, begin the bounded native technical-validation stage described in the workflow and roadmap.
