@@ -72,7 +72,7 @@ This routine cadence is delegated, reversible and not a separate Gate A blocker.
 - [ ] Until reviewed, keep D-008 visual direction, D-016 Growth Mark, D-017 comeback presentation, D-018 archive pattern, D-019 typography/colour and Journal/History navigation marked open.
 - [ ] Keep platform typography as comparison baseline; do not mark a typeface, colour or light/dark theme as approved before contrast/accessibility review.
 
-A rendered Today comparison prototype now exists at `docs/prototypes/dayseed-today-variants.svg`; it is not user-test evidence or approved UI. Navigation and archive comparison prototypes remain to be rendered, then all variants need task/accessibility review.
+Two rendered planning boards now exist: `docs/prototypes/dayseed-today-variants.svg` compares W1/W2/W3 Today layouts, and `docs/prototypes/dayseed-navigation-archive-variants.svg` compares N1/N2 navigation plus A1/A2/A3 archive layouts. They use synthetic data and are not user-test evidence or approved UI. Review all variants against the same task/accessibility scorecard before owner selection.
 
 ### F. Other safe deferrals and policy text
 
@@ -86,7 +86,7 @@ A rendered Today comparison prototype now exists at `docs/prototypes/dayseed-tod
 
 1. Written reconciliation of docs 03 and 30 is complete. Present the coherent schema package for owner review of the format/schema compatibility boundary, safe conflict-resolution options and the full proposed model. D-197's all-or-nothing, fail-closed migration fallback is the current delegated safety default. Do not inspect or migrate the real database during this planning review.
 2. Review delegated defaults only if you want to override them; no separate Undo/reminder/prompt decisions are required by default. The genuine owner-level choices are the remaining schema/restore-compatibility approval, visual/navigation/accessibility decisions after prototypes, final privacy wording (without unsupported runtime claims), whether to keep all monetisation out of initial v1 (recommended default), and explicit planning-gate approval. Record any overrides or consequential choices in docs 09 and reconcile affected documents.
-3. Prepare comparable rendered low-fidelity prototypes based on doc 29; conduct task and accessibility review, then record design choices or explicit deferrals.
+3. Review the two rendered SVG comparison boards linked from doc 29 against the same core task and accessibility scorecard, then record design choices or explicit deferrals. Do not treat mockups as usability evidence.
 4. Close doc 28 traceability gaps, especially schema failure cases, recovery/backup compatibility, privacy and UX/accessibility coverage. AC-011/AC-012/AC-023/AC-024 now use delegated defaults under D-196 unless the owner overrides them. Doc 07 includes planned restore-conflict cases for AC-014/AC-022, deterministic AC-002 progress-band fixtures and AC-009 Mood Insights counts/date-week boundaries. Review any remaining edge cases; all cases remain planned, not executed.
 5. The internal Markdown-link, heading-fragment and external-URL audit is complete across all 37 Markdown files, with no missing relative targets/fragments and all current external URLs resolving at review time. Finish the remaining semantic review for stale status claims, duplicate/conflicting statements and unsupported evidence, then rerun link checks only if further documentation edits affect links or headings.
 6. Check user-facing privacy/export/delete wording against the written rules, keeping unverified runtime claims out.
