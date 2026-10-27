@@ -117,7 +117,7 @@ The current repository contains a native Kotlin/Jetpack Compose Android app and 
 - Added `docs/25-DECISION-REGISTER-AND-RECONCILIATION.md` to centralise approved decisions, delegated defaults, owner-only decisions, and cross-document conflicts. Commit: `e721ed18ba50fde55169ec7057eb24e0f791a204`.
 - Updated `docs/19-AI-STUDIO-GITHUB-WORKFLOW.md` to align with the owner-approved native Kotlin + Jetpack Compose stack. Commit: `fdeb80fbbc96b220dc8ab0cbd79c649789b8c590`.
 - Corrected the historical stack comparison's link to `docs/22-IMPLEMENTATION-REALITY-AUDIT.md`. Commit: `1ec1ca523ce8341748783cf8b85dad3181dfc6e1`.
-- Clarified that 9:00 a.m. local time on the configured week-start day is approved for weekly reflection; remaining reminder questions concern delivery edge cases, not the chosen time. Commit: `5c381230c6bff8194a6c6948684868bf3d022edc`.
+- **Historical note (superseded on 2026-10-27):** an earlier reconciliation recorded 9:00 a.m. as the approved weekly reflection time. That conflated it with the separate per-habit default. The current rule is in D-045 and docs 23/25/27/31: weekly reflection trigger/catch-up rules remain recorded, but the weekly clock time requires separate owner confirmation.
 - Re-fetched and verified each changed file after writing.
 - No application code was changed; no implementation audit or build/test run was started.
 - D-009 is resolved: continue the existing native Kotlin + Jetpack Compose project. R-004 is reconciled: initial v1 includes readable journal export and user-controlled portable local backup/restore, while online backup/cross-device sync remain future premium direction outside v1 and require a separate explicit approval gate.
@@ -276,7 +276,7 @@ The current repository contains a native Kotlin/Jetpack Compose Android app and 
 
 - Owner approved D-195: encode weekdays with a locale-independent 7-bit integer mask, Monday=1, Tuesday=2, Wednesday=4, Thursday=8, Friday=16, Saturday=32, Sunday=64. Combine chosen days by bitwise OR. `SELECTED_WEEKDAYS` requires a valid non-empty mask; `DAILY` and `FLEXIBLE_WEEKLY_TARGET` do not require a scheduled-day mask; flexible weekly preferred weekdays are optional guidance only. Unknown bits and invalid schedule/mask combinations must be rejected.
 - Updated the decision log, proposed architecture, screen/data contract, planned acceptance coverage, risk register, and decision register. Re-fetched each updated file and verified the intended content. The encoding policy is resolved; technical validation remains pending.
-- The complete schema remains proposed, and acceptance cases remain planned, not executed. The remaining identified schema behavior question concerns cleanup of habit-linked reminder-ledger rows and pending OS notifications on permanent habit deletion. No code, build, tests, APK/device validation, or implementation audit was performed; any technical validation or implementation still requires separate explicit authorisation.
+- The complete schema remains proposed, and acceptance cases remain planned, not executed. Permanent-deletion notification cleanup now has a delegated planning default in docs 03/30/26/07; remaining work is owner review of the complete schema and later authorised verification of transaction, cancellation-failure, startup-retry, and stale-worker guard behaviour. No code, build, tests, APK/device validation, or implementation audit was performed; any technical validation or implementation still requires separate explicit authorisation.
 
 
 ## Current readiness snapshot — 2026-10-27
