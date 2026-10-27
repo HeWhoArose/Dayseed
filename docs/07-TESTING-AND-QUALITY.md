@@ -109,6 +109,33 @@ These are planned acceptance cases for the proposed schema, not test results. Th
 - Verify all multi-row operations roll back completely on injected failure; success is never shown before commit.
 - Verify migration/backup compatibility and restore failure recovery only after the owner approves the data model and the technical-validation gate is explicitly authorised. These are planned tests, not executed results.
 
+### Mood Insights synthetic fixture (AC-009) — planned, not executed
+
+Use synthetic journal entries only. For this fixture, set week-start to Monday and interpret dates as saved local-date keys.
+
+| ID | Local date | Primary mood | Secondary mood |
+|---|---|---|---|
+| J1 | 2026-10-26 | Calm | Hopeful |
+| J2 | 2026-10-26 | Focused | None |
+| J3 | 2026-10-27 | Calm | Tired |
+| J4 | 2026-10-25 | Sad | Hopeful |
+| J5 | 2026-10-19 | Calm | None |
+| J6 | 2026-10-01 | Joyful | None |
+| J7 | 2026-09-30 | Tired | Calm |
+| J8 | 2026-10-02 | None | None |
+| J9 | 2026-10-27 | None | None |
+| J10 | 2026-10-22 | Focused | Calm |
+| J11 | 2026-11-01 | Hopeful | None |
+
+Expected results when week-start is Monday:
+- **This week (2026-10-26–2026-11-01):** Calm 2 (J1,J3), Focused 1 (J2), Hopeful 1 (J11). J9 has no mood; it contributes nothing. J3's secondary Tired does not count.
+- **Previous week (2026-10-19–2026-10-25):** Calm 1 (J5), Sad 1 (J4), Focused 1 (J10). Verify week comparison uses the immediately preceding equivalent week, with primary moods only.
+- **This month (2026-10-01–2026-10-31):** Calm 2 (J1,J3), Focused 2 (J2,J10), Sad 1 (J4), Joyful 1 (J6). J11 (Nov 1) is outside the month despite being in the selected week; J7 (Sep 30) is outside the month even though Calm is its secondary mood.
+- Tapping **Calm** in This week opens J1 and J3 only, in the selected period. It must not include J10 because Calm is secondary there; it must not include J7 because that entry is outside the period and Calm is secondary.
+- Entries J8/J9 remain searchable and visible without mood tags; they do not fabricate a mood count. A period with no primary-mood entries uses the neutral empty state. One or few tagged entries show factual counts without claiming a trend.
+- Repeat the boundary assertions with Sunday as the configured week-start; only period membership changes, not stored dates or the primary-versus-secondary rule.
+- Verify correction/deletion of J1 updates distribution and selected-mood results from source data without altering J2/J3 or unrelated entries. No real journal text is used in fixtures.
+
 ## 4. Test data and privacy
 Use synthetic test data. Do not use real journal entries in fixtures, screenshots, logs, or issue reports. Scrub sensitive values from crash reports and automated test output. Initial v1 excludes accounts, online backup, and cross-device sync; premium future sync must not be added under this test plan without a separate approved privacy/security and product gate.
 
