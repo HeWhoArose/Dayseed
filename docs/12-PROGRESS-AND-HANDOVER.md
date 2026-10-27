@@ -284,10 +284,10 @@ The current repository contains a native Kotlin/Jetpack Compose Android app and 
 See [Planning Completeness Review](27-PLANNING-COMPLETENESS-REVIEW.md) for the current workstream matrix and P0/P1 checklist. It supersedes older “next action” lists in this historical handover where they describe already-resolved decisions as open.
 
 - D-195 weekday-mask encoding is approved and reconciled: Monday=1, Tuesday=2, Wednesday=4, Thursday=8, Friday=16, Saturday=32, Sunday=64. The mapping is locale-independent; valid/non-empty and schedule-kind constraints are planned for validation, not tested.
-- The remaining previously identified permanent-habit-deletion reminder question now has a delegated planning default: delete habit-scoped delivery ledger rows; cancel habit-specific pending/posted OS notifications; preserve journal entries/global reminders; guard delivery workers against deleted/inactive habits; and reconcile stale work. This is a design default only, not implemented or verified.
+- The formerly open permanent-habit-deletion reminder question now has a delegated planning default: delete habit-scoped delivery ledger rows; cancel habit-specific pending/posted OS notifications; preserve journal entries/global reminders; guard delivery workers against deleted/inactive habits; and reconcile stale work. The rule is documented in the architecture, screen contracts, quality plan, risk register and decision register; it remains unimplemented/unverified and may be overridden before schema approval.
 - Earlier Expo-first text in the Android platform research and Expo-specific font-packaging wording were corrected to align with D-009 and native Kotlin/Compose.
 - Clarified in the product specification that complete schema design is a planning deliverable, while runtime/technical verification (build, real database migration, Android backup rules, device behaviour) waits for separate owner authorisation after the planning gate.
-- Created `docs/27-PLANNING-COMPLETENESS-REVIEW.md` and refreshed the decision-register planning checklist to distinguish P0 planning work from post-gate technical validation.
+- Created `docs/27-PLANNING-COMPLETENESS-REVIEW.md`, `docs/28-REQUIREMENT-TRACEABILITY.md`, and `docs/29-UX-DESIGN-APPROVAL-PACK.md`. Refreshed the decision-register checklist, roadmap, quality plan, UX plan and design checklist to reflect these planning deliverables and distinguish P0 planning from post-gate technical validation.
 - Existing repository source is native Kotlin/Compose with SQLite persistence, according to the earlier read-only audit. Build, tests, APK installation, physical-device behaviour and safe migration remain unverified. Do not state that the runtime has passed.
 - Documentation updates were fetched before each write and re-fetched for verification. No application code or database was changed; no build, test, migration, APK installation, or device validation was run during this continuation.
 
@@ -295,7 +295,7 @@ See [Planning Completeness Review](27-PLANNING-COMPLETENESS-REVIEW.md) for the c
 
 1. Complete the written schema proposal (constraints/indexes, transactions/rollback, deletion ownership and migration compatibility).
 2. Resolve or explicitly defer reminder, retrospective prompt, partial-tip and undo/recovery edge cases.
-3. Prepare the navigation, screen-flow and design approval pack.
+3. Use `docs/29-UX-DESIGN-APPROVAL-PACK.md` to produce comparable low-fidelity navigation/screen-flow prototypes and collect design review evidence.
 4. Close the remaining gaps in `docs/28-REQUIREMENT-TRACEABILITY.md` and complete the current cross-document/link/claim audit.
 5. Present the remaining owner choices in one batch; keep the gate closed until the owner explicitly approves it.
 6. Only after separate authorisation, begin the bounded native technical-validation stage described in the workflow and roadmap.
