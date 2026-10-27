@@ -93,7 +93,7 @@ Text wireframes in doc 29 exist, but they are not rendered prototypes, user-test
 1. Reconcile docs 03 and 30 and produce the complete written schema for owner review.
 2. Get the owner’s accept/modify/defer decisions for B–D above, including the numeric-session deletion confirmation rule; record any new choice in docs 09 and reconcile affected documents.
 3. Prepare comparable rendered low-fidelity prototypes based on doc 29; conduct task and accessibility review, then record design choices or explicit deferrals.
-4. Close doc 28 traceability gaps, especially mood-insights fixtures (empty/sparse data, primary versus secondary moods, date/week boundaries, prior-period comparison), schema failure cases and approved reminder/prompt/Undo rules.
+4. Close doc 28 traceability gaps, especially owner acceptance/deferment of reminder/prompt/Undo proposals, backup-conflict cases, schema failure cases and UX/accessibility review. A deterministic synthetic Mood Insights fixture with expected counts and date/week boundaries is now drafted in doc 07 and linked to AC-009; review for any additional edge cases. All cases remain planned, not executed.
 5. Complete the heading-anchor, outdated-claim, duplicate/conflict and supported-evidence review. A prior relative Markdown file-target scan found no missing targets among the 36 documents then present; rerun after this document and remaining edits.
 6. Check user-facing privacy/export/delete wording against the written rules, keeping unverified runtime claims out.
 7. Prepare the final planning walkthrough and obtain the owner’s explicit Gate A–D approval in docs/19-AI-STUDIO-GITHUB-WORKFLOW.md.
