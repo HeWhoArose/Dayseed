@@ -72,7 +72,7 @@ This routine cadence is delegated, reversible and not a separate Gate A blocker.
 - [ ] Until reviewed, keep D-008 visual direction, D-016 Growth Mark, D-017 comeback presentation, D-018 archive pattern, D-019 typography/colour and Journal/History navigation marked open.
 - [ ] Keep platform typography as comparison baseline; do not mark a typeface, colour or light/dark theme as approved before contrast/accessibility review.
 
-Text wireframes in doc 29 exist, but they are not rendered prototypes, user-test evidence or approved UI.
+A rendered Today comparison prototype now exists at `docs/prototypes/dayseed-today-variants.svg`; it is not user-test evidence or approved UI. Navigation and archive comparison prototypes remain to be rendered, then all variants need task/accessibility review.
 
 ### F. Other safe deferrals and policy text
 
