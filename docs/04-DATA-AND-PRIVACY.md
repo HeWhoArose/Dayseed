@@ -31,6 +31,17 @@ Default proposal: no third-party analytics in the first release until a concrete
 ## 8. Future network features
 Accounts, online backup, cross-device sync, AI analysis, and server-side processing are out of initial v1 scope. Online backup and cross-device sync may be considered as premium capabilities in a later release only after a separate decision, threat model, data-flow diagram, clear opt-in/consent UX, retention/deletion policy, conflict/recovery design, provider-terms review, and monetisation approval. Premium status does not itself authorise collection or transfer of personal data.
 
+## Proposed user-facing privacy copy — draft for owner review
+
+The following is candidate wording for the v1 privacy and Backup & Restore screens. It must be checked against the actual manifest, data-extraction rules, dependencies, export behavior, and network/data-flow evidence before release. It is not a verified runtime claim.
+
+- **Core use:** “Dayseed’s core habits, journal, history, and insights work offline and do not require an account. Dayseed does not provide its own online backup or cross-device sync service in this version.”
+- **Moving to a new phone:** “Create and verify a Dayseed backup file, then restore it on the new phone. Android’s automatic device backup/transfer is not the intended recovery path for Dayseed’s private records in this version.”
+- **Saving a backup or export:** “A Dayseed backup or journal export is a file that may contain private information. Choose a destination you trust. If the selected file provider connects to an online service, that provider may upload or sync the file.”
+- **Deleting in Dayseed:** “This removes the selected data from Dayseed. It does not remove copies already saved in backup or export files; those copies must be managed separately.”
+
+Do not claim “never leaves this device,” “encrypted at rest,” or “Android backup is disabled” unless the relevant behavior is verified. The platform-backup exclusion is an approved policy decision (D-186), but it remains a release-verification item. Owner review of the copy and verification of actual behavior remain required.
+
 ## 9. Privacy acceptance checklist
 - [ ] Data inventory and data-flow diagram approved.
 - [ ] Permissions justified and explained in context.
