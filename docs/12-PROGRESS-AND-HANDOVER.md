@@ -322,6 +322,7 @@ See [Planning Completeness Review](27-PLANNING-COMPLETENESS-REVIEW.md) for the c
 - Updated README.md to link the current planning review, traceability matrix, UX/design pack, schema-closure plan and owner decision batch. A relative-target check of README and docs 27–31 found no missing relative targets in those checked files; the full repository-wide post-edit link/heading audit remains open.
 
 
+- Schema reconciliation continuation: reconciled docs 03 and 30 on durable restore-session lifecycle, atomic Replace/Merge completion, interrupted-restore recovery states, index notation, notification-cancellation outbox uniqueness and proposed global idempotency-key enforcement across `habit_entries` and `habit_day_outcomes`. Added planned failure/recovery cases to docs 07/28 and updated the planning readiness checklist in doc 27. This narrows the schema gaps but does not mean the complete schema has owner approval or that any tests were run.
 ## Planning continuation — delegated defaults and current remaining work — 2026-10-27
 
 - Re-fetched `main` and confirmed D-195 is already **Approved** in `docs/09-DECISION-LOG.md`; no duplicate decision was added. The fixed mask is documented in the data contracts and proposed schema (Monday=1 through Sunday=64; valid non-empty masks 1–127; selected-day mask required only for `SELECTED_WEEKDAYS`; flexible-weekly preferred days are optional guidance).
