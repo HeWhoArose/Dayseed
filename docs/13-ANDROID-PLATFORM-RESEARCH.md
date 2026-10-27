@@ -1,5 +1,7 @@
 # Android Platform and Build-Route Research
 
+**Current-status note (2026-10-27):** This document preserves earlier Expo/platform research as historical comparison. D-009 now approves continuing the existing native Kotlin + Jetpack Compose Android project; Expo-specific recommendations below are not active stack guidance and do not reopen that decision.
+
 **Research date:** 2026-10-17  
 **Status:** Official-documentation review; architecture remains a proposal. No app has been created or built as part of this research.
 
@@ -126,7 +128,7 @@ The spike is a bounded feasibility experiment, not the start of the product buil
 
 **Not verified:** Dayseed itself builds; a particular package combination compiles; notification timing is exact across devices; SDK versions are final; monetisation SDKs are suitable; or the Play release is ready.
 
-**Recommendation:** retain React Native + Expo + TypeScript + SQLite as a **proposed candidate**, not an approved decision. Complete product/design planning, approve the technical spike, then validate exact package versions and native configuration before implementation.
+**Historical recommendation at the time of this research (superseded by D-009):** retain React Native + Expo + TypeScript + SQLite as a proposed candidate. This is not the current architecture choice. The active direction is the existing native Kotlin + Jetpack Compose project; no rewrite or second scaffold is authorised by this document.
 
 ## 7. Related stack comparison
-See [Stack Comparison: React Native + Expo vs Native Kotlin + Jetpack Compose](14-STACK-COMPARISON.md) for the head-to-head assessment, criteria and scorecard, the trade-offs around Room versus Expo SQLite, notification constraints, and the conditional recommendation. D-009 remains open; this research does not approve app implementation.
+See [Stack Comparison: React Native + Expo vs Native Kotlin + Jetpack Compose](14-STACK-COMPARISON.md) for the head-to-head assessment, criteria and scorecard, the trade-offs around Room versus Expo SQLite, notification constraints, and the conditional recommendation. D-009 is approved: continue the existing native Kotlin + Jetpack Compose project. This research does not authorise technical validation or app feature implementation.
