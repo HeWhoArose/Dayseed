@@ -46,6 +46,20 @@ Protect personal data, prevent loss of history, keep core flows usable offline, 
 - (Delegated planning default; planned, not executed) Verify permanent habit deletion transactionally removes habit-owned records/configuration and habit-scoped delivery-ledger rows, preserves independent journal entries with their text and global reminders, and queues only opaque platform-notification IDs in the cancellation outbox. Inject cancellation failure and process interruption; confirm delivery workers suppress stale reminders when the habit no longer exists, the outbox retries on startup, and IDs are cleared only after confirmed cancellation.
 - (D-193) Verify there is no explicit habit-day Skip action and no persisted skipped outcome in v1; missed status remains derived after the scheduled day passes without qualifying activity. Confirm rest/non-scheduled days remain neutral, paused periods are excluded, genuine backdated activity recalculates the selected date, and journal entries/memos do not change habit status.
 
+### Restore-conflict matrix coverage — D-094–D-102 / AC-014, AC-022 (planned, not executed)
+
+- Same stable ID plus identical validated content resolves to one logical record; same stable ID plus different content preserves both versions as an unresolved conflict rather than auto-selecting a winner.
+- Journal conflict choices allow current, backup, or both as independent entries with distinct stable IDs; “both” never concatenates text or overwrites original dates/moods.
+- Distinct numeric entry IDs remain distinct entries. Conflicting versions of the same numeric entry are never summed together; they remain available for explicit current/backup resolution. Do not permit two competing completion/effort outcomes for the same habit/date; where “both” cannot be represented safely, retain the unresolved conflict until the user chooses a supported option.
+- Habit-definition/configuration conflicts are compared explicitly; any supported separate-habit option must preserve stable relationships and must not create two effective configuration versions for the same habit/date or rewrite historical interpretation.
+- Conflicting preferences require explicit current/backup choice rather than duplicate setting keys. Conflicting comeback drafts remain separate unresolved drafts and do not become saved Journal entries without explicit Save.
+- Corrupt, incomplete, or unsupported-version backups stop before changing live data. Safety-backup failure also stops restore; an injected failure/interruption at each Replace/Merge stage must leave a safe, truthful recovery state.
+- Unresolved conflicts remain visible under Backup & Restore after restart and remain represented in a later portable backup until resolution. Clearing a conflict and applying the selected record must occur atomically; failed resolution preserves both snapshots.
+
+These cases translate the approved D-094–D-102 conflict principles into tests against the proposed record model. The specific per-type mapping in doc 30 is still a planning proposal for owner review. No restore tests have been executed.
+
+
+
 These are planned acceptance cases for the proposed schema, not test results. The complete schema still awaits owner approval, and technical validation requires separate explicit authorisation. D-190 approves stable UUID identity and nullable unique idempotency keys; D-193 settles the no-Skip-action policy; D-194 resolves repeated Apply-today behavior; D-195 resolves the weekday-mask encoding policy. None of these decisions means acceptance cases have been executed. Before finalising acceptance coverage, keep the delegated permanent-deletion reminder-cleanup default covered by the transaction, cancellation-failure, active-habit-guard, and startup-reconciliation cases above; the rule is documented, but neither the schema nor tests are implemented or verified.
 
 ### Retrospective journal prompt — proposed, not executed
