@@ -29,7 +29,7 @@ Still to reconcile before asking for schema approval:
 - All tables and relationships, including effective lifecycle versions, journal drafts, restore-session/conflict records, and notification-cancellation outbox.
 - Exact nullability and checks for tracking mode, target period, weekday masks, values, local-date keys, outcomes and idempotency keys.
 - Index/uniqueness rules, cross-table mode validation, transaction/rollback map and permanent-deletion ownership.
-- Full portable-backup mapping, version compatibility, merge conflicts that cannot coexist, interruption recovery and migration/quarantine behaviour.
+- Full portable-backup mapping, version compatibility, merge conflicts that cannot coexist, interruption recovery and migration/quarantine behaviour. Doc 30 now includes a proposed record-type conflict matrix drawn from D-094–D-102; review it with the architecture proposal and keep unresolved/unsafe cases visible rather than silently selecting a winner.
 - Align schema and planned tests with AC-001, AC-003–AC-008, AC-014, AC-019, AC-020 and AC-022.
 
 **Boundary:** This is written-model review only. Do not inspect or modify the live database, build, migrate, or run implementation tests as part of this step.
