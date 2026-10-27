@@ -147,10 +147,10 @@ No migration should be implemented from this document alone. The actual schema, 
 
 ## 7. Remaining closure checklist
 
-- [ ] Review the proposed lifecycle-state refinement and optional journal-habit link against D-071, D-149–D-160, and D-172; reconcile into the canonical architecture.
+- [x] Review the lifecycle-state refinement and optional journal-habit link against D-071, D-149–D-160, and D-172 and include them in the architecture proposal: ACTIVE/PAUSED/COMPLETED/ARCHIVED are effective-dated states; an optional journal-habit link is cleared on habit deletion so the entry/text survives. These remain proposed schema details, not owner approval of the complete schema.
 - [x] Add proposed restore-session/conflict structures and the notification-cancellation outbox to the architecture schema proposal; their retention and portable-backup rules are documented and remain proposed pending owner review.
-- [ ] Confirm the full mask/target/mode checks, indexes, per-operation transactions, and rollback tests in the architecture and test plan.
-- [ ] Decide the short-lived undo contract and whether deleting an individual numeric entry needs confirmation; do not silently default destructive recovery behaviour.
+- [x] Draft mask/target/mode constraints, minimum indexes, operation transaction boundaries and rollback acceptance cases in docs 03/30/07. [ ] Complete the final cross-document consistency review and obtain owner approval; runtime/transaction tests are post-gate.
+- [ ] Owner review: accept or explicitly defer the proposed 8-second in-session Undo in docs 03/30 and decide whether deleting an individual numeric entry needs confirmation. This is a product/recovery choice, not a reason to run implementation tests now.
 - [ ] Review the proposed entity/field mapping for portable backup versus readable journal export, confirm the compatibility boundary, and close “Keep both” cases where duplicate coexistence is unsafe without changing the approved conflict policy.
 - [ ] Record the proposed schema for explicit owner review and approval before any application schema change.
 - [ ] Only after the planning gate and separate technical-validation authorisation, inspect actual source/schema/build/toolchain, run synthetic migration tests, and verify backup/restore, deletion, notification and device behavior.
