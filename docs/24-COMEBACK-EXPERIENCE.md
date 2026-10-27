@@ -88,7 +88,7 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 
 ## Optional retrospective prompt for the previous day (D-042)
 
-**Status:** Optional retrospective journaling is an approved direction. The following is a conservative delegated planning proposal for cadence and interaction; the owner must accept it or explicitly defer it before Gate A. It is not an approved implementation contract.
+**Status:** Optional retrospective journaling is an approved direction. Under D-196, the cadence and interaction below are the delegated planning default: conservative, reversible, and owner-overridable in the consolidated review. They do not require a separate owner approval by default and are not evidence of implementation.
 
 - On the first eligible app opening of a local calendar day, Dayseed may show one small, non-blocking in-app invitation to reflect on the **most recent fully completed local calendar day** only if that date has no saved journal entry.
 - This does not depend on whether any habit was logged. A journal-only gap is not evidence of inactivity or a bad day; do not infer a reason or use guilt language.
