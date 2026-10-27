@@ -105,8 +105,6 @@ These are not micro-decisions and must not be silently delegated:
 8. `27-PLANNING-COMPLETENESS-REVIEW.md` — current readiness snapshot and planning/post-gate checklist; it does not supersede the decision log.
 9. `28-REQUIREMENT-TRACEABILITY.md` — initial requirement-to-screen/data-rule/test mapping; its gaps still need closure and its cases are not test results.
 10. `29-UX-DESIGN-APPROVAL-PACK.md` — proposed design/navigation recommendations and owner-review topics; prototypes and owner approval remain outstanding.
-8. `27-PLANNING-COMPLETENESS-REVIEW.md` — current readiness snapshot and planning/post-gate checklist; it does not supersede the decision log.
-
 When a decision changes, update the decision log and every affected document in one traceable reconciliation batch. Fetch each current file immediately before writing it, preserve unrelated content, then re-fetch and verify the result.
 
 ## Planning gate checklist
@@ -127,7 +125,8 @@ When a decision changes, update the decision log and every affected document in 
 - [ ] Finalise or explicitly defer reminder/notification and retrospective-journal-prompt edge cases, including quiet hours, collisions, late delivery, and optional-tip scope.
 - [ ] Specify undo/recovery interactions and ensure they do not conflict with stable identities, retries, edits, deletions, or backup/restore.
 - [x] Prepare the UX/design recommendation pack in `29-UX-DESIGN-APPROVAL-PACK.md`.
-- [ ] Prepare/review comparable navigation and screen-flow prototypes, then record owner choices for Growth Mark, archive, visual direction, typography/colour/theme, and accessibility.
+- [x] Draft comparable text wireframes for Today hierarchy, navigation and archive alternatives in doc 29; rendered visual prototypes, task review and owner approval remain outstanding.
+- [ ] Review the new text wireframes and prepare rendered comparable navigation/screen-flow prototypes; then record owner choices for Growth Mark, archive, visual direction, typography/colour/theme, and accessibility.
 - [x] Create the initial requirement-to-screen/data-rule/test matrix in [28-REQUIREMENT-TRACEABILITY.md](28-REQUIREMENT-TRACEABILITY.md).
 - [ ] Close the remaining traceability gaps listed in doc 28; its acceptance cases are plans, not test results.
 - [x] Run a relative Markdown file-target check across all 34 current Markdown documents; no missing targets were found.
