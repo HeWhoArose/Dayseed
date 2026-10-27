@@ -1,12 +1,12 @@
 # Comeback Flow and Encouragement
 
-**Status:** Proposed experience rules; exact thresholds and copy require testing.
+**Status:** Trigger and suppression policy largely owner-approved; the older broad band table is historical hypothesis only. Final presentation/copy and optional partial-progress encouragement rules remain open. Use D-047–D-056 and D-146–D-160 as the active comeback contract.
 
 ## 1. Purpose
 Make returning after a break feel easy. The flow should acknowledge that time passed without framing the absence as failure, guessing its cause, or implying that previous progress disappeared.
 
-## 2. Candidate inactivity bands
-These bands are initial copy/design hypotheses, not approved behavioural rules:
+## 2. Historical candidate inactivity bands (not the active v1 trigger contract)
+The table below records an earlier copy/design hypothesis. It must not be implemented as multiple active trigger bands. Later owner-approved rules D-047–D-056 and D-146–D-160 govern actual v1 eligibility:
 
 | Time since last app activity | Candidate tone | Intended next step |
 |---|---|---|
@@ -19,23 +19,31 @@ These bands are initial copy/design hypotheses, not approved behavioural rules:
 
 Test boundary values and language with users. Avoid making the copy sound like a campaign or assuming the person intentionally abandoned a goal.
 
-## 3. Triggering rules
-- Track app inactivity separately from each habit's activity.
-- Do not infer a reason for absence.
-- Do not reset or hide history.
-- Do not repeatedly show the same prompt after dismissal.
-- A person may use the journal while not completing habits; do not treat that as total disengagement.
-- The flow must work offline.
-- If there is insufficient or corrupted date data, use a neutral fallback rather than inventing an inactivity duration.
-- Respect explicit user preference to dismiss or disable encouragement prompts.
+## 3. Active v1 trigger and suppression rules
+- **Two-week experience:** qualify after 14 complete local calendar days without opening Dayseed; show only on the next app opening, not as a notification while the person is away. Any successful app opening resets the app-inactivity timer.
+- **One-month experience:** qualify after 30 consecutive days without opening Dayseed, or after no active habit/goal has remained for 30 days even if the person continues opening the app. Starting/reactivating an active habit resets the no-active-habit timer.
+- **Precedence:** if both qualify, show only the broader one-month experience.
+- **Frequency:** show each qualifying experience at most once per qualifying episode; acknowledge/dismiss/action suppresses repeats for that episode, not future independent episodes.
+- **Presentation differences:** the two-week experience is a short welcome with one action to continue into Dayseed; do not add habit-management shortcuts to that welcome. The one-month experience offers the approved optional resume/start-again, create-new, and continue paths according to available habits, with optional reflection never required.
+- Distinguish app inactivity from the activity of any single habit. App openings that only read the journal or view history still reset app-inactivity measurement. The separate no-active-habit trigger is governed by its own approved policy.
+- Do not infer a reason for absence, reset history, or present old 1–2/3–6/7–13/90-day bands as active triggers.
+- The flow must work offline. If date data is missing/corrupt or clock confidence is uncertain, use a neutral fallback instead of inventing an inactivity duration.
+- Dismissal and trigger rules are approved; exact presentation, copy and accessibility review remain open. A global “disable comeback flow” setting is not yet an approved requirement.
 
 ## 4. Interaction model
-Offer a short message and optional actions:
-1. **Choose one small step** — go to today's habit list.
-2. **Review my habits** — edit, pause, or archive goals that no longer fit.
-3. **Just look around** — dismiss the prompt and continue using the app.
 
-Do not force a questionnaire about why the user was away. Do not require completing a habit to dismiss the flow.
+### Two-week experience
+Use a short welcome and one primary action to continue into Dayseed. Keep normal habit management available from the ordinary dashboard; do not turn the two-week welcome into a review questionnaire or add shortcut actions for managing habits. The message is dismissible and does not block normal app use.
+
+### One-month experience
+Use the approved choice flow and adapt it to available data:
+- If an eligible paused/archived or completed habit can be deliberately restarted, offer the appropriate **Resume/Start again** path, with settings review and no automatic reactivation.
+- Offer **Create a new habit**.
+- Offer **Continue into Dayseed** without changes.
+- If no eligible habit exists to resume/restart, omit that option rather than showing an empty list.
+- Optional reflection may be written/saved through normal journal flow; it can be skipped. An unsaved comeback reflection remains a protected local draft and is never treated as a saved journal entry automatically.
+
+Do not force a questionnaire about why the user was away. Do not require completing a habit or saving a reflection before continuing.
 
 ## 5. Language rules
 Use neutral observations such as “It’s been a little while. You can start with one small step, or just take a look around.” Copy must not imply disappointment, debt, broken streaks, or that the user owes the app an explanation.
@@ -48,17 +56,16 @@ Avoid:
 - Any claim about stress, depression, laziness, motivation, or life circumstances that the user has not stated.
 
 ## 6. Testing requirements
-- Unit-test each band at one day below, exactly on, and one day above each boundary.
-- Test timezone changes, daylight-saving changes where applicable, device clock changes, and missing timestamps.
-- Test app inactivity while journal use continues.
-- Test individual habit inactivity while other habits remain active.
-- Test dismissal persistence and disabled prompts.
-- Verify no data or streak reset occurs.
-- Have users assess tone, clarity, and perceived pressure.
-- Test entirely offline.
+- Test the 14-complete-local-calendar-day app-inactivity boundary (13/14/15 days), the 30-day app-inactivity boundary (29/30/31 days), and the 30-day no-active-habit boundary.
+- Test one-month precedence when both triggers qualify, episode-level suppression after acknowledge/dismiss/action, and eligibility in a new independent episode.
+- Test timezone travel, manual clock changes, uncertain/missing timestamps, month/year transitions, and app launches that only view Journal/History.
+- Test no-active-habit timer reset when a habit is created/reactivated and restart/resume never occurs without explicit user choice.
+- Test two-week welcome has one continue action and the one-month choices adapt to available habits; reflection is skippable and drafts remain unsaved.
+- Verify no data/history reset or guilt-inducing copy occurs.
+- Test entirely offline and review tone, clarity, accessibility and perceived pressure with users when feasible.
 
-## 7. Open decisions
-Approve the inactivity source (last app open, meaningful action, or separate signals); exact threshold boundaries; whether first return after installation gets a welcome rather than comeback message; dismissal persistence; and how users control encouragement frequency.
+## 7. Remaining presentation and policy details
+The active trigger source, 14-/30-day thresholds, precedence, and per-episode suppression are approved in D-047–D-056 and D-146–D-160. Do not reopen those as unresolved. Remaining work is final copy/layout, visual hierarchy, accessibility/localisation, and user comprehension review. Any additional global disable/frequency setting must be explicitly approved rather than inferred from the existing dismissal policy.
 ## 8. Partial-progress encouragement (separate from comeback flow)
 
 **Status:** Approved direction; trigger details and copy remain open.
