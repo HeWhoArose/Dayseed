@@ -1,0 +1,171 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1450" viewBox="0 0 1800 1450" role="img" aria-labelledby="title desc">
+  <title id="title">Dayseed navigation and journal archive comparison</title>
+  <desc id="desc">Planning-only visual comparisons: N1 four primary destinations with Journal under History, N2 with a dedicated Journal destination, and three archive layouts: timeline first, hybrid timeline/calendar, and calendar first. All entries are synthetic.</desc>
+  <defs>
+    <style>
+      .ink{fill:#282a24}.muted{fill:#6b7066}.soft{fill:#92948a}.paper{fill:#fbf9f3}.sage{fill:#e0e7d9}.sageInk{fill:#4f6248}.terra{fill:#b86f56}.rule{stroke:#dedbd0;stroke-width:1.4}.title{font-family:Georgia,'Times New Roman',serif;font-size:38px;fill:#282a24}.heading{font-family:Arial,sans-serif;font-size:22px;font-weight:700;fill:#282a24}.body{font-family:Arial,sans-serif;font-size:17px;fill:#282a24}.small{font-family:Arial,sans-serif;font-size:14px;fill:#6b7066}.micro{font-family:Arial,sans-serif;font-size:12px;fill:#6b7066;letter-spacing:1px}.nav{font-family:Arial,sans-serif;font-size:12px;fill:#65695e}.button{font-family:Arial,sans-serif;font-size:13px;font-weight:700;fill:#4f6248}.panel{fill:#fbf9f3;stroke:#dedbd0;stroke-width:1.4}
+    </style>
+    <g id="seed">
+      <path d="M0 10 C-10 4 -10 -6 -1 -8 C5 -2 5 5 0 10Z" fill="#7f8a5d"/>
+      <path d="M2 7 C2 -2 10 -8 18 -4 C16 4 10 8 2 7Z" fill="#a8b79a"/>
+      <path d="M1 7 L1 16" stroke="#5d6b4b" stroke-width="1.7" stroke-linecap="round"/>
+    </g>
+  </defs>
+  <rect width="1800" height="1450" fill="#f1eee5"/>
+  <text x="44" y="56" class="title">Dayseed · Navigation and journal archive</text>
+  <text x="46" y="91" class="small" style="font-size:16px">Planning prototypes · same synthetic entries and retrieval tasks · choices remain open</text>
+  <rect x="1434" y="28" width="316" height="62" rx="10" fill="#e3e9dc" stroke="#cbd5c2"/>
+  <text x="1454" y="53" class="body" style="font-size:15px;font-weight:700;fill:#4f6248">PLANNING ONLY</text>
+  <text x="1454" y="74" class="small">No approved navigation or archive UI</text>
+
+  <!-- Navigation variant N1 -->
+  <rect x="36" y="122" width="850" height="622" rx="18" class="panel"/>
+  <text x="60" y="158" class="heading">N1 · Four primary destinations</text>
+  <text x="60" y="184" class="small">Today · History · Insights · Settings</text>
+  <rect x="205" y="205" width="500" height="510" rx="28" fill="#262923"/>
+  <rect x="214" y="214" width="482" height="492" rx="23" fill="#fbf9f3"/>
+  <rect x="376" y="219" width="158" height="6" rx="3" fill="#c9c6bb"/>
+  <use href="#seed" x="236" y="239"/>
+  <text x="262" y="255" class="body" style="font-size:16px;font-weight:700">Dayseed</text>
+  <text x="238" y="294" class="title" style="font-size:29px">History</text>
+  <text x="238" y="319" class="small">Find a habit record or a saved reflection.</text>
+  <rect x="238" y="334" width="434" height="34" rx="7" fill="#f0eee4" stroke="#dedbd0"/>
+  <text x="250" y="356" class="small">Habit history</text>
+  <rect x="450" y="339" width="101" height="24" rx="12" fill="#dfe7d8"/>
+  <text x="500" y="355" text-anchor="middle" class="button">Journal</text>
+  <rect x="238" y="379" width="205" height="32" rx="7" fill="#fbf9f3" stroke="#c9c8bd"/>
+  <text x="250" y="400" class="small">Choose date ▾</text>
+  <rect x="451" y="379" width="221" height="32" rx="7" fill="#fbf9f3" stroke="#c9c8bd"/>
+  <text x="463" y="400" class="small">Search saved entries</text>
+  <text x="238" y="441" class="micro">RECENT JOURNAL ENTRIES</text>
+  <line x1="238" y1="451" x2="672" y2="451" class="rule"/>
+  <text x="238" y="478" class="small">TUE · 27 OCT</text>
+  <text x="238" y="503" class="body" style="font-size:16px;font-weight:700">A small win</text>
+  <text x="238" y="524" class="small">“I made time to read today.”</text>
+  <line x1="238" y1="539" x2="672" y2="539" class="rule"/>
+  <text x="238" y="566" class="small">MON · 26 OCT</text>
+  <text x="238" y="591" class="body" style="font-size:16px;font-weight:700">A long walk</text>
+  <text x="238" y="612" class="small">“The air felt cooler this evening.”</text>
+  <line x1="238" y1="627" x2="672" y2="627" class="rule"/>
+  <text x="238" y="654" class="small">Blank dates are neutral; marks mean an entry exists.</text>
+  <rect x="214" y="666" width="482" height="40" fill="#f0eee4"/>
+  <text x="274" y="691" text-anchor="middle" class="nav">Today</text>
+  <text x="390" y="691" text-anchor="middle" class="nav" style="font-weight:700;fill:#4f6248">History</text>
+  <text x="512" y="691" text-anchor="middle" class="nav">Insights</text>
+  <text x="631" y="691" text-anchor="middle" class="nav">Settings</text>
+  <text x="60" y="704" class="small">Question: is Journal sufficiently discoverable inside History?</text>
+
+  <!-- Navigation variant N2 -->
+  <rect x="914" y="122" width="850" height="622" rx="18" class="panel"/>
+  <text x="938" y="158" class="heading">N2 · Dedicated Journal destination</text>
+  <text x="938" y="184" class="small">Today · Journal · History · Insights · Settings</text>
+  <rect x="1083" y="205" width="500" height="510" rx="28" fill="#262923"/>
+  <rect x="1092" y="214" width="482" height="492" rx="23" fill="#fbf9f3"/>
+  <rect x="1254" y="219" width="158" height="6" rx="3" fill="#c9c6bb"/>
+  <use href="#seed" x="1114" y="239"/>
+  <text x="1140" y="255" class="body" style="font-size:16px;font-weight:700">Dayseed</text>
+  <text x="1116" y="294" class="title" style="font-size:29px">Journal</text>
+  <text x="1116" y="319" class="small">Your saved words, easy to find.</text>
+  <rect x="1116" y="334" width="434" height="34" rx="7" fill="#fbf9f3" stroke="#c9c8bd"/>
+  <text x="1128" y="356" class="small">Search titles and text</text>
+  <rect x="1116" y="379" width="126" height="32" rx="16" fill="#dfe7d8"/>
+  <text x="1179" y="400" text-anchor="middle" class="button">New entry +</text>
+  <rect x="1252" y="379" width="180" height="32" rx="7" fill="#f0eee4" stroke="#dedbd0"/>
+  <text x="1264" y="400" class="small">Choose date ▾</text>
+  <text x="1116" y="441" class="micro">RECENT JOURNAL ENTRIES</text>
+  <line x1="1116" y1="451" x2="1550" y2="451" class="rule"/>
+  <text x="1116" y="478" class="small">TUE · 27 OCT</text>
+  <text x="1116" y="503" class="body" style="font-size:16px;font-weight:700">A small win</text>
+  <text x="1116" y="524" class="small">“I made time to read today.”</text>
+  <line x1="1116" y1="539" x2="1550" y2="539" class="rule"/>
+  <text x="1116" y="566" class="small">MON · 26 OCT</text>
+  <text x="1116" y="591" class="body" style="font-size:16px;font-weight:700">A long walk</text>
+  <text x="1116" y="612" class="small">“The air felt cooler this evening.”</text>
+  <line x1="1116" y1="627" x2="1550" y2="627" class="rule"/>
+  <text x="1116" y="654" class="small">Blank dates are neutral; marks mean an entry exists.</text>
+  <rect x="1092" y="666" width="482" height="40" fill="#f0eee4"/>
+  <text x="1135" y="691" text-anchor="middle" class="nav">Today</text>
+  <text x="1225" y="691" text-anchor="middle" class="nav" style="font-weight:700;fill:#4f6248">Journal</text>
+  <text x="1315" y="691" text-anchor="middle" class="nav">History</text>
+  <text x="1408" y="691" text-anchor="middle" class="nav">Insights</text>
+  <text x="1510" y="691" text-anchor="middle" class="nav">Settings</text>
+  <text x="938" y="704" class="small">Question: is direct access worth a five-item bottom bar?</text>
+
+  <!-- Archive options -->
+  <text x="40" y="794" class="title" style="font-size:31px">Archive layout variants</text>
+  <text x="42" y="822" class="small" style="font-size:15px">Keep the same search and retrieval tasks; empty dates never imply a good/bad day.</text>
+
+  <!-- A1 Timeline -->
+  <rect x="36" y="843" width="550" height="510" rx="16" class="panel"/>
+  <text x="58" y="881" class="heading">A1 · Timeline first</text>
+  <text x="58" y="907" class="small">Recent entries are the main view.</text>
+  <rect x="58" y="925" width="506" height="35" rx="7" fill="#fbf9f3" stroke="#c9c8bd"/>
+  <text x="72" y="948" class="small">Search saved entries</text>
+  <rect x="58" y="968" width="120" height="31" rx="15" fill="#dfe7d8"/>
+  <text x="118" y="988" text-anchor="middle" class="button">Choose date</text>
+  <text x="58" y="1025" class="micro">TUE · 27 OCT</text>
+  <text x="58" y="1051" class="body" style="font-size:16px;font-weight:700">A small win</text>
+  <text x="58" y="1074" class="small">“I made time to read today.”</text>
+  <line x1="58" y1="1090" x2="564" y2="1090" class="rule"/>
+  <text x="58" y="1118" class="micro">MON · 26 OCT</text>
+  <text x="58" y="1144" class="body" style="font-size:16px;font-weight:700">A long walk</text>
+  <text x="58" y="1167" class="small">“The air felt cooler this evening.”</text>
+  <text x="58" y="1215" class="small">Strength: simple scrolling.</text>
+  <text x="58" y="1239" class="small">Trade-off: date-jump is secondary.</text>
+  <text x="58" y="1291" class="small">Test: find a known date quickly.</text>
+
+  <!-- A2 Hybrid -->
+  <rect x="625" y="843" width="550" height="510" rx="16" class="panel"/>
+  <text x="647" y="881" class="heading">A2 · Hybrid timeline + date jump</text>
+  <text x="647" y="907" class="small">Timeline first; compact date navigation stays visible.</text>
+  <rect x="647" y="925" width="506" height="35" rx="7" fill="#fbf9f3" stroke="#c9c8bd"/>
+  <text x="661" y="948" class="small">Search saved entries</text>
+  <text x="647" y="985" class="micro">OCTOBER 2026</text>
+  <g fill="#6b7066" font-family="Arial,sans-serif" font-size="12" text-anchor="middle">
+    <text x="674" y="1007">M</text><text x="742" y="1007">T</text><text x="810" y="1007">W</text><text x="878" y="1007">T</text><text x="946" y="1007">F</text><text x="1014" y="1007">S</text><text x="1082" y="1007">S</text>
+  </g>
+  <g fill="none" stroke="#d9d7cc">
+    <rect x="652" y="1015" width="44" height="33" rx="6"/><rect x="720" y="1015" width="44" height="33" rx="6"/><rect x="788" y="1015" width="44" height="33" rx="6"/><rect x="856" y="1015" width="44" height="33" rx="6"/><rect x="924" y="1015" width="44" height="33" rx="6"/><rect x="992" y="1015" width="44" height="33" rx="6"/><rect x="1060" y="1015" width="44" height="33" rx="6"/>
+  </g>
+  <g fill="#282a24" font-family="Arial,sans-serif" font-size="13" text-anchor="middle">
+    <text x="674" y="1037">26</text><text x="742" y="1037">27</text><text x="810" y="1037">28</text><text x="878" y="1037">29</text><text x="946" y="1037">30</text><text x="1014" y="1037">31</text><text x="1082" y="1037">1</text>
+  </g>
+  <circle cx="742" cy="1042" r="3" fill="#7f8a5d"/>
+  <circle cx="674" cy="1042" r="3" fill="#7f8a5d"/>
+  <text x="647" y="1076" class="micro">TUE · 27 OCT</text>
+  <text x="647" y="1102" class="body" style="font-size:16px;font-weight:700">A small win</text>
+  <text x="647" y="1125" class="small">“I made time to read today.”</text>
+  <text x="647" y="1190" class="small">Strength: quick scroll or date jump.</text>
+  <text x="647" y="1214" class="small">Trade-off: slightly denser archive.</text>
+  <text x="647" y="1266" class="small">Test: retrieval, large text, empty dates.</text>
+
+  <!-- A3 Calendar first -->
+  <rect x="1214" y="843" width="550" height="510" rx="16" class="panel"/>
+  <text x="1236" y="881" class="heading">A3 · Calendar first</text>
+  <text x="1236" y="907" class="small">Entry marks make dates the primary control.</text>
+  <text x="1236" y="944" class="micro">OCTOBER 2026</text>
+  <g fill="#6b7066" font-family="Arial,sans-serif" font-size="12" text-anchor="middle">
+    <text x="1260" y="969">M</text><text x="1330" y="969">T</text><text x="1400" y="969">W</text><text x="1470" y="969">T</text><text x="1540" y="969">F</text><text x="1610" y="969">S</text><text x="1680" y="969">S</text>
+  </g>
+  <g fill="none" stroke="#dedbd0">
+    <rect x="1238" y="980" width="44" height="34" rx="6"/><rect x="1308" y="980" width="44" height="34" rx="6"/><rect x="1378" y="980" width="44" height="34" rx="6"/><rect x="1448" y="980" width="44" height="34" rx="6"/><rect x="1518" y="980" width="44" height="34" rx="6"/><rect x="1588" y="980" width="44" height="34" rx="6"/><rect x="1658" y="980" width="44" height="34" rx="6"/>
+    <rect x="1238" y="1022" width="44" height="34" rx="6"/><rect x="1308" y="1022" width="44" height="34" rx="6"/><rect x="1378" y="1022" width="44" height="34" rx="6"/><rect x="1448" y="1022" width="44" height="34" rx="6"/><rect x="1518" y="1022" width="44" height="34" rx="6"/><rect x="1588" y="1022" width="44" height="34" rx="6"/><rect x="1658" y="1022" width="44" height="34" rx="6"/>
+    <rect x="1238" y="1064" width="44" height="34" rx="6"/><rect x="1308" y="1064" width="44" height="34" rx="6"/><rect x="1378" y="1064" width="44" height="34" rx="6"/><rect x="1448" y="1064" width="44" height="34" rx="6"/><rect x="1518" y="1064" width="44" height="34" rx="6"/><rect x="1588" y="1064" width="44" height="34" rx="6"/><rect x="1658" y="1064" width="44" height="34" rx="6"/>
+  </g>
+  <rect x="1308" y="1064" width="44" height="34" rx="6" fill="#dfe7d8" stroke="#7f8a5d" stroke-width="1.7"/>
+  <g fill="#282a24" font-family="Arial,sans-serif" font-size="13" text-anchor="middle">
+    <text x="1260" y="1002">19</text><text x="1330" y="1002">20</text><text x="1400" y="1002">21</text><text x="1470" y="1002">22</text><text x="1540" y="1002">23</text><text x="1610" y="1002">24</text><text x="1680" y="1002">25</text>
+    <text x="1260" y="1044">26</text><text x="1330" y="1044">27</text><text x="1400" y="1044">28</text><text x="1470" y="1044">29</text><text x="1540" y="1044">30</text><text x="1610" y="1044">31</text><text x="1680" y="1044">1</text>
+    <text x="1260" y="1086">2</text><text x="1330" y="1086">3</text><text x="1400" y="1086">4</text><text x="1470" y="1086">5</text><text x="1540" y="1086">6</text><text x="1610" y="1086">7</text><text x="1680" y="1086">8</text>
+  </g>
+  <circle cx="1330" cy="1049" r="3" fill="#7f8a5d"/>
+  <circle cx="1260" cy="1049" r="3" fill="#7f8a5d"/>
+  <line x1="1236" y1="1117" x2="1740" y2="1117" class="rule"/>
+  <text x="1236" y="1145" class="micro">SELECTED DATE · TUE 27 OCT</text>
+  <text x="1236" y="1170" class="body" style="font-size:16px;font-weight:700">A small win</text>
+  <text x="1236" y="1193" class="small">“I made time to read today.”</text>
+  <text x="1236" y="1242" class="small">Strength: visual date navigation.</text>
+  <text x="1236" y="1266" class="small">Trade-off: entry list is less immediate.</text>
+  <text x="40" y="1393" class="small" style="font-size:14px">Review with the same tasks: find an entry by date and phrase, edit/delete safely, understand blank dates, use large text and return to the prior archive position.</text>
+  <text x="40" y="1418" class="small" style="font-size:13px">Synthetic data only. Entry marks indicate that an entry exists; blank dates are neutral. None of these designs is approved or tested with users.</text>
+</svg>
