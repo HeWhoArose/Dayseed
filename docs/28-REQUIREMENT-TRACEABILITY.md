@@ -49,7 +49,7 @@ This matrix includes AC-022 for restore-conflict recovery, AC-023 for the propos
 
 1. The written schema reconciliation across docs 03/30 is complete. During owner schema review, confirm the proposed format/schema compatibility boundary and unsafe “Keep both” cases, then ensure AC-001, AC-003–AC-008, AC-014, and AC-019 cover the accepted model.
 2. AC-011/AC-012/AC-024 use delegated defaults under D-196 for routine notification cadence, timing and retrospective prompt eligibility. Keep the defaults documented and testable; include them for visibility in the grouped owner review, but do not block Gate A on separate micro-decisions unless the owner wants to override/defer them.
-3. Review the new deterministic Mood Insights fixture in docs/07-TESTING-AND-QUALITY.md and ensure any additional edge cases needed for acceptance are covered (AC-009); it remains a plan, not a test result.
+3. **AC-009 fixture review completed at the planning level:** the deterministic Mood Insights fixture in docs/07-TESTING-AND-QUALITY.md now explicitly covers Monday- and Sunday-start weeks, adjacent-month/week boundaries, primary-versus-secondary mood counting, untagged entries, sparse/empty states, opening only matching entries, and source-record correction/deletion. No further AC-009 gap is currently identified in the written fixture; this remains a plan, not a test result. Reopen only if later requirements change.
 4. Approve UX/navigation and visual direction or explicitly defer the unsettled areas (AC-018/AC-021).
 5. Re-run the cross-document link, anchor, duplicate/conflict, and supported-claim audit after remaining edits.
 6. Keep all AC entries as **planned, not executed** until technical validation is explicitly authorised and the evidence is recorded.
