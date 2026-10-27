@@ -39,42 +39,30 @@ Still to reconcile before asking for schema approval:
 
 **Boundary:** This is written-model review only. Do not inspect or modify the live database, build, migrate, or run implementation tests as part of this step.
 
-### B. Habit record Undo
+### B. Habit record Undo — delegated default under D-196
 
-**Proposal in docs 01/03/26/30; traceability AC-023:** one 8-second in-session Undo after a successfully committed single-record create/log/complete/edit. It targets the exact stable ID/version, only reverses a safe inverse, and disappears after timeout/process death. Confirmed journal deletion, permanent habit deletion, delete-all and Replace/Merge restore are not snackbar-undoable. Normal History correction remains available.
+**Default across docs 01/03/26/28/30; AC-023:** one 8-second in-session Undo after a successfully committed single-record create/log/complete/edit. It targets the exact stable ID and expected version, refuses unsafe inverses after a newer change, and disappears after timeout/process death. For deleting one selected numeric/duration entry, use a clear contextual Delete action plus immediate Undo without a second confirmation dialog. Confirmed journal deletion, permanent habit deletion, delete-all and Replace/Merge restore remain explicitly confirmed/non-undoable.
 
-- [ ] Accept the 8-second Undo proposal.
-- [ ] Modify the window/behaviour.
-- [ ] Defer Undo from v1 and explicitly define the alternative protection.
+This is a reversible interaction detail and is **not a required owner checkbox**. The owner may override the default in the consolidated review. AC-023 remains planned, not executed; this default is not evidence of implementation.
 
-**Related choice:** D-032 still leaves open whether deleting an individual numeric session needs a confirmation dialog. Recommendation: if the 8-second Undo is accepted, use a clear contextual Delete action plus the immediate Undo affordance (no second confirmation for a single selected numeric session); if Undo is deferred, require confirmation. This is a proposal for the owner to accept/modify, not current policy. Keep journal deletion confirmation and permanent-habit deletion confirmation unchanged.
+### C. Shared reminders and local timing personalisation — delegated defaults under D-196
 
-### C. Shared reminders and local timing personalisation
+**Defaults documented in docs 09/23/05/26/28; AC-011/AC-012:**
+- Ask once during setup whether reminders are wanted; No creates no reminders. Each habit's reminder time defaults to 9:00 a.m. local time; manually chosen times remain protected from automatic adjustment.
+- Editable quiet hours default to 21:00–08:00 local; shared cap of three Dayseed OS notifications per local date and at most one ordinary reminder per habit/date.
+- Combine eligible events due within 15 minutes when one clear destination preserves their meaning; otherwise stagger within the daily cap. Priority: explicit per-habit reminder, weekly-goal-reached acknowledgement, week-start reflection, inactivity check-in, optional partial-progress tips.
+- Re-check global opt-in, Android permission, current local date/week, effective schedule, activity, quiet hours and suppression immediately before sending. Stable keys prevent duplicates. Do not backfill stale daily reminders.
+- Timing learning uses only local habit-record timestamps, never journal text/moods or network uploads. For system-managed daily habits, require at least seven positive activity timestamps on at least five local dates in 14 days, with at least 70% in a two-hour band; candidate time is median plus 30 minutes rounded up to a 15-minute boundary. Never auto-override a manual time. Validate for 28 days and revert if the evidence no longer supports the cluster.
+- Weekly reflection defaults to 9:00 a.m. device-local time on the first day of the user's configured week. The previously approved trigger/catch-up/deduplication behaviour remains unchanged; this clock time is a delegated, reversible default, not a new owner-approved product rule.
+- Optional partial-progress tips default to at most three over seven days, at least 24 hours apart and maximum one/day; suppress after target-met, dismissal or opt-out. Phone tips require a separate opt-in. If tips are unwanted for v1, the safe default is in-app only or omit the automated sequence.
 
-**Proposal in docs 23/05/26/07; traceability AC-011/AC-012:**
-- Editable quiet hours defaulting to 21:00–08:00 local.
-- Shared cap of three OS notifications per local date and at most one ordinary reminder per habit/date.
-- Combine eligible events within 15 minutes where the combined message and tap destination remain clear; prioritise explicit per-habit reminders, weekly-goal-reached acknowledgement, week-start reflection, inactivity check-in, then optional partial tips.
-- Re-check opt-in, OS permission, current date/week, habit/goal/activity state and suppression immediately before every send. Stable keys prevent duplicates. Do not backfill stale daily reminders.
-- Learn only from local habit-record timestamps; never inspect journal text/moods or send timing data over the network. Proposed threshold: at least seven positive activity timestamps on at least five dates in 14 days, 70% in a two-hour band; candidate time is median plus 30 minutes rounded up to a 15-minute boundary. Never auto-override a manually chosen time. Validate for 28 days, and revert if a stable cluster is no longer supported.
-- Optional partial-progress tips: at most three over the following seven days, at least 24 hours apart, maximum one/day; suppress after target-met, dismissal or opt-out. Phone tips require a separate setting.
+These are conservative planning defaults, not proof of Android delivery. They may be overridden together in the consolidated review, but they do **not** require separate owner approval by default. Permission, reboot, clock/timezone, scheduling and deduplication behaviour remain post-gate technical-validation work; planned tests are not executed.
 
-- [ ] Accept these defaults for planning, including confirmation of the weekly reflection time separately from the per-habit 9:00 a.m. default.
-- [ ] Accept with changes (specify which).
-- [ ] Defer personalised timing and/or partial-progress tips from initial v1.
-- [ ] Explicitly defer the complete reminder enhancement until a later version, retaining only already-approved simple reminders/weekly-goal rules.
+### D. Retrospective journal prompt (D-042) — delegated default under D-196
 
-These defaults are not approved, the weekly reflection time remains to be separately confirmed, and Android delivery/reboot/permission behaviour remains unverified.
+**Default in docs 09/24/26/28; AC-024:** on the first eligible app opening, offer one non-blocking in-app prompt for the most recent fully completed local date only if that date has no saved journal entry. Show at most once for that date; no OS notification, backlog or nagging; suppress repeat after display/dismiss/“Not now”/save; reuse a same-date draft; do not stack with a qualifying 14-/30-day comeback experience. Show the target date clearly, require normal explicit Save, and never change habit status/progress.
 
-### D. Retrospective journal prompt (D-042)
-
-**Proposal in docs 24/26/07; traceability AC-024:** on the first eligible app opening, offer one non-blocking in-app prompt for the most recent fully completed local day without a saved journal entry. Show at most once for that date; no OS notification, no backlog, no repeat after display/dismiss/“Not now”/leaving, no stacking with a 14-/30-day comeback screen. Reuse an existing draft for that date. Saving remains explicit and never changes habit status.
-
-- [ ] Accept this cadence.
-- [ ] Modify it.
-- [ ] Defer the retrospective prompt from v1 while retaining ordinary Journal and daily writing prompts.
-
-D-042 approved the optional direction, not this exact cadence.
+This routine cadence is delegated, reversible and not a separate Gate A blocker. The owner may override it or defer the prompt from v1 during the grouped review. AC-024 remains planned, not executed.
 
 ### E. Visual direction, navigation and Growth Mark
 
@@ -97,9 +85,9 @@ Text wireframes in doc 29 exist, but they are not rendered prototypes, user-test
 ## 3. What still remains in the planning phase
 
 1. Reconcile docs 03 and 30 and produce the complete written schema for owner review.
-2. Get the owner’s accept/modify/defer decisions for B–D above, including the numeric-session deletion confirmation rule; also record the remaining privacy wording and monetisation v1 decision. Use D-196 to delegate routine defaults instead of opening separate micro-questions; record owner choices in docs 09 and reconcile affected documents.
+2. Review delegated defaults only if you want to override them; no separate Undo/reminder/prompt decisions are required by default. The genuine owner-level choices are the remaining schema/restore-compatibility approval, visual/navigation/accessibility decisions after prototypes, final privacy wording (without unsupported runtime claims), whether to keep all monetisation out of initial v1 (recommended default), and explicit planning-gate approval. Record any overrides or consequential choices in docs 09 and reconcile affected documents.
 3. Prepare comparable rendered low-fidelity prototypes based on doc 29; conduct task and accessibility review, then record design choices or explicit deferrals.
-4. Close doc 28 traceability gaps, especially owner acceptance/deferment of reminder/prompt/Undo proposals, schema failure cases and UX/accessibility review. Doc 07 now includes planned record-type restore-conflict cases for AC-014/AC-022, plus deterministic fixtures for AC-002 progress-band boundaries and AC-009 Mood Insights counts/date-week boundaries. Review for remaining edge cases. All cases remain planned, not executed.
+4. Close doc 28 traceability gaps, especially schema failure cases, recovery/backup compatibility, privacy and UX/accessibility coverage. AC-011/AC-012/AC-023/AC-024 now use delegated defaults under D-196 unless the owner overrides them. Doc 07 includes planned restore-conflict cases for AC-014/AC-022, deterministic AC-002 progress-band fixtures and AC-009 Mood Insights counts/date-week boundaries. Review any remaining edge cases; all cases remain planned, not executed.
 5. The internal Markdown-link, heading-fragment and external-URL audit is complete across all 37 Markdown files, with no missing relative targets/fragments and all current external URLs resolving at review time. Finish the remaining semantic review for stale status claims, duplicate/conflicting statements and unsupported evidence, then rerun link checks only if further documentation edits affect links or headings.
 6. Check user-facing privacy/export/delete wording against the written rules, keeping unverified runtime claims out.
 7. Prepare one final planning walkthrough that includes all consequential choices and safe deferrals, then obtain the owner’s explicit Gate A–D approval in docs/19-AI-STUDIO-GITHUB-WORKFLOW.md. Routine details should be delegated under D-196 rather than turned into additional owner questions.
