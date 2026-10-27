@@ -119,7 +119,9 @@ The owner can approve a recommendation, request a variation, or explicitly defer
 
 ## 8. Low-fidelity wireframe sketches — planning only
 
-**Rendered planning artefact:** [Today screen comparison — W1 Action-first, W2 Reflective, W3 Compact controls](prototypes/dayseed-today-variants.svg). This SVG compares the same synthetic habit data across three hierarchy variants. It is a planning prototype only: no style/navigation choice is approved, no usability study has been performed, and the sample data are not real user records. Navigation and archive comparison prototypes remain to be rendered and reviewed.
+**Rendered planning artefact:** [Today screen comparison — W1 Action-first, W2 Reflective, W3 Compact controls](prototypes/dayseed-today-variants.svg). This SVG compares the same synthetic habit data across three hierarchy variants. It is a planning prototype only: no style/navigation choice is approved, no usability study has been performed, and the sample data are not real user records.
+
+**Rendered navigation/archive planning artefact:** [N1/N2 navigation and A1/A2/A3 archive comparison](prototypes/dayseed-navigation-archive-variants.svg). This board compares four versus five bottom destinations and timeline-first, hybrid, and calendar-first archive layouts using matching synthetic entries. It is also planning-only; owner selection and task/accessibility review remain outstanding.
 
 
 These text sketches are a first comparable prototype specification so the next visual pass does not restart from generic templates. They are not pixel-accurate mockups, usability findings, approved layout decisions, or app UI.
