@@ -81,7 +81,7 @@ After partial progress, Dayseed may offer a short sequence of optional motivatio
 - At weekly review, distinguish met days, partial days, above-target days, totals, neutral rest/non-scheduled days, and excluded paused periods.
 - Define behaviour when partial activity occurs repeatedly, the weekly target is reached early, an entry is edited, or a target changes midweek.
 
-Offer one optional evening check-in when a scheduled habit remains unrecorded; suppress it after logging/dismissal and respect user settings, quiet hours, and notification limits. Learning thresholds, the meaning of 28-day solidification, undo/revert behaviour, and reminder controls still need definition before implementation.
+Offer one optional evening check-in when a scheduled habit remains unrecorded; suppress it after logging/dismissal and respect user settings, quiet hours, and notification limits. A delegated reminder proposal now defines evidence thresholds, 28-day validation/rollback, and coordination controls in this document and `23-WEEKLY-GOAL-REMINDERS.md`; owner acceptance/deferral and actual OS delivery verification remain outstanding.
 
 The exact one-week schedule, thresholds, number of tips, copy, and controls remain open and need review before implementation.
 
@@ -125,4 +125,4 @@ Planning safeguards:
 - A saved custom reminder takes precedence and must not be overwritten by defaults. Users can review, change, or disable reminders in Settings.
 - For habits left on system-managed timing, Dayseed may automatically adjust after 14 days of sufficient observations, then observe the new time for a further 28 days to validate/solidify the adjustment. If the routine changes again, Dayseed may automatically adjust again while system-managed timing remains enabled. If the user manually edits a time, routine changes can prompt suggestions only; never automatically change a manually selected time unless the user explicitly returns the habit to automatic timing. Android notification permission is separate and declining it must not block app use.
 
-Open: how to choose the suggested default time; per-habit override/reset semantics; minimum observations and confidence before personalisation; quiet hours and end-of-day definition; notification caps and copy variants; and whether pattern learning remains entirely on-device. These require product, privacy, UX, and technical review before implementation.
+Open for owner review or explicit deferral: per-habit override/reset semantics, exact end-of-day/check-in window, and final copy. A conservative local-only learning threshold, quiet-hour default, shared cap and rollback proposal are documented above; they are not owner-approved or technically verified. Preserve the 14-day observation and 28-day validation direction, and never learn from journal text/mood or network data.
