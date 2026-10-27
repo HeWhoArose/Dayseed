@@ -61,7 +61,7 @@ Updated references: README.md, DESIGN.md, docs/02-UX-AND-DESIGN.md, docs/08-IMPL
 ## Next actions
 
 1. Audit all documentation for contradictions, dead links, duplicates, stale claims, and missing acceptance criteria.
-2. Reconcile the remaining high-impact edge cases: explicit skipped-state semantics, local date/time policy, habit deletion/history, technical verification of the approved D-186 Android platform-backup exclusion, and exact export/delete/privacy wording. Treat approved schedule, journal multiplicity, backup scope, platform-backup policy, and reminder rules as baselines, not fresh open questions.
+2. Reconcile the remaining high-impact edge cases: local date/time policy, habit deletion/history, technical verification of the approved D-186 Android platform-backup exclusion, and exact export/delete/privacy wording. D-193 resolves the habit-day Skip question for v1: no explicit Skip action/outcome. Treat approved schedule, journal multiplicity, backup scope, platform-backup policy, and reminder rules as baselines, not fresh open questions.
 3. Create comparable low-fidelity screen samples or wireframes for Today, Growth Mark, comeback return, journal archive, and settings/privacy; do not create app code as a substitute.
 4. Inspect current live competitor flows on an Android device where possible; until then, keep conclusions limited to publisher screenshots/listing copy.
 5. Run typography/contrast and enlarged-text checks on prototype screens; update DESIGN.md only when a token is approved.
@@ -257,3 +257,11 @@ The current repository contains a native Kotlin/Jetpack Compose Android app and 
 - Added R-015 to track remaining proposal questions: stable weekday-mask encoding; repeated Apply-today edits when a version effective today already exists; handling habit-linked reminder-ledger rows and pending OS notifications on permanent deletion; and whether an explicit skipped action belongs in v1.
 - Re-fetched each changed document immediately after its update and verified the intended wording. The schema is still proposed, not approved for implementation; the weekday-mask encoding and identified behavioral questions remain unresolved. These are planning-document corrections only.
 - No app code or database schema changed. No build, automated tests, APK installation, device validation, or implementation audit was run. Do not begin technical validation or implementation without the owner's separate explicit authorisation.
+
+## Habit-day Skip policy approved — 2026-10-27
+
+- Owner approved D-193: v1 has no explicit “Skip this day” action for a habit and no persisted skipped habit-day outcome.
+- A scheduled day without qualifying activity becomes derived-missed only after the scheduled local day passes. Rest/non-scheduled days remain neutral, paused periods are excluded, genuine activity may be explicitly backdated to its actual date, and journal memos do not change habit status. Optional skipping of journal prompts and comeback reflections is unaffected.
+- Marked D-006 as superseded in part by D-193 so its older suggestion that skipped habit-days need a separate state no longer conflicts. Reconciled the product specification, proposed schema, screen/data contract, quality plan, risk register, and decision register; test coverage is planned, not executed.
+- The complete data schema remains proposed. Weekday-mask encoding, repeated Apply-today behavior, and reminder-ledger/pending-notification cleanup on permanent habit deletion remain open. No app code, build, tests, APK/device validation, or implementation audit was run. Do not begin technical validation or implementation without separate explicit authorisation.
+
