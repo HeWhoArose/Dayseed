@@ -36,7 +36,9 @@
 
 
 
-| AC-024 | D-042 retrospective journal prompt | [Journal and comeback contracts](24-COMEBACK-EXPERIENCE.md); [Screen/data contracts](26-SCREEN-AND-DATA-CONTRACTS.md); [Quality plan](07-TESTING-AND-QUALITY.md) | Prompt only for the most recent fully completed local date without a saved entry; show at most once/date; no backlog or OS notification; draft reuse/save failure safe; comeback experience does not stack; no habit state changes | Frequency proposal drafted; owner must accept or explicitly defer; cases planned, not executed |\n\n## Deferred or unapproved scope
+| AC-024 | D-042 retrospective journal prompt | [Journal and comeback contracts](24-COMEBACK-EXPERIENCE.md); [Screen/data contracts](26-SCREEN-AND-DATA-CONTRACTS.md); [Quality plan](07-TESTING-AND-QUALITY.md) | Prompt only for the most recent fully completed local date without a saved entry; show at most once/date; no backlog or OS notification; draft reuse/save failure safe; comeback experience does not stack; no habit state changes | Frequency proposal drafted; owner must accept or explicitly defer; cases planned, not executed 
+
+## Deferred or unapproved scope
 
 - **H5 XP/rank and social comparison:** not approved for v1; no acceptance case should block core release unless scope is explicitly changed.
 - **Online accounts, Dayseed-managed cloud backup, cross-device sync, AI processing, ads/purchases/subscriptions:** excluded from initial v1 and gated separately.
