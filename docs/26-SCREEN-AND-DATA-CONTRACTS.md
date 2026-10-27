@@ -151,7 +151,7 @@ All affected screens must implement the following state distinctions:
 - **Corrupt/incompatible backup:** stop before live-data mutation and explain the recovery path.
 - **Clock/time uncertainty:** avoid duplicate reminders/comeback displays and avoid asserting an unsupported exact elapsed duration.
 
-## 4. Open items that must not be silently defaulted
+## 4. Unresolved items and delegated defaults that must stay explicit
 
 1. Android Auto Backup/device-transfer exclusion under D-186 — **decision resolved; technical verification remains required** to confirm the manifest/data-extraction configuration excludes private records on supported Android versions and transfer paths.
 2. Complete proposed schema approval: reconcile the table/constraint/index/transaction, restore-conflict, journal-link and cancellation-outbox refinements in `03-TECHNICAL-ARCHITECTURE.md` with `30-SCHEMA-CLOSURE-AND-MIGRATION-PLAN.md`; owner approval and post-gate migration verification are still outstanding.
