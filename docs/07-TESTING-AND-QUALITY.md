@@ -80,7 +80,7 @@ These are planned acceptance cases for the proposed schema, not test results. Th
 - Verify 14-/30-day comeback UI takes precedence without stacking a second prompt.
 - Verify timezone travel does not move historical date keys or re-trigger the same target date; uncertain/corrupt clock data suppresses rather than fabricates the prompt date.
 - Verify an existing draft for the target date is reused, save failure preserves it, and saving a retrospective entry does not change habit records or outcomes.
-- This cadence is a delegated proposal; owner acceptance/deferral is required before Gate A and no tests have been executed.
+- This cadence is a delegated default under D-196, owner-overridable before Gate A; no tests have been executed.
 
 ### Undo and recovery — proposed, not executed
 
@@ -90,7 +90,7 @@ These are planned acceptance cases for the proposed schema, not test results. Th
 - After timeout or process death, confirm committed records remain and the stale Undo control does not reappear; normal History correction remains available.
 - Confirm journal-entry deletion, permanent habit deletion, delete-all and Replace/Merge restore do not show snackbar Undo; delete confirmation and verified restore safety-backup requirements remain effective.
 - Inject a failed/uncertain original save and verify no Undo is offered as though the mutation succeeded; drafts and existing data remain recoverable.
-- This is acceptance coverage for a delegated planning proposal only. Owner review/deferral is required before Gate A; no implementation or test result is claimed.
+- This is acceptance coverage for the delegated planning default under D-196; the owner may override it before Gate A. No implementation or test result is claimed.
 
 ### Reminder coordination and personalisation — planned, not executed
 
@@ -100,7 +100,7 @@ These are planned acceptance cases for the proposed schema, not test results. Th
 - Confirm a logged entry, dismissal, inactive/archived/deleted habit, met weekly goal, expired week or global opt-out suppresses the relevant delivery. A deleted habit's stale worker must never post.
 - For personalisation, verify no change before the minimum 14-day evidence threshold; minimum evidence is seven qualifying timestamps on at least five dates with at least 70% in a two-hour band; calculate candidate as band median plus 30 minutes rounded up to a 15-minute boundary; manually selected times never change automatically; a 28-day validation window prevents timing churn; insufficient evidence reverts to the prior system-managed time; confirm no journal text/mood/network access.
 - For partial tips, verify at most three per seven-day sequence, 24-hour minimum spacing, one/day maximum, goal-met suppression, and dismissal/opt-out. Confirm in-app feedback remains possible when Android notification permission is denied.
-- These cases test the proposed delegated planning defaults only after the gate is authorised; they do not mean the defaults are accepted, implemented or tested.
+- These cases test the delegated planning defaults only after the technical-validation stage is authorised; they do not mean the behaviour is implemented or tested. The owner may override the defaults before Gate A.
 
 ## Date/history acceptance coverage (D-187)
 
