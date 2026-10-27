@@ -72,6 +72,8 @@ These cases translate the approved D-094–D-102 conflict principles into tests 
 
 These are planned acceptance cases for the proposed schema, not test results. The complete schema still awaits owner approval, and technical validation requires separate explicit authorisation. D-190 approves stable UUID identity and nullable unique idempotency keys; D-193 settles the no-Skip-action policy; D-194 resolves repeated Apply-today behavior; D-195 resolves the weekday-mask encoding policy and D-197 records the delegated fail-closed migration fallback. None of these decisions means acceptance cases have been executed. Before finalising acceptance coverage, keep the delegated permanent-deletion reminder-cleanup default covered by the transaction, cancellation-failure, active-habit-guard, and startup-reconciliation cases above; the rule is documented, but neither the schema nor tests are implemented or verified.
 
+- Journal mood tagging is optional. Verify no mood is required to save, each entry allows one primary and an optional secondary mood, the ten starter moods are curated and equally weighted, “More” exposes the expanded vocabulary, and no numeric intensity, good/bad hierarchy, behavioural ranking, diagnosis or network analysis is introduced. This content default is planned for prototype review, not an executed test.
+
 ### Retrospective journal prompt — delegated default; acceptance cases planned, not executed
 
 - On the first eligible open for a local date, offer a prompt only when the most recent fully completed local date has no saved journal entry; existing habit records on that date do not suppress it.
