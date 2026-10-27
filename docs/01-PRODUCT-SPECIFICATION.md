@@ -30,7 +30,7 @@ Multiple entries for the same habit on the same local calendar date are supporte
 ### H3 — Schedule and daily records
 Support flexible weekly targets with optional preferred days. Preferred days guide the routine but do not restrict completion to those days. Define week boundaries and progress calculation explicitly; a flexible weekly target must not label every uncompleted day as a missed opportunity.
 
-Schedule edits offer an effective choice of **Apply today** or **Apply tomorrow**. Existing activity records remain unchanged by schedule edits. Explicit record correction is a separate user action. Historical completion uses the target that applied at the time; current-target comparisons are separate and must not rewrite historical completion.
+Schedule edits offer an effective choice of **Apply today** or **Apply tomorrow**. The first Apply-today change creates today's configuration version. A further change today replaces that version only if no qualifying habit activity has been recorded today. Once qualifying activity exists, preserve today's configuration and activity history and offer **Apply tomorrow** instead; **Cancel** leaves everything unchanged. **Apply tomorrow** creates or updates tomorrow's not-yet-effective configuration version. Existing activity records remain unchanged by schedule edits. Explicit record correction is a separate user action. Historical completion uses the target that applied at the time; current-target comparisons are separate and must not rewrite historical completion (D-194).
 
 Distinguish:
 - **Rest/non-scheduled day:** neutral, not a failure or missed opportunity.
