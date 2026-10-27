@@ -2,6 +2,9 @@
 
 **Research date:** 2026-10-17  
 **Status:** Design hypothesis and copy examples; not approved for implementation.  
+
+**Current-status note (2026-10-27):** The visual Growth Mark measure/representation and the final comeback presentation/copy remain open design decisions. However, this older research predates approved trigger rules: D-047–D-056 and D-146–D-160 govern the v1 comeback experience, including the 14-complete-local-calendar-day app-inactivity trigger, 30-day broader trigger (including no active habits), 30-day precedence, and suppression for each qualifying episode. The 3-day and 90-day examples below are copy exploration only, not approved v1 triggers. Use the [Planning Completeness Review](27-PLANNING-COMPLETENESS-REVIEW.md) and [Requirement Traceability Matrix](28-REQUIREMENT-TRACEABILITY.md) for current planning status.
+  
 **Purpose:** Define what the Growth Mark communicates and how Dayseed welcomes people back without turning absence into a penalty.
 
 ## 1. Non-negotiable principle
@@ -60,13 +63,13 @@ The return experience is a brief, dismissible welcome, not a gate. It must:
 - be shown at a restrained frequency, with dismissal persistence specified before implementation;
 - not rely on notification permission or a network connection.
 
-The proposed inactivity bands in docs/05-COMEBACK-AND-ENCOURAGEMENT.md remain hypotheses. The elapsed-day calculation, timezone behaviour, and whether to show a message after an app opens repeatedly must be specified in the product rules.
+The older broad inactivity-band proposal is superseded by owner-approved trigger/date rules D-047–D-056 and D-146–D-160. The active v1 contract triggers the two-week experience after 14 complete local calendar days without opening the app and the broader one-month experience after 30 days without opening or after 30 days without an active habit/goal; the 30-day experience takes precedence if both qualify. Each experience is shown at most once per qualifying episode. The remaining design work is presentation, final copy, accessibility/localisation and usability review—not reopening those trigger policies.
 
 ## 5. Return page copy examples
 
 Copy examples are prototypes for review, not final copy. Use a calm title, one short paragraph, and no more than three actions. Do not make the page a modal that blocks the Today screen.
 
-### After 3 days away
+### Exploratory copy — 3 days away (not an approved v1 trigger)
 
 **Known state:** the app has not been opened for three days. We do not know why.
 
@@ -88,7 +91,7 @@ Copy examples are prototypes for review, not final copy. Use a calm title, one s
 - Secondary: “Review my progress”
 - Quiet option: “Skip for now”
 
-### After 90 days away
+### Exploratory copy — 90 days away (not an approved v1 trigger)
 
 **Known state:** the app has not been opened for ninety days. Avoid melodrama or treating this as a special failure state.
 
