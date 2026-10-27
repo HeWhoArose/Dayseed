@@ -1,7 +1,7 @@
 # Decision Register and Planning Reconciliation
 
 **Status:** Working reconciliation register — planning only; implementation remains not authorised.
-**Last reconciled:** 2026-10-26
+**Last reconciled:** 2026-10-27
 **Canonical source:** GitHub `main`; the decision log records owner choices and this register makes their current operational status easy to review.
 
 ## Purpose and decision rules
@@ -102,21 +102,38 @@ These are not micro-decisions and must not be silently delegated:
 5. `03-TECHNICAL-ARCHITECTURE.md`, `04-DATA-AND-PRIVACY.md`, `07-TESTING-AND-QUALITY.md`, and `08-IMPLEMENTATION-ROADMAP.md` — technical/privacy/test/sequence implications.
 6. `19-AI-STUDIO-GITHUB-WORKFLOW.md` — workflow and explicit implementation gate.
 7. `12-PROGRESS-AND-HANDOVER.md` — factual status, verified commits, tests and next task.
+8. `27-PLANNING-COMPLETENESS-REVIEW.md` — current readiness snapshot and planning/post-gate checklist; it does not supersede the decision log.
 
 When a decision changes, update the decision log and every affected document in one traceable reconciliation batch. Fetch each current file immediately before writing it, preserve unrelated content, then re-fetch and verify the result.
 
 ## Planning gate checklist
 
-- [x] Resolve R-001 / D-009 stack decision: continue native Kotlin + Jetpack Compose; remove contradictory Expo instructions from active workflow and architecture guidance.
-- [x] Resolve R-004 cloud/premium scope conflict: initial v1 is offline/account-free for core use with readable journal export and local backup/restore; premium online backup/sync remain future scope behind a separate approval gate.
-- [ ] Reconcile product specification, privacy, monetisation, and roadmap with approved decisions.
-- [ ] Finish UX/navigation, design tokens, archive, Growth Mark, and research evidence.
-- [x] Align the architecture's data-model proposal with approved multiple-entry and journal semantics; reconcile the regression-test list with those decisions.
-- [ ] Finish the exact schema, idempotency/transaction design, date/time boundary and clock-change verification plan, and migration safety. D-187 policy baseline is approved; technical evidence remains gated.
-- [ ] Verify implementation of the approved D-186 Android platform-backup exclusion against manifest/data-extraction rules and supported device-transfer paths; owner policy choice itself is resolved.
-- [ ] Complete notification and journaling edge-case acceptance tests.
-- [x] Correct the known broken stack-comparison link and normalise decision-log rows with traceability; remove the duplicate D-090 without renumbering later IDs.
-- [ ] Reconcile the handover and roadmap against the actual latest repository state.
-- [ ] Owner explicitly approves Gates A–D before implementation begins.
+### Completed in planning documentation
+
+- [x] Resolve R-001 / D-009: the active stack is the existing native Kotlin + Jetpack Compose project; earlier Expo recommendations are historical only.
+- [x] Resolve R-004: initial v1 remains account-free/offline-first for core use, with readable journal export and user-controlled portable backup/restore; online sync is future scope behind a separate gate.
+- [x] Align core tracking and journal semantics with the architecture and planned acceptance cases: multiple legitimate numeric entries, explicit zero versus no record, independent journal entries, stable IDs/idempotency, effective-dated schedules, no explicit habit-day Skip, and derived missed status.
+- [x] Record and reconcile D-186–D-195, including Android platform-backup policy, date/history baseline, schedule fields, repeated Apply-today behavior, and D-195 weekday-mask encoding.
+- [x] Add cross-screen data contracts and planned tests; document a delegated default for cleanup of habit-scoped reminder rows and notifications during permanent deletion.
+- [x] Correct the known broken stack-comparison link and normalise decision-log rows; remove duplicate D-090 without renumbering later decisions.
+- [x] Add the current [Planning Completeness Review](27-PLANNING-COMPLETENESS-REVIEW.md) so completed decisions, open planning work, and post-gate validation are separated.
+
+### Still required before the owner can approve the planning gate
+
+- [ ] Close the full schema proposal: constraints, indexes, transaction/rollback boundaries, deletion ownership, version compatibility, and migration plan. Do not change or migrate the database in this step.
+- [ ] Finalise or explicitly defer reminder/notification and retrospective-journal-prompt edge cases, including quiet hours, collisions, late delivery, and optional-tip scope.
+- [ ] Specify undo/recovery interactions and ensure they do not conflict with stable identities, retries, edits, deletions, or backup/restore.
+- [ ] Prepare and review the navigation/wireframe pack, Growth Mark representation, journal archive pattern, visual direction, typography/colour/theme and accessibility review.
+- [ ] Complete requirement-to-screen/data-rule/acceptance-test traceability.
+- [ ] Reconcile stale statements, links, anchors, and evidence claims across current documents and handover; keep dated research snapshots labelled historical.
+- [ ] Present the remaining owner decisions/deferred items together and record explicit owner approval of the planning gate in the workflow approval record.
+
+### Post-gate technical validation — not a planning task and not currently authorised
+
+- [ ] Inspect current Gradle/toolchain/source and the actual version-1 SQLite schema; run build/test validation only after separate owner authorisation.
+- [ ] Verify migration, offline persistence, notification lifecycle, export/delete/restore, and the D-186 Android backup/data-extraction exclusion using synthetic data.
+- [ ] Install and verify the native app on a physical Android device; record exact versions, commands, results and limitations.
+
+**Boundary:** This register records planning state only. It does not authorise code changes, an implementation audit, technical validation, migration, or a release-readiness claim.
 
 **Boundary:** This register records planning state only. It does not authorise code changes, an implementation audit, or a release-readiness claim.
