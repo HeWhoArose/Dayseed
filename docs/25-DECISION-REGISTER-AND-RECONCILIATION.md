@@ -105,9 +105,8 @@ These are not micro-decisions and must not be silently delegated:
 8. `27-PLANNING-COMPLETENESS-REVIEW.md` — current readiness snapshot and planning/post-gate checklist; it does not supersede the decision log.
 9. `28-REQUIREMENT-TRACEABILITY.md` — initial requirement-to-screen/data-rule/test mapping; its gaps still need closure and its cases are not test results.
 10. `29-UX-DESIGN-APPROVAL-PACK.md` — proposed design/navigation recommendations and owner-review topics; prototypes and owner approval remain outstanding.
-11. `31-OWNER-PLANNING-DECISION-BATCH.md` — consolidated settled policies, proposed defaults, owner accept/modify/defer items, and gate boundary; review aid only.
 11. `30-SCHEMA-CLOSURE-AND-MIGRATION-PLAN.md` — proposed constraints, transaction, restore, backup mapping and migration requirements; not implementation approval.
-12. `31-OWNER-PLANNING-DECISION-BATCH.md` — consolidated owner accept/modify/defer choices; not an approval or an implementation gate by itself.
+12. `31-OWNER-PLANNING-DECISION-BATCH.md` — consolidated settled policies, proposed defaults, owner accept/modify/defer items, and gate boundary; review aid only, not an approval or implementation gate by itself.
 When a decision changes, update the decision log and every affected document in one traceable reconciliation batch. Fetch each current file immediately before writing it, preserve unrelated content, then re-fetch and verify the result.
 
 ## Planning gate checklist
