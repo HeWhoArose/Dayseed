@@ -96,6 +96,9 @@ When a user returns after a day without a journal entry, Dayseed may offer a gen
 
 ## Research documents
 
+Use the current [UX and Design Approval Pack](29-UX-DESIGN-APPROVAL-PACK.md) to review recommended navigation, Today hierarchy, Growth Mark and archive prototypes, visual direction, and open owner decisions. It is a planning recommendation package only; neither the layouts nor design tokens are approved by its existence.
+
+
 - [Growth Mark and Comeback Research](15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md)
 - [Journal Archive Research](16-JOURNAL-ARCHIVE-RESEARCH.md)
 - [Typography, Colour, and Accessibility Research](17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md)
