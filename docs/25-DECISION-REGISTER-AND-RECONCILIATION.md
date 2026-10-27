@@ -137,7 +137,7 @@ When a decision changes, update the decision log and every affected document in 
 - [x] Draft the bounded Undo/recovery proposal in docs 01/03/26/30 and trace it as AC-023: single-mutation, eight-second Undo; guarded inverse; destructive deletion and Replace/Merge are not snackbar-undoable.
 - [x] Record the bounded Undo and one-entry deletion interaction as delegated D-196 defaults; the owner may override during the consolidated review. No implementation/test has run.
 - [x] Prepare the UX/design recommendation pack in `29-UX-DESIGN-APPROVAL-PACK.md`.
-- [x] Draft comparable text wireframes for Today hierarchy, navigation and archive alternatives in doc 29; rendered visual prototypes, task review and owner approval remain outstanding.
+- [x] Draft comparable text wireframes for Today hierarchy, navigation and archive alternatives in doc 29; first rendered Today comparison exists at `docs/prototypes/dayseed-today-variants.svg`. Navigation/archive prototypes, task/accessibility review and owner approval remain outstanding.
 - [ ] Review the new text wireframes and prepare rendered comparable navigation/screen-flow prototypes; then record owner choices for Growth Mark, archive, visual direction, typography/colour/theme, and accessibility.
 - [x] Create the initial requirement-to-screen/data-rule/test matrix in [28-REQUIREMENT-TRACEABILITY.md](28-REQUIREMENT-TRACEABILITY.md).
 - [ ] Close the remaining traceability gaps listed in doc 28; its acceptance cases are plans, not test results.
