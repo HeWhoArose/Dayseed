@@ -2,6 +2,8 @@
 
 **Status:** Required test strategy for the approved native Kotlin + Jetpack Compose direction; implementation and validation remain unauthorised until the planning gate is approved.
 
+Requirement-to-test mapping is tracked in [28-REQUIREMENT-TRACEABILITY.md](28-REQUIREMENT-TRACEABILITY.md). Test cases in that matrix and this file are plans only unless explicit execution evidence is recorded.
+
 ## 1. Quality goals
 Protect personal data, prevent loss of history, keep core flows usable offline, ensure dates behave predictably, and verify that the app remains supportive after interruptions.
 
@@ -44,7 +46,7 @@ Protect personal data, prevent loss of history, keep core flows usable offline, 
 - (Delegated planning default; planned, not executed) Verify permanent habit deletion transactionally removes habit-owned records/configuration and habit-scoped delivery-ledger rows, cancels pending/posted habit-specific OS notifications, preserves independent journal entries and global reminders, and is idempotent. Inject notification-cancellation failure and confirm a delivery worker's active-habit guard suppresses stale notifications and cleanup can retry/reconcile on startup.
 - (D-193) Verify there is no explicit habit-day Skip action and no persisted skipped outcome in v1; missed status remains derived after the scheduled day passes without qualifying activity. Confirm rest/non-scheduled days remain neutral, paused periods are excluded, genuine backdated activity recalculates the selected date, and journal entries/memos do not change habit status.
 
-These are planned acceptance cases for the proposed schema, not test results. The complete schema still awaits owner approval, and technical validation requires separate explicit authorisation. D-190 approves stable UUID identity and nullable unique idempotency keys; D-193 settles the no-Skip-action policy; D-194 resolves repeated Apply-today behavior; D-195 resolves the weekday-mask encoding policy. None of these decisions means acceptance cases have been executed. Before finalising acceptance coverage, define habit-linked reminder-delivery cleanup on permanent deletion.
+These are planned acceptance cases for the proposed schema, not test results. The complete schema still awaits owner approval, and technical validation requires separate explicit authorisation. D-190 approves stable UUID identity and nullable unique idempotency keys; D-193 settles the no-Skip-action policy; D-194 resolves repeated Apply-today behavior; D-195 resolves the weekday-mask encoding policy. None of these decisions means acceptance cases have been executed. Before finalising acceptance coverage, keep the delegated permanent-deletion reminder-cleanup default covered by the transaction, cancellation-failure, active-habit-guard, and startup-reconciliation cases above; the rule is documented, but neither the schema nor tests are implemented or verified.
 
 ## Date/history acceptance coverage (D-187)
 
