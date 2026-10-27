@@ -65,7 +65,7 @@ Use [Planning Completeness Review](27-PLANNING-COMPLETENESS-REVIEW.md) as the cu
 1. Close the written schema proposal: keys, nullability/check constraints, foreign keys/indexes, transaction/rollback, deletion ownership, and migration/backup compatibility.
 2. Finalise or safely defer the remaining reminder/notification, retrospective-journal-prompt, partial-tip, and undo/recovery details.
 3. Prepare the primary navigation/wireframe and visual-design approval pack, including Growth Mark, archive pattern, typography/colour/theme, and accessibility.
-4. Build the requirement-to-screen/data-rule/acceptance-test traceability matrix and run the current cross-document claim/link/anchor review.
+4. Close the gaps in [28-REQUIREMENT-TRACEABILITY.md](28-REQUIREMENT-TRACEABILITY.md) and run the current cross-document claim/link/anchor review.
 5. Present the genuine owner choices and safe deferrals together; keep the planning gate closed until the owner explicitly approves it.
 6. Only after separate authorisation, run the bounded native technical-validation stage. Do not treat repository source presence as proof of a clean build or verified behaviour.
 
