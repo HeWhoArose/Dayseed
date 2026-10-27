@@ -155,7 +155,7 @@ Use synthetic journal entries only. For this fixture, set week-start to Monday a
 Expected results when week-start is Monday:
 - **This week (2026-10-26–2026-11-01):** Calm 2 (J1,J3), Focused 1 (J2), Hopeful 1 (J11). J9 has no mood; it contributes nothing. J3's secondary Tired does not count.
 - **Previous week (2026-10-19–2026-10-25):** Calm 1 (J5), Sad 1 (J4), Focused 1 (J10). Verify week comparison uses the immediately preceding equivalent week, with primary moods only.
-- **This month (2026-10-01–2026-10-31):** Calm 2 (J1,J3), Focused 2 (J2,J10), Sad 1 (J4), Joyful 1 (J6). J11 (Nov 1) is outside the month despite being in the selected week; J7 (Sep 30) is outside the month even though Calm is its secondary mood.
+- **This month (2026-10-01–2026-10-31):** Calm 3 (J1,J3,J5), Focused 2 (J2,J10), Sad 1 (J4), Joyful 1 (J6). J11 (Nov 1) is outside the month despite being in the selected week; J7 (Sep 30) is outside the month even though Calm is its secondary mood.
 - Tapping **Calm** in This week opens J1 and J3 only, in the selected period. It must not include J10 because Calm is secondary there; it must not include J7 because that entry is outside the period and Calm is secondary.
 - Entries J8/J9 remain searchable and visible without mood tags; they do not fabricate a mood count. A period with no primary-mood entries uses the neutral empty state. One or few tagged entries show factual counts without claiming a trend.
 - Repeat the boundary assertions with Sunday as the configured week-start; only period membership changes, not stored dates or the primary-versus-secondary rule.
