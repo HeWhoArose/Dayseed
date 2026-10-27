@@ -86,6 +86,14 @@ Offer one optional evening check-in when a scheduled habit remains unrecorded; s
 The exact one-week schedule, thresholds, number of tips, copy, and controls remain open and need review before implementation.
 
 
+### Delegated planning defaults for reminders and partial tips
+
+Until explicitly accepted or deferred by the owner, use the safe proposal in [Weekly Goal Reminders](23-WEEKLY-GOAL-REMINDERS.md) as the single shared delivery contract: quiet hours default to 21:00–08:00 local and remain editable; use a shared three-notifications-per-local-day budget; combine eligible events within 15 minutes where a useful single destination exists; re-check eligibility immediately before delivery; and never backfill stale daily reminders after their local day ends.
+
+For system-managed **daily** reminders only, consider learning from local positive activity timestamps after at least seven qualifying records on five or more distinct local dates in 14 days, with at least 70% clustered in a two-hour local-time band. A candidate is the median of that band plus 30 minutes, rounded up to a 15-minute boundary. Never auto-change a manually selected time. Hold a candidate through a 28-day validation window and revert to the prior system-managed time if the observations no longer support a stable pattern. Do not analyse journal text or mood, use network services, or apply this daily learning rule to flexible weekly-target timing.
+
+Proposed partial-tip default: up to three optional tips in the seven days after partial progress, at least 24 hours apart, no more than one per local day, and suppressed if the relevant target is met or the user dismisses/opts out. In-app tips may remain available when OS notification permission is denied; phone tips require a separate enabling setting. These are delegated defaults, not owner-approved final copy or evidence of working scheduling.
+
 ## 9. Personalised reminders and outcome-aware messages
 
 **Status:** Approved direction; exact policy and feasibility remain planning work.
