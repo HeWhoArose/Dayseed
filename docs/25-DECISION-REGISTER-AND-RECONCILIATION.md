@@ -31,7 +31,7 @@ The decision log (`09-DECISION-LOG.md`) remains the detailed record of owner cho
 | Progress language | Approved | Actual amount is preserved; partial, goal-met, above-target, and Tiny-to-Huge labels are factual progress states, not moral judgements. |
 | Comeback experiences | Approved direction with detailed rules | Two-week and one-month triggers have defined precedence and suppression rules. Do not infer why the user was away. See `24-COMEBACK-EXPERIENCE.md`. |
 | Weekly reminders | Approved direction | 9:00 a.m. local time on the configured week-start day for weekly reflection; two full days without progress before inactivity check-in; at most three inactivity reminders per week; stop when goal is met. See `23-WEEKLY-GOAL-REMINDERS.md`. |
-| AI analysis, social features, leaderboards | Deferred unless explicitly re-approved | Do not add AI processing, accounts, public profiles, or leaderboards implicitly. |
+| Monetisation (D-010) | Owner preference recorded; v1 release decision open | Preferred candidate to evaluate: restrained secondary-screen banners, optional user-initiated rewarded extras, and a possible one-time Supporter Pack. This is not approval for an ad SDK, purchase flow, or monetisation in initial v1. Keep core features free and usable offline; settle through policy/privacy review and a clear owner choice. |\n| AI analysis, social features, leaderboards | Deferred unless explicitly re-approved | Do not add AI processing, accounts, public profiles, or leaderboards implicitly. |
 | Visual identity and navigation | Unverified / proposed | Design exploration and mockups are not final approval. `DESIGN.md` should remain the authoritative design-token/component reference. |
 
 ## Proposed data model — owner approval pending
@@ -44,7 +44,7 @@ The decision log (`09-DECISION-LOG.md`) remains the detailed record of owner cho
 
 ## Delegated defaults
 
-These are conservative defaults for routine details. They do not authorise new product scope, collection/sharing of personal data, or irreversible behaviour.
+These are conservative defaults for routine details under D-196. Use them rather than asking the owner about each micro-decision. They do not authorise new product scope, collection/sharing of personal data, or irreversible behaviour; the owner may override them before the planning gate.
 
 | Topic | Delegated default | Guardrail / verification |
 |---|---|---|
@@ -61,7 +61,7 @@ These are conservative defaults for routine details. They do not authorise new p
 | Technical organisation | Prefer the smallest maintainable change consistent with the verified architecture; keep domain rules testable and avoid unnecessary dependencies. | Do not switch frameworks, add cloud services, or introduce SDKs without the required gate. |
 | Backup/restore safety | Validate a backup fully before touching live data; create and verify a safety backup before Replace/Merge; stop if safety backup fails; preserve source backup files. | These behaviours are owner-approved; exact format/merge semantics remain governed by D-091 onward. |
 
-## Decisions requiring owner approval
+D-196 records the planning process: default routine, reversible details conservatively and explicitly; escalate material product, privacy, safety, data-integrity, accessibility, monetisation, and owner-taste decisions. The decision log remains the authority, and this rule does not authorise implementation.\n\n## Decisions requiring owner approval
 
 These are not micro-decisions and must not be silently delegated:
 
@@ -116,7 +116,7 @@ When a decision changes, update the decision log and every affected document in 
 - [x] Resolve R-001 / D-009: the active stack is the existing native Kotlin + Jetpack Compose project; earlier Expo recommendations are historical only.
 - [x] Resolve R-004: initial v1 remains account-free/offline-first for core use, with readable journal export and user-controlled portable backup/restore; online sync is future scope behind a separate gate.
 - [x] Align core tracking and journal semantics with the architecture and planned acceptance cases: multiple legitimate numeric entries, explicit zero versus no record, independent journal entries, stable IDs/idempotency, effective-dated schedules, no explicit habit-day Skip, and derived missed status.
-- [x] Record and reconcile D-186–D-195, including Android platform-backup policy, date/history baseline, schedule fields, repeated Apply-today behavior, and D-195 weekday-mask encoding.
+- [x] Record and reconcile D-186–D-196, including Android platform-backup policy, date/history baseline, structured schedule fields and D-195 weekday-mask encoding. D-196 sets the delegated-default decision process; it does not approve implementation.
 - [x] Add cross-screen data contracts and planned tests; document a delegated default for permanent-habit-deletion notification cleanup using an opaque cancellation outbox.
 - [x] Correct the known broken stack-comparison link and normalise decision-log rows; remove duplicate D-090 without renumbering later decisions.
 - [x] Add the current [Planning Completeness Review](27-PLANNING-COMPLETENESS-REVIEW.md) so completed decisions, open planning work, and post-gate validation are separated.
