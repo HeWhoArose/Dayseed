@@ -357,6 +357,8 @@ The canonical readiness snapshot is `docs/27-PLANNING-COMPLETENESS-REVIEW.md`; t
 
 ## Schema reconciliation completed; owner review still pending — 2026-10-27
 
+- Created `docs/prototypes/dayseed-today-variants.svg`, an editable SVG comparison of W1 Action-first, W2 Reflective and W3 Compact Today layouts using identical synthetic data. It is a planning artifact only—not approved UI or usability evidence. Navigation and archive variants still need rendered comparisons, followed by task/accessibility review and owner selection or explicit deferral.
+
 - Reconciled docs 03 and 30 on the proposed relational model, including one authoritative effective-dated lifecycle (no separate archived timestamp projection), D-195 weekday-mask/schedule constraints, cross-table activity idempotency conflict handling, durable restore-session and conflict-row lifecycle, field-level portable-backup mapping, transaction boundaries, stable journal-draft save identity, and migration rollback rules.
 - Added `intended_journal_entry_id` to the proposed journal-draft model with a partial unique index for non-null values. A prepared save reuses that stable ID, atomically inserts the saved journal entry and resolves its source draft, and preserves the draft/ID on failure or uncertain outcome. Acceptance coverage is planned only.
 - Added D-197 as a delegated fail-closed migration default: if any legacy record cannot be mapped losslessly, roll back the entire migration and leave the original DB/schema version intact. No automatic dropping/coercion or assumed quarantine table. Synthetic migration-failure tests remain gated.
