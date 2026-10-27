@@ -20,7 +20,8 @@ Required before coding:
 - accessibility and test strategy defined;
 - implementation roadmap, acceptance criteria, and release gates reconciled;
 - documentation links, duplicate/outdated plans, contradictions, and unsupported claims audited;
-- owner reviews and explicitly approves the planning gate.
+- owner reviews and explicitly approves the planning gate;
+- the current status and remaining blockers are captured in `docs/27-PLANNING-COMPLETENESS-REVIEW.md` and the handover.
 
 ### Stage B — Bounded stack-specific feasibility validation
 
