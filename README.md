@@ -4,25 +4,31 @@
 
 Dayseed is an Android-native, offline-first habit and micro-journal application built with Kotlin and Jetpack Compose. It is designed for people who want to build consistency without being shamed when life interrupts them.
 
-## Core Features Implemented
+## Product scope and source components
 
-- **Progress Over Perfection:** Support for flexible effort levels (**Tiny**, **Usual**, and **Extra**), plus completion-only habits. A tiny action (e.g., rolling shoulders, reading 1 paragraph) is fully celebrated as showing up.
-- **Humane Comeback Loops:** Gentle, dismissible re-entry experiences after time away (e.g. 3, 14, 30+ days) with zero guilt copy, no streak resets, and preserved history.
-- **Collected Moments (Growth Mark):** Visualizes genuine user records without arbitrary XP, decay, points, or streaks. Shows active days tended and effort mix (Tiny 🌱, Usual 🌿, Extra 🌳).
-- **Daily Micro-Journal:** Low-friction, serene daily reflections with suggested prompts ("What went better than expected today?", "A small moment of calm"), word counter, and full archive search.
-- **Historical Editing:** Day-by-day past logs with inline correction. Adjusting past records recalculates metrics in real time without penalty.
-- **Private by Default:** 100% on-device SQLite storage. No ads, tracking, or unexpected cloud calls.
-- **Backup & Portability:** Complete JSON export and sharing with full data deletion option in Settings.
-- **Modern Material 3 Design:** Built strictly according to `DESIGN.md` with warm paper palette, adaptive launcher icon, dynamic dark/light theme support, and accessible 48dp touch targets.
+The current repository contains native Kotlin/Jetpack Compose source for Today, History, Insights, Settings, Add/Edit Habit, and Journal Editor screens, plus source components such as HabitCard, GrowthMark, ComebackCard, and ReflectionCard. Their presence in source is not proof that the app builds, passes tests, or behaves correctly on a device.
+
+The product and planning documents define the intended v1 scope: measured/effort-aware habits, independent text journaling, history correction, local insights, approved 14-/30-day comeback triggers, local journal search, reminders, readable journal export, portable backup/restore, and user-controlled deletion. Some of these requirements are only partially represented by the observed data model. See [Implementation Reality Audit](docs/22-IMPLEMENTATION-REALITY-AUDIT.md), [Planning Completeness Review](docs/27-PLANNING-COMPLETENESS-REVIEW.md), and [Requirement-to-Test Traceability](docs/28-REQUIREMENT-TRACEABILITY.md) for current status.
+
+Important status distinctions:
+- The current SQLiteOpenHelper schema was reported as version 1 with a placeholder upgrade handler; it uses a one-row-per-habit/date record model that conflicts with the approved multiple-numeric-entry requirement. The target relational schema remains proposed; no migration is verified.
+- The Growth Mark component exists in source, but its final metric and visual representation are not approved.
+- Approved comeback triggers are 14 complete local calendar days without opening Dayseed and a broader 30-day trigger; the 3-day and 90-day examples are exploratory copy, not approved v1 triggers.
+- The initial v1 is intended to work offline without a Dayseed account or cloud service. Actual network/data-flow behavior, privacy configuration, and Android platform-backup exclusion still require technical verification.
+- Human-readable journal export is separate from the versioned Dayseed portable-backup format. Neither should be considered release-verified from documentation alone.
+- The design system and UX remain proposals; candidate colours, themes, layouts, and design tokens are not yet owner-approved or accessibility-validated.
+
+This repository status does **not** claim a clean build or a functionally complete app. No Gradle build, automated test suite, APK installation, physical-device validation, or database migration has been verified in the current planning status.
 
 ## Technology Stack
 
-- **Platform:** Native Android (minSdk 26, targetSdk 36)
-- **Language:** Kotlin 2.2.10
+The project declares a native Android/Kotlin + Jetpack Compose stack with SQLiteOpenHelper, a repository, ViewModel/StateFlow, and Gradle build configuration. The versions below reflect the repository configuration inspected in the previous read-only audit; they have not been confirmed by a successful build in this planning pass.
+
+- **Platform configuration:** minSdk 26, targetSdk 36 (declared; build/runtime not verified)
+- **Language/tooling declarations:** Kotlin 2.2.10; Gradle 9.3.1; Android Gradle Plugin 9.1.1 (declared; compatibility not build-verified)
 - **UI Toolkit:** Jetpack Compose + Material 3
-- **Architecture:** MVVM with Kotlin Coroutines and `StateFlow`
-- **Local Persistence:** Android SQLite OpenHelper with full relational schema
-- **Build System:** Gradle 9.3.1 with Android Gradle Plugin 9.1.1
+- **Architecture:** ViewModel/StateFlow and repository-based structure
+- **Local persistence:** SQLiteOpenHelper; existing schema/migration path needs review. The approved multi-entry schema is not yet verified as implemented.
 
 ## Project status and audits
 
