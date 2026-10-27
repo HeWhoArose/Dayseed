@@ -105,6 +105,7 @@ These are not micro-decisions and must not be silently delegated:
 8. `27-PLANNING-COMPLETENESS-REVIEW.md` — current readiness snapshot and planning/post-gate checklist; it does not supersede the decision log.
 9. `28-REQUIREMENT-TRACEABILITY.md` — initial requirement-to-screen/data-rule/test mapping; its gaps still need closure and its cases are not test results.
 10. `29-UX-DESIGN-APPROVAL-PACK.md` — proposed design/navigation recommendations and owner-review topics; prototypes and owner approval remain outstanding.
+11. `31-OWNER-PLANNING-DECISION-BATCH.md` — consolidated settled policies, proposed defaults, owner accept/modify/defer items, and gate boundary; review aid only.
 11. `30-SCHEMA-CLOSURE-AND-MIGRATION-PLAN.md` — proposed constraints, transaction, restore, backup mapping and migration requirements; not implementation approval.
 When a decision changes, update the decision log and every affected document in one traceable reconciliation batch. Fetch each current file immediately before writing it, preserve unrelated content, then re-fetch and verify the result.
 
@@ -133,9 +134,11 @@ When a decision changes, update the decision log and every affected document in 
 - [ ] Review the new text wireframes and prepare rendered comparable navigation/screen-flow prototypes; then record owner choices for Growth Mark, archive, visual direction, typography/colour/theme, and accessibility.
 - [x] Create the initial requirement-to-screen/data-rule/test matrix in [28-REQUIREMENT-TRACEABILITY.md](28-REQUIREMENT-TRACEABILITY.md).
 - [ ] Close the remaining traceability gaps listed in doc 28; its acceptance cases are plans, not test results.
-- [x] Run a relative Markdown file-target check across all 36 current Markdown documents; no missing targets were found. Re-run after remaining edits to the documentation set.
+- [x] Prior relative Markdown file-target check covered 36 documents and found no missing targets.
+- [ ] Re-run the relative Markdown file-target check after adding doc 31 and completing remaining edits; the prior pass does not cover the newest decision batch.
 - [ ] Reconcile stale statements, heading anchors, and evidence claims across current documents and handover; keep dated research snapshots labelled historical.
-- [ ] Present the remaining owner decisions/deferred items together and record explicit owner approval of the planning gate in the workflow approval record.
+- [x] Consolidate settled decisions and owner accept/modify/defer items in `31-OWNER-PLANNING-DECISION-BATCH.md`.
+- [ ] Walk through the batch, update the decision log and every affected document, then record explicit owner approval of the planning gate in the workflow approval record only if the owner chooses to approve it.
 
 ### Post-gate technical validation — not a planning task and not currently authorised
 
