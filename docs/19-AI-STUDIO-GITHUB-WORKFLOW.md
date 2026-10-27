@@ -103,4 +103,4 @@ Only the owner may change the approval status. Documentation completion by an as
 
 ## Current environment note (2026-10-18)
 
-AI Studio is the active development environment. Remove and avoid reintroducing Replit-specific instructions, quota recovery procedures, file names, or assumptions in current project documentation. GitHub remains the canonical shared source of truth. This note updates environment guidance only; it does not by itself change implementation authorization or product decisions.
+AI Studio is the active development environment. Remove and avoid reintroducing instructions, quota-recovery procedures, filenames, or assumptions from previous coding environments in current project documentation. GitHub remains the canonical shared source of truth. This note updates environment guidance only; it does not by itself change implementation authorization or product decisions.
