@@ -87,7 +87,7 @@ Text wireframes in doc 29 exist, but they are not rendered prototypes, user-test
 - **XP/rank, social/leaderboards, journal photos/audio, AI analysis and online features:** remain outside v1 unless separately approved.
 - **Monetisation:** no v1 ads, purchases or subscriptions approved. Keep out by default; no pricing decision is needed to finish core planning.
 - **Minimum Android API/device matrix:** do not invent a version from assumption. Capture the actual project/toolchain and supported-device evidence during the separately authorised technical-validation stage.
-- **Privacy language:** make no blanket “never leaves this device,” encryption, or fully disabled platform-backup claim until actual manifest/data-extraction rules, export destinations and network/SDK behaviour have been verified. Planned wording must distinguish local storage, portable backup, Android platform backup and user-selected provider syncing.
+- **Privacy language:** candidate screen copy is drafted in docs/04 for owner review. Do not make blanket “never leaves this device,” encryption, or fully disabled platform-backup claims until actual manifest/data-extraction rules, export destinations and network/SDK behaviour have been verified. Wording distinguishes local use, portable backup, Android platform backup and user-selected provider syncing.
 
 ## 3. What still remains in the planning phase
 
