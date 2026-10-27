@@ -146,7 +146,7 @@ All affected screens must implement the following state distinctions:
 ## 4. Open items that must not be silently defaulted
 
 1. Android Auto Backup/device-transfer exclusion under D-186 — **decision resolved; technical verification remains required** to confirm the manifest/data-extraction configuration excludes private records on supported Android versions and transfer paths.
-2. Exact schema, indexes, transaction boundaries, stable ID/idempotency strategy, and migration from the current version-1 SQLite schema.
+2. Complete proposed schema approval: reconcile the table/constraint/index/transaction, restore-conflict, journal-link and cancellation-outbox refinements in `03-TECHNICAL-ARCHITECTURE.md` with `30-SCHEMA-CLOSURE-AND-MIGRATION-PLAN.md`; owner approval and post-gate migration verification are still outstanding.
 3. Exact undo window and user-facing recovery interaction.
 4. Final delete-all wording and any retention details required for exported/OS backup copies.
 5. Owner acceptance/deferral of the delegated reminder defaults, per-habit override/reset semantics, and exact retrospective journal-prompt eligibility/frequency.
