@@ -41,13 +41,13 @@
 - **H5 XP/rank and social comparison:** not approved for v1; no acceptance case should block core release unless scope is explicitly changed.
 - **Online accounts, Dayseed-managed cloud backup, cross-device sync, AI processing, ads/purchases/subscriptions:** excluded from initial v1 and gated separately.
 - **Journal photos/audio/attachments and any unapproved search enhancement:** do not silently add; retain only expressly approved v1 scope.
-- **Optional partial-progress tips:** exact cadence and copy remain open; decide to specify fully or defer them rather than ship unspecified notifications.
+- **Optional partial-progress tips:** cadence is a delegated default under D-196 (up to three tips in seven days, at least 24 hours apart, no more than one per local day; suppress after goal-met/dismissal/opt-out). Final copy and whether to include phone tips in v1 can be reviewed or safely deferred; do not ship unspecified notification behaviour.
 
 ## Traceability gaps to close before the planning gate
 
 This matrix includes AC-022 for restore-conflict recovery, AC-023 for the proposed Undo/recovery interaction, and AC-024 for retrospective journal prompt cadence. These cases remain planned, not executed.
 
-1. Finalise schema constraints and transaction/deletion/restore invariants, then ensure AC-001, AC-003–AC-008, AC-014, and AC-019 cover each.
+1. The written schema reconciliation across docs 03/30 is complete. During owner schema review, confirm the proposed format/schema compatibility boundary and unsafe “Keep both” cases, then ensure AC-001, AC-003–AC-008, AC-014, and AC-019 cover the accepted model.
 2. AC-011/AC-012/AC-024 use delegated defaults under D-196 for routine notification cadence, timing and retrospective prompt eligibility. Keep the defaults documented and testable; include them for visibility in the grouped owner review, but do not block Gate A on separate micro-decisions unless the owner wants to override/defer them.
 3. Review the new deterministic Mood Insights fixture in docs/07-TESTING-AND-QUALITY.md and ensure any additional edge cases needed for acceptance are covered (AC-009); it remains a plan, not a test result.
 4. Approve UX/navigation and visual direction or explicitly defer the unsettled areas (AC-018/AC-021).
