@@ -2,6 +2,9 @@
 
 **Research date:** 2026-10-17  
 **Status:** Recommendation for prototyping; not approved.  
+
+**Current-status note (2026-10-27):** This document's unresolved questions were written before several later owner decisions. The archive layout remains a proposal, but entry/data semantics have since been settled: multiple entries per date (D-170/D-075), optional title (D-073), optional primary/secondary mood tags (D-079–D-086), text-only v1 with no photos (D-072), deliberate entry-date changes (D-169), confirmed permanent deletion with no recycle bin or post-delete undo (D-068–D-070), and offline search over saved entry title/body (D-074, with mood labels where present under D-081). Use this document to compare retrieval layouts, not to reopen those decisions. D-187 governs local-date behaviour.
+  
 **Purpose:** Help users revisit a personal record quickly without making journaling feel like administrative work.
 
 ## 1. User jobs
@@ -35,7 +38,7 @@ Prototype a **hybrid archive**:
 3. Open an entry in a calm reading/editorial detail view with clear edit and delete actions.
 4. Make empty dates neutral. A calendar may mark “entry exists” but must not colour an empty date as failure.
 5. Keep journal records independent from habit completion and from the Growth Mark unless a separately approved metric explicitly connects them.
-6. Defer full-text search until the first archive prototype is tested; search can be useful but should not be added just because competitors have it.
+6. Include the approved v1 offline search for saved journal-entry title/body (D-074), displaying recorded primary/secondary mood labels where present (D-081) and excluding unsaved comeback drafts. Treat advanced date-range and habit filters as out of scope unless separately approved. Prototype comparison should focus on archive layout and retrieval flow; basic search is already an approved requirement.
 
 This recommendation is a hypothesis based on task fit, not a measured usability result. Compare the hybrid against a plain timeline and a calendar-first variant with real tasks before locking it.
 
@@ -54,17 +57,14 @@ Measure completion, time-to-find, wrong taps, backtracking, confidence, and inte
 
 ## 5. Entry data and behaviour questions
 
-Resolve before implementation:
-- One entry per day or multiple entries per day?
-- Are title, mood, tags, photos, audio, or attachments in v1? Current v1 baseline is a short text reflection; richer media must not be assumed.
-- Can a user edit an entry's date?
-- What happens when two entries share a date?
-- What timezone determines the entry date?
-- Is search local-only and what fields are indexed?
-- How does export represent dates and deleted entries?
-- Does deletion require confirmation, undo, or both?
-- How are long entries displayed without truncating the original content?
-- What happens when no entries exist?
+Current status of data/behaviour questions:
+- Entry count per date: resolved — multiple entries per local date are allowed (D-170/D-075).
+- Fields: text-only v1; title and primary/secondary mood are optional; photos/attachments are excluded (D-072–D-080).
+- Date changes and timezone: a deliberate saved journal-date change affects only the selected entry (D-169); D-187 governs date keys and timezone travel.
+- Search: offline title/body search is approved (D-074); mood labels may appear in results (D-081); unsaved comeback drafts are excluded. Advanced date-range/habit filters are not implied.
+- Deletion: saved-entry deletion requires confirmation and is permanent; there is no recycle bin or post-deletion undo (D-068–D-070).
+- Remaining design/release details: exact export serialization of dates/moods, long-text preview/read mode, empty states, date-jump navigation, and accessibility at large text sizes.
+- Archive layout itself remains open: test a hybrid timeline/calendar against timeline-only or calendar-first patterns before choosing.
 
 ## 6. Privacy and emotional safety
 
