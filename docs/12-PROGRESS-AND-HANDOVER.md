@@ -357,7 +357,7 @@ The canonical readiness snapshot is `docs/27-PLANNING-COMPLETENESS-REVIEW.md`; t
 
 ## Schema reconciliation completed; owner review still pending — 2026-10-27
 
-- Created `docs/prototypes/dayseed-today-variants.svg`, an editable SVG comparison of W1 Action-first, W2 Reflective and W3 Compact Today layouts using identical synthetic data. It is a planning artifact only—not approved UI or usability evidence. Navigation and archive variants still need rendered comparisons, followed by task/accessibility review and owner selection or explicit deferral.
+- Created two editable SVG planning boards: `docs/prototypes/dayseed-today-variants.svg` (W1 Action-first, W2 Reflective, W3 Compact) and `docs/prototypes/dayseed-navigation-archive-variants.svg` (N1/N2 navigation and A1/A2/A3 archive). Both use synthetic data; neither is approved UI or usability evidence. Task/accessibility review and owner selection or explicit deferral remain.
 
 - Reconciled docs 03 and 30 on the proposed relational model, including one authoritative effective-dated lifecycle (no separate archived timestamp projection), D-195 weekday-mask/schedule constraints, cross-table activity idempotency conflict handling, durable restore-session and conflict-row lifecycle, field-level portable-backup mapping, transaction boundaries, stable journal-draft save identity, and migration rollback rules.
 - Added `intended_journal_entry_id` to the proposed journal-draft model with a partial unique index for non-null values. A prepared save reuses that stable ID, atomically inserts the saved journal entry and resolves its source draft, and preserves the draft/ID on failure or uncertain outcome. Acceptance coverage is planned only.
@@ -365,3 +365,10 @@ The canonical readiness snapshot is `docs/27-PLANNING-COMPLETENESS-REVIEW.md`; t
 - Updated docs 07/28 and the planning review to trace these cases. The written model is reconciled, but the full schema has not been owner-approved; owner review of portable format/schema compatibility and unsafe restore-conflict choices remains. No code/database change, build, test, migration, APK, device validation or implementation audit was performed.
 
 - Traceability continuation: reviewed AC-009's deterministic Mood Insights fixture in docs 07/28. It covers configured Monday/Sunday week starts, month/week boundaries, primary-only counts, entries without mood tags, sparse/empty states, matching-entry navigation and source-record correction/deletion. No further written AC-009 gap is currently identified; the fixture remains planned, not executed.
+
+
+## Rendered UX comparison boards added — 2026-10-27
+
+- Created `docs/prototypes/dayseed-today-variants.svg`, with three comparable Today hierarchies using identical synthetic habit data.
+- Created `docs/prototypes/dayseed-navigation-archive-variants.svg`, with four- versus five-destination navigation and timeline-first, hybrid and calendar-first archive layouts.
+- Both SVG files were re-fetched from `main` and passed a simple XML tag-balance check. They are planning artefacts only—not approved UI, app code, or usability evidence. Next: review them against the task and accessibility scorecard, then record choices or explicit deferrals. No app code, build, tests, database, migration, APK, device state or implementation audit was changed or run.
