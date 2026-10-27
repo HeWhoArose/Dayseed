@@ -48,6 +48,8 @@ Protect personal data, prevent loss of history, keep core flows usable offline, 
 
 ### Restore-conflict matrix coverage — D-094–D-102 / AC-014, AC-022 (planned, not executed)
 
+- Verify backup-envelope category counts distinguish live entities from unresolved conflict rows/payload snapshots and minimal conflict-session context; conflict evidence must not inflate live habit, activity, or journal-entry counts.
+
 - Same stable ID plus identical validated content resolves to one logical record; same stable ID plus different content preserves both versions as an unresolved conflict rather than auto-selecting a winner.
 - Journal conflict choices allow current, backup, or both as independent entries with distinct stable IDs; “both” never concatenates text or overwrites original dates/moods.
 - Distinct numeric entry IDs remain distinct entries. Conflicting versions of the same numeric entry are never summed together; they remain available for explicit current/backup resolution. Do not permit two competing completion/effort outcomes for the same habit/date; where “both” cannot be represented safely, retain the unresolved conflict until the user chooses a supported option.
