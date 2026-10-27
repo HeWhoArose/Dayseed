@@ -182,27 +182,27 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - A portable offline backup should preserve the user's complete personal Dayseed experience: habit definitions and schedules, all habit-tracking history, saved journal entries and their mood tags, relevant user preferences, and unresolved comeback reflection drafts where technically feasible.
 - Treat unresolved drafts as important user writing: include them in the backup when supported and restore them as drafts, not as saved journal entries. Do not silently replace an existing draft during restore.
 - Do not include account credentials, secrets, or premium purchase verification data in the portable backup. These must be handled separately and securely.
-- The exact backup schema, version compatibility, and restore conflict/replacement behavior still require decisions before implementation.
+- The owner-approved backup/restore policy is recorded in D-091–D-145: a dedicated versioned and integrity-checked file; complete approved coverage; optional password protection for manual backups; preview; Replace/Merge; a verified safety backup before either operation; no mutation after unsafe validation/failure; source file preserved; and explicit conflict preservation/resolution. The remaining written-planning work is to map every current Dayseed entity and field to the portable format, document the supported older/newer version compatibility boundary, and close any record-type conflict case not covered below. These are not implemented features.
 
 ## Restore behavior when Dayseed already contains data
 
 - When restoring a portable backup onto an installation that already has personal data, offer two explicit choices: **Replace existing data** or **Merge with existing data**.
 - Explain the consequences of each choice in plain language before the user commits to the operation. Do not silently replace or merge data.
 - Create a safety backup of the current local Dayseed data before either operation and verify that it was created successfully before proceeding. If safety-backup creation fails, stop the restore and leave existing data unchanged.
-- The exact merge rules for duplicate or conflicting records, and the handling of unsupported backup versions, must be defined before implementation.
+- Merge uses stable IDs/type-specific keys to avoid duplicate logical records while preserving distinct records. D-094–D-102 define the approved conflict-preservation approach and main record-specific choices; D-122 requires restore to stop without mutation when compatibility cannot be established safely. Remaining cases include conflicts for records that cannot safely coexist and the exact field/schema mapping for the portable format. Do not describe the main conflict strategy or unsupported-version stop rule as undecided.
 
 ## Merge rules for duplicate and conflicting records
 
 - Use stable record IDs and reliable type-specific keys to recognize records that already exist in both the backup and current installation. Do not create duplicate copies of the same logical record.
 - Preserve distinct records from both datasets.
 - When matching records genuinely conflict, do not silently overwrite either version. Detect and surface the conflict for a safe, explicit resolution path.
-- Exact conflict rules and resolution UX for each record type remain to be specified before implementation. Merge must preserve the pre-restore safety backup and must not mutate existing data if validation or conflict handling fails.
+- Core conflict policy is recorded in D-094–D-102: preserve genuine competing versions, make conflicts discoverable in Settings → Backup & Restore, and do not silently choose a winner. Journal entries, tracking records, habit definitions/schedules, preferences, and comeback drafts have specific choices documented below. Remaining planning work is field-level comparison/merge mapping and cases where keeping both is unsafe or unsupported. Merge must preserve the pre-restore safety backup and must not mutate live data if validation or conflict handling fails.
 
 ## Handling genuine merge conflicts
 
 - If matching records genuinely conflict, preserve both versions intact and mark the conflict for later user review.
 - Do not interrupt the entire restore to demand a decision for every conflict. Complete the restore safely while retaining both versions and making unresolved conflicts discoverable.
-- Do not silently select a winner, overwrite either version, or delete a conflicting version. The conflict-review interface and record-specific resolution rules remain to be specified.
+- Do not silently select a winner, overwrite either version, or delete a conflicting version. The main conflict-review placement and preservation rule are approved; field-level UI detail and conflicts that cannot safely coexist remain open planning items.
 
 ## Finding unresolved merge conflicts
 
@@ -215,7 +215,7 @@ Example direction: “Welcome back! 🌿 What's new with you? Ready to pick up a
 - For a genuine conflict between two versions of a journal entry, show both versions clearly so the user can compare them.
 - Offer three explicit outcomes: **Keep backup version**, **Keep current version**, or **Keep both as separate journal entries**.
 - Do not discard either version until the user chooses an outcome. If keeping both, create distinct entries without falsely presenting them as one entry or silently changing their original content. Preserve relevant dates and mood tags with the correct version where possible.
-- The review must be available from Settings → Backup & Restore. Exact behavior for other record types remains to be specified.
+- The review must be available from Settings → Backup & Restore. Other record types follow D-094–D-102; if no safe record-specific choice exists, retain the conflict for review or stop safely rather than silently overwriting data.
 
 ## Resolving habit-tracking merge conflicts
 
