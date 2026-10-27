@@ -175,15 +175,10 @@ Planned checks must cover no prior entry, an existing prior entry, habit activit
 
 ## Mood comparison control in Insights
 
-- Place a simple **Compare with previous period** control directly in Mood Insights.
-- Keep the comparison hidden until the user chooses the control; do not add a permanent comparison panel or require a Settings change.
-- The control compares the selected period with its immediately preceding equivalent period (week-to-week or month-to-month), following the neutral and limited-data rules above.
-
-## Mood comparison control
-
-- Place a simple **Compare with previous period** control directly in Insights.
-- Keep the comparison hidden until the user activates the control; do not make comparisons automatic or require users to visit Settings to enable them.
-- When activated, compare the current week with the previous week or the current month with the previous month, using recorded primary-mood counts/distributions and neutral wording as specified above.
+- Place one simple **Compare with previous period** control directly in Mood Insights.
+- Keep comparison hidden until the user explicitly chooses the control. Do not add a permanent comparison panel or require a Settings change.
+- Compare the selected week with the immediately preceding week, or the selected month with the immediately preceding month, using recorded primary-mood counts/distributions only.
+- If one or both periods have limited data, explain the limitation neutrally; never frame changes as good or bad, diagnose the user, infer causation, or imply optional mood tags capture the complete emotional experience.
 
 ## Export, local backup/restore, and premium cloud sync
 
