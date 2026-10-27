@@ -36,7 +36,7 @@
 
 
 
-## Deferred or unapproved scope
+| AC-024 | D-042 retrospective journal prompt | [Journal and comeback contracts](24-COMEBACK-EXPERIENCE.md); [Screen/data contracts](26-SCREEN-AND-DATA-CONTRACTS.md); [Quality plan](07-TESTING-AND-QUALITY.md) | Prompt only for the most recent fully completed local date without a saved entry; show at most once/date; no backlog or OS notification; draft reuse/save failure safe; comeback experience does not stack; no habit state changes | Frequency proposal drafted; owner must accept or explicitly defer; cases planned, not executed |\n\n## Deferred or unapproved scope
 
 - **H5 XP/rank and social comparison:** not approved for v1; no acceptance case should block core release unless scope is explicitly changed.
 - **Online accounts, Dayseed-managed cloud backup, cross-device sync, AI processing, ads/purchases/subscriptions:** excluded from initial v1 and gated separately.
@@ -45,7 +45,7 @@
 
 ## Traceability gaps to close before the planning gate
 
-This matrix includes AC-022 for restore-conflict recovery and AC-023 for the proposed Undo/recovery interaction. Both sets of cases remain planned, not executed.
+This matrix includes AC-022 for restore-conflict recovery, AC-023 for the proposed Undo/recovery interaction, and AC-024 for retrospective journal prompt cadence. These cases remain planned, not executed.
 
 1. Finalise schema constraints and transaction/deletion/restore invariants, then ensure AC-001, AC-003–AC-008, AC-014, and AC-019 cover each.
 2. Have the owner accept or explicitly defer the proposed quiet-hour/cap/collision/late-delivery and partial-tip defaults mapped in AC-011/AC-012; resolve or defer retrospective journal prompt eligibility/frequency.
