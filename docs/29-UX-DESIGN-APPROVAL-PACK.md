@@ -116,6 +116,119 @@ The owner can approve a recommendation, request a variation, or explicitly defer
 | Theme preference | Open | Follow system by default; consider an optional System/Light/Dark override if usability/accessibility benefits justify the extra setting | A complete light/dark palette and prototype review; no mechanically inverted palette |
 | Minimum Android support/device matrix | Product target Android; exact minimum remains unverified | Decide from source/toolchain and intended device needs during the authorised technical-validation stage, not from a guessed number today | Supported API/build evidence and a named test-device matrix; this does not need to delay visual exploration |
 
+## 8. Low-fidelity wireframe sketches — planning only
+
+These text sketches are a first comparable prototype specification so the next visual pass does not restart from generic templates. They are not pixel-accurate mockups, usability findings, approved layout decisions, or app UI.
+
+### Today layout variants
+
+**Shared frame:** Android portrait; top app bar with date/context; local data only; no decorative score; daily and weekly targets remain separate; one consistent bottom navigation during each comparison; sample entries must be clearly identified as synthetic.
+
+**W1 — Action-first**
+
+```text
+┌────────────────────────────┐
+│ Today                [⋯]  │
+│ Tue, 27 October             │
+│ 2 of 4 scheduled habits     │
+│────────────────────────────│
+│ TODAY                       │
+│ Walk              [Record] │
+│   0 / 20 minutes            │
+│ Read              [Record] │
+│   10 / 10 pages · Goal met  │
+│ Stretch          [Complete]│
+│ Water             [Record] │
+│────────────────────────────│
+│ Write a reflection     [＋] │
+│ Collected moments · See all │
+│────────────────────────────│
+│ Today  History  Insights  ⚙ │
+└────────────────────────────┘
+```
+
+Purpose: make today's useful habit action first. The denominator must be the count of habits actually scheduled today; the numeric values and outcomes come from saved records, and “0” appears only for explicit zero. Interactions: Record opens the correct mode-specific recorder; the reflection action starts a separate Journal entry; “See all” opens the inspectable growth/history view. Empty state: invite creation or exploration without fake records. Accessibility: every action has a named control and status text beyond colour.
+
+**W2 — Reflective Today (controlled variation)**
+
+```text
+┌────────────────────────────┐
+│ Today                [⋯]  │
+│ Tue, 27 October             │
+│ A small note for today  [＋] │
+│────────────────────────────│
+│ TODAY'S HABITS              │
+│ Walk              [Record] │
+│   0 / 20 minutes            │
+│ Read              [Record] │
+│   10 / 10 pages · Goal met  │
+│ Stretch          [Complete]│
+│────────────────────────────│
+│ Your collected moments      │
+│ 6 active dates this month   │
+│ [View the dates behind this]│
+│────────────────────────────│
+│ Today  History  Insights  ⚙ │
+└────────────────────────────┘
+```
+
+Purpose: test the user's stated interest in a slightly more reflective Today screen without making writing compulsory. The count is a candidate metric only; it must be inspectable and must not count a saved numeric zero as a positive activity moment. Compare whether the reflection invitation crowds out the main habit action, especially with large text and several habits.
+
+**W3 — Compact effort controls (controlled variation)**
+
+```text
+┌────────────────────────────┐
+│ Today                [⋯]  │
+│ Tue, 27 October             │
+│ TODAY'S HABITS              │
+│ Walk              [Record] │
+│   0 / 20 minutes            │
+│ Read              [Record] │
+│   10 / 10 pages · Goal met  │
+│ Stretch          [Complete]│
+│   Tap for Tiny/Usual/Extra  │
+│────────────────────────────│
+│ Write a reflection     [＋] │
+│ See history and insights    │
+│────────────────────────────│
+│ Today  History  Insights  ⚙ │
+└────────────────────────────┘
+```
+
+Purpose: test lower visual density. Only use “Tiny / Usual / Extra” where the habit mode supports that choice. The extra tap must not make ordinary logging meaningfully harder; log tap-count, mistaken taps, correction success, and how easily users see their saved result.
+
+### Navigation variants
+
+**N1 — Four primary destinations (recommended to prototype first):** Today · History · Insights · Settings. Put “Write reflection” on Today and an explicit Journal section/date-jump within History. Test findability; Journal must not be buried behind ambiguous iconography.
+
+**N2 — Dedicated Journal destination:** Today · Journal · History · Insights · Settings. Compare whether direct Journal access helps journal-first users enough to justify a five-item bottom bar on small screens. Do not shrink labels or remove accessibility names to fit.
+
+For both variants, Settings must expose privacy/export/backup/delete controls under clear text labels. From any journal entry, users should be able to return to the prior archive position.
+
+### Archive variants
+
+- **A1 — Timeline first:** recent saved entries grouped by date; “Choose date” opens a calendar/date jump.
+- **A2 — Hybrid (recommended first prototype):** timeline first plus a compact calendar/date jump and local title/body search.
+- **A3 — Calendar first:** calendar of dates containing saved entries; selecting a date opens that date's full entry list.
+
+Use identical synthetic entries and tasks for all three. Empty dates remain neutral. Search excludes unresolved comeback drafts; all date/month labels use the stored local-date key. Test retrieval, editing, deletion confirmation/cancellation, multiple entries on one date, long text, large fonts, and empty results.
+
+### Prototype review scorecard
+
+For each variant, record observed results rather than guesses:
+
+| Task | Evidence to record |
+|---|---|
+| Log a quantity/duration or completion-only habit | completion; seconds/taps if practical; error/correction path |
+| Find an older Journal entry by date and phrase | success; wrong taps; backtracking; correct distinction between saved entry and draft |
+| Explain a blank date and explicit zero | user's explanation in their own words |
+| Distinguish daily targets from a flexible weekly target | correct explanation; any misleading label/denominator |
+| Continue after a comeback prompt without reflecting | whether continue/not-now is found without pressure |
+| Find privacy, export, backup/restore, and deletion settings | completion and any ambiguity |
+| Use the primary tasks with large text and keyboard visible | clipping, lost actions, focus order, scrolling and recovery issues |
+
+**Exit rule:** a wireframe is not approved because it looks cleaner. Choose a direction only after the variants use the same content/tasks, major empty/error/destructive states have been checked, accessibility concerns are logged, and the owner approves or explicitly defers each decision. No usability score or observed finding is claimed yet.
+
 ## 7. Approval and implementation boundary
 
 This pack is a planning deliverable only. Until the owner approves the planning gate:
