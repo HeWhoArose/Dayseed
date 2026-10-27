@@ -33,7 +33,7 @@ Protect personal data, prevent loss of history, keep core flows usable offline, 
 14. Initial v1 core flows do not require network access and do not transmit journal/habit data to a Dayseed cloud service; inspect actual SDK and data paths before making privacy claims.
 15. Verify D-186's Android platform-backup/device-transfer exclusion separately from Dayseed's user-controlled portable backup file: inspect manifest/data-extraction rules and representative supported OS/transfer paths; confirm sensitive app records/drafts are excluded and portable backup still contains its approved complete coverage.
 16. Large fonts, TalkBack, contrast, reduced motion, small-screen layout, and keyboard entry remain usable.
-17. Schema migration is all-or-nothing: if any legacy row cannot be mapped losslessly, rollback preserves the entire source database, does not advance the schema version and reports a recoverable blocker. Do not drop/coerce records or assume a quarantine table. Test the current version-1 placeholder upgrade path only after technical validation is authorised.
+17. Schema migration follows delegated safety default D-197 and is all-or-nothing: if any legacy row cannot be mapped losslessly, rollback preserves the entire source database, does not advance the schema version and reports a recoverable blocker. Do not drop/coerce records or assume a quarantine table. Test the current version-1 placeholder upgrade path only after technical validation is authorised.
 
 ### Proposed schema acceptance coverage — not executed
 
