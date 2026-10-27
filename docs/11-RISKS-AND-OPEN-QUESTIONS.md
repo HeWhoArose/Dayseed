@@ -48,6 +48,10 @@ D-194 resolves repeated Apply-today edits: the first change creates today's vers
 16. Which font family and dark-theme behaviour are approved after device and accessibility checks?
 17. What is the minimum Android version and physical-device test matrix?
 
+### Retrospective journal prompt — cadence proposal available
+
+D-042 approves the optional direction but leaves cadence open. A conservative proposal is now documented in docs 24/26/07 and traced as AC-024: one non-blocking in-app prompt for the most recent fully completed local date with no saved entry, at most once per date, no notification/backlog, and no stacking with comeback. The owner must accept or explicitly defer this before Gate A; the proposal is not implemented or tested.
+
 ## 3. Technical and operational questions
 
 - - **Stack direction resolved (D-009):** continue native Kotlin + Jetpack Compose. Build, test, APK-install, and device readiness remain unverified and must wait for explicit validation authorisation.
