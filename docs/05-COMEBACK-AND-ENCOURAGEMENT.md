@@ -81,9 +81,9 @@ After partial progress, Dayseed may offer a short sequence of optional motivatio
 - At weekly review, distinguish met days, partial days, above-target days, totals, neutral rest/non-scheduled days, and excluded paused periods.
 - Define behaviour when partial activity occurs repeatedly, the weekly target is reached early, an entry is edited, or a target changes midweek.
 
-Offer one optional evening check-in when a scheduled habit remains unrecorded; suppress it after logging/dismissal and respect user settings, quiet hours, and notification limits. A delegated reminder proposal now defines evidence thresholds, 28-day validation/rollback, and coordination controls in this document and `23-WEEKLY-GOAL-REMINDERS.md`; owner acceptance/deferral and actual OS delivery verification remain outstanding.
+Offer one optional evening check-in when a scheduled habit remains unrecorded; suppress it after logging/dismissal and respect user settings, quiet hours, and notification limits. Delegated defaults under D-196 now define evidence thresholds, 28-day validation/rollback, and coordination controls in this document and `23-WEEKLY-GOAL-REMINDERS.md`. These routine details may be overridden together in the grouped review; they are not separate Gate A blockers. Actual OS delivery verification remains post-gate.
 
-The exact one-week schedule, thresholds, number of tips, copy, and controls remain open and need review before implementation.
+The reminder cadence, quiet hours, shared cap, collision handling, timing-learning thresholds/rollback, and partial-tip frequency use documented delegated defaults. Remaining planning work is final non-shaming copy and consistency review; the owner may choose to disable phone tips or defer automated tips from v1 during the grouped review.
 
 
 ### Delegated planning defaults for reminders and partial tips
