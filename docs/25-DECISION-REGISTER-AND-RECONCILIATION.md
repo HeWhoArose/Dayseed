@@ -126,8 +126,10 @@ When a decision changes, update the decision log and every affected document in 
 - [ ] Finalise or explicitly defer reminder/notification and retrospective-journal-prompt edge cases, including quiet hours, collisions, late delivery, and optional-tip scope.
 - [ ] Specify undo/recovery interactions and ensure they do not conflict with stable identities, retries, edits, deletions, or backup/restore.
 - [ ] Prepare and review the navigation/wireframe pack, Growth Mark representation, journal archive pattern, visual direction, typography/colour/theme and accessibility review.
-- [ ] Complete requirement-to-screen/data-rule/acceptance-test traceability.
-- [ ] Reconcile stale statements, links, anchors, and evidence claims across current documents and handover; keep dated research snapshots labelled historical.
+- [x] Create the initial requirement-to-screen/data-rule/test matrix in [28-REQUIREMENT-TRACEABILITY.md](28-REQUIREMENT-TRACEABILITY.md).
+- [ ] Close the remaining traceability gaps listed in doc 28; its acceptance cases are plans, not test results.
+- [x] Run a relative Markdown file-target check across all 34 current Markdown documents; no missing targets were found.
+- [ ] Reconcile stale statements, heading anchors, and evidence claims across current documents and handover; keep dated research snapshots labelled historical.
 - [ ] Present the remaining owner decisions/deferred items together and record explicit owner approval of the planning gate in the workflow approval record.
 
 ### Post-gate technical validation — not a planning task and not currently authorised
