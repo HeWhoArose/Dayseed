@@ -136,7 +136,3 @@ When a decision changes, update the decision log and every affected document in 
 - [ ] Install and verify the native app on a physical Android device; record exact versions, commands, results and limitations.
 
 **Boundary:** This register records planning state only. It does not authorise code changes, an implementation audit, technical validation, migration, or a release-readiness claim.
-
-**Boundary:** This register records planning state only. It does not authorise code changes, an implementation audit, technical validation, migration, or a release-readiness claim.
-
-**Boundary:** This register records planning state only. It does not authorise code changes, an implementation audit, or a release-readiness claim.
