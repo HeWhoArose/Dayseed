@@ -51,7 +51,8 @@ Use this checklist before marking UX/design approved. Do not check items merely 
 - [ ] Competitor claims are labelled as observed, vendor-claimed, or unknown.
 - [ ] Public store screenshots are not misrepresented as live app testing.
 - [ ] Research limitations and outstanding decisions are recorded.
-- [ ] The native-app implementation gate and GitHub/Replit handoff rules are understood.
+- [ ] Current owner-review pack in docs/29-UX-DESIGN-APPROVAL-PACK.md is reconciled with approved decisions; draft concepts are not represented as final UI.
+- [ ] The native-app implementation gate and GitHub/AI Studio handoff rules are understood.
 
 ## Approval
 - Reviewer:
