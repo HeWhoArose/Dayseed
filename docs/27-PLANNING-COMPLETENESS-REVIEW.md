@@ -60,6 +60,7 @@ For permanent habit deletion, the architecture and schema addendum propose a del
 - [ ] **Privacy language:** align user-facing claims with the approved no-account/offline core, portable backup versus provider-backed file syncing, D-186 OS-backup exclusion policy, deletion/export coverage, and unverified encryption/implementation facts.
 - [x] **Initial traceability pass:** created [28-REQUIREMENT-TRACEABILITY.md](28-REQUIREMENT-TRACEABILITY.md), mapping core requirements to screen/data contracts and planned acceptance cases.
 - [x] **Mood Insights fixture drafted:** doc 07 now has a deterministic synthetic dataset and expected counts/boundaries for AC-009; cases remain planned, not executed.
+- [x] **Measured progress-boundary fixtures drafted:** docs 01/07/28 now specify exact-ratio classification and deterministic examples for 100-, 10-, and 1-unit targets, including unreachable bands for tiny targets; cases remain planned, not executed.
 - [ ] **Traceability completion:** close the remaining gaps in doc 28, especially owner acceptance/deferment of reminder and Undo defaults, backup-conflict edge cases, schema/transaction cases, and UX/accessibility review; review whether AC-009 needs further edge cases.
 - [x] **Relative-link target pass:** checked relative Markdown file targets across all 37 current Markdown documents; no missing targets were found.
 - [x] **Same-file heading-fragment pass:** checked same-file Markdown heading fragments across all 37 documents; no missing fragments were found under the reviewed GitHub-style slug rules.
