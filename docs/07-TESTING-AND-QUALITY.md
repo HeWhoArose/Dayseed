@@ -25,7 +25,7 @@ Protect personal data, prevent loss of history, keep core flows usable offline, 
 6. A past record edit updates all dependent summaries without changing unrelated records.
 7. Archive preserves history; deletion follows the approved deletion policy and does not accidentally erase independent journal entries.
 8. Repeated taps or retries of the same logical action do not create duplicate records, while legitimate repeated sessions remain possible.
-9. App process termination does not lose acknowledged writes; failed or uncertain saves preserve drafts and do not create duplicate journal entries.
+9. App process termination does not lose acknowledged writes; failed or uncertain journal saves preserve the draft and its stable `intended_journal_entry_id`. Saving inserts the journal entry with that ID and removes/resolves the source draft in one transaction; retry after an uncertain result must discover the persisted outcome and must not create a duplicate.
 10. Offline operation does not show endless loading or require sign-in.
 11. Comeback thresholds, local-date boundaries, and dismissal work at boundary dates; changed or uncertain clocks do not create duplicate or fabricated messages.
 12. Notification denial, disabled notifications, quiet hours, and OS restrictions do not break core tasks or bypass reminder opt-in.
@@ -33,7 +33,7 @@ Protect personal data, prevent loss of history, keep core flows usable offline, 
 14. Initial v1 core flows do not require network access and do not transmit journal/habit data to a Dayseed cloud service; inspect actual SDK and data paths before making privacy claims.
 15. Verify D-186's Android platform-backup/device-transfer exclusion separately from Dayseed's user-controlled portable backup file: inspect manifest/data-extraction rules and representative supported OS/transfer paths; confirm sensitive app records/drafts are excluded and portable backup still contains its approved complete coverage.
 16. Large fonts, TalkBack, contrast, reduced motion, small-screen layout, and keyboard entry remain usable.
-17. Schema migration preserves records and can recover safely from failure; test the current version-1 placeholder upgrade path only after technical validation is authorised.
+17. Schema migration is all-or-nothing: if any legacy row cannot be mapped losslessly, rollback preserves the entire source database, does not advance the schema version and reports a recoverable blocker. Do not drop/coerce records or assume a quarantine table. Test the current version-1 placeholder upgrade path only after technical validation is authorised.
 
 ### Proposed schema acceptance coverage — not executed
 
@@ -119,6 +119,7 @@ These are planned acceptance cases for the proposed schema, not test results. Th
 ### Proposed data-model acceptance coverage — pending owner approval
 
 - Validate each schema constraint and foreign key, including a habit with many entries on one date and many journal entries on one date.
+- Verify each draft's non-null `intended_journal_entry_id` is unique; failed draft-to-journal save preserves the draft and ID, while successful save inserts the journal entry with the same ID and removes/resolves the source draft atomically. Simulate process interruption/uncertain result before and after commit; retry must produce one saved entry or leave the intact draft, never duplicate it.
 - **Approved policy, planned test only:** effective-dated configuration chooses the correct target, schedule, tracking mode, and other applicable settings for dates before, on, and after a change; editing a future version must not rewrite past records. This owner decision does not mean the schema or tests are implemented or executed.
 - **D-194 same-day configuration edit (planned, not executed):** the first Apply-today change creates the current local-date version; a second Apply-today edit replaces that version only while no qualifying habit activity has been recorded on that date. Once qualifying activity exists, preserve today's version and offer Apply tomorrow. Cancel changes nothing. Apply tomorrow creates or revises only tomorrow's not-yet-effective version. Past versions and their historical interpretation remain unchanged.
 - Verify same-key retries create/count once, while a new idempotency key preserves a distinct intentional entry even when its value and timestamp are similar.
