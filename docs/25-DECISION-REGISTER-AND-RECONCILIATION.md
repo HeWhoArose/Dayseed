@@ -122,7 +122,8 @@ When a decision changes, update the decision log and every affected document in 
 ### Still required before the owner can approve the planning gate
 
 - [ ] Close the full schema proposal: constraints, indexes, transaction/rollback boundaries, deletion ownership, version compatibility, and migration plan. Do not change or migrate the database in this step.
-- [ ] Finalise or explicitly defer reminder/notification and retrospective-journal-prompt edge cases, including quiet hours, collisions, late delivery, and optional-tip scope.
+- [x] Document delegated reminder safety defaults across docs 23/05/26/07: quiet hours, shared daily cap, collision/late-delivery suppression, local-only timing-learning thresholds/rollback, and optional-tip cadence.
+- [ ] Have the owner accept or explicitly defer those proposed defaults and resolve/defer retrospective journal prompt eligibility/frequency; these remain planning questions.
 - [ ] Specify undo/recovery interactions and ensure they do not conflict with stable identities, retries, edits, deletions, or backup/restore.
 - [x] Prepare the UX/design recommendation pack in `29-UX-DESIGN-APPROVAL-PACK.md`.
 - [x] Draft comparable text wireframes for Today hierarchy, navigation and archive alternatives in doc 29; rendered visual prototypes, task review and owner approval remain outstanding.
