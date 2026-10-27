@@ -293,9 +293,20 @@ See [Planning Completeness Review](27-PLANNING-COMPLETENESS-REVIEW.md) for the c
 
 ### Next planning actions
 
-1. Reconcile `docs/30-SCHEMA-CLOSURE-AND-MIGRATION-PLAN.md` with the canonical `docs/03-TECHNICAL-ARCHITECTURE.md`; close remaining constraints/backup mappings and get owner review. Resolve the undo/recovery policy before planning-gate approval.
-2. Resolve or explicitly defer reminder, retrospective prompt, partial-tip and undo/recovery edge cases.
-3. Use `docs/29-UX-DESIGN-APPROVAL-PACK.md` to produce comparable low-fidelity navigation/screen-flow prototypes and collect design review evidence.
-4. Close the remaining gaps in `docs/28-REQUIREMENT-TRACEABILITY.md` and complete the current cross-document/link/claim audit.
-5. Present the remaining owner choices in one batch; keep the gate closed until the owner explicitly approves it.
-6. Only after separate authorisation, begin the bounded native technical-validation stage described in the workflow and roadmap.
+1. Reconcile the structural refinements in `docs/30-SCHEMA-CLOSURE-AND-MIGRATION-PLAN.md` against `docs/03-TECHNICAL-ARCHITECTURE.md`, including mask/mode constraints, foreign keys/indexes, transaction/rollback boundaries, portable-backup field mapping, conflict cases, and migration compatibility. Present the full written proposal to the owner; do not inspect/migrate the real database during this planning step.
+2. Present the delegated reminder defaults for owner acceptance or explicit deferral; resolve or defer retrospective journal-prompt eligibility/frequency, Undo window and whether individual numeric-entry deletion needs confirmation. These remain planning decisions, not technical tests.
+3. Turn the text sketches in `docs/29-UX-DESIGN-APPROVAL-PACK.md` into comparable visual/wireframe prototypes, then review navigation, Today hierarchy, Growth Mark, journal archive, typography/colour/theme, empty/error/destructive states and accessibility. Do not build app UI.
+4. Close `docs/28-REQUIREMENT-TRACEABILITY.md` gaps (especially mood-insight fixtures and reminder/Undo cases) and complete heading-anchor, stale-claim, duplicate/conflict and supported-evidence review across current Markdown docs.
+5. Prepare one concise owner-review batch: decisions already approved; proposed delegated defaults requiring acceptance/defer; design decisions that may be deferred from v1; and remaining schema proposal. Keep Gate A–D closed until the owner explicitly approves the planning gate.
+6. Only after separate explicit authorisation, begin the bounded native technical-validation stage described in the workflow and roadmap.
+
+
+## Latest planning continuation — 2026-10-27
+
+- Reconfirmed D-195 is already approved on `main`; the seven-bit weekday mask is not a new unresolved owner choice.
+- Drafted comparable text wireframes in `docs/29-UX-DESIGN-APPROVAL-PACK.md`: three Today hierarchies, two navigation variants and three journal archive patterns. No rendered prototype, user study or design approval is claimed.
+- Documented delegated reminder safety proposals in docs 23/05/26/07 and mapped them in doc 28: editable 21:00–08:00 local quiet hours, a shared three-notifications/day cap, collision/late-delivery revalidation, local-only personalisation evidence/rollback and a capped optional-tip sequence. Owner acceptance or explicit deferral remains pending; OS scheduling is unverified.
+- Documented a proposed eight-second, single-mutation Undo in docs 01/03/26/07/30 and mapped it to AC-023. D-032 still requires owner review of the window and whether individual numeric-entry deletion requires confirmation; it is not an approved implementation contract.
+- Reconciled traceability IDs: AC-022 remains restore conflict/interruption recovery; AC-023 is the Undo proposal. Removed the duplicate AC-022 row added during reconciliation and re-fetched the matrix to verify the IDs and section boundary.
+- The schema closure document 30 exists and contains proposed table/index constraints, transactions, restore sessions/conflicts, notification cancellation outbox, backup mapping and migration design. It must still be reconciled and reviewed with the canonical architecture and owner-approved rules.
+- No app code or live database was modified. No build, automated test, migration, APK installation, device validation or implementation audit was run. All acceptance cases remain planned, not executed. The planning gate remains not approved.
