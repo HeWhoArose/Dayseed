@@ -39,7 +39,7 @@ D-194 resolves repeated Apply-today edits: the first change creates today's vers
 7. **Habit lifecycle — baseline approved (D-187):** archive by default to preserve accessible history; permanent deletion is a separate, clearly explained action. Remaining work is to finalise deletion confirmation/retention wording and verify export/backup and derived-summary behaviour; independent journal entries must remain intact.
 8. **Backup/export — policy largely approved; mapping and technical verification remain:** readable journal export and complete versioned portable backup are required. Replace/Merge, safety backup, integrity/compatibility stop rules, password-protection direction, backup scheduling/retention, and the main conflict-preservation choices are recorded in D-091–D-145. D-186 separately resolves the Android platform-backup policy: exclude sensitive Dayseed data by default. Before the planning gate, review the proposed entity-category mapping in `30-SCHEMA-CLOSURE-AND-MIGRATION-PLAN.md`, finish its serialized field-level contract and version-compatibility boundary, and define safe handling for record-type conflicts where keeping both cannot coexist. After separate authorisation, verify actual export/restore, migration and Android backup/device-transfer behaviour.
 9. **Encouragement — partially resolved:** outcome-aware and comeback behaviors have specific decisions; remaining optional-tip cadence, opt-out, and per-message dismissal rules must be reconciled against those decisions.
-10. **Reminders — core rules approved; edge cases open:** onboarding opt-in, per-habit default time, weekly reflection, and inactivity caps are recorded. Finalise quiet hours, global/per-habit controls, Android permission denial, timezone changes, and delivery deduplication.
+10. **Reminders — core rules approved; delegated defaults documented:** onboarding opt-in, per-habit default time, 9:00 a.m. weekly reflection on the configured week-start day, and inactivity caps are recorded. D-196 defaults cover editable 21:00–08:00 quiet hours, a shared three/day cap, per-habit/day cap, collisions, deduplication, local-only timing learning and rollback. Owner may override these routine defaults in the grouped review; Android permission, timezone, delivery and reboot behaviour still require post-gate validation.
 11. **Monetisation — no v1 model approved:** do not add ads, rewarded extras, purchases, or subscriptions to initial v1 without an explicit owner decision. Future premium cloud scope is gated separately.
 12. Which visual direction best balances distinctiveness, legibility, and calm?
 13. Which events qualify for Growth Mark, and should the first release use a simple count rather than an illustration?
@@ -48,9 +48,9 @@ D-194 resolves repeated Apply-today edits: the first change creates today's vers
 16. Which font family and dark-theme behaviour are approved after device and accessibility checks?
 17. What is the minimum Android version and physical-device test matrix?
 
-### Retrospective journal prompt — cadence proposal available
+### Retrospective journal prompt — delegated default
 
-D-042 approves the optional direction but leaves cadence open. A conservative proposal is now documented in docs 24/26/07 and traced as AC-024: one non-blocking in-app prompt for the most recent fully completed local date with no saved entry, at most once per date, no notification/backlog, and no stacking with comeback. The owner must accept or explicitly defer this before Gate A; the proposal is not implemented or tested.
+D-042 approves the optional direction. Under D-196, the default cadence in docs 09/24/26/28 is one non-blocking in-app prompt on the first eligible app opening for the most recent fully completed local date with no saved entry; at most once per date, no notification/backlog, reuse a same-date draft, and no stacking with comeback. It is not a separate Gate A blocker; the owner may override or defer it in the grouped review. The prompt is not implemented and its acceptance cases are planned, not executed.
 
 ## 3. Technical and operational questions
 
