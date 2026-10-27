@@ -158,15 +158,6 @@ Readable journal export is not the same artifact as the full Dayseed portable ba
 
 The file should carry a distinct `format_version` (container/serialization contract) and `schema_version` (entity/data contract), creation instant, an integrity value and a category/count summary. The proposed compatibility rule is: accept the current format/schema and any older version for which an explicit, loss-aware converter is documented; reject unknown or unsupported versions (including an unknown newer schema) before touching live data. If a required field cannot be mapped without loss, quarantine the affected validated record for explicit recovery or stop the restore safely—never silently drop/coerce it. If compatibility cannot be established or integrity fails, stop before live mutation. Manual password-protected backup needs a dedicated encryption envelope; the exact cryptographic parameters remain subject to a security review before release.
 
-- Habit identities and every effective configuration version, including schedule masks, target/tracking modes, units, lifecycle and reminder preferences.
-- All numeric/duration entries, non-numeric day outcomes, habit/date notes, and entry-specific notes.
-- All saved journal entries including optional habit links and mood tags, and unresolved journal drafts as drafts rather than saved entries.
-- Relevant app preferences such as week-start, theme, reminder opt-in/time preferences and approved backup preferences, excluding credentials/secrets/premium purchase verification.
-- Logical reminder-delivery keys/statuses needed to deduplicate past logical occurrences; do not carry OS-specific notification IDs as active scheduled work.
-- Unresolved restore-conflict payloads until user resolution, so a second migration/backup cannot silently lose either version.
-- Do not include transient UI state, cache-only totals, platform notification cancellation outbox rows, or an Android provider's access-grant tokens as portable data. Destination access must be checked/reselected on the receiving installation when unavailable.
-
-The file should carry format/schema version, creation instant, an integrity value and a category/count summary. If compatibility cannot be established or integrity fails, stop before live mutation. Manual password-protected backup needs a dedicated encryption envelope; the exact cryptographic parameters remain subject to a security review before release.
 
 ## 6. Proposed migration plan from the observed version-1 database
 
