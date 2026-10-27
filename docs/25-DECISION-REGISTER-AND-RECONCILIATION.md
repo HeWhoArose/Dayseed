@@ -103,6 +103,7 @@ These are not micro-decisions and must not be silently delegated:
 6. `19-AI-STUDIO-GITHUB-WORKFLOW.md` — workflow and explicit implementation gate.
 7. `12-PROGRESS-AND-HANDOVER.md` — factual status, verified commits, tests and next task.
 8. `27-PLANNING-COMPLETENESS-REVIEW.md` — current readiness snapshot and planning/post-gate checklist; it does not supersede the decision log.
+9. `28-REQUIREMENT-TRACEABILITY.md` — initial requirement-to-screen/data-rule/test mapping; its gaps still need closure and its cases are not test results.
 8. `27-PLANNING-COMPLETENESS-REVIEW.md` — current readiness snapshot and planning/post-gate checklist; it does not supersede the decision log.
 
 When a decision changes, update the decision log and every affected document in one traceable reconciliation batch. Fetch each current file immediately before writing it, preserve unrelated content, then re-fetch and verify the result.
