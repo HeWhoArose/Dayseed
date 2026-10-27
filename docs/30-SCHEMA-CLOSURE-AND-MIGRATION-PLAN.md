@@ -111,7 +111,7 @@ The following SQL/domain invariants should appear in the final architecture mode
 | Restore Replace/Merge | Fully validate file first; require verified safety backup; apply data and unresolved conflicts in one controlled transaction/session | Invalid file, failed safety backup, or transaction error leaves pre-restore data intact; interruption recovers or rolls back safely |
 | Resolve one conflict | Write the chosen result(s) and clear only that resolved conflict in one transaction | Keep both source versions until the chosen resolution commits |
 
-The undo interaction for newly created habit activity remains an explicit product decision. Proposed safe default for owner review: offer a short, in-session Undo only for a newly created log/outcome and undo that exact stable ID; edits remain explicit corrections, and confirmed permanent journal deletion remains irreversible per D-070. The undo window and whether deletion of a numeric entry itself requires confirmation must be agreed before the planning gate.
+The architecture already proposes a concrete recovery default, which remains **proposed for owner review, not approved**: after a successful single-record tracking mutation (create/log/complete/edit of one numeric entry, day outcome or habit/date note), show one 8-second snackbar Undo. The token references the exact stable entity and mutation; a new mutation replaces the previous pending token. Undo runs in a guarded transaction: creation removes only the record created by that action; edit restores captured prior fields only if the entity still has the expected post-edit version. If another change makes the inverse unsafe, do not overwrite newer data; direct the user to normal History correction instead. Undo is in-session only; after timeout or process death, committed state remains and the Undo affordance disappears. Confirmed journal-entry deletion, permanent habit deletion, delete-all and Replace/Merge restore are not snackbar-undoable. The owner still needs to accept/defer the 8-second window and decide whether deleting an individual numeric entry requires explicit confirmation. Never show Undo until the original mutation commits; a failed/uncertain save preserves the prior data and offers recovery rather than false success.
 
 ## 5. Portable backup mapping
 
@@ -148,10 +148,10 @@ No migration should be implemented from this document alone. The actual schema, 
 ## 7. Remaining closure checklist
 
 - [ ] Review the proposed lifecycle-state refinement and optional journal-habit link against D-071, D-149–D-160, and D-172; reconcile into the canonical architecture.
-- [ ] Add proposed restore-session/conflict structures and the notification-cancellation outbox to the schema proposal, including their retention and backup rules.
+- [x] Add proposed restore-session/conflict structures and the notification-cancellation outbox to the architecture schema proposal; their retention and portable-backup rules are documented and remain proposed pending owner review.
 - [ ] Confirm the full mask/target/mode checks, indexes, per-operation transactions, and rollback tests in the architecture and test plan.
 - [ ] Decide the short-lived undo contract and whether deleting an individual numeric entry needs confirmation; do not silently default destructive recovery behaviour.
-- [ ] Map all entities/fields into the portable backup and journal export separately; close unresolved “Keep both” limitations without changing the approved conflict policy.
+- [ ] Review the proposed entity/field mapping for portable backup versus readable journal export, confirm the compatibility boundary, and close “Keep both” cases where duplicate coexistence is unsafe without changing the approved conflict policy.
 - [ ] Record the proposed schema for explicit owner review and approval before any application schema change.
 - [ ] Only after the planning gate and separate technical-validation authorisation, inspect actual source/schema/build/toolchain, run synthetic migration tests, and verify backup/restore, deletion, notification and device behavior.
 
