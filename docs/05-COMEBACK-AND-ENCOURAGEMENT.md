@@ -96,7 +96,7 @@ Proposed partial-tip default: up to three optional tips in the seven days after 
 
 ## 9. Personalised reminders and outcome-aware messages
 
-**Status:** Approved direction; exact policy and feasibility remain planning work.
+**Status:** Approved direction; delegated timing/coordination defaults are documented under D-196. Final non-shaming copy and cross-document consistency remain planning work; Android scheduling feasibility requires separate post-gate technical validation.
 
 Dayseed should explore a gentle reminder system that can learn from the user's own completion patterns over time. For example, if a habit is often completed around 3 p.m. and remains unrecorded by a later chosen/check-in time, Dayseed may offer a reminder around 4 p.m. This must be treated as a pattern-based suggestion, not a certainty or a judgement. Sparse data should not create false confidence.
 
