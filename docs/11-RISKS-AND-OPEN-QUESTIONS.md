@@ -43,7 +43,7 @@ D-194 resolves repeated Apply-today edits: the first change creates today's vers
 11. **Monetisation — no v1 model approved:** do not add ads, rewarded extras, purchases, or subscriptions to initial v1 without an explicit owner decision. Future premium cloud scope is gated separately.
 12. Which visual direction best balances distinctiveness, legibility, and calm?
 13. Which events qualify for Growth Mark, and should the first release use a simple count rather than an illustration?
-14. Should comeback prompts appear once per absence episode, as a non-blocking card, or not at all by default?
+14. **Comeback trigger/episode policy resolved:** D-047–D-056 and D-146–D-160 approve the 14-day and 30-day triggers, 30-day precedence, and once-per-qualifying-episode suppression. Remaining question is presentation/copy and accessibility, not whether to show the approved experiences. See `29-UX-DESIGN-APPROVAL-PACK.md`.
 15. Should journal archive default to timeline, hybrid timeline/calendar, or another pattern after testing?
 16. Which font family and dark-theme behaviour are approved after device and accessibility checks?
 17. What is the minimum Android version and physical-device test matrix?
