@@ -1,6 +1,6 @@
 # Progress and Handover
 
-**Last updated:** 2026-10-26  
+**Last updated:** 2026-10-27  
 **Status:** Planning phase; planning gate not approved; feature implementation is not authorised. Existing source files/preview are evidence for the later audit, not proof of a verified build or approval to add features.
 
 ## Repository status
@@ -10,7 +10,7 @@ Canonical branch: `main`. GitHub is the source of truth for planning and future 
 
 ## Current state
 
-- Product direction and core v1 boundaries: documented as a planning baseline; some product semantics remain open.
+- Product direction and core v1 boundaries: most core data semantics are approved and reconciled through D-195; remaining planning work is mainly UX/design approval, a complete schema proposal, reminder/prompt/undo edge cases, traceability and repository consistency.
 - UX directions and information architecture: explored, not approved.
 - Existing repository source: native Kotlin + Jetpack Compose, `SQLiteOpenHelper`, repository, ViewModel/StateFlow, and screens are present. Treat the project as being in the planning phase for our workflow; do not add features yet. Source/preview presence does not verify build, tests, installation, or device behavior. The later audit must reconcile observed source with the approved plan.
 - Growth Mark and return experience: concepts, definitions, sample copy for 3/14/90 days, zero-completion state, and test cases documented in [docs/15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md](15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md). Not approved.
@@ -276,3 +276,25 @@ The current repository contains a native Kotlin/Jetpack Compose Android app and 
 - Owner approved D-195: encode weekdays with a locale-independent 7-bit integer mask, Monday=1, Tuesday=2, Wednesday=4, Thursday=8, Friday=16, Saturday=32, Sunday=64. Combine chosen days by bitwise OR. `SELECTED_WEEKDAYS` requires a valid non-empty mask; `DAILY` and `FLEXIBLE_WEEKLY_TARGET` do not require a scheduled-day mask; flexible weekly preferred weekdays are optional guidance only. Unknown bits and invalid schedule/mask combinations must be rejected.
 - Updated the decision log, proposed architecture, screen/data contract, planned acceptance coverage, risk register, and decision register. Re-fetched each updated file and verified the intended content. The encoding policy is resolved; technical validation remains pending.
 - The complete schema remains proposed, and acceptance cases remain planned, not executed. The remaining identified schema behavior question concerns cleanup of habit-linked reminder-ledger rows and pending OS notifications on permanent habit deletion. No code, build, tests, APK/device validation, or implementation audit was performed; any technical validation or implementation still requires separate explicit authorisation.
+
+
+## Current readiness snapshot — 2026-10-27
+
+See [Planning Completeness Review](27-PLANNING-COMPLETENESS-REVIEW.md) for the current workstream matrix and P0/P1 checklist. It supersedes older “next action” lists in this historical handover where they describe already-resolved decisions as open.
+
+- D-195 weekday-mask encoding is approved and reconciled: Monday=1, Tuesday=2, Wednesday=4, Thursday=8, Friday=16, Saturday=32, Sunday=64. The mapping is locale-independent; valid/non-empty and schedule-kind constraints are planned for validation, not tested.
+- The remaining previously identified permanent-habit-deletion reminder question now has a delegated planning default: delete habit-scoped delivery ledger rows; cancel habit-specific pending/posted OS notifications; preserve journal entries/global reminders; guard delivery workers against deleted/inactive habits; and reconcile stale work. This is a design default only, not implemented or verified.
+- Earlier Expo-first text in the Android platform research and Expo-specific font-packaging wording were corrected to align with D-009 and native Kotlin/Compose.
+- Clarified in the product specification that complete schema design is a planning deliverable, while runtime/technical verification (build, real database migration, Android backup rules, device behaviour) waits for separate owner authorisation after the planning gate.
+- Created `docs/27-PLANNING-COMPLETENESS-REVIEW.md` and refreshed the decision-register planning checklist to distinguish P0 planning work from post-gate technical validation.
+- Existing repository source is native Kotlin/Compose with SQLite persistence, according to the earlier read-only audit. Build, tests, APK installation, physical-device behaviour and safe migration remain unverified. Do not state that the runtime has passed.
+- Documentation updates were fetched before each write and re-fetched for verification. No application code or database was changed; no build, test, migration, APK installation, or device validation was run during this continuation.
+
+### Next planning actions
+
+1. Complete the written schema proposal (constraints/indexes, transactions/rollback, deletion ownership and migration compatibility).
+2. Resolve or explicitly defer reminder, retrospective prompt, partial-tip and undo/recovery edge cases.
+3. Prepare the navigation, screen-flow and design approval pack.
+4. Build the requirement-to-screen/data-rule/test traceability matrix and complete the current cross-document/link/claim audit.
+5. Present the remaining owner choices in one batch; keep the gate closed until the owner explicitly approves it.
+6. Only after separate authorisation, begin the bounded native technical-validation stage described in the workflow and roadmap.
