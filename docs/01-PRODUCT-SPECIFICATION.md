@@ -16,10 +16,11 @@
 Users can create, edit, pause/archive, restore, and delete a habit. A habit should have a name, optional description, tracking mode, schedule, optional reminder, and creation/update metadata. Editing a habit must not silently rewrite historical records.
 
 ### H2 — Habit measurement and progress levels
-Every habit uses one explicit measurement mode selected during creation:
+Every habit uses one explicit tracking mode selected during creation:
 - **Duration:** record time spent in a consistent internal unit (for example, minutes), displayed in a human-friendly format.
 - **Quantity:** record a count in the habit's chosen unit (for example, pages, practice questions, or repetitions). Numeric entries are whole numbers only; intentional zero is valid and is distinct from no record.
 - **Completion-only:** record whether the task was done, without a quantity or duration.
+- **Effort-aware:** record the user-selected qualitative effort outcome for that habit/date. Do not convert effort levels into invented numeric amounts or sum them as quantities. For flexible weekly goals, count qualifying completed dates according to the weekly-goal rules.
 
 For duration and quantity habits, the user defines a usual target. Dayseed derives progress labels from the recorded amount relative to that target: Tiny (>0% and <25%), Small (25% to <50%), Halfway (50% to <75%), Nearly there (75% to <100%), Goal met (exactly 100%), Extra (>100% through 150%), and Huge (>150%). Use sensible whole-number boundaries and skip intermediate labels that cannot meaningfully apply to a very small target. Always preserve the actual amount. Huge gets distinct, enthusiastic but non-pressuring encouragement; users should never feel obliged to beat their past performance. Labels describe measured progress, not the user's feelings, motivation, character, or moral worth.
 
