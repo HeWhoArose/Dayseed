@@ -58,6 +58,25 @@ These are schema recommendations based on approved behaviour, not new owner-appr
 - Do not transfer OS-specific scheduled-notification IDs as portable data. Preserve logical reminder-delivery keys/status where needed for deduplication, then rebuild eligible future scheduling on restore from current settings and source records.
 - The outbox is technical cleanup state, not a user record. Its retention must be limited to the minimum needed for reliable cancellation.
 
+#### Proposed record-type conflict mapping — owner review required
+
+The following mapping applies D-094–D-102 to the proposed schema. It is a conservative reconciliation proposal, not a new owner-approved conflict policy.
+
+| Record type | Proposed restore/merge treatment | Safety boundary |
+|---|---|---|
+| Same stable ID and same validated contents | Deduplicate as one logical record. | Do not use similar text/value/timestamp as a substitute for stable identity or an approved logical key. |
+| Same stable ID but different validated contents | Preserve both payloads in `restore_conflicts`; do not auto-select or overwrite. | The conflict stays reviewable across restart until an explicit choice commits. |
+| Journal entries | Offer current, backup, or both as separate journal entries with distinct stable IDs, as approved by D-097. | “Both” means two independent entries; never merge their text into one entry. |
+| Numeric tracking entries and non-numeric day outcomes | Treat distinct stable IDs as distinct records; for conflicting payloads with the same stable ID, preserve both versions and ask the user to choose current or backup. Offer “both” only if the entries are demonstrably separate logical activities and the schema can represent them without violating idempotency or the one-outcome-per-habit/date invariant. | Never sum two conflicting versions of the same numeric entry, or create two competing day outcomes for one habit/date. Do not resolve an unsafe “both” by fabricating a new activity. |
+| Habit definitions and effective-dated configuration | Compare conflicting definitions/versions side by side and let the user choose; separate habits may be preserved where appropriate, as approved by D-099. | A same-ID configuration conflict must not create two effective versions for the same habit/date or reinterpret historical records. If a safe separate-habit remap cannot be established, keep the conflict unresolved until a supported choice is made. |
+| Preferences/settings | Show current and backup values and require explicit selection, as approved by D-100. | Do not duplicate a setting key or silently prefer one source. |
+| Unfinished comeback drafts | Preserve both conflicting versions for later review, as approved by D-101. | Keep drafts separate from saved journal entries and do not auto-promote either version into Journal. |
+| Corrupt, incomplete, or unsupported backup/schema version | Stop before live mutation, as approved by D-102. | Do not treat an unsafe file as an ordinary merge conflict or leave partial restored data. |
+
+For all conflict types, clear the conflict payload only in the same successful transaction that commits the selected resolution. A failure leaves the conflict available for review. The specific options presented must be generated from the record type's safe capabilities, not show a generic “Keep both” choice when the schema cannot safely support it.
+
+
+
 ## 3. Candidate relational invariants
 
 The following SQL/domain invariants should appear in the final architecture model and acceptance plan.
