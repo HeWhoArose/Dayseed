@@ -48,6 +48,16 @@ Protect personal data, prevent loss of history, keep core flows usable offline, 
 
 These are planned acceptance cases for the proposed schema, not test results. The complete schema still awaits owner approval, and technical validation requires separate explicit authorisation. D-190 approves stable UUID identity and nullable unique idempotency keys; D-193 settles the no-Skip-action policy; D-194 resolves repeated Apply-today behavior; D-195 resolves the weekday-mask encoding policy. None of these decisions means acceptance cases have been executed. Before finalising acceptance coverage, keep the delegated permanent-deletion reminder-cleanup default covered by the transaction, cancellation-failure, active-habit-guard, and startup-reconciliation cases above; the rule is documented, but neither the schema nor tests are implemented or verified.
 
+### Retrospective journal prompt — proposed, not executed
+
+- On the first eligible open for a local date, offer a prompt only when the most recent fully completed local date has no saved journal entry; existing habit records on that date do not suppress it.
+- Verify an existing saved entry suppresses the prompt; multiple older empty dates create no backlog; display/dismissal/Not now/leave suppress repeat display for the same target date.
+- Verify no OS notification is created, and no more than one retrospective prompt appears per app opening.
+- Verify 14-/30-day comeback UI takes precedence without stacking a second prompt.
+- Verify timezone travel does not move historical date keys or re-trigger the same target date; uncertain/corrupt clock data suppresses rather than fabricates the prompt date.
+- Verify an existing draft for the target date is reused, save failure preserves it, and saving a retrospective entry does not change habit records or outcomes.
+- This cadence is a delegated proposal; owner acceptance/deferral is required before Gate A and no tests have been executed.
+
 ### Undo and recovery — proposed, not executed
 
 - Verify the Undo affordance appears only after the source mutation commits and remains available for eight seconds; the next mutation replaces the pending Undo.
