@@ -52,8 +52,8 @@ Until the owner approves the model:
 - List existing entries individually, with their own values and notes.
 - Editing or deleting targets only the selected entry; totals and dependent insights recalculate from remaining valid entries.
 - Negative values are rejected for non-negative counters without changing existing records. Above-target values remain valid and are not capped in storage.
-- **Delegated Undo proposal:** after a successful create/log/complete/edit of one tracking record or habit-date note, show a single 8-second snackbar Undo. It reverses only that exact mutation; a newer mutation replaces the pending Undo, and an edit is reverted only if no later change makes the inverse unsafe. Recompute totals/insights. After timeout/process death, the committed data remains and normal History correction is available.
-- Confirmed journal-entry deletion, permanent habit deletion, delete-all and Replace/Merge restore are not snackbar-undoable; retain the current confirmation/safety-backup rules and explain irrecoverability. Owner must accept or explicitly defer this proposal before Gate A; planned tests are not evidence of implementation.
+- **Delegated Undo default under D-196:** after a successful create/log/complete/edit of one tracking record or habit-date note, show a single 8-second snackbar Undo. It reverses only that exact mutation; a newer mutation replaces the pending Undo, and an edit is reverted only if no later change makes the inverse unsafe. Recompute totals/insights. After timeout/process death, the committed data remains and normal History correction is available.
+- Delete of one selected numeric/duration entry uses a clear contextual Delete action plus immediate Undo without a second confirmation dialog. Confirmed journal-entry deletion, permanent habit deletion, delete-all and Replace/Merge restore are not snackbar-undoable; retain explicit confirmation/safety-backup rules and explain irrecoverability. This is the default under D-196 and the owner may override it before Gate A; planned tests are not evidence of implementation.
 
 ### Journal editor
 
@@ -71,7 +71,7 @@ Until the owner approves the model:
 - Show at most once for that target date; display, dismissal, “Not now,” or leaving the prompt suppresses re-prompting for that date. Never send a notification or backlog multiple older dates.
 - If a comeback experience takes precedence on the same opening, do not stack the retrospective prompt. A saved entry suppresses the prompt; a draft for the same date is reused rather than duplicated.
 - Open the ordinary Journal editor with the target date visible. Explicit save remains required, and the saved entry never changes habit status/progress.
-- This frequency/priority proposal remains delegated pending owner acceptance/deferral. Tests are planned only.
+- This frequency/priority is the delegated planning default under D-196; the owner may override or defer it before Gate A. Tests are planned only.
 
 ### History / calendar
 
@@ -105,9 +105,9 @@ Until the owner approves the model:
 - Habit reminder time defaults to 9:00 a.m. local time. A manually chosen time is user-controlled; automatic adaptation may not override it unless the user explicitly returns to automatic timing.
 - Respect quiet hours, per-habit/global controls, approved caps and suppression after relevant progress/dismissal.
 - Explain that Android can defer notifications. Do not promise exact delivery time.
-- Proposed evidence thresholds, 28-day validation/rollback, quiet-hour default and shared notification cap are documented in the delegated proposal below. Owner review/explicit deferral and technical OS scheduling evidence remain pending.
+- Evidence thresholds, 28-day validation/rollback, quiet-hour default and shared notification cap are delegated planning defaults described below. The owner may override them before Gate A; technical OS scheduling evidence remains pending.
 
-### Shared reminder delivery rules (delegated planning proposal)
+### Shared reminder delivery rules (delegated planning defaults under D-196)
 
 - Default quiet hours are 21:00–08:00 local and are editable in Settings; no OS notification is posted inside the window. Re-check relevance at the next permitted time.
 - Use a shared cap of three OS notifications per local date and at most one ordinary reminder per habit/date. Combine eligible events within 15 minutes where one destination can explain them; Today is the default destination for combined habit summaries.
@@ -115,7 +115,7 @@ Until the owner approves the model:
 - Every delivery re-checks global opt-in, OS permission, quiet hours, schedule/active state, saved activity, dismissal/suppression, week/target state, and current habit existence. Stable delivery keys prevent duplicate sends across restart/reschedule.
 - Recalculate future local delivery times after time-zone changes without rewriting saved local-date keys; do not use clock jumps to invent elapsed time.
 - System-managed daily reminder learning is local-only, never reads journal text/mood, and requires minimum evidence (seven positive activity timestamps on at least five distinct local dates in 14 days, with 70% in a two-hour band). Candidate reminder: median completion time in that band plus 30 minutes rounded up to a 15-minute boundary. Manual times are never auto-overridden. Hold the candidate for 28 days and revert to the previous automatic time if evidence no longer supports the cluster.
-- Optional partial-progress tips: proposed maximum three in the following seven days, at least 24 hours apart, maximum one/day, suppressed after the relevant target is met or dismissal/opt-out. Phone tips need a separate tips-notification setting. These are planning defaults, not implementation evidence; owner must accept or explicitly defer them before Gate A.
+- Optional partial-progress tips: proposed maximum three in the following seven days, at least 24 hours apart, maximum one/day, suppressed after the relevant target is met or dismissal/opt-out. Phone tips need a separate tips-notification setting. These are planning defaults, not implementation evidence; the owner may override them before Gate A.
 
 ### Settings → Backup & Restore
 
@@ -155,9 +155,9 @@ All affected screens must implement the following state distinctions:
 
 1. Android Auto Backup/device-transfer exclusion under D-186 — **decision resolved; technical verification remains required** to confirm the manifest/data-extraction configuration excludes private records on supported Android versions and transfer paths.
 2. Complete proposed schema approval: reconcile the table/constraint/index/transaction, restore-conflict, journal-link and cancellation-outbox refinements in `03-TECHNICAL-ARCHITECTURE.md` with `30-SCHEMA-CLOSURE-AND-MIGRATION-PLAN.md`; owner approval and post-gate migration verification are still outstanding.
-3. Exact undo window and user-facing recovery interaction.
+3. Delegated Undo default: 8-second in-session single-mutation Undo and no second confirmation for deleting one selected numeric/duration entry. The owner may override this before Gate A; it is not a hard blocker requiring a separate decision.
 4. Final delete-all wording and any retention details required for exported/OS backup copies.
-5. Owner acceptance/deferral of the delegated reminder defaults, per-habit override/reset semantics, and exact retrospective journal-prompt eligibility/frequency.
+5. Delegated reminder and retrospective-prompt defaults, including per-habit manual-time protection; these are reversible defaults under D-196 and may be overridden as part of the grouped review rather than answered separately.
 6. Exact whole-number rounding at progress-band boundaries and minimum-target display exceptions.
 7. Final navigation, visual direction, Growth Mark, and journal archive layout after research/prototype review.
 8. Build, automated test, APK install, physical-device, accessibility, and privacy/data-flow evidence — none is asserted by this planning contract.
