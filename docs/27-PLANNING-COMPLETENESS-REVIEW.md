@@ -71,4 +71,4 @@ For permanent habit deletion, the architecture now proposes a delegated default:
 
 ## Current next action
 
-Continue the documentation reconciliation and close the remaining P0 items without modifying application code. The next useful deliverable is the UX/design approval pack. An initial requirement-to-test matrix now exists in doc 28; close its listed gaps and then run a final consistency/link review. After that, present the owner approval batch. No technical validation or feature implementation should start until the owner separately approves the planning gate and authorises the relevant next stage.
+Continue the documentation reconciliation and close the remaining P0 items without modifying application code. The next useful deliverable is the UX/design approval pack. An initial requirement-to-test matrix now exists in doc 28; close its listed gaps, then finish heading-anchor and semantic consistency review. After that, present the owner approval batch. No technical validation or feature implementation should start until the owner separately approves the planning gate and authorises the relevant next stage.
