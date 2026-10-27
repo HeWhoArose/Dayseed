@@ -339,3 +339,9 @@ See [Planning Completeness Review](27-PLANNING-COMPLETENESS-REVIEW.md) for the c
 5. Keep post-gate native build/test/device/schema/migration/backup/notification validation separate. It requires explicit authorisation after the planning gate; feature implementation is a later, separate stage.
 
 The canonical readiness snapshot is `docs/27-PLANNING-COMPLETENESS-REVIEW.md`; the decision log remains authoritative. Older historical handover entries should not be treated as current when they conflict with that snapshot.
+
+
+## Portable backup schema reconciliation — 2026-10-27
+
+- Added a field-level portable-backup mapping in doc 30 and aligned docs 03/07/28/27/31: entity fields and relationships, preservation of stable IDs/local-date keys/idempotency, the minimum portable context for unresolved restore conflicts, fresh local restore-session ID remapping, and exclusions for device-only notification/cancellation state, provider grants, caches and secrets. Acceptance coverage is planned only; owner review of the proposed format/version and unsafe “Keep both” cases remains open.
+- This is a documentation-only refinement. No app code or live database was changed; no build, test, migration, APK install, device validation or implementation audit was performed.
