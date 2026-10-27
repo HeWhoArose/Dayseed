@@ -52,8 +52,8 @@ Until the owner approves the model:
 - List existing entries individually, with their own values and notes.
 - Editing or deleting targets only the selected entry; totals and dependent insights recalculate from remaining valid entries.
 - Negative values are rejected for non-negative counters without changing existing records. Above-target values remain valid and are not capped in storage.
-- Provide recent undo for accidental actions when the final undo window/interaction is specified; always support later explicit correction/deletion.
-- The exact undo duration and recovery UI remain open.
+- **Delegated Undo proposal:** after a successful create/log/complete/edit of one tracking record or habit-date note, show a single 8-second snackbar Undo. It reverses only that exact mutation; a newer mutation replaces the pending Undo, and an edit is reverted only if no later change makes the inverse unsafe. Recompute totals/insights. After timeout/process death, the committed data remains and normal History correction is available.
+- Confirmed journal-entry deletion, permanent habit deletion, delete-all and Replace/Merge restore are not snackbar-undoable; retain the current confirmation/safety-backup rules and explain irrecoverability. Owner must accept or explicitly defer this proposal before Gate A; planned tests are not evidence of implementation.
 
 ### Journal editor
 
