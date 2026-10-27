@@ -15,7 +15,7 @@
 | Typography or colour fails in real use | Small-screen readability and accessibility failures | Compare device samples; test all actual light/dark contrast pairs and large text | Open |
 | Native Kotlin/Compose implementation readiness is unverified | Build or platform issues may require rework | Keep native stack decision (D-009); inspect compatibility and run the authorised build/test spike only after the planning gate | Evidence required |
 | AI-assisted workflow drifts from native Android scope | Wrong deliverable or overwritten work | Keep AI Studio instructions explicit about native Kotlin/Compose; GitHub `main` is canonical; no implementation before the planning gate | Controlled; monitor |
-| Cross-environment changes overwrite newer work | Lost code or broken history | GitHub is canonical; pull before resuming Replit; reconcile branches rather than blind overwrite | Open |
+| Cross-environment changes overwrite newer work | Lost code or broken history | GitHub `main` is canonical; refresh the latest remote state before resuming work in AI Studio; reconcile branches rather than blindly overwriting newer commits | Open |
 | Monetisation damages trust or violates policy | User harm, policy/store risk | Consider no ads; privacy review before SDK choice | Open |
 | Scope expands before core flows are reliable | Delayed release and complexity | Enforce v1 non-goals and phase exit gates | Open |
 | Accessibility is treated as polish | Some users cannot complete core tasks | Include accessibility in design and release gates | Open |
