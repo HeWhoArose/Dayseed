@@ -117,7 +117,7 @@ Before bundling a font, record:
 - script/language coverage;
 - app bundle size impact;
 - fallback behaviour;
-- whether the selected library and Expo workflow support the file formats as intended.
+- whether the selected font-rendering approach and native Android Gradle/Compose configuration support the file formats as intended.
 
 Atkinson Hyperlegible's public Google Fonts repository describes the font's legibility goal and SIL Open Font License, but that repository was archived in April 2026. Confirm the current trusted distribution/version before adoption rather than copying files from an old tutorial.
 
