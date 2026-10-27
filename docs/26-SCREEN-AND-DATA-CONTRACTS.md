@@ -153,4 +153,5 @@ All affected screens must implement the following state distinctions:
 - Regression plan: `07-TESTING-AND-QUALITY.md`
 - Owner choices: `09-DECISION-LOG.md`
 - Reconciliation and open gates: `25-DECISION-REGISTER-AND-RECONCILIATION.md`
+- Requirement-to-test mapping: `28-REQUIREMENT-TRACEABILITY.md`
 - Design tokens/components: `DESIGN.md`
