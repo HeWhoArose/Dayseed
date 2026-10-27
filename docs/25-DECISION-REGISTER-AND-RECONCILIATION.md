@@ -126,14 +126,14 @@ When a decision changes, update the decision log and every affected document in 
 - [ ] Reconcile remaining proposed-model gaps, resolve undo/recovery policy, and present the complete schema to the owner. Do not change or migrate the database in this step.
 - [x] Document delegated reminder safety defaults across docs 23/05/26/07: quiet hours, shared daily cap, collision/late-delivery suppression, local-only timing-learning thresholds/rollback, and optional-tip cadence.
 - [ ] Have the owner accept or explicitly defer those proposed defaults and resolve/defer retrospective journal prompt eligibility/frequency; these remain planning questions.
-- [x] Draft the bounded Undo/recovery proposal in docs 01/03/26/07 and trace it as AC-022: single-mutation, eight-second Undo; guarded inverse; destructive deletion and Replace/Merge are not snackbar-undoable.
+- [x] Draft the bounded Undo/recovery proposal in docs 01/03/26/30 and trace it as AC-023: single-mutation, eight-second Undo; guarded inverse; destructive deletion and Replace/Merge are not snackbar-undoable.
 - [ ] Owner must accept or explicitly defer the Undo proposal before Gate A; no implementation/test has run.
 - [x] Prepare the UX/design recommendation pack in `29-UX-DESIGN-APPROVAL-PACK.md`.
 - [x] Draft comparable text wireframes for Today hierarchy, navigation and archive alternatives in doc 29; rendered visual prototypes, task review and owner approval remain outstanding.
 - [ ] Review the new text wireframes and prepare rendered comparable navigation/screen-flow prototypes; then record owner choices for Growth Mark, archive, visual direction, typography/colour/theme, and accessibility.
 - [x] Create the initial requirement-to-screen/data-rule/test matrix in [28-REQUIREMENT-TRACEABILITY.md](28-REQUIREMENT-TRACEABILITY.md).
 - [ ] Close the remaining traceability gaps listed in doc 28; its acceptance cases are plans, not test results.
-- [x] Run a relative Markdown file-target check across all 34 current Markdown documents; no missing targets were found.
+- [x] Run a relative Markdown file-target check across all 36 current Markdown documents; no missing targets were found. Re-run after remaining edits to the documentation set.
 - [ ] Reconcile stale statements, heading anchors, and evidence claims across current documents and handover; keep dated research snapshots labelled historical.
 - [ ] Present the remaining owner decisions/deferred items together and record explicit owner approval of the planning gate in the workflow approval record.
 
