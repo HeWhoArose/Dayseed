@@ -139,12 +139,12 @@ The linked SVG boards are rendered comparison prototypes with consistent synthet
 │ 2 of 4 scheduled habits     │
 │────────────────────────────│
 │ TODAY                       │
-│ Walk              [Record] │
+│ Walk [Complete] [Record] │
 │   0 / 20 minutes            │
-│ Read              [Record] │
+│ Read [Complete] [Record] │
 │   10 / 10 pages · Goal met  │
 │ Stretch          [Complete]│
-│ Water             [Record] │
+│ Water [Complete] [Record] │
 │────────────────────────────│
 │ Write a reflection     [＋] │
 │ Collected moments · See all │
@@ -164,9 +164,9 @@ Purpose: make today's useful habit action first. The denominator must be the cou
 │ A small note for today  [＋] │
 │────────────────────────────│
 │ TODAY'S HABITS              │
-│ Walk              [Record] │
+│ Walk [Complete] [Record] │
 │   0 / 20 minutes            │
-│ Read              [Record] │
+│ Read [Complete] [Record] │
 │   10 / 10 pages · Goal met  │
 │ Stretch          [Complete]│
 │────────────────────────────│
@@ -187,12 +187,12 @@ Purpose: test the user's stated interest in a slightly more reflective Today scr
 │ Today                [⋯]  │
 │ Tue, 27 October             │
 │ TODAY'S HABITS              │
-│ Walk              [Record] │
+│ Walk [Complete] [Record] │
 │   0 / 20 minutes            │
-│ Read              [Record] │
+│ Read [Complete] [Record] │
 │   10 / 10 pages · Goal met  │
 │ Stretch          [Complete]│
-│   Tap for Tiny/Usual/Extra  │
+│ Measured habits keep both actions│
 │────────────────────────────│
 │ Write a reflection     [＋] │
 │ See history and insights    │
@@ -201,7 +201,7 @@ Purpose: test the user's stated interest in a slightly more reflective Today scr
 └────────────────────────────┘
 ```
 
-Purpose: test lower visual density. Only use “Tiny / Usual / Extra” where the habit mode supports that choice. The extra tap must not make ordinary logging meaningfully harder; log tap-count, mistaken taps, correction success, and how easily users see their saved result.
+Purpose: test lower visual density without removing the approved Complete action (usual target for numeric/duration, completion for completion-only) or the separate detailed Record action for measured habits. Completion-only habits show Complete only. Keep the compact controls visible and test tap-count, mistaken taps, correction success, and how easily users see the saved result. No third Tiny/Usual/Extra action is assumed by this variant.
 
 ### Navigation variants
 
