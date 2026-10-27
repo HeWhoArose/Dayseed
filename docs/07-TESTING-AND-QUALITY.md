@@ -48,6 +48,16 @@ Protect personal data, prevent loss of history, keep core flows usable offline, 
 
 These are planned acceptance cases for the proposed schema, not test results. The complete schema still awaits owner approval, and technical validation requires separate explicit authorisation. D-190 approves stable UUID identity and nullable unique idempotency keys; D-193 settles the no-Skip-action policy; D-194 resolves repeated Apply-today behavior; D-195 resolves the weekday-mask encoding policy. None of these decisions means acceptance cases have been executed. Before finalising acceptance coverage, keep the delegated permanent-deletion reminder-cleanup default covered by the transaction, cancellation-failure, active-habit-guard, and startup-reconciliation cases above; the rule is documented, but neither the schema nor tests are implemented or verified.
 
+### Reminder coordination and personalisation — planned, not executed
+
+- Verify default quiet hours (21:00–08:00 local), user edits, suppression during quiet hours, and next-window revalidation.
+- Verify at most three Dayseed OS notifications per local date and one ordinary reminder per habit/date; same-window events combine within 15 minutes where the destination preserves all essential information, otherwise stagger under the cap.
+- Inject late workers, reboot, time-zone changes, clock jumps and OS permission denial; ensure each delivery re-checks current habit/goal state and a stable occurrence key prevents duplicates. Do not backfill a stale daily reminder after its local date passes; retain only the most recent weekly reflection after multi-week absence.
+- Confirm a logged entry, dismissal, inactive/archived/deleted habit, met weekly goal, expired week or global opt-out suppresses the relevant delivery. A deleted habit's stale worker must never post.
+- For personalisation, verify no change before the minimum 14-day evidence threshold; minimum evidence is seven qualifying timestamps on at least five dates with at least 70% in a two-hour band; calculate candidate as band median plus 30 minutes rounded up to a 15-minute boundary; manually selected times never change automatically; a 28-day validation window prevents timing churn; insufficient evidence reverts to the prior system-managed time; confirm no journal text/mood/network access.
+- For partial tips, verify at most three per seven-day sequence, 24-hour minimum spacing, one/day maximum, goal-met suppression, and dismissal/opt-out. Confirm in-app feedback remains possible when Android notification permission is denied.
+- These cases test the proposed delegated planning defaults only after the gate is authorised; they do not mean the defaults are accepted, implemented or tested.
+
 ## Date/history acceptance coverage (D-187)
 
 - Travel across time zones and confirm existing habit/journal local-date keys do not change; new entries default to the current device-local date unless another date is explicitly selected.
