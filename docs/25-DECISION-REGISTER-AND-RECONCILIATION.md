@@ -125,7 +125,7 @@ When a decision changes, update the decision log and every affected document in 
 - [x] Expand the written schema/transaction/migration proposal in docs 03 and 30, including proposed restore-conflict and notification-cancellation-outbox structures.
 - [ ] Reconcile remaining proposed-model gaps, resolve undo/recovery policy, and present the complete schema to the owner. Do not change or migrate the database in this step.
 - [x] Document delegated reminder safety defaults across docs 23/05/26/07: quiet hours, shared daily cap, collision/late-delivery suppression, local-only timing-learning thresholds/rollback, and optional-tip cadence.
-- [ ] Have the owner accept or explicitly defer those proposed defaults and resolve/defer retrospective journal prompt eligibility/frequency; these remain planning questions.
+- [ ] Have the owner accept or explicitly defer the shared reminder defaults and the D-042 retrospective journal-prompt proposal in docs 24/26/07 (AC-024); no-backlog, once-per-date and comeback-priority rules remain proposed.
 - [x] Draft the bounded Undo/recovery proposal in docs 01/03/26/30 and trace it as AC-023: single-mutation, eight-second Undo; guarded inverse; destructive deletion and Replace/Merge are not snackbar-undoable.
 - [ ] Owner must accept or explicitly defer the Undo proposal before Gate A; no implementation/test has run.
 - [x] Prepare the UX/design recommendation pack in `29-UX-DESIGN-APPROVAL-PACK.md`.
