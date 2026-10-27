@@ -21,7 +21,7 @@ Required before coding:
 - implementation roadmap, acceptance criteria, and release gates reconciled;
 - documentation links, duplicate/outdated plans, contradictions, and unsupported claims audited;
 - owner reviews and explicitly approves the planning gate;
-- the current status and remaining blockers are captured in `docs/27-PLANNING-COMPLETENESS-REVIEW.md`, the requirement map in `docs/28-REQUIREMENT-TRACEABILITY.md`, the UX recommendations in `docs/29-UX-DESIGN-APPROVAL-PACK.md`, the proposed schema closure plan in `docs/30-SCHEMA-CLOSURE-AND-MIGRATION-PLAN.md`, and the handover.
+- the current status and remaining blockers are captured in `docs/27-PLANNING-COMPLETENESS-REVIEW.md`, the requirement map in `docs/28-REQUIREMENT-TRACEABILITY.md`, the UX recommendations in `docs/29-UX-DESIGN-APPROVAL-PACK.md`, the proposed schema closure plan in `docs/30-SCHEMA-CLOSURE-AND-MIGRATION-PLAN.md`, the consolidated owner review in `docs/31-OWNER-PLANNING-DECISION-BATCH.md`, and the handover.
 
 ### Stage B — Bounded stack-specific feasibility validation
 
