@@ -99,6 +99,16 @@ Until the owner approves the model:
 - Explain that Android can defer notifications. Do not promise exact delivery time.
 - Reminder learning/auto-adjustment confidence, validation, rollback, and full quiet-hour controls remain to be finalised before implementation.
 
+### Shared reminder delivery rules (delegated planning proposal)
+
+- Default quiet hours are 21:00–08:00 local and are editable in Settings; no OS notification is posted inside the window. Re-check relevance at the next permitted time.
+- Use a shared cap of three OS notifications per local date and at most one ordinary reminder per habit/date. Combine eligible events within 15 minutes where one destination can explain them; Today is the default destination for combined habit summaries.
+- Priority under the cap: explicit per-habit reminder, weekly-goal-reached acknowledgement, week-start reflection, inactivity check-in, optional partial tip. Defer a weekly reflection to the next suitable permitted opportunity; suppress stale daily reminders after their local date ends.
+- Every delivery re-checks global opt-in, OS permission, quiet hours, schedule/active state, saved activity, dismissal/suppression, week/target state, and current habit existence. Stable delivery keys prevent duplicate sends across restart/reschedule.
+- Recalculate future local delivery times after time-zone changes without rewriting saved local-date keys; do not use clock jumps to invent elapsed time.
+- System-managed daily reminder learning is local-only, never reads journal text/mood, and requires minimum evidence (seven positive activity timestamps on at least five distinct local dates in 14 days, with 70% in a two-hour band). Candidate reminder: median completion time in that band plus 30 minutes rounded up to a 15-minute boundary. Manual times are never auto-overridden. Hold the candidate for 28 days and revert to the previous automatic time if evidence no longer supports the cluster.
+- Optional partial-progress tips: proposed maximum three in the following seven days, at least 24 hours apart, maximum one/day, suppressed after the relevant target is met or dismissal/opt-out. Phone tips need a separate tips-notification setting. These are planning defaults, not implementation evidence; owner must accept or explicitly defer them before Gate A.
+
 ### Settings → Backup & Restore
 
 - Manual backup is available regardless of Auto Backup. The user chooses a destination through the Android system file picker.
