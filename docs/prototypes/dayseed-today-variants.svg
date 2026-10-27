@@ -50,13 +50,17 @@
     <line x1="32" y1="255" x2="478" y2="255" class="rule"/>
     <text x="32" y="293" class="h2">Walk</text>
     <text x="32" y="320" class="tiny">0 / 20 min · recorded</text>
-    <rect x="366" y="275" width="112" height="37" rx="18.5" fill="#e2e8da"/>
-    <text x="422" y="298" text-anchor="middle" class="buttonText">Record</text>
+    <rect x="270" y="275" width="92" height="37" rx="18.5" fill="#e2e8da"/>
+    <text x="316" y="298" text-anchor="middle" class="buttonText" style="font-size:13px">Complete</text>
+    <rect x="368" y="275" width="110" height="37" rx="18.5" fill="#e2e8da"/>
+    <text x="423" y="298" text-anchor="middle" class="buttonText">Record</text>
     <line x1="32" y1="339" x2="478" y2="339" class="rule"/>
     <text x="32" y="377" class="h2">Read</text>
     <text x="32" y="404" class="tiny">10 / 10 pages · Goal met</text>
-    <rect x="366" y="359" width="112" height="37" rx="18.5" fill="#e2e8da"/>
-    <text x="422" y="382" text-anchor="middle" class="buttonText">Record</text>
+    <rect x="270" y="359" width="92" height="37" rx="18.5" fill="#e2e8da"/>
+    <text x="316" y="382" text-anchor="middle" class="buttonText" style="font-size:13px">Complete</text>
+    <rect x="368" y="359" width="110" height="37" rx="18.5" fill="#e2e8da"/>
+    <text x="423" y="382" text-anchor="middle" class="buttonText">Record</text>
     <line x1="32" y1="423" x2="478" y2="423" class="rule"/>
     <text x="32" y="461" class="h2">Stretch</text>
     <text x="32" y="488" class="tiny">Completion-only habit</text>
@@ -65,8 +69,10 @@
     <line x1="32" y1="507" x2="478" y2="507" class="rule"/>
     <text x="32" y="545" class="h2">Water</text>
     <text x="32" y="572" class="tiny">Not recorded</text>
-    <rect x="366" y="527" width="112" height="37" rx="18.5" fill="#e2e8da"/>
-    <text x="422" y="550" text-anchor="middle" class="buttonText">Record</text>
+    <rect x="270" y="527" width="92" height="37" rx="18.5" fill="#e2e8da"/>
+    <text x="316" y="550" text-anchor="middle" class="buttonText" style="font-size:13px">Complete</text>
+    <rect x="368" y="527" width="110" height="37" rx="18.5" fill="#e2e8da"/>
+    <text x="423" y="550" text-anchor="middle" class="buttonText">Record</text>
     <line x1="32" y1="600" x2="478" y2="600" class="rule"/>
     <text x="32" y="636" class="body" style="font-weight:700">Write a reflection</text>
     <circle cx="459" cy="631" r="16" fill="#dfe7d8"/>
@@ -118,13 +124,17 @@
     <line x1="32" y1="371" x2="478" y2="371" class="rule"/>
     <text x="32" y="409" class="h2">Walk</text>
     <text x="32" y="436" class="tiny">0 / 20 min · recorded</text>
-    <rect x="366" y="391" width="112" height="37" rx="18.5" fill="#e2e8da"/>
-    <text x="422" y="414" text-anchor="middle" class="buttonText">Record</text>
+    <rect x="270" y="391" width="92" height="37" rx="18.5" fill="#e2e8da"/>
+    <text x="316" y="414" text-anchor="middle" class="buttonText" style="font-size:13px">Complete</text>
+    <rect x="368" y="391" width="110" height="37" rx="18.5" fill="#e2e8da"/>
+    <text x="423" y="414" text-anchor="middle" class="buttonText">Record</text>
     <line x1="32" y1="455" x2="478" y2="455" class="rule"/>
     <text x="32" y="493" class="h2">Read</text>
     <text x="32" y="520" class="tiny">10 / 10 pages · Goal met</text>
-    <rect x="366" y="475" width="112" height="37" rx="18.5" fill="#e2e8da"/>
-    <text x="422" y="498" text-anchor="middle" class="buttonText">Record</text>
+    <rect x="270" y="475" width="92" height="37" rx="18.5" fill="#e2e8da"/>
+    <text x="316" y="498" text-anchor="middle" class="buttonText" style="font-size:13px">Complete</text>
+    <rect x="368" y="475" width="110" height="37" rx="18.5" fill="#e2e8da"/>
+    <text x="423" y="498" text-anchor="middle" class="buttonText">Record</text>
     <line x1="32" y1="539" x2="478" y2="539" class="rule"/>
     <text x="32" y="577" class="h2">Stretch</text>
     <text x="32" y="604" class="tiny">Completion-only habit</text>
@@ -133,8 +143,10 @@
     <line x1="32" y1="623" x2="478" y2="623" class="rule"/>
     <text x="32" y="661" class="h2">Water</text>
     <text x="32" y="688" class="tiny">Not recorded</text>
-    <rect x="366" y="643" width="112" height="37" rx="18.5" fill="#e2e8da"/>
-    <text x="422" y="666" text-anchor="middle" class="buttonText">Record</text>
+    <rect x="270" y="643" width="92" height="37" rx="18.5" fill="#e2e8da"/>
+    <text x="316" y="666" text-anchor="middle" class="buttonText" style="font-size:13px">Complete</text>
+    <rect x="368" y="643" width="110" height="37" rx="18.5" fill="#e2e8da"/>
+    <text x="423" y="666" text-anchor="middle" class="buttonText">Record</text>
     <line x1="32" y1="710" x2="478" y2="710" class="rule"/>
     <text x="32" y="746" class="body" style="font-size:17px;font-weight:700">Your collected moments</text>
     <text x="32" y="773" class="tiny">6 active dates this month</text>
@@ -177,13 +189,17 @@
     <line x1="32" y1="257" x2="478" y2="257" class="rule"/>
     <text x="32" y="295" class="h2">Walk</text>
     <text x="32" y="321" class="tiny">0 / 20 min · recorded</text>
-    <rect x="365" y="276" width="113" height="36" rx="18" fill="#e2e8da"/>
-    <text x="421.5" y="299" text-anchor="middle" class="buttonText">Record</text>
+    <rect x="270" y="276" width="92" height="36" rx="18" fill="#e2e8da"/>
+    <text x="316" y="299" text-anchor="middle" class="buttonText" style="font-size:13px">Complete</text>
+    <rect x="368" y="276" width="110" height="36" rx="18" fill="#e2e8da"/>
+    <text x="423" y="299" text-anchor="middle" class="buttonText">Record</text>
     <line x1="32" y1="341" x2="478" y2="341" class="rule"/>
     <text x="32" y="379" class="h2">Read</text>
     <text x="32" y="405" class="tiny">10 / 10 pages · Goal met</text>
-    <rect x="365" y="360" width="113" height="36" rx="18" fill="#e2e8da"/>
-    <text x="421.5" y="383" text-anchor="middle" class="buttonText">Record</text>
+    <rect x="270" y="360" width="92" height="36" rx="18" fill="#e2e8da"/>
+    <text x="316" y="383" text-anchor="middle" class="buttonText" style="font-size:13px">Complete</text>
+    <rect x="368" y="360" width="110" height="36" rx="18" fill="#e2e8da"/>
+    <text x="423" y="383" text-anchor="middle" class="buttonText">Record</text>
     <line x1="32" y1="425" x2="478" y2="425" class="rule"/>
     <text x="32" y="463" class="h2">Stretch</text>
     <text x="32" y="489" class="tiny">Completion-only</text>
@@ -192,8 +208,10 @@
     <line x1="32" y1="509" x2="478" y2="509" class="rule"/>
     <text x="32" y="547" class="h2">Water</text>
     <text x="32" y="573" class="tiny">Not recorded</text>
-    <rect x="365" y="528" width="113" height="36" rx="18" fill="#e2e8da"/>
-    <text x="421.5" y="551" text-anchor="middle" class="buttonText">Record</text>
+    <rect x="270" y="528" width="92" height="36" rx="18" fill="#e2e8da"/>
+    <text x="316" y="551" text-anchor="middle" class="buttonText" style="font-size:13px">Complete</text>
+    <rect x="368" y="528" width="110" height="36" rx="18" fill="#e2e8da"/>
+    <text x="423" y="551" text-anchor="middle" class="buttonText">Record</text>
     <line x1="32" y1="599" x2="478" y2="599" class="rule"/>
     <text x="32" y="637" class="body" style="font-size:17px;font-weight:700">Writing is optional</text>
     <text x="32" y="663" class="tiny">Add a note when you want to.</text>
