@@ -97,7 +97,7 @@ Until the owner approves the model:
 - Habit reminder time defaults to 9:00 a.m. local time. A manually chosen time is user-controlled; automatic adaptation may not override it unless the user explicitly returns to automatic timing.
 - Respect quiet hours, per-habit/global controls, approved caps and suppression after relevant progress/dismissal.
 - Explain that Android can defer notifications. Do not promise exact delivery time.
-- Reminder learning/auto-adjustment confidence, validation, rollback, and full quiet-hour controls remain to be finalised before implementation.
+- Proposed evidence thresholds, 28-day validation/rollback, quiet-hour default and shared notification cap are documented in the delegated proposal below. Owner review/explicit deferral and technical OS scheduling evidence remain pending.
 
 ### Shared reminder delivery rules (delegated planning proposal)
 
@@ -149,7 +149,7 @@ All affected screens must implement the following state distinctions:
 2. Exact schema, indexes, transaction boundaries, stable ID/idempotency strategy, and migration from the current version-1 SQLite schema.
 3. Exact undo window and user-facing recovery interaction.
 4. Final delete-all wording and any retention details required for exported/OS backup copies.
-5. Reminder-learning confidence, 28-day validation/rollback behaviour, quiet hours, and global/per-habit controls.
+5. Owner acceptance/deferral of the delegated reminder defaults, per-habit override/reset semantics, and exact retrospective journal-prompt eligibility/frequency.
 6. Exact whole-number rounding at progress-band boundaries and minimum-target display exceptions.
 7. Final navigation, visual direction, Growth Mark, and journal archive layout after research/prototype review.
 8. Build, automated test, APK install, physical-device, accessibility, and privacy/data-flow evidence — none is asserted by this planning contract.
