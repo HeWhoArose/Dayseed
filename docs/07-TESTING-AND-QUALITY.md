@@ -48,6 +48,16 @@ Protect personal data, prevent loss of history, keep core flows usable offline, 
 
 These are planned acceptance cases for the proposed schema, not test results. The complete schema still awaits owner approval, and technical validation requires separate explicit authorisation. D-190 approves stable UUID identity and nullable unique idempotency keys; D-193 settles the no-Skip-action policy; D-194 resolves repeated Apply-today behavior; D-195 resolves the weekday-mask encoding policy. None of these decisions means acceptance cases have been executed. Before finalising acceptance coverage, keep the delegated permanent-deletion reminder-cleanup default covered by the transaction, cancellation-failure, active-habit-guard, and startup-reconciliation cases above; the rule is documented, but neither the schema nor tests are implemented or verified.
 
+### Undo and recovery — proposed, not executed
+
+- Verify the Undo affordance appears only after the source mutation commits and remains available for eight seconds; the next mutation replaces the pending Undo.
+- Undo a newly created numeric entry/day outcome and verify only that exact stable-ID record is removed and dependent calculations recalculate. Undo an edit and verify previous fields restore only when the entity has not changed again.
+- Verify Undo never deletes another same-date entry, never uses value/timestamp matching, never reverses a distinct idempotent submission, and refuses an unsafe inverse after a newer conflicting edit.
+- After timeout or process death, confirm committed records remain and the stale Undo control does not reappear; normal History correction remains available.
+- Confirm journal-entry deletion, permanent habit deletion, delete-all and Replace/Merge restore do not show snackbar Undo; delete confirmation and verified restore safety-backup requirements remain effective.
+- Inject a failed/uncertain original save and verify no Undo is offered as though the mutation succeeded; drafts and existing data remain recoverable.
+- This is acceptance coverage for a delegated planning proposal only. Owner review/deferral is required before Gate A; no implementation or test result is claimed.
+
 ### Reminder coordination and personalisation — planned, not executed
 
 - Verify default quiet hours (21:00–08:00 local), user edits, suppression during quiet hours, and next-window revalidation.
