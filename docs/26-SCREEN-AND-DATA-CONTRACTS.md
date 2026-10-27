@@ -65,6 +65,14 @@ Until the owner approves the model:
 - Deleting a saved entry or permanently discarding a draft requires explicit confirmation.
 - Journal operations never mark habits complete or move habit records.
 
+### Optional retrospective journal prompt (D-042; delegated proposal)
+
+- On the first eligible app opening each local date, optionally offer a small in-app-only invitation to journal the most recent fully completed local date if it has no saved entry.
+- Show at most once for that target date; display, dismissal, “Not now,” or leaving the prompt suppresses re-prompting for that date. Never send a notification or backlog multiple older dates.
+- If a comeback experience takes precedence on the same opening, do not stack the retrospective prompt. A saved entry suppresses the prompt; a draft for the same date is reused rather than duplicated.
+- Open the ordinary Journal editor with the target date visible. Explicit save remains required, and the saved entry never changes habit status/progress.
+- This frequency/priority proposal remains delegated pending owner acceptance/deferral. Tests are planned only.
+
 ### History / calendar
 
 - Use the saved week-start preference consistently for weekly views.
