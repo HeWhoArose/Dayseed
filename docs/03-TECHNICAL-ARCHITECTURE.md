@@ -78,18 +78,18 @@ Schema closure supplement: [Proposed Schema Closure, Transaction, and Migration 
 
 **Delegated planning default for permanent habit deletion:** the database transaction records opaque notification-cancellation identifiers in `notification_cancel_outbox`, removes habit-owned tracking/configuration/delivery rows, nulls the optional linked-habit ID on independent journal entries, and deletes the habit identity. After commit, cancel OS notifications and remove outbox rows only after successful cancellation; failed or interrupted cancellation is retried on startup. Every delivery worker re-checks that the habit still exists and is active immediately before posting. The outbox holds no habit name or journal text and is excluded from portable backup. This is a planning default only, not implemented or verified, and may be overridden before schema approval. D-194 resolves repeated Apply-today behavior and D-195 resolves the weekday-mask encoding as documented above. D-193 resolves explicit habit-day skipping: do not expose a Skip action or store a skipped outcome in v1. Do not infer remaining product behavior from D-187–D-196; D-196 defines the delegation process, not new product requirements.
 
-## Undo and recovery — delegated planning proposal
+## Undo and recovery — delegated planning default
 
-**Status: proposed for owner review, not implemented.** To satisfy the product requirement for recent recovery without creating an unbounded undo history:
+**Status: delegated planning default under D-196; not implemented or runtime-verified. The owner may override before Gate A.** To satisfy the product requirement for recent recovery without creating an unbounded undo history:
 
-- After a successfully committed single-record tracking mutation (create/log/complete/edit of one numeric entry, day outcome or habit-date note), expose one 8-second snackbar Undo. The undo token identifies the exact entity and mutation; creating a new mutation replaces the prior pending token.
+- After a successfully committed single-record tracking mutation (create/log/complete/edit of one numeric entry, day outcome or habit-date note), expose one 8-second snackbar Undo. The undo token identifies the exact entity and mutation; creating a new mutation replaces the prior pending token. For Delete of one selected numeric/duration entry, show a clear contextual action and immediate Undo without a second confirmation dialog; this delegated protection is limited to a single recoverable entry deletion.
 - Undo runs as a guarded transaction. A create/log undo removes only the exact record/outcome created by that mutation. An edit undo restores the captured prior fields only if the entity still has the expected post-edit version. If another change makes the inverse unsafe, do not overwrite newer data; explain that the item can be corrected from History instead.
 - Do not deduplicate by value or timestamp. Undo references the original stable UUID and does not create a second activity entry. It recalculates dependent totals/insights from source records.
 - This is short-lived in-session recovery, not a durable undo log. If the window expires or the process dies, the saved state remains as committed and the Undo affordance disappears. Users can still edit/delete supported records through normal History flows.
 - Confirmed journal-entry deletion, permanent habit deletion, delete-all and Replace/Merge restore are not snackbar-undoable. Their existing confirmation and restore safety-backup protections remain authoritative. The UI must state that confirmed permanent deletion may not be recoverable in Dayseed; copies in user-managed backups/exports are separate.
 - Never show Undo before the original mutation commits. If the save fails or the result is uncertain, preserve the record/draft and offer a retry/recovery message, not a false success.
 
-Owner must accept this proposal or explicitly defer the relevant UX before Gate A. Acceptance tests are planned only; no runtime behaviour is implied.
+Treat this as the default unless the owner overrides it before Gate A. Acceptance tests are planned only; no runtime behaviour is implied.
 
 ## Date and time policy
 Separate timestamps (instants) from local calendar dates. Habit completion belongs to the local calendar date explicitly selected/confirmed for the record, never to a UTC date merely because the timestamp converts to that date. Use one injectable clock/date-policy service for all date-sensitive rules.
