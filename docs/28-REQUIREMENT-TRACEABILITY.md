@@ -41,7 +41,7 @@
 ## Traceability gaps to close before the planning gate
 
 1. Finalise schema constraints and transaction/deletion/restore invariants, then ensure AC-001, AC-003–AC-008, AC-014, and AC-019 cover each.
-2. Specify or safely defer reminder quiet hours, collision/cap policy, late delivery, and partial-progress tips; map decisions into AC-011/AC-012.
+2. Have the owner accept or explicitly defer the proposed quiet-hour/cap/collision/late-delivery and partial-tip defaults mapped in AC-011/AC-012; resolve or defer retrospective journal prompt eligibility/frequency.
 3. Add a consolidated mood-insights dataset for sparse/no data, primary/secondary mood filtering, date boundary, and previous-period comparison (AC-009).
 4. Approve UX/navigation and visual direction or explicitly defer the unsettled areas (AC-018/AC-021).
 5. Re-run the cross-document link, anchor, duplicate/conflict, and supported-claim audit after remaining edits.
