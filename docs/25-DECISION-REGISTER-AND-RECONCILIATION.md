@@ -107,6 +107,7 @@ These are not micro-decisions and must not be silently delegated:
 10. `29-UX-DESIGN-APPROVAL-PACK.md` — proposed design/navigation recommendations and owner-review topics; prototypes and owner approval remain outstanding.
 11. `31-OWNER-PLANNING-DECISION-BATCH.md` — consolidated settled policies, proposed defaults, owner accept/modify/defer items, and gate boundary; review aid only.
 11. `30-SCHEMA-CLOSURE-AND-MIGRATION-PLAN.md` — proposed constraints, transaction, restore, backup mapping and migration requirements; not implementation approval.
+12. `31-OWNER-PLANNING-DECISION-BATCH.md` — consolidated owner accept/modify/defer choices; not an approval or an implementation gate by itself.
 When a decision changes, update the decision log and every affected document in one traceable reconciliation batch. Fetch each current file immediately before writing it, preserve unrelated content, then re-fetch and verify the result.
 
 ## Planning gate checklist
@@ -134,8 +135,9 @@ When a decision changes, update the decision log and every affected document in 
 - [ ] Review the new text wireframes and prepare rendered comparable navigation/screen-flow prototypes; then record owner choices for Growth Mark, archive, visual direction, typography/colour/theme, and accessibility.
 - [x] Create the initial requirement-to-screen/data-rule/test matrix in [28-REQUIREMENT-TRACEABILITY.md](28-REQUIREMENT-TRACEABILITY.md).
 - [ ] Close the remaining traceability gaps listed in doc 28; its acceptance cases are plans, not test results.
-- [x] Prior relative Markdown file-target check covered 36 documents and found no missing targets.
-- [ ] Re-run the relative Markdown file-target check after adding doc 31 and completing remaining edits; the prior pass does not cover the newest decision batch.
+- [x] Re-ran the relative Markdown file-target check across all 37 current Markdown documents; no missing target files found.
+- [x] Checked same-file Markdown heading fragments across all 37 documents; none were missing under the reviewed slug rules.
+- [ ] Cross-file heading fragments, external URLs, stale claims and semantic contradictions remain for the final content-level pass.
 - [ ] Reconcile stale statements, heading anchors, and evidence claims across current documents and handover; keep dated research snapshots labelled historical.
 - [x] Consolidate settled decisions and owner accept/modify/defer items in `31-OWNER-PLANNING-DECISION-BATCH.md`.
 - [ ] Walk through the batch, update the decision log and every affected document, then record explicit owner approval of the planning gate in the workflow approval record only if the owner chooses to approve it.
