@@ -34,7 +34,9 @@
 | AC-022 | Restore conflict and interruption recovery; D-095–D-105/D-121/D-122 | [Backup & Restore](26-SCREEN-AND-DATA-CONTRACTS.md); [Schema closure plan](30-SCHEMA-CLOSURE-AND-MIGRATION-PLAN.md) | Unresolved conflicts survive process restart and portable backup; invalid/incompatible restore or safety-backup failure changes no live data; interrupted Replace/Merge safely resumes or rolls back; resolution changes only the selected conflict after commit; conflict payloads stay local and never enter logs/notifications | Main policy approved; schema structures drafted, but exact portable mapping and implementation are unverified |
 | AC-023 | Recovery for recent habit-record changes; D-032 and stable-ID rules | [Record detail/edit](26-SCREEN-AND-DATA-CONTRACTS.md); [Architecture recovery proposal](03-TECHNICAL-ARCHITECTURE.md); [Schema closure plan](30-SCHEMA-CLOSURE-AND-MIGRATION-PLAN.md) | Proposed, pending owner approval: after a successful single-record create/log/complete/edit, show one 8-second in-session Undo. It targets the same stable record ID and expected version; it must not overwrite later edits. The action expires after the window or process death. Confirmed journal delete, habit delete, delete-all and Replace/Merge restore are excluded. Test the separately approved rule for removing one numeric entry. | D-032 supports a recent Undo direction, but the 8-second window and numeric-entry removal confirmation remain open; this is not approved policy |
 
-| AC-022 | H4b recent Undo and destructive recovery | [Screen/data contracts](26-SCREEN-AND-DATA-CONTRACTS.md); [Technical architecture: Undo and recovery](03-TECHNICAL-ARCHITECTURE.md); [Quality plan](07-TESTING-AND-QUALITY.md) | Eight-second Undo reverses only one exact committed mutation; edits are guarded against newer changes; timeout/process death leaves committed data intact; confirmed permanent delete and Replace/Merge are not snackbar-undoable; failure never creates a false Undo | Delegated planning proposal drafted; owner must accept or explicitly defer before Gate A; cases planned, not executed |\n\n## Deferred or unapproved scope
+
+
+## Deferred or unapproved scope
 
 - **H5 XP/rank and social comparison:** not approved for v1; no acceptance case should block core release unless scope is explicitly changed.
 - **Online accounts, Dayseed-managed cloud backup, cross-device sync, AI processing, ads/purchases/subscriptions:** excluded from initial v1 and gated separately.
@@ -43,7 +45,7 @@
 
 ## Traceability gaps to close before the planning gate
 
-This matrix now includes AC-022/AC-023 for restore-conflict recovery and the still-open Undo decision. These cases remain planned, not executed.
+This matrix includes AC-022 for restore-conflict recovery and AC-023 for the proposed Undo/recovery interaction. Both sets of cases remain planned, not executed.
 
 1. Finalise schema constraints and transaction/deletion/restore invariants, then ensure AC-001, AC-003–AC-008, AC-014, and AC-019 cover each.
 2. Have the owner accept or explicitly defer the proposed quiet-hour/cap/collision/late-delivery and partial-tip defaults mapped in AC-011/AC-012; resolve or defer retrospective journal prompt eligibility/frequency.
