@@ -119,9 +119,9 @@ The copy must not assume the habit is difficult, that the user feels guilty, or 
 
 | Scenario | Required behaviour |
 |---|---|
-| 3 days since app opened; habits logged recently | Welcome is about app return, not falsely claiming all habits stopped |
+| Return before the 14-day threshold | Do not show the two-week comeback experience merely because a short 3-day example exists; ordinary app use remains available |
 | 14 days since app opened; one habit active, another inactive | Do not describe all habits as abandoned |
-| 90 days since app opened; prior history exists | Preserve and offer to inspect history; no reset |
+| Return after a qualifying 14-day or 30-day episode; prior history exists | Apply the approved trigger precedence and episode suppression; preserve history, with no reset. 90-day copy remains exploratory, not a separate trigger |
 | Habit exists with zero completions | Use first-step language; do not imply lost progress |
 | User journals daily but has no habit completions | Do not classify the whole person/app as inactive based on habit records |
 | Planned rest or a non-scheduled date | Do not count as a missed opportunity |
@@ -130,7 +130,7 @@ The copy must not assume the habit is difficult, that the user feels guilty, or 
 | No network connection | Same copy and behaviour available offline |
 | No habits exist | Offer create/explore/skip; do not show an empty progress score |
 
-Boundary tests must cover every proposed band edge (1/2/3, 6/7, 13/14, 29/30, 89/90), zero history, archived habits, edited records, timezone travel, manual clock changes, and repeat launches. Use a central date policy rather than scattering date arithmetic across screens.
+Boundary tests for the active v1 triggers must cover 13/14/15 complete local calendar days without opening Dayseed; 29/30/31 days without opening; and 29/30/31 days with no active habits/goals. Also test zero history, archived/paused/completed habits, habit creation/reactivation resetting the no-active-habit timer, the 30-day experience taking precedence, episode suppression, date edits, timezone travel, manual clock changes, and repeat launches. The earlier 1–2/3–6/7–13/14–29/30–89/90+ bands are historical copy hypotheses, not active trigger boundaries. Use a central date policy rather than scattering date arithmetic across screens.
 
 ## 7. Research plan
 
