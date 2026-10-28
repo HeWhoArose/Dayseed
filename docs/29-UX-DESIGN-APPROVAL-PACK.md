@@ -166,14 +166,13 @@ The linked SVG boards are rendered comparison prototypes with consistent synthet
 │ Water [Complete] [Record] │
 │────────────────────────────│
 │ Write a reflection     [＋] │
-│ Collected moments          │
-│ 3 hr 40 min this month     │
+│ Collected moments · 3h 40m this month → │
 │────────────────────────────│
 │ Today  History  Insights  ⚙ │
 └────────────────────────────┘
 ```
 
-Purpose: make today's useful habit action first. The denominator must be the count of habits actually scheduled today; the numeric values and outcomes come from saved records, and “0” appears only for explicit zero. Interactions: Record opens the correct mode-specific recorder; the reflection action starts a separate Journal entry; “See all” opens the inspectable growth/history view. Empty state: invite creation or exploration without fake records. Accessibility: every action has a named control and status text beyond colour.
+Purpose: make today's useful habit action first. The denominator must be the count of habits actually scheduled today; numeric values and outcomes come from saved records, and “0” appears only for explicit zero. The compact G2 row reads “Collected moments · 3h 40m this month”; tapping it opens G3 calendar/date-level detail so the user can inspect saved duration sessions. Record opens the correct mode-specific recorder and the reflection action starts a separate Journal entry. Empty state: invite creation or exploration without fake records or fabricated duration. Accessibility: the card and its drill-down have clear TalkBack names and status text beyond colour.
 
 **W2 — Reflective Today (controlled variation)**
 
