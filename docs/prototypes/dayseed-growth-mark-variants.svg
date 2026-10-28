@@ -34,7 +34,7 @@
   <text x="585" y="208" class="small">Friendly label + total recorded duration.</text>
   <line x1="585" y1="230" x2="1015" y2="230" class="line"/>
   <text x="585" y="285" class="heading">Collected moments</text>
-  <text x="585" y="325" class="body">3 hr 40 min recorded this month</text>
+  <text x="585" y="325" class="body">4 hr 40 min recorded this month</text>
   <text x="585" y="365" class="link">Progress →</text>
   <line x1="585" y1="394" x2="1015" y2="394" class="line"/>
   <text x="585" y="433" class="heading">What it communicates</text>

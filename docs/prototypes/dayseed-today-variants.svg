@@ -43,13 +43,13 @@
     <use href="#ellipsis" x="445" y="52"/>
     <text x="32" y="105" class="small">TUE · 27 OCT</text>
     <text x="30" y="150" class="h1">Today, at your pace.</text>
-    <text x="32" y="182" class="tiny">2 of 4 scheduled habits recorded</text>
+    <text x="32" y="182" class="tiny">2 of 4 scheduled habits have records</text>
     <rect x="32" y="199" width="446" height="5" rx="2.5" fill="#e6e5db"/>
     <rect x="32" y="199" width="223" height="5" rx="2.5" fill="#a8b79a"/>
     <text x="32" y="241" class="small">YOUR HABITS</text>
     <line x1="32" y1="255" x2="478" y2="255" class="rule"/>
     <text x="32" y="293" class="h2">Walk</text>
-    <text x="32" y="320" class="tiny">0 / 20 min · recorded</text>
+    <text x="32" y="320" class="tiny">0 min recorded · target 20 min</text>
     <rect x="270" y="275" width="92" height="37" rx="18.5" fill="#e2e8da"/>
     <text x="316" y="298" text-anchor="middle" class="buttonText" style="font-size:13px">Complete</text>
     <rect x="368" y="275" width="110" height="37" rx="18.5" fill="#e2e8da"/>
@@ -112,7 +112,7 @@
     <use href="#ellipsis" x="445" y="52"/>
     <text x="32" y="105" class="small">TUE · 27 OCT</text>
     <text x="30" y="150" class="h1">Today, at your pace.</text>
-    <text x="32" y="182" class="tiny">2 of 4 scheduled habits recorded</text>
+    <text x="32" y="182" class="tiny">2 of 4 scheduled habits have records</text>
     <rect x="32" y="199" width="446" height="5" rx="2.5" fill="#e6e5db"/>
     <rect x="32" y="199" width="223" height="5" rx="2.5" fill="#a8b79a"/>
     <rect x="32" y="224" width="446" height="96" rx="8" fill="#f0eee3" stroke="#dcd8c8"/>
@@ -123,7 +123,7 @@
     <text x="32" y="357" class="small">YOUR HABITS</text>
     <line x1="32" y1="371" x2="478" y2="371" class="rule"/>
     <text x="32" y="409" class="h2">Walk</text>
-    <text x="32" y="436" class="tiny">0 / 20 min · recorded</text>
+    <text x="32" y="436" class="tiny">0 min recorded · target 20 min</text>
     <rect x="270" y="391" width="92" height="37" rx="18.5" fill="#e2e8da"/>
     <text x="316" y="414" text-anchor="middle" class="buttonText" style="font-size:13px">Complete</text>
     <rect x="368" y="391" width="110" height="37" rx="18.5" fill="#e2e8da"/>
@@ -182,13 +182,13 @@
     <use href="#ellipsis" x="445" y="52"/>
     <text x="32" y="105" class="small">TUE · 27 OCT</text>
     <text x="30" y="150" class="h1">Today, at your pace.</text>
-    <text x="32" y="182" class="tiny">2 of 4 scheduled habits recorded</text>
+    <text x="32" y="182" class="tiny">2 of 4 scheduled habits have records</text>
     <rect x="32" y="199" width="446" height="5" rx="2.5" fill="#e6e5db"/>
     <rect x="32" y="199" width="223" height="5" rx="2.5" fill="#a8b79a"/>
     <text x="32" y="243" class="small">YOUR HABITS</text>
     <line x1="32" y1="257" x2="478" y2="257" class="rule"/>
     <text x="32" y="295" class="h2">Walk</text>
-    <text x="32" y="321" class="tiny">0 / 20 min · recorded</text>
+    <text x="32" y="321" class="tiny">0 min recorded · target 20 min</text>
     <rect x="270" y="276" width="92" height="36" rx="18" fill="#e2e8da"/>
     <text x="316" y="299" text-anchor="middle" class="buttonText" style="font-size:13px">Complete</text>
     <rect x="368" y="276" width="110" height="36" rx="18" fill="#e2e8da"/>

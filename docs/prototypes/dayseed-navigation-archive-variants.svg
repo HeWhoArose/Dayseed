@@ -132,17 +132,18 @@
   </g>
   <circle cx="742" cy="1042" r="3" fill="#7f8a5d"/>
   <circle cx="674" cy="1042" r="3" fill="#7f8a5d"/>
-  <text x="647" y="1076" class="micro">TUE · 27 OCT</text>
-  <text x="647" y="1102" class="body" style="font-size:16px;font-weight:700">A small win</text>
-  <text x="647" y="1125" class="small">“I made time to read today.”</text>
-  <text x="647" y="1190" class="small">Strength: quick scroll or date jump.</text>
-  <text x="647" y="1214" class="small">Trade-off: slightly denser archive.</text>
-  <text x="647" y="1266" class="small">Test: retrieval, large text, empty dates.</text>
+  <text x="647" y="1060" class="small" style="font-size:12px">• Saved entry · blank date is neutral</text>
+  <text x="647" y="1090" class="micro">SELECTED DATE · TUE 27 OCT</text>
+  <text x="647" y="1116" class="body" style="font-size:16px;font-weight:700">A small win</text>
+  <text x="647" y="1139" class="small">“I made time to read today.”</text>
+  <text x="647" y="1204" class="small">Strength: quick scroll or date jump.</text>
+  <text x="647" y="1228" class="small">Trade-off: slightly denser archive.</text>
+  <text x="647" y="1280" class="small">Test: retrieval, large text, empty dates.</text>
 
   <!-- A3 Calendar first -->
   <rect x="1214" y="843" width="550" height="510" rx="16" class="panel"/>
   <text x="1236" y="881" class="heading">A3 · Calendar first</text>
-  <text x="1236" y="907" class="small">Entry marks make dates the primary control.</text>
+  <text x="1236" y="907" class="small">Dots = saved entry; blank date is neutral.</text>
   <text x="1236" y="944" class="micro">OCTOBER 2026</text>
   <g fill="#6b7066" font-family="Arial,sans-serif" font-size="12" text-anchor="middle">
     <text x="1260" y="969">M</text><text x="1330" y="969">T</text><text x="1400" y="969">W</text><text x="1470" y="969">T</text><text x="1540" y="969">F</text><text x="1610" y="969">S</text><text x="1680" y="969">S</text>

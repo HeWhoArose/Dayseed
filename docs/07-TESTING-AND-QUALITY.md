@@ -66,7 +66,7 @@ Protect personal data, prevent loss of history, keep core flows usable offline, 
 - Verify exclusions: no credentials/passwords/purchase verification, provider access grants, platform notification IDs as active work, `notification_cancel_outbox`, cache-only totals, transient UI state, or device-specific safety-backup reference. A receiving install must reselect/re-authorise an unavailable destination rather than silently redirect.
 - Verify unresolved conflicts retain both validated snapshots and a minimal parent-session context in a later backup. Import creates fresh local restore-session IDs and remaps each unresolved conflict's parent reference; never import a foreign session pointer as a live FK or treat an interrupted transaction as a completed portable backup. Conflict rows exist only while unresolved and do not require a status column. Parent context remains until all related conflicts resolve; a successful Replace/Merge ends in `COMPLETED_WITH_CONFLICTS` if any remain or `COMPLETED` if none remain; after the last child conflict is resolved the parent transitions to `COMPLETED` in the same transaction. An interrupted operation uses its recovery state rather than appearing completed; a failed resolution preserves the conflict snapshots and parent state.
 
-These cases translate the approved D-094–D-102 conflict principles into tests against the proposed record model. The specific per-type mapping in doc 30 is still a planning proposal for owner review. No restore tests have been executed.
+These cases translate the approved D-094–D-102 conflict principles into planned tests against the proposed record model. O-2 accepted the written compatibility/conflict policy as a planning baseline; the entity-by-entity mapping and full schema remain proposals that must be checked under the separately authorised technical/schema gate. No restore tests have been executed.
 
 
 
@@ -196,14 +196,37 @@ Also verify: actual zero is retained as an explicit saved record but does not re
 
 - With synthetic records, calculate the compact G2 “Collected moments” total from saved duration sessions belonging to duration-tracked habits in the current calendar month. The month is the default reporting period, not a duration unit.
 - Verify recognized time units (for example minutes and hours) are normalised to a shared base before summing. Never mix quantity units, completion-only/effort-aware outcomes, journal entries, or unknown/incompatible units into the duration total. Where a source unit cannot safely be converted, present a clear supported-scope message or separate unit breakdown rather than a misleading total.
-- Verify readable formatting across magnitude boundaries: minute-only values, combined hours/minutes, totals spanning days, and large totals that may be expressed as weeks when clear. If an approximate month-of-time representation is ever considered, it must be explicitly labelled as an approximation and not confused with the selected calendar-month reporting period; this display decision remains open.
+- Verify readable formatting across magnitude boundaries: minute-only values, combined hours/minutes, totals spanning days, and large totals that may be expressed as weeks when clear. Do not present a calendar month as a fixed duration unit; calendar month is a reporting period only. The display threshold proposal in doc 34 remains pending owner disposition.
 - Verify the G2 label and reporting period are understandable at typical and enlarged text sizes. The selected compact Today summary states the current month; the detailed view can switch among a selected day, configured week and calendar month, with week boundaries respecting the saved week-start preference.
-- Verify G3 opens the selected date, displays the duration total and underlying saved sessions, and keeps blank dates neutral. Do not present synthetic/example records as user data.
+- Verify G3 opens the selected date, displays the duration total and underlying saved sessions, and keeps blank dates neutral. For the six static-board sample sessions (35m + 20m + 1h + 45m + 1h 10m + 50m), assert a synthetic expected total of 280 minutes / 4 hr 40 min, with the calendar-month label treated as the reporting period only. Do not present synthetic/example records as user data.
 - Verify no record, an explicit zero-valued duration entry, positive duration, loading, query failure, and partial/incompatible-source cases are distinguishable. Explicit zero contributes no time; it is not silently treated as absent.
 - Correcting/deleting one session recalculates only the affected period/date totals and never changes unrelated records. Backdated records appear under their saved local-date key and applicable historical configuration.
 - Check TalkBack labels/order, keyboard and touch navigation, contrast, large text, compact-width wrapping, non-colour cues, and accessibility of the G2-to-G3 route.
 
 These are planned acceptance scenarios only. No tests were run and no UI or aggregation code was implemented.
+
+### Selected-screen task and accessibility coverage — AC-027 (planned, not executed)
+
+- Use one consistent synthetic dataset across the selected W1 Today, N1 navigation, A2 archive, G2 Collected moments and G3 date-detail flows. Verify the observable tasks and expected outcomes documented in docs/34-PLANNING-UX-AND-TRACEABILITY-CLOSURE.md.
+- Test measured-habit Complete and Record/correction separately; distinguish daily schedules from flexible-weekly goals; save a journal entry independently of habit completion; retrieve by date and phrase; edit; cancel deletion; and confirm deletion.
+- Confirm blank dates are neutral, explicit zero is a saved value, no records differ from empty search results, and loading/search/calculation failure is never reported as an empty success.
+- Follow G2 into G3 and verify period labels, configured week boundaries, source-session inspection, and recomputation after record correction/deletion.
+- Exercise comeback Continue/Not now without reflection, then locate privacy/export/backup/restore/delete settings and verify scopes before confirmation.
+- Check compact and typical widths, enlarged text (including up to 200% where supported), keyboard-open layout, logical focus order, control names/roles, TalkBack output, non-colour cues, touch targets, text wrapping, reduced motion, and error/destructive states. These manual and automated plans do not become results until recorded evidence exists.
+
+### Monetisation and ads — AC-026 (conditional, planned not executed)
+
+- Do not run an SDK integration test before the owner explicitly includes ads and the relevant authorisation permits the work. If ads remain deferred, record AC-026 as not applicable to the initial v1 release rather than adding a placeholder SDK.
+- If approved later, document target audience and launch regions; verify the selected current SDK/format and eligibility rules; consent and preference handling; truthful Play Store “Contains ads”, privacy policy and Data safety disclosures; and actual data flows.
+- Verify that no habit name/activity record, journal text/title/mood, or comeback draft is sent for ad targeting; core habit, Journal, History, Insights, comeback, export and restore flows remain usable offline and when an ad fails; no loading loop or misleading placeholder appears; and the placement does not mimic controls, gate core features, obstruct large text, or cause accidental taps.
+- These are pre-release requirements, not executed checks, and a product-scope decision to include a banner does not approve a specific SDK or placement.
+
+### Habit and session notes — AC-028 / D-192 (planned, not executed)
+
+- A per-entry note follows only its own duration/quantity session; the single optional habit/date note remains separate from per-entry notes and the general Journal.
+- Creating, editing, clearing, or deleting a note alone does not alter duration/quantity totals, progress bands, completion/outcome semantics, or derived missed status.
+- Verify multiple same-day sessions can retain independent per-entry notes while sharing the optional habit/date note; archive/delete/restore and backup round trips must not duplicate or misattach either kind of note.
+
 
 ## 4. Test data and privacy
 Use synthetic test data. Do not use real journal entries in fixtures, screenshots, logs, or issue reports. Scrub sensitive values from crash reports and automated test output. Initial v1 excludes accounts, online backup, and cross-device sync; premium future sync must not be added under this test plan without a separate approved privacy/security and product gate.

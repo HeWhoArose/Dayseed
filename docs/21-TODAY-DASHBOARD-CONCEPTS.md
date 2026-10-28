@@ -1,10 +1,10 @@
 # Today Dashboard: Comparative UI Concepts
 
 **Research date:** 2026-10-17  
-**Status:** Concept exploration; no layout, navigation, visual token, or copy is approved.  
+**Status:** Concept exploration. The owner selected W1/N1/A2 as starting directions and accepted the platform/system appearance baseline; no final layout, navigation implementation, visual token set, or final copy is approved.  
 **Purpose:** Continue the Dayseed UI research by comparing different Today-screen priorities before committing to a visual direction or building app UI.
 
-**Current-authority note (2026-10-28):** This is a cumulative design notebook with dated proposals; old “decisions still needed” and “next design iteration” sections are historical snapshots, not a live backlog. For current habit modes, schedule types, date/history policy, and Complete/Record semantics, use `docs/01-PRODUCT-SPECIFICATION.md`, `docs/09-DECISION-LOG.md`, and `docs/26-SCREEN-AND-DATA-CONTRACTS.md`. The current contract in docs 01/09/26 and approved schedule decisions D-191/D-195 supersede earlier tentative ideas about one numeric total per day, optional numeric targets, decimal quantities, arbitrary start dates, and every-N-days schedules. The owner-selected daily summary + one-line monthly context + quiet route to Progress remains the working Today direction; final visual/accessibility approval is still open. The rendered Today, navigation/archive and Growth Mark comparisons are linked in `docs/29-UX-DESIGN-APPROVAL-PACK.md`.
+**Current-authority note (2026-10-28):** This is a cumulative design notebook with dated proposals; old “decisions still needed” and “next design iteration” sections are historical snapshots, not a live backlog. For current habit modes, schedule types, date/history policy, and Complete/Record semantics, use `docs/01-PRODUCT-SPECIFICATION.md`, `docs/09-DECISION-LOG.md`, and `docs/26-SCREEN-AND-DATA-CONTRACTS.md`. The current contract in docs 01/09/26 and approved schedule decisions D-191/D-195 supersede earlier tentative ideas about one numeric total per day, optional numeric targets, decimal quantities, arbitrary start dates, and every-N-days schedules. The owner-selected Today direction is W1 Action-first. Under D-199, the compact Growth Mark headline is G2 “Collected moments” (duration total for the current calendar month by default), with G3 date/session detail; the active-date-count concept below is historical only. The selected directions are planning baselines, not final UI approval. Owner disposition of the proposed Growth Mark formatting and final visual/accessibility review remain open. The rendered Today, navigation/archive and Growth Mark comparisons are linked in `docs/29-UX-DESIGN-APPROVAL-PACK.md`.
 
 ## Product promise
 
@@ -194,7 +194,9 @@ Tasks:
 
 Record task success, hesitation, wrong taps, time-to-action, misinterpretations, and subjective pressure. Do not claim user research has happened until sessions are conducted. Include people who have struggled to maintain habits as well as confident trackers; do not collect journal content.
 
-## Suggested next sequence
+## Historical suggested next sequence (2026-10-17; superseded by the current planning review)
+
+This list records an earlier exploration order; do not use it to reopen owner decisions or replace docs 27/31/34 as the current handover. The 3-, 14- and 90-day Return Page examples below were exploratory mockup examples, not the approved v1 triggers. The current comeback trigger/precedence rules are in docs 09/24. The former order was:
 
 1. Agree on the user jobs and compare A/B/C wireframes.
 2. Research the Growth Mark separately and decide whether it deserves a prominent Today card.
@@ -238,7 +240,9 @@ The user prefers the Today dashboard to primarily record today's activity, with 
 - The broader glimpse must remain visually secondary and must not displace habit logging below the fold on small Android screens.
 - Keep the panel useful offline and accessible without relying on colour alone.
 
-### Next prototype comparison
+### Historical next prototype comparison (2026-10-17; metric superseded by D-199)
+
+These variants were proposed before the owner selected the duration-total Growth Mark. They remain context for comparing hierarchy only; do not reintroduce the active-date metric as the chosen card. Use doc 34 and the current owner batch for today's remaining UX work.
 
 Build low-fidelity variants with identical content:
 - **Variant 1:** daily summary only.
@@ -248,39 +252,39 @@ Build low-fidelity variants with identical content:
 Compare scan speed, comprehension of the denominator, perceived pressure, and whether users notice the broader context without mistaking it for a score. These are test candidates, not implementation requirements.
 
 
-## Decision recorded: daily summary + one-line monthly context
+## Historical Today summary direction — amended by D-199
 
-**Status:** Selected direction for the next prototype round by the project owner on 2026-10-17. This is a research/design decision, not authorization to implement the app or a claim that the UI is final.
+**Status:** The owner selected a daily-first hierarchy on 2026-10-17; D-199 later changed the Growth Mark headline from active-date count to recorded duration. The daily-first W1 layout remains the starting direction, but this section's active-date example is not the current selected metric. This is a research/design direction, not final UI or implementation approval.
 
 Use the recommended combination:
 - **Today remains primary.** Today's habit list and logging actions are the main focus.
-- **Daily summary:** show a compact count such as “2 of 3 habits recorded” only after the denominator rules are defined for schedules, planned rest, paused habits, and skipped/missed records.
-- **Broader context:** a single restrained sentence such as “You've recorded habits on 8 days this month.” This is a candidate copy/metric, not yet approved wording or final data semantics.
-- **Deeper progress:** provide a quiet route to the Progress screen rather than a chart or decorative timeline on Today.
+- **Daily summary:** if shown, keep the record-presence count aligned with the current eligible/scheduled-habit contract in docs 01/26; explicit-zero is a record and no-record is distinct. Do not present the count as completed goals or treat journal activity as habit activity.
+- **Historical active-date metric (superseded):** “You've recorded habits on 8 days this month” was a copy/metric candidate from this 2026-10-17 exploration. D-199 later selected a duration-total G2 “Collected moments” card for the current calendar month instead. Use the proposed format/period details in doc 34 pending owner disposition.
+- **Deeper detail:** G2 opens G3 calendar/date-level or separate detail-page content so the user can inspect per-date totals and their underlying duration sessions. Do not imply that a compact duration-total card itself is the full history.
 - **No tiny timeline on the initial Today concept.** It can be researched later if user evidence suggests it adds value.
 
-The monthly measure should be explicitly labelled and computed from real qualifying habit records, using local calendar dates. It must not include journal entries, infer action from missing records, or treat a day without a record as failure. The broader context should remain visually secondary and must not push the habit actions down the screen on small Android devices.
+**Current replacement rule (D-199):** the selected G2 monthly measure is total recorded duration from saved, compatible duration sessions in the current calendar month; G3 exposes date totals and source sessions. Exclude journal records and other tracking modes, and distinguish no saved session from explicit zero and calculation failure. Keep this context visually secondary so it does not displace primary habit actions on small Android screens.
 
-### Prototype variants to prepare next
+### Historical prototype variants to compare (not the current backlog)
 
-Prepare two equivalent low-fidelity wireframes with the same content and viewport:
+These variants compared placement of the earlier active-date sentence. They are superseded for the selected metric by D-199; any reuse must display the G2 duration total and G3 detail route. The original comparison was:
 1. Daily summary + one-line monthly context + quiet Progress link.
 2. Daily summary + one-line monthly context, with no explicit Progress link in the card (Progress remains accessible through navigation).
 
 Compare whether the link is discoverable, whether the monthly sentence is understood, and whether the card draws too much attention. Keep the screenshot's restrained editorial direction and apply the anti-AI-slop checklist. Do not finalise colour, typography, or the full design system based on this decision alone.
 
 
-## Visual exploration: selected daily-first direction
+## Historical visual exploration: selected daily-first direction (2026-10-17)
 
-A visual concept was generated on 2026-10-17 to explore the selected direction. It places the daily habit summary first, keeps the habit list as the dominant working area, includes the optional “A note to yourself” entry, and adds a quiet monthly sentence with a route to Progress.
+A visual concept was generated on 2026-10-17 to explore the action-first hierarchy. It places the daily habit summary first, keeps the habit list dominant, includes an optional reflection entry, and adds the then-proposed active-date monthly sentence. D-199 subsequently replaced that active-date metric with the G2 duration-total card and G3 date/session detail.
 
 **This generated image is a discussion artifact only**, not a production-ready UI specification. It may contain invented or inconsistent details and must not be treated as validated product behaviour.
 
 Review notes for the next iteration:
 - Preserve the user's earlier screenshot as the stronger reference for restrained, practical styling; avoid letting large botanical artwork dominate usable space.
-- Keep the monthly context below or after the primary habit actions where possible. Test whether it should appear above reflection or below it, especially on short screens.
+- Keep the selected G2 duration-total context below or after the primary habit actions where practical. Test whether placement preserves the primary logging tasks on short screens.
 - Avoid duplicated settings access in the header and bottom navigation unless a clear need is established.
-- Verify that the daily count denominator is well-defined and that “recorded” matches the underlying event semantics.
+- If a daily record-presence count is shown, verify that its eligible-habit denominator is defined and that “has a record” matches saved records; do not confuse record presence with target completion.
 - Ensure effort controls remain usable at narrow widths and with large text; do not compress Tiny / Usual / Extra into undersized pills.
 - Do not use generated text, icons, or imagery as final assets without review.
 - Use the concept to discuss hierarchy only. Final typography, palette, iconography, spacing, states, and navigation remain open for comparative wireframing and accessibility review.
@@ -321,11 +325,11 @@ This most clearly communicates “today first, broader context second,” but th
 - Offers a gentle first action and neutral progress display.
 - Avoid “0” as a judgement or messages that assume failure. Confirm how planned rest, new habits, paused habits, and unscheduled days are represented before defining exact copy.
 
-### Recommended next wireframe baseline
+### Historical wireframe baseline — adapted for the current W1/G2 direction
 
-Use A as the baseline for the next round, with these refinements:
-1. Keep the daily summary first, using a denominator based on eligible habits for that local date.
-2. Keep the monthly context to one concise sentence with a quiet, optional route to Progress. Avoid adding a separate decorative plant illustration if the text and link already communicate the idea.
+The owner selected W1 Action-first Today; A's broad hierarchy (habit list remains dominant, reflection after logging) can inform its exploration. The old active-date metric and its exact placement comparison are superseded by D-199. The historic checklist follows, interpreted under the current screen/data contracts:
+1. Keep W1 Action-first: habit actions remain the dominant working area and record-presence status must be explicit.
+2. Use the selected G2 duration-total summary with an explicit current-calendar-month reporting label and a clear route into G3 detail. Do not substitute the historical active-date count. Avoid decorative illustration that displaces practical actions.
 3. Keep the habit list as the dominant working area.
 4. Keep “A note to yourself” after the habit list and make it clearly optional.
 5. Test whether the monthly sentence sits directly beneath the daily summary or after the reflection. Default hypothesis: beneath the daily summary if it is short enough not to push key actions down; compare on a small Android viewport.
@@ -353,9 +357,9 @@ Review each for:
 - Tap target size, wrapping, clipping, scrolling, and bottom-navigation overlap.
 - Whether any copy implies blame, a broken streak, or moral judgement.
 
-### Current conclusion
+### Current conclusion (reconciled 2026-10-28)
 
-The owner selected the daily summary + one-line monthly context + quiet route to Progress. The first visual baseline should be layout A, not the reflection-first or icon-compressed alternatives. This is a directional choice for research, not final design approval. No app implementation is authorised or started by this work.
+W1 Action-first Today remains the selected starting direction; a compact G2 duration-total summary for the current calendar month with G3 date/session detail is the selected Growth Mark direction under D-199. The old active-date count and the old exact copy/layout comparisons remain historical. The habit list should remain dominant, with reflection secondary. Final visual/tokens and the proposed Growth Mark formatting remain pending owner disposition; these are planning directions, not final UI approval. No app implementation is authorised or started by this work.
 
 
 ## Owner direction: screens 1–8, using the recommended Today baseline
@@ -368,7 +372,7 @@ The owner likes the generated design board's numbered screens 1–8 and wants th
 ### Eight-screen design set
 
 Use the numbered set from the concept board as the working scope:
-1. **Today** — recommended daily-first baseline: daily summary, one-line monthly context with quiet Progress link, habits as the main working area, optional reflection after habits, consistent bottom navigation.
+1. **Today** — W1 Action-first baseline: habits and logging actions dominate; preserve the explicit record-presence summary if shown; use G2 “Collected moments” as the duration-total card for the current calendar month and G3 for date/session detail; optional reflection after habits; consistent four-destination bottom navigation.
 2. **Habit Creation / Edit** — create and configure a habit with clear, beginner-friendly choices.
 3. **Habit Detail** — view a habit's records and relevant details without turning it into a scorecard.
 4. **History (Calendar)** — inspect dated habit records and navigate to a past day.
@@ -453,7 +457,7 @@ Use at least one narrow Android viewport and one enlarged-text condition. Check:
 - The screen still makes sense without colour, plant illustration, or progress fill.
 - All-recorded and rest-day states remain calm and non-punitive.
 
-### Exit gate for Screen 1
+### Historical exit gate for Screen 1 (2026-10-17; superseded by the current readiness review)
 
 Do not move to Screen 2 as if Today were final until:
 1. The state matrix is represented in wireframes or annotated concepts.
@@ -486,27 +490,27 @@ A generated board now shows five Today states and seven connected screens. The n
 
 ### Findings and guardrails
 
-- Keep the daily summary + one-line monthly context + quiet Progress route as the selected design direction.
+- **Historical G1-era proposal (superseded by D-199):** the daily summary plus monthly active-date context was explored as a compact direction. The selected Growth Mark headline is now G2 “Collected moments” (duration total) with G3 date/session details; do not treat active-date count as the selected headline metric.
 - The generated board repeats monthly context on multiple states; in a real interface this should remain concise and visually secondary, and should not be repeated if it creates clutter.
 - The generated rest-day illustration is more decorative than necessary. Keep the existing editorial reference restrained; illustration is optional and must earn its space.
 - The generated mockup includes specific example counts and sample journal content. These are placeholders, not real user data or approved copy.
 - The mockup uses a date and device/status-bar details that are illustrative only. Date must be the device's local date; do not hard-code the sample date.
 - Avoid relying on colour alone to distinguish recorded states. Combine labels, shape, and accessible state semantics.
 - Do not infer that a habit is “completed” from a journal entry.
-- Daily count denominator, habit schedule semantics, skipped/missed/rest states, time-zone boundaries, and monthly distinct-date counting remain to be specified before implementation.
+- **Superseded open-question list:** schedule kinds, missed/rest/paused status, timezone date-key behaviour and effective-date edits have since been recorded in D-187/D-188/D-191/D-193/D-194/D-195 and docs 01/26. Monthly distinct-date count is not the selected Growth Mark metric; D-199 selects a duration total and G3 date detail. Any still-relevant exact summary denominator must be specified in the current product/screen contract rather than reopened as an unspecified bundle.
 
-### Next design task
+### Historical next design task (pre-decision)
 
-Move to **Screen 2: Habit Creation / Edit**, keeping Today as the reference skeleton. The habit editor must make these choices understandable:
+The following checklist predates the owner decisions and is retained only as a set of potential states to verify against the current product contract. It is not a live backlog of undecided semantics. The current sequence and unresolved choices are tracked in docs 27/31/34. The habit editor must reflect these current rules:
 - Name and optional description.
 - Icon/appearance choice that avoids overwhelming icon catalogues.
 - Completion-only versus effort-level logging.
-- Tiny / Usual / Extra labels and optional targets.
-- Schedule, rest days, and how a habit appears on Today.
-- Optional reminders, with permission timing and quiet hours still to be researched.
+- Tiny / Usual / Extra choices and progress labels must follow the current mode/target rules. Duration/Quantity habits have a usual target; do not present those targets as optional.
+- The approved schedule modes, neutral non-scheduled/paused states, and how a habit appears on Today; do not add every-N-days or a habit-day Skip action.
+- Optional per-habit reminders use the per-habit default; the separate weekly reflection uses O-9's 09:00 device-local time on the configured week-start day. Both follow the shared quiet-hours/cap/collision defaults in D-196. Permission timing and OS delivery need later platform validation.
 - Editing, pausing, archiving, and deleting a habit, including effects on history.
 
-Before finalising that screen, resolve the product semantics that affect both creation and Today; do not encode undecided schedule or record rules into the UI as if they were approved.
+Historical instruction superseded: the main schedule, target, record-mode, multiple-entry and effective-date semantics are now specified in docs 01/09/26 and decisions D-187/D-189–D-195. Use those sources when reviewing the editor; escalate only a consequential gap that is genuinely not covered by the current contracts.
 
 
 ## Screen 2 research: Habit Creation / Edit
@@ -576,10 +580,11 @@ The owner prefers the tracking range to extend from effort levels through number
 - **Completion-only:** a simple recorded/done action.
 - **Number-based:** record a quantity with a user-defined unit/target where applicable.
 
-This is a direction to explore, not yet a complete data contract. For number-based habits, the next research must define whether users can log partial quantities, whether a target is optional or required, whether exceeding a target is allowed, unit changes, daily reset/aggregation, and how a record is represented when there is no quantity yet. Do not imply that effort-level records, completion-only records, and numeric records are interchangeable without explicit rules.
+This paragraph records an earlier exploration, not an open current requirement. The current contract is in [Product Specification](01-PRODUCT-SPECIFICATION.md), [Decision Log](09-DECISION-LOG.md), and [Screen and Data Contracts](26-SCREEN-AND-DATA-CONTRACTS.md): Duration and Quantity habits have a usual target; Quantity actuals are non-negative whole numbers; multiple valid numeric/duration sessions per habit/local date are allowed and summed; explicit zero differs from no record; and Completion-only/Effort-aware modes remain distinct. Do not use this notebook’s historic questions as current owner blockers.
 
-### Scheduling: progressive disclosure
-The owner wants **selected weekdays plus an optional start date as the default**, with an unobtrusive expandable control for more flexibility.
+### Scheduling: historical progressive-disclosure proposal (superseded)
+
+**Historical proposal from 2026-10-18; current authority is D-191/D-195 in [Decision Log](09-DECISION-LOG.md) and the schedule contract in [Screen and Data Contracts](26-SCREEN-AND-DATA-CONTRACTS.md).** This section originally explored a selected-weekday-first interface; it is not the current schedule specification. Current v1 schedule kinds are `DAILY`, `SELECTED_WEEKDAYS`, and `FLEXIBLE_WEEKLY_TARGET` only. A progressive-disclosure design may still be explored if it presents those modes accurately, but **every-N-days is not a v1 option**.
 
 Default collapsed view:
 - Weekday selector.
@@ -587,10 +592,13 @@ Default collapsed view:
 - One short human-readable summary.
 - A clearly labelled secondary affordance such as “More schedule options” with an expand/collapse indicator.
 
-Expanded advanced options should be explored to include:
-- Weekly target (e.g. choose any 3 days per week).
-- Every-N-days interval patterns (e.g. every 2 or 3 days).
-- Clear schedule summary and a way to collapse advanced options without losing selections.
+Historical exploration listed these ideas; apply the current authority above instead:
+- `DAILY` schedule.
+- `SELECTED_WEEKDAYS` schedule, with its required valid weekday selection.
+- `FLEXIBLE_WEEKLY_TARGET` (for example, achieve a chosen number of days in the configured week); preferred days are optional guidance, not restrictions.
+- A clear schedule summary and a way to collapse advanced options without losing selections.
+
+Do not offer an every-N-days interval in v1.
 
 ### Design constraints
 - Advanced scheduling must be discoverable but must not overwhelm first-time habit creation.
@@ -601,42 +609,36 @@ Expanded advanced options should be explored to include:
 - All schedule controls need accessible labels, non-colour state cues, large-text reflow, and usable touch targets.
 - Keep all core scheduling functions available offline.
 
-### Next design iteration
-Produce a focused comparative wireframe for:
-1. Default weekday picker + optional start date, advanced options collapsed.
-2. Expanded view showing weekly-target and every-N-days alternatives.
-3. Review/save state with a human-readable schedule summary.
-4. Edit-existing-habit state, explicitly distinguishing future schedule changes from historical records.
+### Historical next-design-iteration note
 
-The owner-selected direction is to be recorded in the decision log only after the exact semantics are reviewed and confirmed. No app implementation is authorised or started.
+The old proposed wireframe checklist below is retained as historical context, not as a current requirement. Any new comparison should use the current D-191/D-195 schedule vocabulary; do not add the superseded every-N-days option. Effective-date behaviour must follow D-194 in the [Screen and Data Contracts](26-SCREEN-AND-DATA-CONTRACTS.md). The schedule vocabulary has already been recorded; do not re-open it as an unmade decision. No app implementation is authorised or started.
 
 
-## Screen 2 follow-up: number-based records and schedule-change semantics
+## Screen 2 follow-up: historical number-based and schedule exploration
 
-**Date:** 2026-10-18  
-**Status:** Proposed product contract for owner review. These rules are design recommendations, not approved implementation requirements.
+**Date of original note:** 2026-10-18. This is retained as design history, not as the current owner decision batch. The current authority is [Product Specification](01-PRODUCT-SPECIFICATION.md), [Decision Log](09-DECISION-LOG.md), and [Screen and Data Contracts](26-SCREEN-AND-DATA-CONTRACTS.md). In particular, the current v1 contract requires a usual target for Duration/Quantity, allows multiple entries per habit/date, restricts numeric actuals to non-negative whole numbers, uses only D-191/D-195 schedule kinds, and follows D-194 for same-day configuration edits. Where this dated exploration conflicts with those sources, the current sources win.
 
-### Number-based tracking: recommended first-pass contract
+### Number-based tracking: historical first-pass notes
 
-A number-based habit stores a quantity with a user-defined unit (for example, pages, minutes, glasses, repetitions). It may optionally have a target.
+A Quantity habit stores a count in a user-defined unit (for example, pages, questions, or repetitions) and has a usual target under the current v1 contract. Duration is tracked as elapsed time in the compatible internal unit defined by the screen/data contract.
 
 Proposed behavior:
 - **Unit required:** the unit tells users what the number means. Offer a short editable text unit, with suggestions only as shortcuts.
-- **Target optional:** a target gives context but should not be required to record an amount. Distinguish “recorded 4 pages” from “reached target of 10 pages.”
-- **Partial values allowed:** allow zero only if zero is meaningful and intentionally recorded; allow decimals where units reasonably need them. Avoid accidental blank or invalid entries.
+- **Usual target:** the user defines a usual target for Duration/Quantity. Distinguish an actual saved amount from the target; progress labels derive from the actual-to-target ratio and never replace or cap the recorded amount.
+- **Whole-number actuals:** actual quantity/duration values are non-negative whole numbers under the current v1 contract. Zero may be deliberately recorded when meaningful; decimal actuals are not a v1 input option. Blank/invalid input must not create a record.
 - **Target exceeded:** accept values above target. Never cap or discard the actual amount just because the target was exceeded.
-- **Record one daily aggregate, with corrections:** recommended initial UX is one current quantity per habit per local calendar date, editable later. If the user enters a new amount after recording, ask whether they are replacing the day's total or adding to it only if both interpretations are genuinely needed; avoid ambiguous silent behavior. Recommended default: edits replace the saved daily total, not add to it.
+- **Multiple sessions per date:** allow multiple valid quantity/duration entries for one habit and local calendar date. Sum them for derived totals while retaining each entry as separately inspectable and editable. Correcting or deleting one entry targets only that entry; do not replace the day's entire total or silently add a retry as a second entry.
 - **No value is not zero:** an unrecorded date remains unrecorded; it must not become zero automatically.
-- **Target changes:** new target applies prospectively by default. Historical recorded quantities remain unchanged; historical target snapshots versus current-target comparison remains an open data/reporting choice.
-- **Unit changes:** warn that changing units may make old values incomparable. Prefer asking whether the change is only a label correction or a true unit change; do not convert historical data without explicit conversion rules.
-- **Today summary:** number-based values should be presented with their unit and optionally target context (e.g. “4 of 10 pages” only if the ratio is meaningful). They should not be reduced to generic completion without explaining the distinction.
+- **Target changes:** the effective-dated target that applied at the time governs historical completion/progress. Current-target comparisons, when shown, must be labelled separately and never rewrite historical completion (D-194/H2).
+- **Unit changes:** never silently reinterpret historical values when a Quantity unit changes. Any distinction between a label correction and a true unit change must follow the approved screen/data contract; do not invent conversion factors.
+- **Today summary:** show the actual with its unit and useful target context; do not reduce a measured value to generic completion or treat progress as moral worth.
 - **Effort levels remain categorical:** Tiny / Usual / Extra are not secretly converted to numbers or compared as quantities.
 
 ### Scheduling model: separate the pattern from recorded activity
 
 Recommended conceptual separation:
-- **Schedule pattern:** selected weekdays, weekly target, or every-N-days interval.
-- **Start date:** optional user-selected local calendar date; define the default when omitted.
+- **Schedule pattern:** `DAILY`, `SELECTED_WEEKDAYS`, or `FLEXIBLE_WEEKLY_TARGET` only. Every-N-days is excluded from v1 by the current approved schedule vocabulary.
+- **Configuration effective date:** schedule changes use D-194's Apply today/Apply tomorrow versioning rules. Do not introduce a separate arbitrary user-selected start-date feature based on this historical notebook; creation and effective-date semantics must follow the current product/screen contracts.
 - **Eligible occurrence:** whether a habit is scheduled for a given local date under the chosen pattern and start/pause/archive rules.
 - **Record:** the user's saved action/quantity on a date. Records must remain distinct from eligibility.
 - **Rest/no-schedule date:** a date with no eligible occurrence; it should not appear as a missed or incomplete scheduled habit.
@@ -644,7 +646,7 @@ Recommended conceptual separation:
 
 ### Schedule edits: recommended history-preserving rule
 
-1. A schedule edit changes future eligibility from an explicit effective date, defaulting to the next local date after save unless the user deliberately selects a future effective date.
+1. Schedule edits are effective-dated and must follow D-194: Apply-today replacement is allowed only before qualifying activity exists for today; after qualifying activity, preserve today's configuration and offer Apply tomorrow.
 2. Past eligibility and saved records are not silently rewritten when the schedule changes.
 3. The user may correct an individual past record, but changing a schedule must not automatically create/delete historical records.
 4. If an edit would make a date's historical eligibility unclear, keep the record itself visible in History and avoid retroactive changes to counts until the product defines historical schedule snapshots.
@@ -652,23 +654,26 @@ Recommended conceptual separation:
 6. Archiving removes the habit from active Today and reminders but preserves history and derived insights. Restore returns it to active status without deleting records.
 7. Deleting is distinct from pausing/archiving and must disclose exactly which records and associated data will be removed. Do not finalise delete behavior until export/backup/privacy policy is decided.
 
-### Important unresolved questions
-- Should multiple numeric entries on the same day be supported in v1, or should there be one editable daily total only? Recommendation: one editable daily total initially.
-- Should historical insights compare values against the target that existed at the time or the current target? Recommendation: preserve historical target context if the data model can do so simply; otherwise be explicit that charts use the current target.
-- When the user edits a schedule, should the change be effective immediately or from tomorrow? Recommendation: from the next local date by default, with an explicit “apply today” option only if a strong use case emerges.
-- How do weekly-target schedules define eligibility for each day? A weekly target is an aim over a period, not a predetermined set of weekdays; the UI and metrics must not falsely label individual unchosen days as missed.
-- How are daylight-saving/time-zone changes handled for local dates? The date of a record should remain the date on which the user intentionally recorded it, not shift when travelling.
-- Should custom units be normalised or left as user-defined strings? Recommendation: user-defined string plus optional suggestions; don't silently convert units.
+### Former open questions — current resolution
+- **Multiple entries:** resolved in H2/D-189: multiple valid numeric/duration entries for one habit/date are permitted and summed; each entry remains separately inspectable/editable. No single-daily-total-only rule.
+- **Target/history semantics:** resolved in H2/D-194: Duration/Quantity have a usual target; the target effective on the activity date governs historical completion; current-target comparison is distinct.
+- **Schedule effective date:** resolved in D-194: Apply-today replacement only before qualifying activity exists today; otherwise preserve today's configuration and offer Apply tomorrow. Cancel makes no change.
+- **Weekly target meaning:** resolved in D-191/D-195: `FLEXIBLE_WEEKLY_TARGET` is a period goal rather than predetermined required weekdays; preferred days are optional guidance.
+- **Local-date behaviour:** D-187 preserves saved local-date keys across timezone changes; actual platform/device behaviour still needs later authorised technical validation.
+- **Custom Quantity units:** retain the user-defined unit; do not silently convert incompatible or changed units. Exact copy/interaction details are delegated design details unless they change scope or data meaning.
 
-### Design work to do next
-Create focused wireframe states for:
-1. Number-based habit setup with unit, optional target, and a clear example.
+### Potential states for detailed UI review
+
+The list below originated as a pre-contract wireframe checklist. Use the current selected screen directions and the task/accessibility scorecard in [Planning UX and Traceability Closure](34-PLANNING-UX-AND-TRACEABILITY-CLOSURE.md); revisit these states if the later real-UI review identifies a material gap. It is not a separate owner-decision backlog.
+
+Potential states:
+1. Quantity/Duration habit setup with its required usual target, compatible unit, and a clear example; Completion-only and Effort-aware modes must remain distinct.
 2. Logging a number on Today, including replace/edit behavior and target-exceeded state.
 3. Editing a unit or target with an explanation of what changes for historical data.
 4. Editing a schedule with an effective-date summary.
 5. Pausing, resuming, archiving, restoring, and deletion confirmation as distinct actions.
 
-Before locking these flows, review the proposed contract with the owner and reflect any confirmed choices in the decision log and product specification. No app implementation is authorised or started.
+Use docs/27 and docs/31 for current open owner choices and gate status. Record any future consequential change in the decision log before changing the contracts. No app implementation is authorised or started.
 
 
 ## Owner-approved interaction direction — quick Complete and detailed Record (2026-10-18)
