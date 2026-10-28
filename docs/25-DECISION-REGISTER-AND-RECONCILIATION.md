@@ -137,7 +137,7 @@ When a decision changes, update the decision log and every affected document in 
 - [x] Draft the bounded Undo/recovery proposal in docs 01/03/26/30 and trace it as AC-023: single-mutation, eight-second Undo; guarded inverse; destructive deletion and Replace/Merge are not snackbar-undoable.
 - [x] Record the bounded Undo and one-entry deletion interaction as delegated D-196 defaults; the owner may override during the consolidated review. No implementation/test has run.
 - [x] Prepare the UX/design recommendation pack in `29-UX-DESIGN-APPROVAL-PACK.md`.
-- [x] Draft comparable text wireframes and render two SVG boards: `docs/prototypes/dayseed-today-variants.svg` (W1/W2/W3) and `docs/prototypes/dayseed-navigation-archive-variants.svg` (N1/N2 and A1/A2/A3), using synthetic data.
+- [x] Draft comparable text wireframes and render three SVG boards: `docs/prototypes/dayseed-today-variants.svg` (W1/W2/W3) and `docs/prototypes/dayseed-navigation-archive-variants.svg` (N1/N2 and A1/A2/A3), and `docs/prototypes/dayseed-growth-mark-variants.svg` (G1/G2/G3), using synthetic data.
 - [ ] Review both boards using the task/accessibility scorecard, then record owner choices or explicit deferrals for Growth Mark, archive, visual direction, typography/colour/theme, and accessibility. The boards are not approved UI or usability evidence.
 - [x] Create the initial requirement-to-screen/data-rule/test matrix in [28-REQUIREMENT-TRACEABILITY.md](28-REQUIREMENT-TRACEABILITY.md).
 - [ ] Close the remaining traceability gaps listed in doc 28; its acceptance cases are plans, not test results.
