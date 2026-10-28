@@ -92,7 +92,7 @@ For every issue: reproduce → identify root cause → implement the smallest sa
 
 - Planning gate decision: **Not approved**
 - Owner planning responses O-1–O-11 recorded: **2026-10-28** — this is not planning-gate approval.
-- Remaining planning items include final task/accessibility and semantic review, Growth Mark definition/accessibility checks, and the requested ad-policy/privacy evaluation in `docs/33-MONETISATION-AND-ADS-EVALUATION.md`. O-11 does not approve an ad SDK/placement. No implementation or technical validation is authorised.
+- Remaining planning items include final task/accessibility and semantic review, Growth Mark definition/accessibility checks, and owner review/decision on the written ad-policy/privacy evaluation in `docs/33-MONETISATION-AND-ADS-EVALUATION.md`. O-11 does not approve an ad SDK/placement. No implementation or technical validation is authorised.
 - Owner approval date:
 - Approved scope/version:
 - Stack decision D-009: **Approved — continue the existing native Kotlin + Jetpack Compose Android project** (2026-10-26). This is not planning-gate approval or authorisation to implement features.
