@@ -373,3 +373,14 @@ The canonical readiness snapshot is `docs/27-PLANNING-COMPLETENESS-REVIEW.md`; t
 - Created `docs/prototypes/dayseed-navigation-archive-variants.svg`, comparing four versus five bottom destinations and three journal archive layouts.
 - Created `docs/prototypes/dayseed-growth-mark-variants.svg`, isolating plain monthly context, a “Collected moments” label with count, and count plus inspectable date marks using the same synthetic activity.
 - All three SVG files were re-fetched from `main` and passed a simple XML tag-balance check. They are planning artefacts only—not approved UI, app code, or usability evidence. Next: review them against the task/accessibility scorecard, then record choices or explicit deferrals. No app code, build, tests, database, migration, APK, device state or implementation audit was changed or run.
+
+
+## Continuation handover and decision protocol — 2026-10-28
+
+- Added [`AGENTS.md`](../AGENTS.md) as the repository-root entry point for AI agents, and [`docs/32-CONTINUATION-HANDOVER.md`](32-CONTINUATION-HANDOVER.md) as the self-contained handover/decision protocol. The README now points new assistants to both.
+- The handover captures project purpose and stack, canonical decision/document hierarchy, D-196 decision-making rules, escalation criteria, grouped Accept/Modify/Defer workflow, GitHub write/verification discipline, current status and the ordered next steps.
+- It records the current schema and privacy caveats, the weekly-reflection-time owner choice, the three planning-only SVG boards, and the boundary between planning, technical validation, and later implementation. It does not add owner approvals or open the gate.
+- GitHub writes for `docs/32-CONTINUATION-HANDOVER.md`, root `AGENTS.md`, and the README link were re-fetched and verified. The three SVG boards are present under `docs/prototypes/`; their contents are synthetic planning artefacts, not approved UI or usability/accessibility evidence.
+- **Next action:** use O-1–O-11 in `docs/31-OWNER-PLANNING-DECISION-BATCH.md` for one grouped owner review; then record actual decisions, reconcile affected documents, finish design/accessibility and traceability/semantic checks, and only then present a final planning-gate readiness decision.
+- **Not done:** no application code/schema/migration changes, live-database inspection, implementation audit, build, tests, APK installation, device validation, or feature implementation.
+
