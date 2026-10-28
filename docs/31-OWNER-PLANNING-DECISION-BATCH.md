@@ -45,7 +45,7 @@ The remaining owner-level review is to confirm the coherent proposal, especially
 
 This is a reversible interaction detail and is **not a required owner checkbox**. The owner may override the default in the consolidated review. AC-023 remains planned, not executed; this default is not evidence of implementation.
 
-### C. Shared reminders and local timing personalisation — defaults under D-196; weekly reflection time needs owner choice
+### C. Shared reminders and local timing personalisation — defaults under D-196; weekly reflection time recorded as 09:00
 
 **Defaults documented in docs 09/23/05/26/28; AC-011/AC-012:**
 - Ask once during setup whether reminders are wanted; No creates no reminders. Each habit's reminder time defaults to 9:00 a.m. local time; manually chosen times remain protected from automatic adjustment.
