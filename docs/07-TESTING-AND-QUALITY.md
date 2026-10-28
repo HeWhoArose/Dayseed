@@ -192,6 +192,19 @@ Classify with the exact actual/target ratio before rounding any displayed percen
 
 Also verify: actual zero is retained as an explicit saved record but does not receive the positive-progress Tiny label; no record remains a separate state; actual amounts are never capped or changed; rounded percentage display cannot change the classification; units/targets validate as positive whole-number targets while recorded numeric values may be zero. These cases must eventually be implemented as deterministic acceptance tests after the planning gate and technical-validation authorisation; they have not been run.
 
+## Growth Mark acceptance coverage (AC-025; planned, not executed)
+
+- With synthetic records, calculate the compact G2 “Collected moments” total from saved duration sessions belonging to duration-tracked habits in the current calendar month. The month is the default reporting period, not a duration unit.
+- Verify recognized time units (for example minutes and hours) are normalised to a shared base before summing. Never mix quantity units, completion-only/effort-aware outcomes, journal entries, or unknown/incompatible units into the duration total. Where a source unit cannot safely be converted, present a clear supported-scope message or separate unit breakdown rather than a misleading total.
+- Verify readable formatting across magnitude boundaries: minute-only values, combined hours/minutes, totals spanning days, and large totals that may be expressed as weeks when clear. If an approximate month-of-time representation is ever considered, it must be explicitly labelled as an approximation and not confused with the selected calendar-month reporting period; this display decision remains open.
+- Verify the G2 label and reporting period are understandable at typical and enlarged text sizes. The selected compact Today summary states the current month; the detailed view can switch among a selected day, configured week and calendar month, with week boundaries respecting the saved week-start preference.
+- Verify G3 opens the selected date, displays the duration total and underlying saved sessions, and keeps blank dates neutral. Do not present synthetic/example records as user data.
+- Verify no record, an explicit zero-valued duration entry, positive duration, loading, query failure, and partial/incompatible-source cases are distinguishable. Explicit zero contributes no time; it is not silently treated as absent.
+- Correcting/deleting one session recalculates only the affected period/date totals and never changes unrelated records. Backdated records appear under their saved local-date key and applicable historical configuration.
+- Check TalkBack labels/order, keyboard and touch navigation, contrast, large text, compact-width wrapping, non-colour cues, and accessibility of the G2-to-G3 route.
+
+These are planned acceptance scenarios only. No tests were run and no UI or aggregation code was implemented.
+
 ## 4. Test data and privacy
 Use synthetic test data. Do not use real journal entries in fixtures, screenshots, logs, or issue reports. Scrub sensitive values from crash reports and automated test output. Initial v1 excludes accounts, online backup, and cross-device sync; premium future sync must not be added under this test plan without a separate approved privacy/security and product gate.
 
