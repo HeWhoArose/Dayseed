@@ -85,7 +85,7 @@ These are high-value anchors; the full Decision Log and product contracts remain
 
 - **D-009:** continue the existing native Kotlin + Jetpack Compose Android project; no second app or stack rewrite.
 - **Offline-first:** core habit, journal, history, insights, and comeback use must not require an account or network. Online account/cloud/sync/AI processing is out of initial v1 scope unless separately approved.
-- **D-010 monetisation:** the owner has a *candidate preference* for restrained banners, user-initiated rewarded extras, and possibly a one-time Supporter Pack. This is **not** approval to monetise initial v1. Current safe recommendation is to keep ads, purchases, and subscriptions out of v1 pending an explicit owner decision and policy/privacy review.
+- **D-010 / O-11 monetisation:** on 2026-10-28 the owner said at least ads are needed for a full launch and requested an initial-v1 evaluation. See `docs/33-MONETISATION-AND-ADS-EVALUATION.md`. The recommended first candidate is a modest banner on a secondary screen; that proposal is not approval to ship an SDK or placement. Rewarded ads, purchases, subscriptions and Supporter Pack remain unapproved. Do not infer implementation authorisation from the evaluation request.
 - **D-040 progress bands:** Tiny, Small, Halfway, Nearly there, Goal met, Extra, Huge use the approved target-relative thresholds; classify from the exact actual/target ratio before display rounding. Always show actual amounts and avoid shame/pressure.
 - **Measured habits:** duration and quantity preserve non-negative whole-number actuals; explicit zero is distinct from no record. Multiple valid entries per habit/date are permitted and summed; each entry remains inspectable/editable. The dashboard **Complete** shortcut records the usual target for measured habits; **Record** opens detailed entry/correction. Completion-only habits use Complete. A note is not completion.
 - **History/date policy (D-187/D-188/D-193/D-194):** saved local-date keys do not move with timezone travel; schedule/target changes preserve historical meaning; rest/non-scheduled/paused days are neutral or excluded as defined; missed status is derived only after a scheduled local day passes without qualifying activity; no manual mark-missed or habit-day Skip action in v1; journal text never changes habit status. Same-day Apply-today replacement is allowed only before qualifying activity exists that day; otherwise preserve today and offer Apply tomorrow.
@@ -110,7 +110,7 @@ These are high-value anchors; the full Decision Log and product contracts remain
 - Requirement matrix covers AC-001 to AC-024. AC-009's deterministic Mood Insights fixture was reviewed; the fixtures and all other acceptance cases are still not executed.
 - Earlier Markdown relative-link, heading-fragment, table, and external-URL checks were recorded as passing for the then-current 37 Markdown files. New files/edits require appropriate re-checks before closing planning.
 - The weekly reflection clock-time contradiction was corrected: owner choice is open, not delegated.
-- The owner batch (doc 31) now contains O-1 through O-11, covering schema, backup/restore compatibility, Today hierarchy, navigation, archive, Growth Mark, type/colour/theme, comeback presentation, weekly reflection time, privacy copy, and v1 monetisation.
+- The owner batch (doc 31) records O-1–O-11 responses from 2026-10-28. Selected directions are W1/N1/A2 and Growth Mark plain label + count; weekly reflection is 09:00 local on the configured week-start day; privacy wording is accepted as draft; and the requested ads evaluation is in doc 33. The Growth Mark count and UI/accessibility review remain planning work.
 - The current handover intentionally does not claim application code has passed build/tests or that any proposed schema/design is implemented.
 
 ## 7. Exact next steps — use this order
@@ -119,13 +119,13 @@ These are high-value anchors; the full Decision Log and product contracts remain
 
 Fetch current `main`, check the recent commits and relevant decision/doc files. Confirm the three SVG paths exist, keep doc 27/doc 31/doc 12 aligned, and finish a semantic stale-claim pass. In particular, cumulative/history documents must not present old options (decimal numeric entry, one numeric total/day, every-N-days schedules, weekly reflection at a presumed time) as current requirements.
 
-### Step 2 — Present the owner decisions as one review
+### Step 2 — Reconcile the recorded owner decisions
 
-Use **Section 4, “Owner response sheet,” in doc 31** (O-1 through O-11). The starting recommendations are proposals, not approvals. Ask the owner to reply **Accept / Modify / Defer** to material choices in one grouped review, with a single time field for O-9. It is valid to defer a design or feature while keeping unrelated planning moving. Do not ask them to re-approve decisions already recorded as Approved.
+The owner responded to O-1–O-11 on 2026-10-28; responses are in docs 09/31 and the current progress note. Do not ask again for these same choices. W1/N1/A2 and the plain Growth Mark label + count are selected planning directions, not user-test or accessibility results. O-1/O-2 accept the schema/restore package as a planning baseline only. O-9 sets weekly reflection to 09:00 device-local on the configured week-start day. O-10 accepts the privacy wording as draft only. O-11 requests an ads evaluation, not permission to ship ads. The remaining owner-level issue is any further decision required after the ads evaluation; continue task/accessibility and semantic review meanwhile.
 
 ### Step 3 — Apply the owner's actual responses
 
-Record actual decisions in doc 09 and reconcile affected docs 01/03/04/07/11/23/25/27/28/29/30/31/12 as needed. Keep the source choice and status consistent; retain unresolved options as Open or Deferred. The planning gate remains closed while any material decision, privacy wording, schema/conflict policy, or required checklist is not resolved or safely deferred.
+Record the already-given owner responses in doc 09 and reconcile affected docs 03/04/07/19/23/25/27/28/29/30/31/12 and README as needed. Keep the source choice and status consistent; retain exact colour/type tokens, broader visual identity, and any unresolved ad-launch decision as Open or Proposed. The planning gate remains closed while any material decision, privacy wording, schema/conflict policy, or required checklist is not resolved or safely deferred.
 
 ### Step 4 — Finish design accessibility review
 
@@ -154,3 +154,11 @@ On each meaningful continuation append/update a short entry in `docs/12-PROGRESS
 - remaining blocker and one next action.
 
 A handover is successful when a new agent can start with this file, refresh GitHub, understand the decision protocol and current blockers, and continue without asking the owner to restate the project's history. It must not bypass owner authority or the planning gate.
+
+### Latest continuation — owner decisions and ad evaluation (2026-10-28)
+
+- Owner responses O-1–O-11 were recorded in docs 09/31; the authoritative status is D-198. Do not reopen settled choices without a material reason.
+- O-1/O-2 accept the written schema and backup/restore/conflict rules as planning baselines only; no database implementation/migration is authorised. W1/N1/A2 and Growth Mark's plain explanatory label + count are selected planning directions. Platform typography/system appearance and compact non-blocking comeback direction are accepted baselines; exact tokens and final accessibility review remain open.
+- O-9 sets the weekly reflection time to 09:00 a.m. device-local on the configured week-start day. O-10 accepts privacy wording only as a draft, not a verified runtime claim.
+- O-11 requests evaluation of ads for the intended full launch. [Monetisation and Ads Evaluation](33-MONETISATION-AND-ADS-EVALUATION.md) recommends evaluating a secondary-screen banner first and documents official Play/AdMob policy checks. No SDK, placement, rewarded feature or purchase is approved.
+- Planning gate remains **not approved**. Next: finish task/accessibility and semantic consistency review, review the ad evaluation and obtain any explicit follow-up choice it requires, then prepare the readiness report. Technical validation and implementation remain separate authorised stages.
