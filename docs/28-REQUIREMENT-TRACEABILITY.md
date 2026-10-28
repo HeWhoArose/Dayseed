@@ -39,7 +39,7 @@
 ## Deferred or unapproved scope
 
 - **H5 XP/rank and social comparison:** not approved for v1; no acceptance case should block core release unless scope is explicitly changed.
-- **Online accounts, Dayseed-managed cloud backup, cross-device sync, AI processing, ads/purchases/subscriptions:** excluded from initial v1 and gated separately.
+- **Online accounts, Dayseed-managed cloud backup, cross-device sync and AI processing:** excluded from initial v1 unless separately approved. **Ads:** the owner requested a separate initial-launch evaluation because at least ads are needed for a full launch; ads remain unapproved/unimplemented until an explicit decision. See [Monetisation and Ads Evaluation](33-MONETISATION-AND-ADS-EVALUATION.md). Rewarded ads, purchases, subscriptions and Supporter Pack are not approved by the banner-first evaluation proposal.
 - **Journal photos/audio/attachments and any unapproved search enhancement:** do not silently add; retain only expressly approved v1 scope.
 - **Optional partial-progress tips:** cadence is a delegated default under D-196 (up to three tips in seven days, at least 24 hours apart, no more than one per local day; suppress after goal-met/dismissal/opt-out). Final copy and whether to include phone tips in v1 can be reviewed or safely deferred; do not ship unspecified notification behaviour.
 
@@ -50,9 +50,10 @@ This matrix includes AC-022 for restore-conflict recovery, AC-023 for the propos
 1. The written schema reconciliation across docs 03/30 is complete. During owner schema review, confirm the proposed format/schema compatibility boundary and unsafe “Keep both” cases, then ensure AC-001, AC-003–AC-008, AC-014, and AC-019 cover the accepted model.
 2. AC-011/AC-012/AC-024 use delegated defaults under D-196 for routine notification cadence, timing and retrospective prompt eligibility. Keep the defaults documented and testable; include them for visibility in the grouped owner review, but do not block Gate A on separate micro-decisions unless the owner wants to override/defer them.
 3. **AC-009 fixture review completed at the planning level:** the deterministic Mood Insights fixture in docs/07-TESTING-AND-QUALITY.md now explicitly covers Monday- and Sunday-start weeks, adjacent-month/week boundaries, primary-versus-secondary mood counting, untagged entries, sparse/empty states, opening only matching entries, and source-record correction/deletion. No further AC-009 gap is currently identified in the written fixture; this remains a plan, not a test result. Reopen only if later requirements change.
-4. Approve UX/navigation and visual direction or explicitly defer the unsettled areas (AC-018/AC-021).
-5. Re-run the cross-document link, anchor, duplicate/conflict, and supported-claim audit after remaining edits.
-6. Keep all AC entries as **planned, not executed** until technical validation is explicitly authorised and the evidence is recorded.
+4. Review the selected W1/N1/A2 and plain-count Growth Mark directions against the accessibility/task scorecard; keep exact theme/colour/type tokens open until measured and approved (AC-018/AC-021).
+5. Complete planned ads/SDK privacy, consent, ad-load-failure, offline and accessibility acceptance cases before any approved ad-supported release; these are specifications only, not executed tests (see doc 33).
+6. Re-run the cross-document link, anchor, duplicate/conflict, and supported-claim audit after remaining edits.
+7. Keep all AC entries as **planned, not executed** until technical validation is explicitly authorised and the evidence is recorded.
 
 ## Status rules
 
