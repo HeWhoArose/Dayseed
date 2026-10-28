@@ -42,7 +42,7 @@ Schema closure supplement: [Proposed Schema Closure, Transaction, and Migration 
 
 ## Proposed v1 relational schema — owner review required
 
-**Status: Proposed, not owner-approved and not implementation-ready.** This design turns the approved product invariants into a concrete SQLite model while preserving the existing Kotlin + `SQLiteOpenHelper` stack. It must not be treated as permission to change code. Owner approval is needed for the key structure below; actual schema v1, migrations, and current source behaviour remain unverified.
+**Status: Owner accepted the reconciled written model as the planning baseline on 2026-10-28; still proposed for implementation and not implementation-ready.** This design turns approved product invariants into a concrete SQLite model while preserving the existing Kotlin + `SQLiteOpenHelper` stack. The owner's O-1/O-2 responses do not approve code changes, live-database inspection, migration or tests. Actual schema v1, migrations and current source behaviour remain unverified.
 
 ### Tables and responsibilities
 
