@@ -34,7 +34,7 @@
   <text x="585" y="208" class="small">Friendly label + total recorded duration.</text>
   <line x1="585" y1="230" x2="1015" y2="230" class="line"/>
   <text x="585" y="285" class="heading">Collected moments</text>
-  <text x="585" y="325" class="body">3 hr 40 min recorded this week</text>
+  <text x="585" y="325" class="body">3 hr 40 min recorded this month</text>
   <text x="585" y="365" class="link">Progress →</text>
   <line x1="585" y1="394" x2="1015" y2="394" class="line"/>
   <text x="585" y="433" class="heading">What it communicates</text>
@@ -51,21 +51,27 @@
   <text x="1094" y="174" class="micro">G3 · CALENDAR / DETAIL VIEW</text>
   <text x="1094" y="208" class="small">Inspect duration across recorded dates.</text>
   <line x1="1094" y1="230" x2="1524" y2="230" class="line"/>
-  <text x="1094" y="275" class="heading">Recorded time by date</text>
-  <text x="1094" y="305" class="small">Example dates · synthetic only</text>
+  <text x="1094" y="275" class="heading">October · recorded time by date</text>
+  <text x="1094" y="305" class="small">Example dates and totals · synthetic only</text>
   <g>
-    <rect x="1094" y="326" width="52" height="48" rx="9" fill="#e1e8da" stroke="#bccab3"/>
-    <rect x="1157" y="326" width="52" height="48" rx="9" fill="#e1e8da" stroke="#bccab3"/>
-    <rect x="1220" y="326" width="52" height="48" rx="9" fill="#e1e8da" stroke="#bccab3"/>
-    <rect x="1283" y="326" width="52" height="48" rx="9" fill="#e1e8da" stroke="#bccab3"/>
-    <rect x="1346" y="326" width="52" height="48" rx="9" fill="#e1e8da" stroke="#bccab3"/>
-    <rect x="1409" y="326" width="52" height="48" rx="9" fill="#e1e8da" stroke="#bccab3"/>
-    <text x="1120" y="356" text-anchor="middle" class="small" style="font-size:15px;fill:#506448">02</text>
-    <text x="1183" y="356" text-anchor="middle" class="small" style="font-size:15px;fill:#506448">05</text>
-    <text x="1246" y="356" text-anchor="middle" class="small" style="font-size:15px;fill:#506448">09</text>
-    <text x="1309" y="356" text-anchor="middle" class="small" style="font-size:15px;fill:#506448">14</text>
-    <text x="1372" y="356" text-anchor="middle" class="small" style="font-size:15px;fill:#506448">21</text>
-    <text x="1435" y="356" text-anchor="middle" class="small" style="font-size:15px;fill:#506448">27</text>
+    <rect x="1094" y="326" width="52" height="66" rx="9" fill="#e1e8da" stroke="#bccab3"/>
+    <rect x="1157" y="326" width="52" height="66" rx="9" fill="#e1e8da" stroke="#bccab3"/>
+    <rect x="1220" y="326" width="52" height="66" rx="9" fill="#e1e8da" stroke="#bccab3"/>
+    <rect x="1283" y="326" width="52" height="66" rx="9" fill="#e1e8da" stroke="#bccab3"/>
+    <rect x="1346" y="326" width="52" height="66" rx="9" fill="#e1e8da" stroke="#bccab3"/>
+    <rect x="1409" y="326" width="52" height="66" rx="9" fill="#e1e8da" stroke="#bccab3"/>
+    <text x="1120" y="348" text-anchor="middle" class="small" style="font-size:15px;fill:#506448">02</text>
+    <text x="1120" y="378" text-anchor="middle" class="small" style="font-size:12px;fill:#506448">35m</text>
+    <text x="1183" y="348" text-anchor="middle" class="small" style="font-size:15px;fill:#506448">05</text>
+    <text x="1183" y="378" text-anchor="middle" class="small" style="font-size:12px;fill:#506448">20m</text>
+    <text x="1246" y="348" text-anchor="middle" class="small" style="font-size:15px;fill:#506448">09</text>
+    <text x="1246" y="378" text-anchor="middle" class="small" style="font-size:12px;fill:#506448">1h</text>
+    <text x="1309" y="348" text-anchor="middle" class="small" style="font-size:15px;fill:#506448">14</text>
+    <text x="1309" y="378" text-anchor="middle" class="small" style="font-size:12px;fill:#506448">45m</text>
+    <text x="1372" y="348" text-anchor="middle" class="small" style="font-size:15px;fill:#506448">21</text>
+    <text x="1372" y="378" text-anchor="middle" class="small" style="font-size:12px;fill:#506448">1h 10m</text>
+    <text x="1435" y="348" text-anchor="middle" class="small" style="font-size:15px;fill:#506448">27</text>
+    <text x="1435" y="378" text-anchor="middle" class="small" style="font-size:12px;fill:#506448">50m</text>
   </g>
   <text x="1094" y="412" class="link">Open calendar / session details →</text>
   <line x1="1094" y1="442" x2="1524" y2="442" class="line"/>
