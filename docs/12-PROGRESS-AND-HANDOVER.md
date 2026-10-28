@@ -62,10 +62,10 @@ Updated references: README.md, DESIGN.md, docs/02-UX-AND-DESIGN.md, docs/08-IMPL
 
 Use [Planning Completeness Review](27-PLANNING-COMPLETENESS-REVIEW.md) as the current checklist; it supersedes older next-action lists in this historical handover where they describe resolved decisions as open.
 
-1. Close the written schema proposal: keys, nullability/check constraints, foreign keys/indexes, transaction/rollback, deletion ownership, and migration/backup compatibility.
+1. Present the reconciled written schema in docs 03 and 30 for owner review, especially portable-backup format/schema compatibility and restore conflicts that cannot safely be kept both. Do not inspect or change the live database during this planning review.
 2. Keep the D-196 delegated defaults for guarded 8-second Undo, single-entry Delete+Undo, shared reminder coordination, local-only timing-learning safeguards, and retrospective journal-prompt cadence. Include one explicit owner choice in the grouped review for the weekly reflection's local clock time; do not inherit the per-habit 9:00 a.m. default.
-3. Prepare the primary navigation/wireframe and visual-design approval pack, including Growth Mark, archive pattern, typography/colour/theme, and accessibility.
-4. Close the gaps in [28-REQUIREMENT-TRACEABILITY.md](28-REQUIREMENT-TRACEABILITY.md) and run the current cross-document claim/link/anchor review.
+3. Review the rendered boards `docs/prototypes/dayseed-today-variants.svg` and `docs/prototypes/dayseed-navigation-archive-variants.svg` against the task/accessibility scorecard; record design choices or explicit deferrals for Today hierarchy, navigation, archive, Growth Mark, typography/colour/theme and comeback presentation.
+4. Close the remaining gaps in [28-REQUIREMENT-TRACEABILITY.md](28-REQUIREMENT-TRACEABILITY.md), then finish the semantic claim/link/anchor review without treating plans or prototypes as test evidence.
 5. Present the genuine owner choices and safe deferrals together; keep the planning gate closed until the owner explicitly approves it.
 6. Only after separate authorisation, run the bounded native technical-validation stage. Do not treat repository source presence as proof of a clean build or verified behaviour.
 
