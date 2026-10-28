@@ -1,7 +1,7 @@
 # UX and Design Approval Pack
 
 **Review date:** 2026-10-28  
-**Status:** Owner selections recorded on 2026-10-28: W1 Action-first Today, N1 four-destination navigation, A2 hybrid journal archive, platform/system typography and system light/dark baseline, the recommended compact non-blocking comeback presentation. O-6 was answered Modify without specifying the intended Growth Mark change, so no Growth Mark representation is selected. These remain planning directions for task/accessibility review; exact design tokens and broad visual identity are not approved. The planning gate remains closed.
+**Status:** Owner selections recorded on 2026-10-28: W1 Action-first Today, N1 four-destination navigation, A2 hybrid journal archive, platform/system typography and system light/dark baseline, and the recommended compact non-blocking comeback presentation. O-6 is clarified in D-199: modified G2-style “Collected moments” duration-total summary, with G3 reserved for calendar/date-level details or a separate detailed page. Unit formatting, period defaults, data edge cases and accessibility review remain open; exact design tokens and broad visual identity are not approved. The planning gate remains closed.
 
 **Related documents:** [UX and Design](02-UX-AND-DESIGN.md), [Today Dashboard Concepts](21-TODAY-DASHBOARD-CONCEPTS.md), [Design System](../DESIGN.md), [Growth Mark and Comeback Research](15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md), [Journal Archive Research](16-JOURNAL-ARCHIVE-RESEARCH.md), [Typography and Accessibility Research](17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md), [Design Review Checklist](DESIGN-REVIEW-CHECKLIST.md), [Requirement Traceability](28-REQUIREMENT-TRACEABILITY.md).
 
@@ -13,7 +13,7 @@
 
 The product rules are far more settled than the UI choices. Approved baseline requirements include Today’s separate Complete and Record actions; the local journal and its save/edit/delete rules; the History and Insight jobs; 14-day and 30-day comeback triggers; nonjudgmental copy; offline title/body journal search; local backup/restore settings; and the accessibility expectations. Those policies must shape the design rather than being treated as undecided. Three rendered comparison boards are now available in `docs/prototypes/`; they are ready for owner review, but do not constitute accessibility validation or user-test evidence.
 
-Still open are the broad visual direction (D-008), the qualifying-date/count definition and accessibility review for Growth Mark (D-016), final comeback copy/layout/localisation (D-017), accessibility/findability review for the selected A2 archive (D-018), and exact colour/type token values (D-019). The owner has selected W1 Today, N1 navigation and A2 archive as the starting directions; these are not usability-test results or final approved UI. The current Dashboard Concepts document includes a user-supplied screenshot discussion and a “little of Concept C” direction; use that as the design exploration anchor, not as approval of a finished screen.
+Still open are the broad visual direction (D-008), Growth Mark duration-unit formatting/report-period defaults and accessibility review (D-016/D-199), final comeback copy/layout/localisation (D-017), accessibility/findability review for the selected A2 archive (D-018), and exact colour/type token values (D-019). The owner has selected W1 Today, N1 navigation and A2 archive as the starting directions; these are not usability-test results or final approved UI. The current Dashboard Concepts document includes a user-supplied screenshot discussion and a “little of Concept C” direction; use that as the design exploration anchor, not as approval of a finished screen.
 
 ## 2. Recommended starting direction
 
@@ -43,9 +43,11 @@ If a summary is included, use a precise denominator and period. For example, sho
 
 ### Growth Mark
 
-**O-6 response — Modify; exact change unspecified:** the owner did not describe what should change. Keep G1/G2/G3 as alternatives, not approved choices: G1 plain monthly summary, G2 “Collected moments” + count, and G3 count + inspectable date marks. Do not treat the recommendation for a plain explanatory label + count as accepted. When the owner clarifies the intended modification, define the period and counting rule and provide access to the underlying dates/records. Any chosen metric must count genuine records accurately; explicit numeric zero remains distinct from no record.
+**Owner-selected direction (O-6 clarified in D-199):** use a modified G2 card labelled **“Collected moments”** that shows the total duration recorded by duration-tracked habits, formatted naturally by magnitude (for example, “45 min this week” or “3 hr 20 min this week”). The period must be visible. Consider day, configured week, and calendar-month reporting periods; a month is a reporting period, not a fixed duration unit. G2 remains the compact summary. **G3 becomes the Calendar/date-level or separate detail-page treatment**, where users can inspect per-date totals and underlying duration sessions. G1 remains a simple active-date summary comparison, not the selected Growth Mark card.
 
-Do not add a growing plant as a score, arbitrary level, composite score, streak, or time-based decay. Review all candidate treatments for comprehension and accessibility before selecting a display.
+Only duration-based habit records contribute to the duration total. Do not add quantity values, completion-only/effort-aware outcomes, journal entries, or incompatible units. Derive the total from saved records and recalculate after corrections/deletions; do not persist a duplicate aggregate without a separate schema decision. Format very large totals with day/week equivalents only when clear and meaningful; do not silently define a month as a fixed duration. Keep no-record, explicit-zero and failed/loading states distinct and nonjudgmental.
+
+Do not add a growing plant as a score, arbitrary level, composite score, streak, or time-based decay. Finalise display thresholds, default period, date-detail interactions and accessibility through planning review; no final UI or implementation is approved.
 
 ### Journal archive and search
 
@@ -64,7 +66,7 @@ The active v1 triggers are already approved: the two-week experience after 14 co
 - **W1 Today:** selected; preserve separate Complete and Record actions for measured habits and keep journaling optional.
 - **N1 navigation:** selected; check that Journal is findable from Today and History without ambiguous labels or icon-only routes.
 - **A2 archive:** selected; validate date jump, search, edit, delete, empty dates and multiple entries on a date.
-- **Growth Mark:** O-6 was marked Modify without specifying the intended change; G1/G2/G3 remain alternatives and no display is selected.
+- **Growth Mark:** modified G2 “Collected moments” duration-total summary selected; G3 reserved for Calendar/date-level or separate-page details. Display thresholds, reporting-period defaults and accessibility remain to review.
 - **Typography/theme baseline:** platform typography and system light/dark appearance accepted; exact colours/fonts/tokens are still open in DESIGN.md.
 - **Comeback:** compact, dismissible, non-blocking direction accepted; final copy/localisation/accessibility still needs review.
 - **Ads:** O-11 requested an initial-launch ads evaluation because ads are needed for full launch; see [the monetisation evaluation](33-MONETISATION-AND-ADS-EVALUATION.md). No SDK, placement or release integration is approved.
@@ -93,7 +95,7 @@ Keep the copy, data examples, typography scale and overall palette consistent wh
 
 1. **Today hierarchy:** user’s current reference with a light reflective element (baseline); controlled alternative with fewer always-visible effort controls; controlled alternative where reflection has slightly more prominence.
 2. **Journal navigation/archive:** four-destination navigation with a Journal area under History; dedicated Journal tab; archive as a calendar-first variant. Use the same data and tasks.
-3. **Growth Mark:** “Collected moments” small labelled metric/inspectable date marks versus a plain text-and-count summary. Do not use abstract plant growth or scoring as a comparison baseline.
+3. **Growth Mark:** validate the modified G2 “Collected moments” duration-total card and G3 date-level calendar/detail view. G1 remains a comparison option for a simple active-date summary. Do not use abstract plant growth or scoring as a comparison baseline.
 4. **Typography and theme:** compare Roboto/system baseline against at least one suitable editorial candidate at identical size and copy; design a real light and dark palette before contrast approval.
 
 Use the same task set across variants:
@@ -124,7 +126,7 @@ The owner can approve a recommendation, request a variation, or explicitly defer
 |---|---|---|---|
 | D-008 visual direction | Open; three SVG comparison boards prepared | Prototype Field Journal warmth + Living Editorial hierarchy + Quiet Instrument controls | Review the Today, navigation/archive, and Growth Mark boards at small/typical widths and enlarged text; choose or defer the direction. Exact colour pairs, contrast, and accessibility still need review before final design approval |
 | Navigation / Journal placement | Open in UX | Test Today / History / Insights / Settings with Journal accessible from Today and History against a dedicated Journal tab | Task-based find/write/retrieve/edit results; no hidden core flow |
-| D-016 Growth Mark | Open | Test “Collected moments” versus plain editorial summary; omit illustrative growth until semantic value is proven | Metric is defined, inspectable and not misleading; representative users understand it |
+| D-016 Growth Mark | Modified G2 duration-summary direction selected; G3 detail role selected | Define compatible duration aggregation, readable unit thresholds, day/week/month period behaviour, no-data/zero/correction states, and a usable path to G3 date-level details | The total is accurate, the period and unit are immediately clear, records are inspectable, and accessibility/task review finds no misleading or shame-inducing presentation |
 | D-017 comeback presentation | Trigger policy approved; presentation open | Compact, non-blocking, dismissible welcome using approved 14-/30-day rules | Copy/layout review; proves no mandatory reflection or duplicate episode |
 | D-018 Journal archive | Open; hybrid proposed | Chronological list + date jump/calendar + approved local search | Retrieval/edit/delete tasks with large-text/empty-state review |
 | D-019 typography/colour | Open | System typography baseline vs a carefully selected editorial option; restrained semantic palette | License/source confirmed; every actual text/interactive pair passes review |
@@ -138,7 +140,7 @@ The owner can approve a recommendation, request a variation, or explicitly defer
 
 **Rendered navigation/archive planning artefact:** [N1/N2 navigation and A1/A2/A3 archive comparison](prototypes/dayseed-navigation-archive-variants.svg). This board compares four versus five bottom destinations and timeline-first, hybrid, and calendar-first archive layouts using matching synthetic entries. It is also planning-only; owner selection and task/accessibility review remain outstanding.
 
-**Rendered Growth Mark comparison:** [G1 plain monthly context, G2 label + count, and G3 count + inspectable date marks](prototypes/dayseed-growth-mark-variants.svg). These options use the same synthetic October count and Progress destination while varying the presentation. This separates the Growth Mark wording/representation question from the Today-hierarchy comparison; no option is approved, and accessibility review remains outstanding.
+**Rendered Growth Mark comparison:** [G1 plain active-date summary, G2 “Collected moments” duration total, and G3 calendar/date-level detail](prototypes/dayseed-growth-mark-variants.svg). The board uses synthetic duration examples. The owner selected the modified G2/G3 roles in D-199; it remains a planning artefact, not approved application UI or accessibility/usability evidence. Unit formatting, period controls and detailed-view interactions still need review.
 
 
 The linked SVG boards are rendered comparison prototypes with consistent synthetic data across variants. They are still planning artefacts, not usability findings, approved layout decisions, or application UI. The remaining step is a task-based review with large text, empty/error/destructive states and accessibility checks, followed by owner selection or explicit deferral.
@@ -188,7 +190,7 @@ Purpose: make today's useful habit action first. The denominator must be the cou
 │ Stretch          [Complete]│
 │────────────────────────────│
 │ Your collected moments      │
-│ 6 active dates this month   │
+│ 3 hr 40 min recorded this week │
 │ [View the dates behind this]│
 │────────────────────────────│
 │ Today  History  Insights  ⚙ │
