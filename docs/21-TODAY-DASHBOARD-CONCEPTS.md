@@ -634,7 +634,7 @@ Proposed behavior:
 
 Recommended conceptual separation:
 - **Schedule pattern:** `DAILY`, `SELECTED_WEEKDAYS`, or `FLEXIBLE_WEEKLY_TARGET` only. Every-N-days is excluded from v1 by the current approved schedule vocabulary.
-- **Start date:** optional user-selected local calendar date; define the default when omitted.
+- **Configuration effective date:** schedule changes use D-194's Apply today/Apply tomorrow versioning rules. Do not introduce a separate arbitrary user-selected start-date feature based on this historical notebook; creation and effective-date semantics must follow the current product/screen contracts.
 - **Eligible occurrence:** whether a habit is scheduled for a given local date under the chosen pattern and start/pause/archive rules.
 - **Record:** the user's saved action/quantity on a date. Records must remain distinct from eligibility.
 - **Rest/no-schedule date:** a date with no eligible occurrence; it should not appear as a missed or incomplete scheduled habit.
