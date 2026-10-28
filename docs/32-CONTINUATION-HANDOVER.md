@@ -109,7 +109,7 @@ These are high-value anchors; the full Decision Log and product contracts remain
 - Boards use synthetic data. They are planning artefacts, not approved UI, accessibility validation, or user-test evidence. They still need owner task/accessibility review.
 - Requirement matrix covers AC-001 to AC-024. AC-009's deterministic Mood Insights fixture was reviewed; the fixtures and all other acceptance cases are still not executed.
 - Earlier Markdown relative-link, heading-fragment, table, and external-URL checks were recorded as passing for the then-current 37 Markdown files. New files/edits require appropriate re-checks before closing planning.
-- The weekly reflection clock-time contradiction was corrected: owner choice is open, not delegated.
+- The weekly reflection clock-time decision was reconciled: O-9 selected 9:00 a.m. device-local on the configured week-start day; OS notification delivery remains unverified.
 - The owner batch (doc 31) records O-1–O-11 responses from 2026-10-28. Selected directions are W1/N1/A2 and Growth Mark plain label + count; weekly reflection is 09:00 local on the configured week-start day; privacy wording is accepted as draft; and the requested ads evaluation is in doc 33. The Growth Mark count and UI/accessibility review remain planning work.
 - The current handover intentionally does not claim application code has passed build/tests or that any proposed schema/design is implemented.
 
@@ -125,11 +125,11 @@ The owner responded to O-1–O-11 on 2026-10-28; responses are in docs 09/31 and
 
 ### Step 3 — Apply the owner's actual responses
 
-Record the already-given owner responses in doc 09 and reconcile affected docs 03/04/07/19/23/25/27/28/29/30/31/12 and README as needed. Keep the source choice and status consistent; retain exact colour/type tokens, broader visual identity, and any unresolved ad-launch decision as Open or Proposed. The planning gate remains closed while any material decision, privacy wording, schema/conflict policy, or required checklist is not resolved or safely deferred.
+The owner responses are recorded in doc 09 and doc 31, and the main affected planning documents have been reconciled. Re-fetch the latest files and fix only any remaining contradictions; retain exact colour/type tokens and broader visual identity as Open, and keep the ad-launch decision Proposed pending explicit owner choice after the doc 33 evaluation. O-1/O-2 resolve the written schema/restore-policy review only; implementation, live database inspection and migration remain unapproved. O-10 accepts privacy copy as a draft only. The planning gate stays closed until the remaining required review and readiness checklist are completed, followed by the owner's distinct explicit approval.
 
 ### Step 4 — Finish design accessibility review
 
-Review all three SVG boards against the same task list in doc 29 and the accessibility checklist: small/typical widths; large text (including up to 200% where supported); keyboard-open layout; text contrast for real pairs; non-colour states; TalkBack names/order; touch targets; empty/error/destructive states; long labels and entries; corrections; known-date/phrase search; neutral blank dates; and “continue without journaling” on comeback. Do not invent user-test results. Record evidence only if actual users/tasks are tested; otherwise record a heuristic review with its limitations. Update `DESIGN.md` only for owner-approved tokens/components.
+Review the owner-selected W1/N1/A2 directions and plain Growth Mark count alongside the comparison boards against the same task list in doc 29 and the accessibility checklist: small/typical widths; large text (including up to 200% where supported); keyboard-open layout; text contrast for real pairs; non-colour states; TalkBack names/order; touch targets; empty/error/destructive states; long labels and entries; corrections; known-date/phrase search; neutral blank dates; and “continue without journaling” on comeback. The choices are already recorded; use the review to identify risks, necessary revisions or safe deferrals rather than asking the owner to repeat them. Do not invent user-test results. Record heuristic review separately from actual user/task evidence. Update `DESIGN.md` only for owner-approved tokens/components.
 
 ### Step 5 — Finish requirement and semantic consistency
 
