@@ -578,8 +578,9 @@ The owner prefers the tracking range to extend from effort levels through number
 
 This is a direction to explore, not yet a complete data contract. For number-based habits, the next research must define whether users can log partial quantities, whether a target is optional or required, whether exceeding a target is allowed, unit changes, daily reset/aggregation, and how a record is represented when there is no quantity yet. Do not imply that effort-level records, completion-only records, and numeric records are interchangeable without explicit rules.
 
-### Scheduling: progressive disclosure
-The owner wants **selected weekdays plus an optional start date as the default**, with an unobtrusive expandable control for more flexibility.
+### Scheduling: historical progressive-disclosure proposal (superseded)
+
+**Historical proposal from 2026-10-18; current authority is D-191/D-195 in [Decision Log](09-DECISION-LOG.md) and the schedule contract in [Screen and Data Contracts](26-SCREEN-AND-DATA-CONTRACTS.md).** This section originally explored a selected-weekday-first interface; it is not the current schedule specification. Current v1 schedule kinds are `DAILY`, `SELECTED_WEEKDAYS`, and `FLEXIBLE_WEEKLY_TARGET` only. A progressive-disclosure design may still be explored if it presents those modes accurately, but **every-N-days is not a v1 option**.
 
 Default collapsed view:
 - Weekday selector.
@@ -587,10 +588,13 @@ Default collapsed view:
 - One short human-readable summary.
 - A clearly labelled secondary affordance such as “More schedule options” with an expand/collapse indicator.
 
-Expanded advanced options should be explored to include:
-- Weekly target (e.g. choose any 3 days per week).
-- Every-N-days interval patterns (e.g. every 2 or 3 days).
-- Clear schedule summary and a way to collapse advanced options without losing selections.
+Historical exploration listed these ideas; apply the current authority above instead:
+- `DAILY` schedule.
+- `SELECTED_WEEKDAYS` schedule, with its required valid weekday selection.
+- `FLEXIBLE_WEEKLY_TARGET` (for example, achieve a chosen number of days in the configured week); preferred days are optional guidance, not restrictions.
+- A clear schedule summary and a way to collapse advanced options without losing selections.
+
+Do not offer an every-N-days interval in v1.
 
 ### Design constraints
 - Advanced scheduling must be discoverable but must not overwhelm first-time habit creation.
@@ -601,14 +605,9 @@ Expanded advanced options should be explored to include:
 - All schedule controls need accessible labels, non-colour state cues, large-text reflow, and usable touch targets.
 - Keep all core scheduling functions available offline.
 
-### Next design iteration
-Produce a focused comparative wireframe for:
-1. Default weekday picker + optional start date, advanced options collapsed.
-2. Expanded view showing weekly-target and every-N-days alternatives.
-3. Review/save state with a human-readable schedule summary.
-4. Edit-existing-habit state, explicitly distinguishing future schedule changes from historical records.
+### Historical next-design-iteration note
 
-The owner-selected direction is to be recorded in the decision log only after the exact semantics are reviewed and confirmed. No app implementation is authorised or started.
+The old proposed wireframe checklist below is retained as historical context, not as a current requirement. Any new comparison should use the current D-191/D-195 schedule vocabulary; do not add the superseded every-N-days option. Effective-date behaviour must follow D-194 in the [Screen and Data Contracts](26-SCREEN-AND-DATA-CONTRACTS.md). The schedule vocabulary has already been recorded; do not re-open it as an unmade decision. No app implementation is authorised or started.
 
 
 ## Screen 2 follow-up: number-based records and schedule-change semantics
@@ -623,9 +622,9 @@ A number-based habit stores a quantity with a user-defined unit (for example, pa
 Proposed behavior:
 - **Unit required:** the unit tells users what the number means. Offer a short editable text unit, with suggestions only as shortcuts.
 - **Target optional:** a target gives context but should not be required to record an amount. Distinguish “recorded 4 pages” from “reached target of 10 pages.”
-- **Partial values allowed:** allow zero only if zero is meaningful and intentionally recorded; allow decimals where units reasonably need them. Avoid accidental blank or invalid entries.
+- **Whole-number actuals:** actual quantity/duration values are non-negative whole numbers under the current v1 contract. Zero may be deliberately recorded when meaningful; decimal actuals are not a v1 input option. Blank/invalid input must not create a record.
 - **Target exceeded:** accept values above target. Never cap or discard the actual amount just because the target was exceeded.
-- **Record one daily aggregate, with corrections:** recommended initial UX is one current quantity per habit per local calendar date, editable later. If the user enters a new amount after recording, ask whether they are replacing the day's total or adding to it only if both interpretations are genuinely needed; avoid ambiguous silent behavior. Recommended default: edits replace the saved daily total, not add to it.
+- **Multiple sessions per date:** allow multiple valid quantity/duration entries for one habit and local calendar date. Sum them for derived totals while retaining each entry as separately inspectable and editable. Correcting or deleting one entry targets only that entry; do not replace the day's entire total or silently add a retry as a second entry.
 - **No value is not zero:** an unrecorded date remains unrecorded; it must not become zero automatically.
 - **Target changes:** new target applies prospectively by default. Historical recorded quantities remain unchanged; historical target snapshots versus current-target comparison remains an open data/reporting choice.
 - **Unit changes:** warn that changing units may make old values incomparable. Prefer asking whether the change is only a label correction or a true unit change; do not convert historical data without explicit conversion rules.
@@ -635,7 +634,7 @@ Proposed behavior:
 ### Scheduling model: separate the pattern from recorded activity
 
 Recommended conceptual separation:
-- **Schedule pattern:** selected weekdays, weekly target, or every-N-days interval.
+- **Schedule pattern:** `DAILY`, `SELECTED_WEEKDAYS`, or `FLEXIBLE_WEEKLY_TARGET` only. Every-N-days is excluded from v1 by the current approved schedule vocabulary.
 - **Start date:** optional user-selected local calendar date; define the default when omitted.
 - **Eligible occurrence:** whether a habit is scheduled for a given local date under the chosen pattern and start/pause/archive rules.
 - **Record:** the user's saved action/quantity on a date. Records must remain distinct from eligibility.
@@ -644,7 +643,7 @@ Recommended conceptual separation:
 
 ### Schedule edits: recommended history-preserving rule
 
-1. A schedule edit changes future eligibility from an explicit effective date, defaulting to the next local date after save unless the user deliberately selects a future effective date.
+1. Schedule edits are effective-dated and must follow D-194: Apply-today replacement is allowed only before qualifying activity exists for today; after qualifying activity, preserve today's configuration and offer Apply tomorrow.
 2. Past eligibility and saved records are not silently rewritten when the schedule changes.
 3. The user may correct an individual past record, but changing a schedule must not automatically create/delete historical records.
 4. If an edit would make a date's historical eligibility unclear, keep the record itself visible in History and avoid retroactive changes to counts until the product defines historical schedule snapshots.
