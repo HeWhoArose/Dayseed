@@ -296,6 +296,8 @@ See [Planning Completeness Review](27-PLANNING-COMPLETENESS-REVIEW.md) for the c
 
 ### Next planning actions
 
+> **Historical snapshot — 2026-10-27.** The numbered list below records what remained open before O-1–O-11 and D-199. It is superseded by the 2026-10-28 owner-response package and the current readiness status in docs 27/31/34; do not repeat these items as unresolved owner questions when later decisions already settled them.
+
 1. **Written schema reconciliation is complete.** Present `docs/03-TECHNICAL-ARCHITECTURE.md` and `docs/30-SCHEMA-CLOSURE-AND-MIGRATION-PLAN.md` together for owner review of the proposed data model, portable format/schema compatibility boundary, and restore-conflict choices where “Keep both” is unsafe. D-197's fail-closed migration rule remains the delegated safety default. Do not inspect or migrate the live database during this planning review.
 2. Use `docs/31-OWNER-PLANNING-DECISION-BATCH.md` for a single grouped review of genuinely consequential choices: schema/restore compatibility; visual and navigation choices after prototype review; final privacy/export/delete wording; whether monetisation remains excluded from initial v1 (recommended default); and explicit planning-gate approval. Undo, reminder coordination and retrospective-prompt details are delegated under D-196 unless the owner wants to override them.
 3. Review all three rendered planning boards—`docs/prototypes/dayseed-today-variants.svg`, `docs/prototypes/dayseed-navigation-archive-variants.svg`, and `docs/prototypes/dayseed-growth-mark-variants.svg`—against the same task and accessibility scorecard. Record owner choices or explicit deferrals for Today hierarchy, navigation, archive, Growth Mark, typography/colour/theme, and comeback presentation. They are planning artefacts, not approved UI or usability evidence.
@@ -341,6 +343,8 @@ See [Planning Completeness Review](27-PLANNING-COMPLETENESS-REVIEW.md) for the c
 - **Planning-only status:** the weekday-mask schema rule is documented; no application code/schema/migration was changed, and no build, test, APK install, device check or implementation audit was performed in this continuation. The planning gate remains not approved.
 
 ### Consolidated planning work still required
+
+> **Historical snapshot — 2026-10-27.** This list predates the owner responses recorded on 2026-10-28. Use docs 27/31 and the latest continuation below for current blockers; the dated list is preserved as history.
 
 1. **Written schema reconciliation is complete.** Present `docs/03-TECHNICAL-ARCHITECTURE.md` and `docs/30-SCHEMA-CLOSURE-AND-MIGRATION-PLAN.md` together for owner review of the proposed field/constraint model, portable format/schema compatibility boundary, and restore-conflict cases where “Keep both” is unsafe. D-197's fail-closed migration default preserves the original database and rolls back if any legacy row cannot be mapped losslessly. Do not inspect or migrate the live database during this planning review.
 2. Use `docs/31-OWNER-PLANNING-DECISION-BATCH.md` for one grouped review of genuinely consequential items: (a) complete schema and backup/restore compatibility/conflict handling; (b) design choices/deferrals after rendered prototypes; (c) privacy/export/delete wording; (d) whether monetisation remains excluded from initial v1 (recommended default); and (e) explicit planning-gate approval. Undo/reminder/prompt details are delegated under D-196 unless the owner chooses to override them.
