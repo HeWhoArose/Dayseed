@@ -17,11 +17,11 @@ The product and planning documents define the intended v1 scope: measured/effort
 
 Important status distinctions:
 - The current SQLiteOpenHelper schema was reported as version 1 with a placeholder upgrade handler; it uses a one-row-per-habit/date record model that conflicts with the approved multiple-numeric-entry requirement. The target relational schema remains proposed; no migration is verified.
-- The Growth Mark component exists in source, but its final metric and visual representation are not approved.
+- The Growth Mark component exists in source. The owner selected a modified G2 “Collected moments” duration-total summary and G3 calendar/date-level inspection in D-199; final formatting thresholds, period controls and accessible UI remain unapproved.
 - Approved comeback triggers are 14 complete local calendar days without opening Dayseed and a broader 30-day trigger; the 3-day and 90-day examples are exploratory copy, not approved v1 triggers.
 - The initial v1 is intended to work offline without a Dayseed account or cloud service. Actual network/data-flow behavior, privacy configuration, and Android platform-backup exclusion still require technical verification.
 - Human-readable journal export is separate from the versioned Dayseed portable-backup format. Neither should be considered release-verified from documentation alone.
-- The owner selected W1/N1/A2 as planning directions on 2026-10-28. O-6 was marked Modify without a specified Growth Mark change, so G1/G2/G3 remain alternatives and no Growth Mark display is selected; exact visual tokens and task/accessibility review remain open.
+- The owner selected W1/N1/A2 as planning directions on 2026-10-28. The later D-199 clarification selects modified G2 “Collected moments” for duration recorded in duration-tracked habits, defaulting to the current calendar month, and G3 for calendar/date-level detail in Calendar/Progress or a separate page. G1's simple active-date summary remains an alternative only. Unit formatting, period controls, accessibility review and exact visual tokens remain open; the planning gate is closed.
 - The requested initial-launch ads evaluation is documented in `docs/33-MONETISATION-AND-ADS-EVALUATION.md`; owner review and the include/defer decision remain pending. No ad SDK, placement, or monetisation implementation is approved; core functionality must remain usable offline.
 - The design system and UX remain subject to accessibility review; exact candidate colours, themes, and design tokens are not yet approved or accessibility-validated.
 
