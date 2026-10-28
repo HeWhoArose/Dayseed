@@ -31,7 +31,7 @@ Android users who want to build or maintain personal habits, especially people w
 - Comeback Flow after app or habit inactivity.
 - Optional local reminders, subject to explicit permission and scheduling decisions.
 - Human-readable journal export, complete user-controlled local backup/restore for phone migration, and data deletion. Online backup and cross-device sync are premium future capabilities, not part of the initial v1 release.
-- A monetisation model is a candidate for later review only; no ad network, purchase flow, or monetisation feature is approved for initial v1. Any future proposal must never block core functionality and requires explicit product/privacy/policy approval.
+- The owner states that at least ads are needed for a full launch and has requested an initial-v1 ads evaluation (O-11, 2026-10-28). A modest secondary-screen banner is the first candidate under review in `docs/33-MONETISATION-AND-ADS-EVALUATION.md`; no ad network, SDK, placement, rewarded feature, purchase flow, or monetisation implementation is approved yet. Any selected model must not block core functionality and requires explicit product/privacy/policy approval.
 
 ## Explicit v1 non-goals
 Unless the decision log is deliberately revised: cloud accounts, online backup, and cross-device sync in the initial v1 release; AI-generated analysis; public profiles, feeds, social competition, or leaderboards; virtual pets and elaborate gamification; a large paid content library; and claims to diagnose or treat mental-health conditions. Online backup/sync may be considered later as premium capabilities after a separate privacy, security, consent, data-flow, and monetisation approval gate.
