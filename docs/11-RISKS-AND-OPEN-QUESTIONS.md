@@ -54,7 +54,7 @@ D-042 approves the optional direction. Under D-196, the default cadence in docs 
 
 ## 3. Technical and operational questions
 
-- - **Stack direction resolved (D-009):** continue native Kotlin + Jetpack Compose. Build, test, APK-install, and device readiness remain unverified and must wait for explicit validation authorisation.
+- **Stack direction resolved (D-009):** continue native Kotlin + Jetpack Compose. Build, test, APK-install, and device readiness remain unverified and must wait for explicit validation authorisation.
 - What database and migration library are supported by the selected stack at implementation time?
 - How will Android platform backup and device-to-device transfer interact with the privacy promise, separately from the user-controlled local backup file?
 - Before any later premium online backup/cross-device sync release, what provider, consent UX, security/threat model, data-flow, deletion/retention, conflict-resolution, recovery, and monetisation design is approved? This is explicitly outside initial v1.
