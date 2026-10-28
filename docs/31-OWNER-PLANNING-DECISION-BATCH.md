@@ -68,11 +68,11 @@ This routine cadence is delegated, reversible and not a separate Gate A blocker.
 
 **Proposal in doc 29:** prototype the user’s prior “a little of Concept C” direction as an action-first Today screen with a modest reflective element, compared with reduced-effort-controls and more-reflective variants. Compare four primary destinations (Today/History/Insights/Settings, Journal accessible from Today and History) with a dedicated Journal tab. Compare timeline-first, hybrid timeline/calendar and calendar-first archive. Test “Collected moments” against a plain labelled summary; no arbitrary XP, score or decorative growth is implied.
 
-- [ ] Review the two rendered comparative SVG boards linked from doc 29 and choose, modify or explicitly defer each unsettled design choice.
+- [ ] Review all three rendered comparative SVG boards linked from doc 29 and choose, modify or explicitly defer each unsettled design choice.
 - [ ] Until reviewed, keep D-008 visual direction, D-016 Growth Mark, D-017 comeback presentation, D-018 archive pattern, D-019 typography/colour and Journal/History navigation marked open.
 - [ ] Keep platform typography as comparison baseline; do not mark a typeface, colour or light/dark theme as approved before contrast/accessibility review.
 
-Two rendered planning boards now exist: `docs/prototypes/dayseed-today-variants.svg` compares W1/W2/W3 Today layouts, and `docs/prototypes/dayseed-navigation-archive-variants.svg` compares N1/N2 navigation plus A1/A2/A3 archive layouts; `docs/prototypes/dayseed-growth-mark-variants.svg` isolates G1/G2/G3 monthly-summary representations using the same data and destination. They use synthetic data and are not user-test evidence or approved UI. Review all variants against the same task/accessibility scorecard before owner selection.
+Three rendered planning boards now exist: `docs/prototypes/dayseed-today-variants.svg` compares W1/W2/W3 Today layouts, and `docs/prototypes/dayseed-navigation-archive-variants.svg` compares N1/N2 navigation plus A1/A2/A3 archive layouts; `docs/prototypes/dayseed-growth-mark-variants.svg` isolates G1/G2/G3 monthly-summary representations using the same data and destination. They use synthetic data and are not user-test evidence or approved UI. Review all variants against the same task/accessibility scorecard before owner selection.
 
 ### F. Other safe deferrals and policy text
 
