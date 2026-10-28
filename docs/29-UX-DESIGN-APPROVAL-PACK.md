@@ -13,7 +13,7 @@ Still open are the visual direction (D-008), Growth Mark representation (D-016),
 
 ## 2. Recommended starting direction
 
-These are the recommended concepts to prototype together, not decisions silently made on the owner’s behalf.
+These are the recommended concepts illustrated by the comparison boards, not decisions silently made on the owner’s behalf.
 
 ### Visual direction
 
@@ -27,7 +27,7 @@ These are the recommended concepts to prototype together, not decisions silently
 
 ### Information architecture and navigation
 
-**Recommended prototype:** four bottom-level destinations—**Today**, **History**, **Insights**, and **Settings**—with a very visible, lightweight **Write reflection** action on Today. History should let people switch clearly between habit history and the journal archive, and the Journal archive view should have an obvious “New entry” action.
+**Recommended starting option in the rendered comparison:** four bottom-level destinations—**Today**, **History**, **Insights**, and **Settings**—with a very visible, lightweight **Write reflection** action on Today. History should let people switch clearly between habit history and the journal archive, and the Journal archive view should have an obvious “New entry” action. Compare this with the dedicated-Journal alternative before selection.
 
 Why test this first: it keeps the primary daily action, retrieval, summaries and data controls separate without overcrowding the bottom bar. The trade-off is that a journal-first user may not discover History’s journal area quickly enough. Compare it with a dedicated Journal tab variant using the same tasks; do not decide by aesthetics alone.
 
@@ -39,7 +39,7 @@ If a summary is included, use a precise denominator and period. For example, sho
 
 ### Growth Mark
 
-**Recommended first prototype:** test a small, plain-language “Collected moments” summary against a plain editorial number/text summary. Define the candidate as distinct local calendar dates in the selected period with at least one qualifying positive habit record (a positive numeric/duration amount or valid completion/effort-aware outcome). An explicit numeric zero remains a real record but is not counted as a positive activity moment. Show the period and let the user inspect the underlying dates/records.
+**Recommended comparison:** test a small, plain-language “Collected moments” summary against a plain editorial number/text summary. Define the candidate as distinct local calendar dates in the selected period with at least one qualifying positive habit record (a positive numeric/duration amount or valid completion/effort-aware outcome). An explicit numeric zero remains a real record but is not counted as a positive activity moment. Show the period and let the user inspect the underlying dates/records.
 
 Do not start with a growing plant, arbitrary level, composite score, streak, or time-based decay. Only add a symbolic visual if every change maps to a real, auditable event that users can explain. D-016 remains open until tested/reviewed.
 
