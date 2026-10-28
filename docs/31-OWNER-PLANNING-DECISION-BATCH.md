@@ -1,7 +1,7 @@
 # Dayseed Owner Planning Decision Batch
 
 **Review date:** 2026-10-28  
-**Status:** Consolidated review aid; it does not record new owner approvals and does not open the planning/implementation gate.  
+**Status:** Consolidated owner response record and planning review aid. Owner responses O-1–O-11 dated 2026-10-28 are recorded below and reconciled with authoritative statuses in `docs/09-DECISION-LOG.md`. This document does not open the planning/implementation gate.  
 **Purpose:** Make the remaining product choices reviewable in one pass instead of asking about each tiny detail in separate messages.
 
 **Authority:** The Decision Log remains authoritative. See docs/27-PLANNING-COMPLETENESS-REVIEW.md, docs/28-REQUIREMENT-TRACEABILITY.md, docs/29-UX-DESIGN-APPROVAL-PACK.md, and docs/30-SCHEMA-CLOSURE-AND-MIGRATION-PLAN.md.
@@ -19,7 +19,7 @@
 - **Journal core:** multiple entries per local date; explicit Save; edits preserve identity/creation time; saved journal delete requires confirmation; journal activity never changes habit completion; unfinished comeback drafts remain local and separate from saved entries.
 - **Weekly-goal rhythm and comeback triggers:** their important trigger/preference/suppression rules are recorded. See docs 23 and 24 for detailed contracts.
 
-## 2. Owner review: accept, modify, or defer these proposals
+## 2. Recorded owner responses and remaining planning choices
 
 This batch separates **owner-level choices** from **delegated defaults**. O-1/O-2 have accepted the written schema and backup/restore rules as planning baselines only; that does not approve implementation. W1/N1/A2 are selected starting directions, with task/accessibility review pending. O-6 was answered Modify without specifying the intended Growth Mark change; no Growth Mark variant is selected. The weekly reflection time is already set to 9:00 a.m. device-local on the configured week-start day (O-9). O-10 accepts privacy wording as draft-only. The unresolved owner decision is whether to include the proposed banner placement after reviewing doc 33. Undo, routine reminder coordination and retrospective-prompt cadence use the documented conservative defaults under D-196.
 
