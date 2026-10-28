@@ -110,7 +110,7 @@ These are high-value anchors; the full Decision Log and product contracts remain
 - Requirement matrix covers AC-001 to AC-024. AC-009's deterministic Mood Insights fixture was reviewed; the fixtures and all other acceptance cases are still not executed.
 - Earlier Markdown relative-link, heading-fragment, table, and external-URL checks were recorded as passing for the then-current 37 Markdown files. New files/edits require appropriate re-checks before closing planning.
 - The weekly reflection clock-time decision was reconciled: O-9 selected 9:00 a.m. device-local on the configured week-start day; OS notification delivery remains unverified.
-- The owner batch (doc 31) records O-1–O-11 responses from 2026-10-28. Selected directions are W1/N1/A2 and Growth Mark plain label + count; weekly reflection is 09:00 local on the configured week-start day; privacy wording is accepted as draft; and the requested ads evaluation is in doc 33. The Growth Mark count and UI/accessibility review remain planning work.
+- The owner batch (doc 31) records O-1–O-11 responses from 2026-10-28. Selected directions are W1/N1/A2; O-6 was marked Modify without specifying the intended Growth Mark change, so that choice remains open; weekly reflection is 09:00 local on the configured week-start day; privacy wording is accepted as draft; and the requested ads evaluation is in doc 33. The Growth Mark count and UI/accessibility review remain planning work.
 - The current handover intentionally does not claim application code has passed build/tests or that any proposed schema/design is implemented.
 
 ## 7. Exact next steps — use this order
@@ -121,7 +121,7 @@ Fetch current `main`, check the recent commits and relevant decision/doc files. 
 
 ### Step 2 — Reconcile the recorded owner decisions
 
-The owner responded to O-1–O-11 on 2026-10-28; responses are in docs 09/31 and the current progress note. Do not ask again for these same choices. W1/N1/A2 and the plain Growth Mark label + count are selected planning directions, not user-test or accessibility results. O-1/O-2 accept the schema/restore package as a planning baseline only. O-9 sets weekly reflection to 09:00 device-local on the configured week-start day. O-10 accepts the privacy wording as draft only. O-11 requests an ads evaluation, not permission to ship ads. The remaining owner-level issue is any further decision required after the ads evaluation; continue task/accessibility and semantic review meanwhile.
+The owner responded to O-1–O-11 on 2026-10-28; responses are in docs 09/31 and the current progress note. Do not ask again for these same choices. W1/N1/A2 are selected planning directions, not user-test or accessibility results. O-6 remains open because its Modify response did not specify the intended Growth Mark change. O-1/O-2 accept the schema/restore package as a planning baseline only. O-9 sets weekly reflection to 09:00 device-local on the configured week-start day. O-10 accepts the privacy wording as draft only. O-11 requests an ads evaluation, not permission to ship ads. The remaining owner-level issue is any further decision required after the ads evaluation; continue task/accessibility and semantic review meanwhile.
 
 ### Step 3 — Apply the owner's actual responses
 
@@ -158,7 +158,7 @@ A handover is successful when a new agent can start with this file, refresh GitH
 ### Latest continuation — owner decisions and ad evaluation (2026-10-28)
 
 - Owner responses O-1–O-11 were recorded in docs 09/31; the authoritative status is D-198. Do not reopen settled choices without a material reason.
-- O-1/O-2 accept the written schema and backup/restore/conflict rules as planning baselines only; no database implementation/migration is authorised. W1/N1/A2 and Growth Mark's plain explanatory label + count are selected planning directions. Platform typography/system appearance and compact non-blocking comeback direction are accepted baselines; exact tokens and final accessibility review remain open.
+- O-1/O-2 accept the written schema and backup/restore/conflict rules as planning baselines only; no database implementation/migration is authorised. W1/N1/A2 are selected planning directions. O-6 was marked Modify without an explanation, so no Growth Mark variant is selected yet. Platform typography/system appearance and compact non-blocking comeback direction are accepted baselines; exact tokens and final accessibility review remain open.
 - O-9 sets the weekly reflection time to 09:00 a.m. device-local on the configured week-start day. O-10 accepts privacy wording only as a draft, not a verified runtime claim.
 - O-11 requests evaluation of ads for the intended full launch. [Monetisation and Ads Evaluation](33-MONETISATION-AND-ADS-EVALUATION.md) recommends evaluating a secondary-screen banner first and documents official Play/AdMob policy checks. No SDK, placement, rewarded feature or purchase is approved.
-- Planning gate remains **not approved**. Next: finish task/accessibility and semantic consistency review, review the ad evaluation and obtain any explicit follow-up choice it requires, then prepare the readiness report. Technical validation and implementation remain separate authorised stages.
+- Planning gate remains **not approved**. Next: finish task/accessibility and semantic consistency review, resolve O-6's unspecified Growth Mark modification, review the ad evaluation and obtain any explicit follow-up choice it requires, then prepare the readiness report. Technical validation and implementation remain separate authorised stages.
