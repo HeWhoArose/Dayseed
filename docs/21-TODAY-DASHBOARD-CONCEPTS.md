@@ -161,9 +161,9 @@ These are qualitative predictions, not measured scores or user-test results. Do 
 
 ## Growth Mark integration decision
 
-The Growth Mark should not be given a large dashboard footprint until its purpose is chosen and understood. Research in [15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md](15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md) recommends comparing **Collected Moments** with a plain editorial summary. Prototype both in Concepts A and B.
+The owner clarified the Growth Mark direction in D-199: Today uses a restrained G2-style **Collected moments** card showing the total recorded duration from duration-tracked habits in the current calendar month. The label and period must be explicit, and the amount should use a readable duration format. Tapping it opens G3 calendar/date-level detail, either within Calendar/Progress or on a separate page, so the user can inspect per-date totals and source duration sessions. G1's plain active-date summary remains a comparison alternative, not the selected card. Final display thresholds, period controls, aggregation edge cases and accessibility remain open; this decision does not approve implementation.
 
-Every number or visual mark must map to an inspectable, explicitly logged event and show its period. An unrecorded day must not be presented as failure. Journal activity must remain distinct from habit activity unless a future, explicit decision says otherwise.
+Every number must be derived from inspectable saved records and show its period. Only compatible duration-tracked habit sessions contribute to G2; quantity, completion-only/effort-aware outcomes and journal entries do not. An unrecorded date must not be presented as failure. G3 should show actual saved duration records by date, not streak points or decorative progress.
 
 ## Shared first-pass content sketch
 
