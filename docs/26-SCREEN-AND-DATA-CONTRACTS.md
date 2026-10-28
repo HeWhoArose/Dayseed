@@ -45,6 +45,7 @@ Until the owner approves the model:
 - A failed save retains the entered data and communicates that it was not saved; do not show success optimistically.
 - A repeated tap/retry of one logical action must not double-count. Legitimate repeated sessions remain available.
 - Journal entry point is optional and independent of habit completion.
+- **Growth Mark (O-6/D-199, selected planning direction):** Today uses a compact G2-style **Collected moments** summary showing total recorded duration from duration-tracked habits in the current calendar month by default (for example, “3 hr 40 min this month”). Label the reporting period and use a naturally readable duration unit. Tapping the summary opens G3 calendar/date-level detail (in Calendar/Progress or a dedicated detail page), where the user can inspect per-date totals and their underlying duration sessions. Period controls may allow day, configured week and calendar-month views; the configured week-start governs weekly boundaries. This remains a planning contract; layout/format thresholds and interaction accessibility are not yet approved.
 
 ### Record detail / edit
 
@@ -81,6 +82,7 @@ Until the owner approves the model:
 - Corrections are explicit and local to the selected entity. Do not recalculate unrelated records as a side effect.
 - Rest/non-scheduled days are neutral; paused periods are excluded from scheduled opportunities. Before a scheduled day has passed, no record is unrecorded rather than zero. After a scheduled day passes without qualifying activity, missed status is derived; users cannot manually mark a day missed. Genuine backdated activity can recalculate the result, but a journal memo alone cannot change habit status.
 - Date/time behaviour follows approved D-187 and D-188 in `03-TECHNICAL-ARCHITECTURE.md`: stable local-date keys separate from event instants, explicit date selection for genuine backdated activity, conservative clock-change handling, saved week-start consistency, no implicit historical rewrite, derived missed status for past scheduled days with no qualifying activity, and no habit-status changes from journal memos.
+- **G3 calendar/detail:** show date-level duration totals and allow inspection of the source duration sessions for the selected date/period. A calendar mark indicates only that a qualifying duration record exists, not goal success or a streak. Blank dates are neutral. Corrections/deletions must recalculate the relevant totals. Show records from duration-tracked habits only; do not mix quantity records, completion-only/effort-aware outcomes, or journal entries into this metric.
 
 ### Insights
 
@@ -159,7 +161,7 @@ All affected screens must implement the following state distinctions:
 4. Final delete-all wording and any retention details required for exported/OS backup copies.
 5. Delegated reminder and retrospective-prompt defaults, including per-habit manual-time protection; these are reversible defaults under D-196 and may be overridden as part of the grouped review rather than answered separately.
 6. Exact whole-number rounding at progress-band boundaries and minimum-target display exceptions.
-7. Final navigation, visual direction, Growth Mark, and journal archive layout after research/prototype review.
+7. Final colour/type tokens and broad visual direction, Growth Mark unit-format thresholds and period controls/accessibility, and journal archive layout/task review. G2/G3 roles are owner-selected planning directions under D-199; these do not approve final UI or implementation.
 8. Build, automated test, APK install, physical-device, accessibility, and privacy/data-flow evidence — none is asserted by this planning contract.
 
 ## 5. Traceability
