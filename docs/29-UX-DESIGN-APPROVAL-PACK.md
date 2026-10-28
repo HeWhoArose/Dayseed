@@ -166,7 +166,8 @@ The linked SVG boards are rendered comparison prototypes with consistent synthet
 │ Water [Complete] [Record] │
 │────────────────────────────│
 │ Write a reflection     [＋] │
-│ Collected moments · See all │
+│ Collected moments          │
+│ 3 hr 40 min this month     │
 │────────────────────────────│
 │ Today  History  Insights  ⚙ │
 └────────────────────────────┘
@@ -190,14 +191,14 @@ Purpose: make today's useful habit action first. The denominator must be the cou
 │ Stretch          [Complete]│
 │────────────────────────────│
 │ Your collected moments      │
-│ 3 hr 40 min recorded this week │
+│ 3 hr 40 min recorded this month │
 │ [View the dates behind this]│
 │────────────────────────────│
 │ Today  History  Insights  ⚙ │
 └────────────────────────────┘
 ```
 
-Purpose: test the user's stated interest in a slightly more reflective Today screen without making writing compulsory. The count is a candidate metric only; it must be inspectable and must not count a saved numeric zero as a positive activity moment. Compare whether the reflection invitation crowds out the main habit action, especially with large text and several habits.
+Purpose: test the user's stated interest in a slightly more reflective Today screen without making writing compulsory. The example now uses the owner-selected G2 duration-total direction: only saved duration sessions contribute, and an explicit zero is a saved record but contributes no time. Tapping the duration summary opens G3 for date-level totals and source-session inspection. Compare whether the reflection invitation crowds out the main habit action, especially with large text and several habits.
 
 **W3 — Compact effort controls (controlled variation)**
 
