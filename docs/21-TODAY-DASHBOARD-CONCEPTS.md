@@ -1,10 +1,10 @@
 # Today Dashboard: Comparative UI Concepts
 
 **Research date:** 2026-10-17  
-**Status:** Concept exploration; no layout, navigation, visual token, or copy is approved.  
+**Status:** Concept exploration. The owner selected W1/N1/A2 as starting directions and accepted the platform/system appearance baseline; no final layout, navigation implementation, visual token set, or final copy is approved.  
 **Purpose:** Continue the Dayseed UI research by comparing different Today-screen priorities before committing to a visual direction or building app UI.
 
-**Current-authority note (2026-10-28):** This is a cumulative design notebook with dated proposals; old “decisions still needed” and “next design iteration” sections are historical snapshots, not a live backlog. For current habit modes, schedule types, date/history policy, and Complete/Record semantics, use `docs/01-PRODUCT-SPECIFICATION.md`, `docs/09-DECISION-LOG.md`, and `docs/26-SCREEN-AND-DATA-CONTRACTS.md`. The current contract in docs 01/09/26 and approved schedule decisions D-191/D-195 supersede earlier tentative ideas about one numeric total per day, optional numeric targets, decimal quantities, arbitrary start dates, and every-N-days schedules. The owner-selected daily summary + one-line monthly context + quiet route to Progress remains the working Today direction; final visual/accessibility approval is still open. The rendered Today, navigation/archive and Growth Mark comparisons are linked in `docs/29-UX-DESIGN-APPROVAL-PACK.md`.
+**Current-authority note (2026-10-28):** This is a cumulative design notebook with dated proposals; old “decisions still needed” and “next design iteration” sections are historical snapshots, not a live backlog. For current habit modes, schedule types, date/history policy, and Complete/Record semantics, use `docs/01-PRODUCT-SPECIFICATION.md`, `docs/09-DECISION-LOG.md`, and `docs/26-SCREEN-AND-DATA-CONTRACTS.md`. The current contract in docs 01/09/26 and approved schedule decisions D-191/D-195 supersede earlier tentative ideas about one numeric total per day, optional numeric targets, decimal quantities, arbitrary start dates, and every-N-days schedules. The owner-selected Today direction is W1 Action-first. Under D-199, the compact Growth Mark headline is G2 “Collected moments” (duration total for the current calendar month by default), with G3 date/session detail; the active-date-count concept below is historical only. The selected directions are planning baselines, not final UI approval. Owner disposition of the proposed Growth Mark formatting and final visual/accessibility review remain open. The rendered Today, navigation/archive and Growth Mark comparisons are linked in `docs/29-UX-DESIGN-APPROVAL-PACK.md`.
 
 ## Product promise
 
@@ -194,7 +194,9 @@ Tasks:
 
 Record task success, hesitation, wrong taps, time-to-action, misinterpretations, and subjective pressure. Do not claim user research has happened until sessions are conducted. Include people who have struggled to maintain habits as well as confident trackers; do not collect journal content.
 
-## Suggested next sequence
+## Historical suggested next sequence (2026-10-17; superseded by the current planning review)
+
+This list records an earlier exploration order; do not use it to reopen owner decisions or replace docs 27/31/34 as the current handover. The 3-, 14- and 90-day Return Page examples below were exploratory mockup examples, not the approved v1 triggers. The current comeback trigger/precedence rules are in docs 09/24. The former order was:
 
 1. Agree on the user jobs and compare A/B/C wireframes.
 2. Research the Growth Mark separately and decide whether it deserves a prominent Today card.
