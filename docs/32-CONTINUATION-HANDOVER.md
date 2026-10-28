@@ -155,7 +155,7 @@ On each meaningful continuation append/update a short entry in `docs/12-PROGRESS
 
 A handover is successful when a new agent can start with this file, refresh GitHub, understand the decision protocol and current blockers, and continue without asking the owner to restate the project's history. It must not bypass owner authority or the planning gate.
 
-### Latest continuation — owner decisions and ad evaluation (2026-10-28)
+### Earlier continuation — owner decisions and ad evaluation (2026-10-28)
 
 - Owner responses O-1–O-11 were recorded in docs 09/31; D-198 captures that batch and D-199 captures the follow-up Growth Mark clarification. Do not reopen settled choices without a material reason.
 - O-1/O-2 accept the written schema and backup/restore/conflict rules as planning baselines only; no database implementation/migration is authorised. W1/N1/A2 are selected planning directions. O-6 now selects modified G2 “Collected moments” total duration with G3 calendar/date-level detail; the current month is G2’s default period. Exact thresholds, unit formatting, alternate periods and accessibility review remain open. Platform typography/system appearance and compact non-blocking comeback direction are accepted baselines; exact tokens remain open.
