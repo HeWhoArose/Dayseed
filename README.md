@@ -4,6 +4,11 @@
 
 Dayseed is an Android-native, offline-first habit and micro-journal application built with Kotlin and Jetpack Compose. It is designed for people who want to build consistency without being shamed when life interrupts them.
 
+## Owner-provided visual reference
+
+The [Dayseed UI reference layout](docs/prototypes/dayseed-owner-reference-layout.webp) was supplied on 2026-10-28 and is the durable visual direction we are walking toward. It includes Today variants A–E (primary, reflection-higher, compact controls, completed-day, and empty-day states), plus Habit Create/Edit, Habit Detail, History calendar, Journal Entry, Insights Overview, Return-after-a-break, and Settings screens. Carry forward its habits-first hierarchy, small monthly context, optional journal entry, warm-neutral surfaces, restrained dark-green accents, botanical motif, and calm rounded cards as reference points.
+
+**Status boundary:** this is a visual reference, not final UI approval, proof of usability/accessibility, or permission to begin implementation. The owner decision log and grouped decision batch remain authoritative for approval; DESIGN.md remains the sole design-token/component authority. The planning gate remains closed.
 ## Product scope and source components
 
 The current repository contains native Kotlin/Jetpack Compose source for Today, History, Insights, Settings, Add/Edit Habit, and Journal Editor screens, plus source components such as HabitCard, GrowthMark, ComebackCard, and ReflectionCard. Their presence in source is not proof that the app builds, passes tests, or behaves correctly on a device.

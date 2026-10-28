@@ -5,6 +5,10 @@
 
 **Related documents:** [UX and Design](02-UX-AND-DESIGN.md), [Today Dashboard Concepts](21-TODAY-DASHBOARD-CONCEPTS.md), [Design System](../DESIGN.md), [Growth Mark and Comeback Research](15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md), [Journal Archive Research](16-JOURNAL-ARCHIVE-RESEARCH.md), [Typography and Accessibility Research](17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md), [Design Review Checklist](DESIGN-REVIEW-CHECKLIST.md), [Requirement Traceability](28-REQUIREMENT-TRACEABILITY.md).
 
+## Owner-provided visual reference — 2026-10-28
+
+[Open the multi-screen Dayseed UI reference layout](prototypes/dayseed-owner-reference-layout.webp). This owner-supplied collage shows five Today states/variants and supporting screens for Habit Create/Edit, Habit Detail, History calendar, Journal Entry, Insights Overview, return after a break, and Settings. Use it as the persistent visual north star for hierarchy and mood while comparing designs and reviewing accessibility. The image communicates a direction—not final approval of its exact controls, information architecture, colours, type, components, or every screen detail. Keep all unsettled choices open in the owner decision batch; DESIGN.md remains the only token/component authority. It does not authorise implementation or change the closed planning gate.
+
 ## 1. Current status
 
 The product rules are far more settled than the UI choices. Approved baseline requirements include Today’s separate Complete and Record actions; the local journal and its save/edit/delete rules; the History and Insight jobs; 14-day and 30-day comeback triggers; nonjudgmental copy; offline title/body journal search; local backup/restore settings; and the accessibility expectations. Those policies must shape the design rather than being treated as undecided. Three rendered comparison boards are now available in `docs/prototypes/`; they are ready for owner review, but do not constitute accessibility validation or user-test evidence.

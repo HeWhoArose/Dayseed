@@ -387,3 +387,11 @@ The canonical readiness snapshot is `docs/27-PLANNING-COMPLETENESS-REVIEW.md`; t
 - **Next action:** use O-1–O-11 in `docs/31-OWNER-PLANNING-DECISION-BATCH.md` for one grouped owner review; then record actual decisions, reconcile affected documents, finish design/accessibility and traceability/semantic checks, and only then present a final planning-gate readiness decision.
 - **Not done:** no application code/schema/migration changes, live-database inspection, implementation audit, build, tests, APK installation, device validation, or feature implementation.
 
+
+
+## Owner-provided UI reference preserved — 2026-10-28
+
+- Added [the owner-provided Dayseed multi-screen UI reference](prototypes/dayseed-owner-reference-layout.webp) to the repository as a durable visual direction. It includes Today variants/states A–E and supporting Habit Create/Edit, Habit Detail, History calendar, Journal Entry, Insights Overview, Return-after-a-break, and Settings screens.
+- Linked the reference from the README, root AI-agent instructions, UX/Design Approval Pack, and canonical Continuation Handover so future agents are directed to it before design work.
+- The reference is a visual north star, not final screen/token/navigation approval or usability/accessibility evidence. DESIGN.md remains the sole design-token/component authority, owner choices in docs 09/31 remain open as recorded, and the planning gate remains not approved.
+- No application code, schema, database, migration, build, test, APK, or device validation was changed or run.

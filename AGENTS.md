@@ -11,5 +11,6 @@
 5. Reconcile every approved decision across affected documents, then update `docs/25-DECISION-REGISTER-AND-RECONCILIATION.md`, `docs/27-PLANNING-COMPLETENESS-REVIEW.md`, `docs/28-REQUIREMENT-TRACEABILITY.md`, and `docs/12-PROGRESS-AND-HANDOVER.md` as relevant. Keep historical proposals labelled historical.
 6. Never claim builds, tests, usability/accessibility validation, runtime privacy, migrations, or device behaviour passed without inspected evidence. Planned acceptance cases are not executed results.
 7. Protect secrets and private data. The repository tree includes `.env`; do not display, quote, copy, or log its contents. Do not commit credentials, signing material, or private journal data.
+8. Preserve and consult [the owner-provided UI reference](docs/prototypes/dayseed-owner-reference-layout.webp) during UX planning. It is directional, not final UI/token approval and does not open the planning gate. DESIGN.md remains the sole design-token/component authority.
 
 Feature implementation is a later stage after technical validation and separate owner approval. A documentation commit, schema review, or approval of the stack alone does not authorise it.
