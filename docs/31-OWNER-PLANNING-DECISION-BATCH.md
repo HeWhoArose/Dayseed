@@ -112,7 +112,7 @@ This sheet makes the consequential choices answerable in one pass. The recommend
 
 **Gate status:** this response sheet does **not** ask for planning-gate approval yet. First record these owner choices, reconcile affected documents, finish the remaining traceability/semantic review and accessibility checklist, then present a final readiness check. No response here authorises app implementation, live database inspection/migration, builds, tests or device validation.
 
-## 4. Separate post-planning technical validation — not currently authorised
+## 5. Separate post-planning technical validation — not currently authorised
 
 Only after explicit owner authorisation: inspect the current native source, Gradle/toolchain and actual SQLite schema; reconcile source; run build/tests with synthetic data; inspect migration and rollback; verify Android platform-backup exclusion, offline persistence, notification delivery, backup/restore/export/delete; and install on a physical device. Record exact evidence and limitations. Feature implementation is a later stage and is not authorised by approval of the schema or stack alone.
 
