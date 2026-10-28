@@ -4,6 +4,8 @@
 **Status:** Concept exploration; no layout, navigation, visual token, or copy is approved.  
 **Purpose:** Continue the Dayseed UI research by comparing different Today-screen priorities before committing to a visual direction or building app UI.
 
+**Current-authority note (2026-10-28):** This is a cumulative design notebook with dated proposals; old “decisions still needed” and “next design iteration” sections are historical snapshots, not a live backlog. For current habit modes, schedule types, date/history policy, and Complete/Record semantics, use `docs/01-PRODUCT-SPECIFICATION.md`, `docs/09-DECISION-LOG.md`, and `docs/26-SCREEN-AND-DATA-CONTRACTS.md`. D-189 to D-195 supersede earlier tentative ideas about one numeric total per day, optional numeric targets, decimal quantities, arbitrary start dates, and every-N-days schedules. The owner-selected daily summary + one-line monthly context + quiet route to Progress remains the working Today direction; final visual/accessibility approval is still open. The two rendered alternatives are linked in `docs/29-UX-DESIGN-APPROVAL-PACK.md`.
+
 ## Product promise
 
 **Your progress is more than your streak.**
