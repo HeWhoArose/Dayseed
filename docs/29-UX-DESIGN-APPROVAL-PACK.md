@@ -1,9 +1,9 @@
 # UX and Design Approval Pack
 
 **Review date:** 2026-10-28  
-**Status:** Owner selections recorded on 2026-10-28: W1 Action-first Today, N1 four-destination navigation, A2 hybrid journal archive, platform/system typography and system light/dark baseline, and the recommended compact non-blocking comeback presentation. O-6 is clarified in D-199: modified G2-style “Collected moments” duration-total summary, with G3 reserved for calendar/date-level details or a separate detailed page. Unit formatting, period defaults, data edge cases and accessibility review remain open; exact design tokens and broad visual identity are not approved. The planning gate remains closed.
+**Status:** Owner selections recorded on 2026-10-28: W1 Action-first Today, N1 four-destination navigation, A2 hybrid journal archive, platform/system typography and system light/dark baseline, and the recommended compact non-blocking comeback presentation. O-6 is clarified in D-199: modified G2-style “Collected moments” duration-total summary, with G3 reserved for calendar/date-level details or a separate detailed page. A document-only screen/task review and proposed Growth Mark formatting defaults are recorded in docs/34; they remain recommendations, not owner approval or actual usability/accessibility evidence. The ads include/defer choice, final visual direction/tokens, and owner disposition of the formatting defaults remain open. The planning gate remains closed.
 
-**Related documents:** [UX and Design](02-UX-AND-DESIGN.md), [Today Dashboard Concepts](21-TODAY-DASHBOARD-CONCEPTS.md), [Design System](../DESIGN.md), [Growth Mark and Comeback Research](15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md), [Journal Archive Research](16-JOURNAL-ARCHIVE-RESEARCH.md), [Typography and Accessibility Research](17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md), [Design Review Checklist](DESIGN-REVIEW-CHECKLIST.md), [Requirement Traceability](28-REQUIREMENT-TRACEABILITY.md).
+**Related documents:** [UX and Design](02-UX-AND-DESIGN.md), [Today Dashboard Concepts](21-TODAY-DASHBOARD-CONCEPTS.md), [Design System](../DESIGN.md), [Growth Mark and Comeback Research](15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md), [Journal Archive Research](16-JOURNAL-ARCHIVE-RESEARCH.md), [Typography and Accessibility Research](17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md), [Design Review Checklist](DESIGN-REVIEW-CHECKLIST.md), [Requirement Traceability](28-REQUIREMENT-TRACEABILITY.md), [Planning UX and Traceability Closure](34-PLANNING-UX-AND-TRACEABILITY-CLOSURE.md).
 
 ## Owner-provided visual reference — 2026-10-28
 
@@ -43,7 +43,7 @@ If a summary is included, use a precise denominator and period. For example, sho
 
 ### Growth Mark
 
-**Owner-selected direction (O-6 clarified in D-199):** use a modified G2 card labelled **“Collected moments”** that shows the total duration recorded by duration-tracked habits, formatted naturally by magnitude (for example, “45 min this week” or “3 hr 20 min this week”). The period must be visible. Consider day, configured week, and calendar-month reporting periods; a month is a reporting period, not a fixed duration unit. G2 remains the compact summary. **G3 becomes the Calendar/date-level or separate detail-page treatment**, where users can inspect per-date totals and underlying duration sessions. G1 remains a simple active-date summary comparison, not the selected Growth Mark card.
+**Owner-selected direction (O-6 clarified in D-199):** use a modified G2 card labelled **“Collected moments”** that shows the total duration recorded by duration-tracked habits. The compact card defaults to the current calendar month and labels that reporting period. A recommended working default—not yet owner-approved—is minutes below one hour, hours/minutes below 24 hours, days/hours below seven days, and weeks/days from seven days upward; do not use calendar month as a duration unit. See docs/34 for the full proposed formatting, zero/no-record/error and accessibility contract. G2 remains the compact summary. **G3 becomes the Calendar/date-level or separate detail-page treatment**, where users can inspect per-date totals and underlying duration sessions. G3 may expose Day, configured Week, and Calendar Month periods. G1 remains a simple active-date summary comparison, not the selected Growth Mark card.
 
 Only duration-based habit records contribute to the duration total. Do not add quantity values, completion-only/effort-aware outcomes, journal entries, or incompatible units. Derive the total from saved records and recalculate after corrections/deletions; do not persist a duplicate aggregate without a separate schema decision. Format very large totals with day/week equivalents only when clear and meaningful; do not silently define a month as a fixed duration. Keep no-record, explicit-zero and failed/loading states distinct and nonjudgmental.
 
@@ -253,6 +253,17 @@ For each variant, record observed results rather than guesses:
 | Use the primary tasks with large text and keyboard visible | clipping, lost actions, focus order, scrolling and recovery issues |
 
 **Exit rule:** a wireframe is not approved because it looks cleaner. Choose a direction only after the variants use the same content/tasks, major empty/error/destructive states have been checked, accessibility concerns are logged, and the owner approves or explicitly defers each decision. No usability score or observed finding is claimed yet.
+
+## Planning desk-review outcomes — 2026-10-28
+
+The document-only review and explicit expected outcomes are recorded in [Planning UX and Traceability Closure](34-PLANNING-UX-AND-TRACEABILITY-CLOSURE.md). The key outcomes are:
+
+- **Today/navigation/archive:** keep Complete separate from Record, keep Journal optional but findable from Today and History, use clear textual navigation, preserve multiple distinct entries per date, and distinguish empty/no-result/error states. The selected concepts can remain the planning baseline pending owner review; no real usability result is claimed.
+- **Growth Mark:** keep G2 strictly to compatible saved duration sessions and G3 as the source-record/date detail; proposed magnitude-based display and no-record/zero/failure semantics are now testable, but still await owner disposition and future real UI accessibility checks.
+- **Cross-screen accessibility:** acceptance coverage now calls out large text, keyboard-open layouts, focus order, accessible names/roles, non-colour cues, touch targets, reduced motion, and recovery from errors. No contrast measurement, TalkBack run, task result or accessibility validation was performed.
+- **Traceability:** AC-026/027/028 cover conditional ads constraints, selected task flows, and D-192 notes. All are planned acceptance cases, not executed tests.
+- **Still owner-level:** explicit ads include/defer, the Growth Mark working defaults, and the recommended visual synthesis versus an explicit deferral of final style/tokens. Use the grouped owner batch; do not infer an answer from “continue”.
+
 
 ## 7. Approval and implementation boundary
 
