@@ -486,27 +486,27 @@ A generated board now shows five Today states and seven connected screens. The n
 
 ### Findings and guardrails
 
-- Keep the daily summary + one-line monthly context + quiet Progress route as the selected design direction.
+- **Historical G1-era proposal (superseded by D-199):** the daily summary plus monthly active-date context was explored as a compact direction. The selected Growth Mark headline is now G2 “Collected moments” (duration total) with G3 date/session details; do not treat active-date count as the selected headline metric.
 - The generated board repeats monthly context on multiple states; in a real interface this should remain concise and visually secondary, and should not be repeated if it creates clutter.
 - The generated rest-day illustration is more decorative than necessary. Keep the existing editorial reference restrained; illustration is optional and must earn its space.
 - The generated mockup includes specific example counts and sample journal content. These are placeholders, not real user data or approved copy.
 - The mockup uses a date and device/status-bar details that are illustrative only. Date must be the device's local date; do not hard-code the sample date.
 - Avoid relying on colour alone to distinguish recorded states. Combine labels, shape, and accessible state semantics.
 - Do not infer that a habit is “completed” from a journal entry.
-- Daily count denominator, habit schedule semantics, skipped/missed/rest states, time-zone boundaries, and monthly distinct-date counting remain to be specified before implementation.
+- **Superseded open-question list:** schedule kinds, missed/rest/paused status, timezone date-key behaviour and effective-date edits have since been recorded in D-187/D-188/D-191/D-193/D-194/D-195 and docs 01/26. Monthly distinct-date count is not the selected Growth Mark metric; D-199 selects a duration total and G3 date detail. Any still-relevant exact summary denominator must be specified in the current product/screen contract rather than reopened as an unspecified bundle.
 
-### Next design task
+### Historical next design task (pre-decision)
 
-Move to **Screen 2: Habit Creation / Edit**, keeping Today as the reference skeleton. The habit editor must make these choices understandable:
+The following checklist predates the owner decisions and is retained only as a set of potential states to verify against the current product contract. It is not a live backlog of undecided semantics. The current sequence and unresolved choices are tracked in docs 27/31/34. The habit editor must reflect these current rules:
 - Name and optional description.
 - Icon/appearance choice that avoids overwhelming icon catalogues.
 - Completion-only versus effort-level logging.
-- Tiny / Usual / Extra labels and optional targets.
-- Schedule, rest days, and how a habit appears on Today.
-- Optional reminders, with permission timing and quiet hours still to be researched.
+- Tiny / Usual / Extra choices and progress labels must follow the current mode/target rules. Duration/Quantity habits have a usual target; do not present those targets as optional.
+- The approved schedule modes, neutral non-scheduled/paused states, and how a habit appears on Today; do not add every-N-days or a habit-day Skip action.
+- Optional reminders, respecting O-9's 09:00 weekly reflection time, the per-habit default and the shared quiet-hours/cap/collision defaults in D-196. Permission timing and OS delivery need later platform validation.
 - Editing, pausing, archiving, and deleting a habit, including effects on history.
 
-Before finalising that screen, resolve the product semantics that affect both creation and Today; do not encode undecided schedule or record rules into the UI as if they were approved.
+Historical instruction superseded: the main schedule, target, record-mode, multiple-entry and effective-date semantics are now specified in docs 01/09/26 and decisions D-187/D-189–D-195. Use those sources when reviewing the editor; escalate only a consequential gap that is genuinely not covered by the current contracts.
 
 
 ## Screen 2 research: Habit Creation / Edit
@@ -663,7 +663,7 @@ Recommended conceptual separation:
 The list below originated as a pre-contract wireframe checklist. Use the current selected screen directions and the task/accessibility scorecard in [Planning UX and Traceability Closure](34-PLANNING-UX-AND-TRACEABILITY-CLOSURE.md); revisit these states if the later real-UI review identifies a material gap. It is not a separate owner-decision backlog.
 
 Potential states:
-1. Number-based habit setup with unit, optional target, and a clear example.
+1. Quantity/Duration habit setup with its required usual target, compatible unit, and a clear example; Completion-only and Effort-aware modes must remain distinct.
 2. Logging a number on Today, including replace/edit behavior and target-exceeded state.
 3. Editing a unit or target with an explanation of what changes for historical data.
 4. Editing a schedule with an effective-date summary.
