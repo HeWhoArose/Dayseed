@@ -1,6 +1,6 @@
 # Data and Privacy
 
-**Status:** Proposed privacy baseline; legal and platform details require review before release.
+**Status:** Privacy wording accepted by owner as a draft baseline on 2026-10-28; legal, SDK and platform behaviour must still be verified before release.
 
 ## 1. Privacy promise
 Dayseed's initial v1 is local-first and requires no account. Habit names, daily outcomes, and journal text remain in local app storage during ordinary use; the user may deliberately export journal content or create a local backup. Online backup and cross-device sync are premium future capabilities, not included in initial v1, and cannot be added without a separate explicit privacy/security and product approval. Do not describe data as “never leaves the device” until Android backup, crash reporting, analytics, advertising SDKs, and OS sharing behaviour have been inspected and configured.
@@ -40,7 +40,7 @@ The following is candidate wording for the v1 privacy and Backup & Restore scree
 - **Saving a backup or export:** “A Dayseed backup or journal export is a file that may contain private information. Choose a destination you trust. If the selected file provider connects to an online service, that provider may upload or sync the file.”
 - **Deleting in Dayseed:** “This removes the selected data from Dayseed. It does not remove copies already saved in backup or export files; those copies must be managed separately.”
 
-Do not claim “never leaves this device,” “encrypted at rest,” or “Android backup is disabled” unless the relevant behavior is verified. The platform-backup exclusion is an approved policy decision (D-186), but it remains a release-verification item. Owner review of the copy and verification of actual behavior remain required.
+Owner accepted the candidate copy above as a **draft baseline** on 2026-10-28 (O-10). This is not release approval. Do not claim “never leaves this device,” “encrypted at rest,” or “Android backup is disabled” unless the relevant behaviour is verified. The platform-backup exclusion is an approved policy decision (D-186), but it remains a release-verification item. If ads are subsequently approved, revise privacy and Data safety disclosures to reflect the actual ad SDK's collection/use/sharing; see [Monetisation and Ads Evaluation](33-MONETISATION-AND-ADS-EVALUATION.md).
 
 ## 9. Privacy acceptance checklist
 - [ ] Data inventory and data-flow diagram approved.
