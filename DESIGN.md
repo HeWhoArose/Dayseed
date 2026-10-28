@@ -6,6 +6,10 @@
 
 If another document conflicts with this file about a design token or component rule, update that document or record the conflict; do not create a second token source. Research rationale belongs in the linked research documents. When a candidate is approved, update this file and record the decision in `docs/09-DECISION-LOG.md`.
 
+## Owner planning response — 2026-10-28
+
+The owner accepted platform/system typography and following system light/dark appearance as the baseline. This does **not** approve the candidate colour tokens, exact contrast pairs, custom fonts, spacing/shape tokens, or final components. Keep those items open until measured against the owner-provided reference and accessibility checklist. See [UX/Design Approval Pack](docs/29-UX-DESIGN-APPROVAL-PACK.md) and [the current readiness review](docs/27-PLANNING-COMPLETENESS-REVIEW.md).
+
 ## 1. Design principles
 
 - Encouraging and adult; never childish, guilt-inducing, or over-celebratory.
