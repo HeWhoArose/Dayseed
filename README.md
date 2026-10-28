@@ -21,7 +21,7 @@ Important status distinctions:
 - Approved comeback triggers are 14 complete local calendar days without opening Dayseed and a broader 30-day trigger; the 3-day and 90-day examples are exploratory copy, not approved v1 triggers.
 - The initial v1 is intended to work offline without a Dayseed account or cloud service. Actual network/data-flow behavior, privacy configuration, and Android platform-backup exclusion still require technical verification.
 - Human-readable journal export is separate from the versioned Dayseed portable-backup format. Neither should be considered release-verified from documentation alone.
-- The owner selected W1/N1/A2 and a plain explanatory Growth Mark label + count as planning directions on 2026-10-28; exact visual tokens and task/accessibility review remain open.
+- The owner selected W1/N1/A2 as planning directions on 2026-10-28. O-6 was marked Modify without a specified Growth Mark change, so G1/G2/G3 remain alternatives and no Growth Mark display is selected; exact visual tokens and task/accessibility review remain open.
 - The requested initial-launch ads evaluation is documented in `docs/33-MONETISATION-AND-ADS-EVALUATION.md`; owner review and the include/defer decision remain pending. No ad SDK, placement, or monetisation implementation is approved; core functionality must remain usable offline.
 - The design system and UX remain subject to accessibility review; exact candidate colours, themes, and design tokens are not yet approved or accessibility-validated.
 
