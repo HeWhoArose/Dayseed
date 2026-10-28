@@ -3,7 +3,9 @@
 **Review date:** 2026-10-27  
 **Status:** Proposed planning addendum; **not approved for implementation**. No database schema, migration, application code, or tests were changed or executed by this document.
 
-**Authority:** The approved owner choices remain in the [Decision Log](09-DECISION-LOG.md). The current table proposal remains in [Technical Architecture](03-TECHNICAL-ARCHITECTURE.md). This document identifies refinements and acceptance requirements needed to make that proposal coherent. Any disagreement must be reconciled in both documents before the owner approves the complete schema.
+**Owner review outcome (2026-10-28):** O-1 accepts the reconciled written model as the planning baseline; O-2 accepts the documented portable-backup compatibility and restore-conflict rules. This does not approve schema implementation, live-database inspection, migration or tests. The schema remains proposed and technical validation requires separate authorisation.
+
+**Authority:** The approved owner choices remain in the [Decision Log](09-DECISION-LOG.md). The current table proposal remains in [Technical Architecture](03-TECHNICAL-ARCHITECTURE.md). This document identifies refinements and acceptance requirements needed to make that proposal coherent. Any disagreement must be reconciled in both documents before implementation is separately authorised.
 
 ## 1. What is already settled
 
