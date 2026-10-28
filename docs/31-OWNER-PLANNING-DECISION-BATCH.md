@@ -1,6 +1,6 @@
 # Dayseed Owner Planning Decision Batch
 
-**Review date:** 2026-10-27  
+**Review date:** 2026-10-28  
 **Status:** Consolidated review aid; it does not record new owner approvals and does not open the planning/implementation gate.  
 **Purpose:** Make the remaining product choices reviewable in one pass instead of asking about each tiny detail in separate messages.
 
@@ -91,6 +91,26 @@ Two rendered planning boards now exist: `docs/prototypes/dayseed-today-variants.
 5. The internal Markdown-link, heading-fragment and external-URL audit is complete across all 37 Markdown files, with no missing relative targets/fragments and all current external URLs resolving at review time. Finish the remaining semantic review for stale status claims, duplicate/conflicting statements and unsupported evidence, then rerun link checks only if further documentation edits affect links or headings.
 6. Check user-facing privacy/export/delete wording against the written rules, keeping unverified runtime claims out.
 7. Prepare one final planning walkthrough that includes all consequential choices and safe deferrals, then obtain the owner’s explicit Gate A–D approval in docs/19-AI-STUDIO-GITHUB-WORKFLOW.md. Routine details should be delegated under D-196 rather than turned into additional owner questions.
+
+## 4. Owner response sheet — choices not yet recorded
+
+This sheet makes the consequential choices answerable in one pass. The recommendations are defaults for review, not approvals. Reply in chat or annotate this document using **Accept**, **Modify**, or **Defer** for each item. “Defer” means keep the relevant feature/decision out of v1 or leave the design unapproved; it must not be silently treated as acceptance.
+
+| Ref | Owner choice | Recommended starting point | Response |
+|---|---|---|---|
+| O-1 | Proposed relational schema | Accept the reconciled written model as the planning baseline, subject to the explicit compatibility/conflict rules below. This does not approve a live schema change or migration. | **Open** — Accept / Modify / Defer |
+| O-2 | Portable backup compatibility and restore conflicts | Accept only the current format/schema, plus older versions with a documented **lossless** converter; reject unsupported versions before any live-data mutation. Keep journal entries as separate IDs if choosing “both”; choose one live habit/date note; never add conflicting numeric activity together; leave unsafe collisions unresolved and never offer “Keep both” where constraints cannot support it. | **Open** — Accept / Modify / Defer |
+| O-3 | Today layout | W1 Action-first is the recommended starting point: keep Complete and Record distinct for measured habits; leave writing optional. W2 and W3 remain alternatives. A selection is provisional until task/accessibility review. | **Open** — W1 / W2 / W3 / Modify / Defer |
+| O-4 | Primary navigation | N1 four destinations (Today / History / Insights / Settings), with an obvious Journal entry point on Today and Journal archive access from History, is the recommended starting point. N2 adds a dedicated Journal destination. | **Open** — N1 / N2 / Modify / Defer |
+| O-5 | Journal archive | A2 hybrid timeline + compact date jump/calendar is the recommended starting point; compare the same find-by-date, search, edit and delete tasks against A1 timeline-first and A3 calendar-first. | **Open** — A1 / A2 / A3 / Modify / Defer |
+| O-6 | Growth Mark | Prefer a plain, inspectable summary (“Collected moments” or a straightforward count/date summary); no plant-growth animation, arbitrary score, streak or XP. A displayed metric must have an explicit definition and open the underlying dates/records. | **Open** — Collected moments / Plain summary / Defer metric |
+| O-7 | Type, colour and theme | Use platform/system typography as the baseline and follow system light/dark appearance. Treat the warm-neutral restrained palette as a hypothesis only; do not approve exact colour pairs or custom fonts until contrast, text scaling and licensing are reviewed. | **Open** — Accept baseline / Modify / Defer |
+| O-8 | Comeback presentation | Keep the approved 14-/30-day trigger and precedence; prefer a compact, dismissible, non-blocking presentation with no forced explanation or reflection. Final copy/layout remains open for review. | **Open** — Accept recommendation / Modify / Defer presentation |
+| O-9 | Weekly reflection time | This is a true owner choice, not a delegated micro-detail. Recommended candidate: 9:00 a.m. device-local time on the configured week-start day, after quiet-hours and shared-cap checks. Do not infer this from the separate per-habit reminder default. | **Open** — 9:00 a.m. / Other time: ____ / Defer weekly reflection notification from v1 |
+| O-10 | Privacy/export/delete copy | Accept the candidate wording in doc 04 as a **draft baseline only**, with the explicit caveat that it is not release-approved until actual SDK, manifest/data-extraction, network, export and deletion behaviour is verified. Do not promise encryption or “never leaves the device” without evidence. | **Open** — Accept as draft / Modify / Defer copy review |
+| O-11 | Initial-v1 monetisation | Recommended: exclude ads, purchases and subscriptions from initial v1. D-010 records a candidate preference, not approval to ship it. Revisit only through a separate explicit policy/privacy and product decision. | **Open** — Exclude from v1 / Request separate evaluation for v1 |
+
+**Gate status:** this response sheet does **not** ask for planning-gate approval yet. First record these owner choices, reconcile affected documents, finish the remaining traceability/semantic review and accessibility checklist, then present a final readiness check. No response here authorises app implementation, live database inspection/migration, builds, tests or device validation.
 
 ## 4. Separate post-planning technical validation — not currently authorised
 
