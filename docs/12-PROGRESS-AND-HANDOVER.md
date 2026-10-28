@@ -357,7 +357,7 @@ The canonical readiness snapshot is `docs/27-PLANNING-COMPLETENESS-REVIEW.md`; t
 
 ## Schema reconciliation completed; owner review still pending — 2026-10-27
 
-- Created two editable SVG planning boards: `docs/prototypes/dayseed-today-variants.svg` (W1 Action-first, W2 Reflective, W3 Compact) and `docs/prototypes/dayseed-navigation-archive-variants.svg` (N1/N2 navigation and A1/A2/A3 archive). Both use synthetic data; neither is approved UI or usability evidence. Task/accessibility review and owner selection or explicit deferral remain.
+- Created two editable SVG planning boards: `docs/prototypes/dayseed-today-variants.svg` (W1 Action-first, W2 Reflective, W3 Compact) and `docs/prototypes/dayseed-navigation-archive-variants.svg` (N1/N2 navigation and A1/A2/A3 archive). The Today board was reconciled to the owner-selected daily summary, one-line monthly context and quiet route to Progress. Both use synthetic data; neither is approved UI or usability evidence. Task/accessibility review and owner selection or explicit deferral remain.
 
 - Reconciled docs 03 and 30 on the proposed relational model, including one authoritative effective-dated lifecycle (no separate archived timestamp projection), D-195 weekday-mask/schedule constraints, cross-table activity idempotency conflict handling, durable restore-session and conflict-row lifecycle, field-level portable-backup mapping, transaction boundaries, stable journal-draft save identity, and migration rollback rules.
 - Added `intended_journal_entry_id` to the proposed journal-draft model with a partial unique index for non-null values. A prepared save reuses that stable ID, atomically inserts the saved journal entry and resolves its source draft, and preserves the draft/ID on failure or uncertain outcome. Acceptance coverage is planned only.
@@ -367,7 +367,7 @@ The canonical readiness snapshot is `docs/27-PLANNING-COMPLETENESS-REVIEW.md`; t
 - Traceability continuation: reviewed AC-009's deterministic Mood Insights fixture in docs 07/28. It covers configured Monday/Sunday week starts, month/week boundaries, primary-only counts, entries without mood tags, sparse/empty states, matching-entry navigation and source-record correction/deletion. No further written AC-009 gap is currently identified; the fixture remains planned, not executed.
 
 
-## Rendered UX comparison boards added — 2026-10-27
+## Rendered UX comparison boards added — 2026-10-28
 
 - Created `docs/prototypes/dayseed-today-variants.svg`, with three comparable Today hierarchies using identical synthetic habit data.
 - Created `docs/prototypes/dayseed-navigation-archive-variants.svg`, with four- versus five-destination navigation and timeline-first, hybrid and calendar-first archive layouts.
