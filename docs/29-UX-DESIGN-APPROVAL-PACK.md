@@ -1,7 +1,7 @@
 # UX and Design Approval Pack
 
 **Review date:** 2026-10-28  
-**Status:** Recommendations prepared for owner review; **no visual direction, navigation pattern, token set, or prototype has been approved by this document**. The planning gate remains closed.
+**Status:** Owner selections recorded on 2026-10-28: W1 Action-first Today, N1 four-destination navigation, A2 hybrid journal archive, platform/system typography and system light/dark baseline, plain explanatory Growth Mark label + count, and the recommended compact non-blocking comeback presentation. These remain planning directions for task/accessibility review; exact design tokens and broad visual identity are not approved. The planning gate remains closed.
 
 **Related documents:** [UX and Design](02-UX-AND-DESIGN.md), [Today Dashboard Concepts](21-TODAY-DASHBOARD-CONCEPTS.md), [Design System](../DESIGN.md), [Growth Mark and Comeback Research](15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md), [Journal Archive Research](16-JOURNAL-ARCHIVE-RESEARCH.md), [Typography and Accessibility Research](17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md), [Design Review Checklist](DESIGN-REVIEW-CHECKLIST.md), [Requirement Traceability](28-REQUIREMENT-TRACEABILITY.md).
 
@@ -13,7 +13,7 @@
 
 The product rules are far more settled than the UI choices. Approved baseline requirements include Today’s separate Complete and Record actions; the local journal and its save/edit/delete rules; the History and Insight jobs; 14-day and 30-day comeback triggers; nonjudgmental copy; offline title/body journal search; local backup/restore settings; and the accessibility expectations. Those policies must shape the design rather than being treated as undecided. Three rendered comparison boards are now available in `docs/prototypes/`; they are ready for owner review, but do not constitute accessibility validation or user-test evidence.
 
-Still open are the visual direction (D-008), Growth Mark representation (D-016), comeback presentation/copy (D-017), archive layout (D-018), type and colour tokens (D-019), and exact Journal/History navigation. The current Dashboard Concepts document includes a user-supplied screenshot discussion and a “little of Concept C” direction; use that as the design exploration anchor, not as approval of a finished screen.
+Still open are the broad visual direction (D-008), the qualifying-date/count definition and accessibility review for Growth Mark (D-016), final comeback copy/layout/localisation (D-017), accessibility/findability review for the selected A2 archive (D-018), and exact colour/type token values (D-019). The owner has selected W1 Today, N1 navigation and A2 archive as the starting directions; these are not usability-test results or final approved UI. The current Dashboard Concepts document includes a user-supplied screenshot discussion and a “little of Concept C” direction; use that as the design exploration anchor, not as approval of a finished screen.
 
 ## 2. Recommended starting direction
 
@@ -31,7 +31,7 @@ These are the recommended concepts illustrated by the comparison boards, not dec
 
 ### Information architecture and navigation
 
-**Recommended starting option in the rendered comparison:** four bottom-level destinations—**Today**, **History**, **Insights**, and **Settings**—with a very visible, lightweight **Write reflection** action on Today. History should let people switch clearly between habit history and the journal archive, and the Journal archive view should have an obvious “New entry” action. Compare this with the dedicated-Journal alternative before selection.
+**Owner-selected starting option (N1):** four bottom-level destinations—**Today**, **History**, **Insights**, and **Settings**—with a very visible, lightweight **Write reflection** action on Today. History should let people switch clearly between habit history and the journal archive, and the Journal archive view should have an obvious “New entry” action. Review journal findability and accessibility before final UI approval; N2 is no longer the default starting direction but could be revisited if task review reveals a material issue.
 
 Why test this first: it keeps the primary daily action, retrieval, summaries and data controls separate without overcrowding the bottom bar. The trade-off is that a journal-first user may not discover History’s journal area quickly enough. Compare it with a dedicated Journal tab variant using the same tasks; do not decide by aesthetics alone.
 
@@ -43,13 +43,13 @@ If a summary is included, use a precise denominator and period. For example, sho
 
 ### Growth Mark
 
-**Recommended comparison:** test a small, plain-language “Collected moments” summary against a plain editorial number/text summary. Define the candidate as distinct local calendar dates in the selected period with at least one qualifying positive habit record (a positive numeric/duration amount or valid completion/effort-aware outcome). An explicit numeric zero remains a real record but is not counted as a positive activity moment. Show the period and let the user inspect the underlying dates/records.
+**Owner-selected display (O-6):** use a plain explanatory label + count, for example, “You’ve recorded habits on 8 days this month.” The period and counting rule must be explicit, and the user should be able to inspect the underlying dates/records. Use distinct local calendar dates with at least one qualifying positive habit record as the proposed counting rule (positive numeric/duration amount or a valid completion/effort-aware outcome); an explicit numeric zero remains a real record but does not count as positive activity. Review copy comprehension, the qualifying-record definition, and accessibility before treating the metric as final.
 
-Do not start with a growing plant, arbitrary level, composite score, streak, or time-based decay. Only add a symbolic visual if every change maps to a real, auditable event that users can explain. D-016 remains open until tested/reviewed.
+Do not add a growing plant as a metric, arbitrary level, composite score, streak, or time-based decay. The plain count display is selected; exact metric validation/accessibility remains outstanding.
 
 ### Journal archive and search
 
-**Recommended first prototype:** recent chronological entries grouped by date, a compact calendar/date-jump control, a readable entry detail/editor, and the approved local title/body search. Keep the search scope to saved title/body content; display recorded mood labels where present and exclude unsaved comeback drafts. Advanced date-range/habit filters are not implied.
+**Owner-selected A2 hybrid direction:** recent chronological entries grouped by date, a compact calendar/date-jump control, a readable entry detail/editor, and the approved local title/body search. Keep the search scope to saved title/body content; display recorded mood labels where present and exclude unsaved comeback drafts. Advanced date-range/habit filters are not implied.
 
 A blank date is neutral. Calendar marks mean “an entry exists,” never “this day was good/bad” or “a habit was missed.” Compare this hybrid with timeline-only and calendar-first navigation using identical retrieval/edit/delete tasks.
 
@@ -57,8 +57,19 @@ A blank date is neutral. Calendar marks mean “an entry exists,” never “thi
 
 The active v1 triggers are already approved: the two-week experience after 14 complete local calendar days without opening Dayseed; the broader 30-day experience when either app inactivity or no active habits qualifies; the 30-day experience takes precedence; each is shown at most once for that qualifying episode. Do not treat the older 3-day/90-day copy examples as triggers.
 
-**Recommended presentation to test:** a compact, dismissible, non-blocking welcome that never demands an explanation, never erases progress, and offers a small next step plus a valid continue/not-now path. The one-month choice flow retains its approved create/resume/continue options; optional reflection remains optional and draft-safe. Final copy/layout remains open, not the trigger rules.
+**Owner-accepted presentation direction:** a compact, dismissible, non-blocking welcome that never demands an explanation, never erases progress, and offers a small next step plus a valid continue/not-now path. The one-month choice flow retains its approved create/resume/continue options; optional reflection remains optional and draft-safe. Final copy/layout remains open, not the trigger rules.
 
+## Owner response reconciliation — 2026-10-28
+
+- **W1 Today:** selected; preserve separate Complete and Record actions for measured habits and keep journaling optional.
+- **N1 navigation:** selected; check that Journal is findable from Today and History without ambiguous labels or icon-only routes.
+- **A2 archive:** selected; validate date jump, search, edit, delete, empty dates and multiple entries on a date.
+- **Growth Mark:** plain explanatory label + count selected; count rule and date drill-down still need validation.
+- **Typography/theme baseline:** platform typography and system light/dark appearance accepted; exact colours/fonts/tokens are still open in DESIGN.md.
+- **Comeback:** compact, dismissible, non-blocking direction accepted; final copy/localisation/accessibility still needs review.
+- **Ads:** O-11 requested an initial-launch ads evaluation because ads are needed for full launch; see [the monetisation evaluation](33-MONETISATION-AND-ADS-EVALUATION.md). No SDK, placement or release integration is approved.
+
+These responses do not approve a final UI system, usability/accessibility outcomes, implementation, or the planning gate.
 ## 3. Primary screens and states to prototype
 
 | Screen / flow | Must show or do | High-value states to include |
