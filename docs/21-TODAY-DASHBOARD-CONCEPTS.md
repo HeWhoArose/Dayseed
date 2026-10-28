@@ -453,7 +453,7 @@ Use at least one narrow Android viewport and one enlarged-text condition. Check:
 - The screen still makes sense without colour, plant illustration, or progress fill.
 - All-recorded and rest-day states remain calm and non-punitive.
 
-### Exit gate for Screen 1
+### Historical exit gate for Screen 1 (2026-10-17; superseded by the current readiness review)
 
 Do not move to Screen 2 as if Today were final until:
 1. The state matrix is represented in wireframes or annotated concepts.
@@ -503,7 +503,7 @@ The following checklist predates the owner decisions and is retained only as a s
 - Completion-only versus effort-level logging.
 - Tiny / Usual / Extra choices and progress labels must follow the current mode/target rules. Duration/Quantity habits have a usual target; do not present those targets as optional.
 - The approved schedule modes, neutral non-scheduled/paused states, and how a habit appears on Today; do not add every-N-days or a habit-day Skip action.
-- Optional reminders, respecting O-9's 09:00 weekly reflection time, the per-habit default and the shared quiet-hours/cap/collision defaults in D-196. Permission timing and OS delivery need later platform validation.
+- Optional per-habit reminders use the per-habit default; the separate weekly reflection uses O-9's 09:00 device-local time on the configured week-start day. Both follow the shared quiet-hours/cap/collision defaults in D-196. Permission timing and OS delivery need later platform validation.
 - Editing, pausing, archiving, and deleting a habit, including effects on history.
 
 Historical instruction superseded: the main schedule, target, record-mode, multiple-entry and effective-date semantics are now specified in docs 01/09/26 and decisions D-187/D-189–D-195. Use those sources when reviewing the editor; escalate only a consequential gap that is genuinely not covered by the current contracts.
