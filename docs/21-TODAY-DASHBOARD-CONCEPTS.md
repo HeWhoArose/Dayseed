@@ -576,7 +576,7 @@ The owner prefers the tracking range to extend from effort levels through number
 - **Completion-only:** a simple recorded/done action.
 - **Number-based:** record a quantity with a user-defined unit/target where applicable.
 
-This is a direction to explore, not yet a complete data contract. For number-based habits, the next research must define whether users can log partial quantities, whether a target is optional or required, whether exceeding a target is allowed, unit changes, daily reset/aggregation, and how a record is represented when there is no quantity yet. Do not imply that effort-level records, completion-only records, and numeric records are interchangeable without explicit rules.
+This paragraph records an earlier exploration, not an open current requirement. The current contract is in [Product Specification](01-PRODUCT-SPECIFICATION.md), [Decision Log](09-DECISION-LOG.md), and [Screen and Data Contracts](26-SCREEN-AND-DATA-CONTRACTS.md): Duration and Quantity habits have a usual target; Quantity actuals are non-negative whole numbers; multiple valid numeric/duration sessions per habit/local date are allowed and summed; explicit zero differs from no record; and Completion-only/Effort-aware modes remain distinct. Do not use this notebook’s historic questions as current owner blockers.
 
 ### Scheduling: historical progressive-disclosure proposal (superseded)
 
@@ -610,25 +610,24 @@ Do not offer an every-N-days interval in v1.
 The old proposed wireframe checklist below is retained as historical context, not as a current requirement. Any new comparison should use the current D-191/D-195 schedule vocabulary; do not add the superseded every-N-days option. Effective-date behaviour must follow D-194 in the [Screen and Data Contracts](26-SCREEN-AND-DATA-CONTRACTS.md). The schedule vocabulary has already been recorded; do not re-open it as an unmade decision. No app implementation is authorised or started.
 
 
-## Screen 2 follow-up: number-based records and schedule-change semantics
+## Screen 2 follow-up: historical number-based and schedule exploration
 
-**Date:** 2026-10-18  
-**Status:** Proposed product contract for owner review. These rules are design recommendations, not approved implementation requirements.
+**Date of original note:** 2026-10-18. This is retained as design history, not as the current owner decision batch. The current authority is [Product Specification](01-PRODUCT-SPECIFICATION.md), [Decision Log](09-DECISION-LOG.md), and [Screen and Data Contracts](26-SCREEN-AND-DATA-CONTRACTS.md). In particular, the current v1 contract requires a usual target for Duration/Quantity, allows multiple entries per habit/date, restricts numeric actuals to non-negative whole numbers, uses only D-191/D-195 schedule kinds, and follows D-194 for same-day configuration edits. Where this dated exploration conflicts with those sources, the current sources win.
 
-### Number-based tracking: recommended first-pass contract
+### Number-based tracking: historical first-pass notes
 
-A number-based habit stores a quantity with a user-defined unit (for example, pages, minutes, glasses, repetitions). It may optionally have a target.
+A Quantity habit stores a count in a user-defined unit (for example, pages, questions, or repetitions) and has a usual target under the current v1 contract. Duration is tracked as elapsed time in the compatible internal unit defined by the screen/data contract.
 
 Proposed behavior:
 - **Unit required:** the unit tells users what the number means. Offer a short editable text unit, with suggestions only as shortcuts.
-- **Target optional:** a target gives context but should not be required to record an amount. Distinguish “recorded 4 pages” from “reached target of 10 pages.”
+- **Usual target:** the user defines a usual target for Duration/Quantity. Distinguish an actual saved amount from the target; progress labels derive from the actual-to-target ratio and never replace or cap the recorded amount.
 - **Whole-number actuals:** actual quantity/duration values are non-negative whole numbers under the current v1 contract. Zero may be deliberately recorded when meaningful; decimal actuals are not a v1 input option. Blank/invalid input must not create a record.
 - **Target exceeded:** accept values above target. Never cap or discard the actual amount just because the target was exceeded.
 - **Multiple sessions per date:** allow multiple valid quantity/duration entries for one habit and local calendar date. Sum them for derived totals while retaining each entry as separately inspectable and editable. Correcting or deleting one entry targets only that entry; do not replace the day's entire total or silently add a retry as a second entry.
 - **No value is not zero:** an unrecorded date remains unrecorded; it must not become zero automatically.
-- **Target changes:** new target applies prospectively by default. Historical recorded quantities remain unchanged; historical target snapshots versus current-target comparison remains an open data/reporting choice.
-- **Unit changes:** warn that changing units may make old values incomparable. Prefer asking whether the change is only a label correction or a true unit change; do not convert historical data without explicit conversion rules.
-- **Today summary:** number-based values should be presented with their unit and optionally target context (e.g. “4 of 10 pages” only if the ratio is meaningful). They should not be reduced to generic completion without explaining the distinction.
+- **Target changes:** the effective-dated target that applied at the time governs historical completion/progress. Current-target comparisons, when shown, must be labelled separately and never rewrite historical completion (D-194/H2).
+- **Unit changes:** never silently reinterpret historical values when a Quantity unit changes. Any distinction between a label correction and a true unit change must follow the approved screen/data contract; do not invent conversion factors.
+- **Today summary:** show the actual with its unit and useful target context; do not reduce a measured value to generic completion or treat progress as moral worth.
 - **Effort levels remain categorical:** Tiny / Usual / Extra are not secretly converted to numbers or compared as quantities.
 
 ### Scheduling model: separate the pattern from recorded activity
@@ -651,23 +650,26 @@ Recommended conceptual separation:
 6. Archiving removes the habit from active Today and reminders but preserves history and derived insights. Restore returns it to active status without deleting records.
 7. Deleting is distinct from pausing/archiving and must disclose exactly which records and associated data will be removed. Do not finalise delete behavior until export/backup/privacy policy is decided.
 
-### Important unresolved questions
-- Should multiple numeric entries on the same day be supported in v1, or should there be one editable daily total only? Recommendation: one editable daily total initially.
-- Should historical insights compare values against the target that existed at the time or the current target? Recommendation: preserve historical target context if the data model can do so simply; otherwise be explicit that charts use the current target.
-- When the user edits a schedule, should the change be effective immediately or from tomorrow? Recommendation: from the next local date by default, with an explicit “apply today” option only if a strong use case emerges.
-- How do weekly-target schedules define eligibility for each day? A weekly target is an aim over a period, not a predetermined set of weekdays; the UI and metrics must not falsely label individual unchosen days as missed.
-- How are daylight-saving/time-zone changes handled for local dates? The date of a record should remain the date on which the user intentionally recorded it, not shift when travelling.
-- Should custom units be normalised or left as user-defined strings? Recommendation: user-defined string plus optional suggestions; don't silently convert units.
+### Former open questions — current resolution
+- **Multiple entries:** resolved in H2/D-189: multiple valid numeric/duration entries for one habit/date are permitted and summed; each entry remains separately inspectable/editable. No single-daily-total-only rule.
+- **Target/history semantics:** resolved in H2/D-194: Duration/Quantity have a usual target; the target effective on the activity date governs historical completion; current-target comparison is distinct.
+- **Schedule effective date:** resolved in D-194: Apply-today replacement only before qualifying activity exists today; otherwise preserve today's configuration and offer Apply tomorrow. Cancel makes no change.
+- **Weekly target meaning:** resolved in D-191/D-195: `FLEXIBLE_WEEKLY_TARGET` is a period goal rather than predetermined required weekdays; preferred days are optional guidance.
+- **Local-date behaviour:** D-187 preserves saved local-date keys across timezone changes; actual platform/device behaviour still needs later authorised technical validation.
+- **Custom Quantity units:** retain the user-defined unit; do not silently convert incompatible or changed units. Exact copy/interaction details are delegated design details unless they change scope or data meaning.
 
-### Design work to do next
-Create focused wireframe states for:
+### Potential states for detailed UI review
+
+The list below originated as a pre-contract wireframe checklist. Use the current selected screen directions and the task/accessibility scorecard in [Planning UX and Traceability Closure](34-PLANNING-UX-AND-TRACEABILITY-CLOSURE.md); revisit these states if the later real-UI review identifies a material gap. It is not a separate owner-decision backlog.
+
+Potential states:
 1. Number-based habit setup with unit, optional target, and a clear example.
 2. Logging a number on Today, including replace/edit behavior and target-exceeded state.
 3. Editing a unit or target with an explanation of what changes for historical data.
 4. Editing a schedule with an effective-date summary.
 5. Pausing, resuming, archiving, restoring, and deletion confirmation as distinct actions.
 
-Before locking these flows, review the proposed contract with the owner and reflect any confirmed choices in the decision log and product specification. No app implementation is authorised or started.
+Use docs/27 and docs/31 for current open owner choices and gate status. Record any future consequential change in the decision log before changing the contracts. No app implementation is authorised or started.
 
 
 ## Owner-approved interaction direction — quick Complete and detailed Record (2026-10-18)
