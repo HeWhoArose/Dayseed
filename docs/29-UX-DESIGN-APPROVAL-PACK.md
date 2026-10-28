@@ -123,6 +123,8 @@ The owner can approve a recommendation, request a variation, or explicitly defer
 
 **Rendered navigation/archive planning artefact:** [N1/N2 navigation and A1/A2/A3 archive comparison](prototypes/dayseed-navigation-archive-variants.svg). This board compares four versus five bottom destinations and timeline-first, hybrid, and calendar-first archive layouts using matching synthetic entries. It is also planning-only; owner selection and task/accessibility review remain outstanding.
 
+**Rendered Growth Mark comparison:** [G1 plain monthly context, G2 label + count, and G3 count + inspectable date marks](prototypes/dayseed-growth-mark-variants.svg). These options use the same synthetic October count and Progress destination while varying the presentation. This separates the Growth Mark wording/representation question from the Today-hierarchy comparison; no option is approved, and accessibility review remains outstanding.
+
 
 The linked SVG boards are rendered comparison prototypes with consistent synthetic data across variants. They are still planning artefacts, not usability findings, approved layout decisions, or application UI. The remaining step is a task-based review with large text, empty/error/destructive states and accessibility checks, followed by owner selection or explicit deferral.
 
