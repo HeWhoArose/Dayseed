@@ -205,6 +205,29 @@ Also verify: actual zero is retained as an explicit saved record but does not re
 
 These are planned acceptance scenarios only. No tests were run and no UI or aggregation code was implemented.
 
+### Selected-screen task and accessibility coverage — AC-027 (planned, not executed)
+
+- Use one consistent synthetic dataset across the selected W1 Today, N1 navigation, A2 archive, G2 Collected moments and G3 date-detail flows. Verify the observable tasks and expected outcomes documented in docs/34-PLANNING-UX-AND-TRACEABILITY-CLOSURE.md.
+- Test measured-habit Complete and Record/correction separately; distinguish daily schedules from flexible-weekly goals; save a journal entry independently of habit completion; retrieve by date and phrase; edit; cancel deletion; and confirm deletion.
+- Confirm blank dates are neutral, explicit zero is a saved value, no records differ from empty search results, and loading/search/calculation failure is never reported as an empty success.
+- Follow G2 into G3 and verify period labels, configured week boundaries, source-session inspection, and recomputation after record correction/deletion.
+- Exercise comeback Continue/Not now without reflection, then locate privacy/export/backup/restore/delete settings and verify scopes before confirmation.
+- Check compact and typical widths, enlarged text (including up to 200% where supported), keyboard-open layout, logical focus order, control names/roles, TalkBack output, non-colour cues, touch targets, text wrapping, reduced motion, and error/destructive states. These manual and automated plans do not become results until recorded evidence exists.
+
+### Monetisation and ads — AC-026 (conditional, planned not executed)
+
+- Do not run an SDK integration test before the owner explicitly includes ads and the relevant authorisation permits the work. If ads remain deferred, record AC-026 as not applicable to the initial v1 release rather than adding a placeholder SDK.
+- If approved later, document target audience and launch regions; verify the selected current SDK/format and eligibility rules; consent and preference handling; truthful Play Store “Contains ads”, privacy policy and Data safety disclosures; and actual data flows.
+- Verify that no habit name/activity record, journal text/title/mood, or comeback draft is sent for ad targeting; core habit, Journal, History, Insights, comeback, export and restore flows remain usable offline and when an ad fails; no loading loop or misleading placeholder appears; and the placement does not mimic controls, gate core features, obstruct large text, or cause accidental taps.
+- These are pre-release requirements, not executed checks, and a product-scope decision to include a banner does not approve a specific SDK or placement.
+
+### Habit and session notes — AC-028 / D-192 (planned, not executed)
+
+- A per-entry note follows only its own duration/quantity session; the single optional habit/date note remains separate from per-entry notes and the general Journal.
+- Creating, editing, clearing, or deleting a note alone does not alter duration/quantity totals, progress bands, completion/outcome semantics, or derived missed status.
+- Verify multiple same-day sessions can retain independent per-entry notes while sharing the optional habit/date note; archive/delete/restore and backup round trips must not duplicate or misattach either kind of note.
+
+
 ## 4. Test data and privacy
 Use synthetic test data. Do not use real journal entries in fixtures, screenshots, logs, or issue reports. Scrub sensitive values from crash reports and automated test output. Initial v1 excludes accounts, online backup, and cross-device sync; premium future sync must not be added under this test plan without a separate approved privacy/security and product gate.
 
