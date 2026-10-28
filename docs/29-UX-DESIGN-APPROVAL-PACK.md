@@ -107,7 +107,7 @@ The owner can approve a recommendation, request a variation, or explicitly defer
 
 | Decision | Current status | Recommendation to review | What makes it ready to approve |
 |---|---|---|---|
-| D-008 visual direction | Open; two SVG comparison boards prepared | Prototype Field Journal warmth + Living Editorial hierarchy + Quiet Instrument controls | Review both rendered boards at small/typical widths and enlarged text; choose or defer the direction. Exact colour pairs, contrast, and accessibility still need review before final design approval |
+| D-008 visual direction | Open; three SVG comparison boards prepared | Prototype Field Journal warmth + Living Editorial hierarchy + Quiet Instrument controls | Review the Today, navigation/archive, and Growth Mark boards at small/typical widths and enlarged text; choose or defer the direction. Exact colour pairs, contrast, and accessibility still need review before final design approval |
 | Navigation / Journal placement | Open in UX | Test Today / History / Insights / Settings with Journal accessible from Today and History against a dedicated Journal tab | Task-based find/write/retrieve/edit results; no hidden core flow |
 | D-016 Growth Mark | Open | Test “Collected moments” versus plain editorial summary; omit illustrative growth until semantic value is proven | Metric is defined, inspectable and not misleading; representative users understand it |
 | D-017 comeback presentation | Trigger policy approved; presentation open | Compact, non-blocking, dismissible welcome using approved 14-/30-day rules | Copy/layout review; proves no mandatory reflection or duplicate episode |
