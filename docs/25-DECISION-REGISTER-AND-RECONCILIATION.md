@@ -138,12 +138,12 @@ When a decision changes, update the decision log and every affected document in 
 - [x] Record the bounded Undo and one-entry deletion interaction as delegated D-196 defaults; the owner may override during the consolidated review. No implementation/test has run.
 - [x] Prepare the UX/design recommendation pack in `29-UX-DESIGN-APPROVAL-PACK.md`.
 - [x] Draft comparable text wireframes and render three SVG boards: `docs/prototypes/dayseed-today-variants.svg` (W1/W2/W3) and `docs/prototypes/dayseed-navigation-archive-variants.svg` (N1/N2 and A1/A2/A3), and `docs/prototypes/dayseed-growth-mark-variants.svg` (G1/G2/G3), using synthetic data.
-- [ ] Review both boards using the task/accessibility scorecard, then record owner choices or explicit deferrals for Growth Mark, archive, visual direction, typography/colour/theme, and accessibility. The boards are not approved UI or usability evidence.
+- [ ] Review all three boards using the task/accessibility scorecard, then record owner choices or explicit deferrals for Today hierarchy, navigation, Growth Mark, archive, typography/colour/theme, comeback presentation, and accessibility. The boards are not approved UI or usability evidence.
 - [x] Create the initial requirement-to-screen/data-rule/test matrix in [28-REQUIREMENT-TRACEABILITY.md](28-REQUIREMENT-TRACEABILITY.md).
 - [ ] Close the remaining traceability gaps listed in doc 28; its acceptance cases are plans, not test results.
-- [x] Re-ran the relative Markdown file-target check across all 37 current Markdown documents; no missing target files found.
-- [x] Checked same-file Markdown heading fragments across all 37 documents; none were missing under the reviewed slug rules.
-- [x] Cross-file heading-fragment and external-URL checks completed across the 37 Markdown documents reviewed; no missing targets/fragments were found and the checked external URLs resolved. Rerun if later edits affect links/headings. Semantic stale-claim/contradiction review remains open.
+- [x] Re-ran the relative Markdown file-target check after the latest planning edits across all 37 Markdown documents (196 relative links parsed); no missing targets found. All three linked SVG targets exist.
+- [x] Re-ran same-file Markdown heading-fragment checks across all 37 documents; no missing fragments, and no cross-file heading-fragment links were present.
+- [x] External-URL checks from the previous pass remain applicable because no external URLs were added or changed. The current internal file/heading checks are recorded above. Semantic stale-claim/contradiction review is still open pending owner-choice reconciliation.
 - [ ] Reconcile stale statements, heading anchors, and evidence claims across current documents and handover; keep dated research snapshots labelled historical.
 - [x] Consolidate settled decisions and owner accept/modify/defer items in `31-OWNER-PLANNING-DECISION-BATCH.md`.
 - [ ] Walk through the batch, update the decision log and every affected document, then record explicit owner approval of the planning gate in the workflow approval record only if the owner chooses to approve it.
