@@ -218,16 +218,6 @@ Define measurable budgets only after selecting the stack and measuring a baselin
 - Allow both note levels to coexist on the same date and display them distinctly; neither is the general journal, and journal content must not affect habit outcomes.
 - Verify note ownership and date association across archive/restore, backup/restore, and any supported habit deletion flow before implementation is authorised.
 
-## Growth Mark acceptance coverage — D-199 (planned only; not executed)
-
-- **G2 summary calculation:** for the default current calendar month, sum only saved duration sessions from duration-tracked habits, converting compatible values to a common time unit before aggregation. Do not add quantity values, completion-only/effort-aware outcomes, journal entries, or unsaved drafts. Do not depend on the existing one-row-per-habit/date model; distinct sessions must each contribute exactly once.
-- **Display formatting and period clarity:** verify representative totals at each intended magnitude (minutes, hours, days, weeks, and a carefully labelled approximate month equivalent only for very large cumulative durations). Always show the reporting period separately from the duration unit. A calendar month is a reporting window, not a fixed number of elapsed days; if displaying an approximate month-equivalent duration, define and label that approximation (for example, `≈ 1 month of time` based on an explicitly documented 30-day equivalent). Exact display thresholds remain open until UX review.
-- **Record correctness:** zero-duration entries are saved records but add no time; no records show a truthful neutral empty state rather than `0 min` if zero is not what the data means; failure/loading states are distinct. Editing/deleting/backdating a session updates only affected day/month aggregates; multiple valid sessions remain separate and are not double-counted on retry.
-- **G3 detail navigation:** opening G2 reaches Calendar/Progress or a dedicated detail page; changing day/week/month period updates the displayed dates and sums; each date can show its actual duration sessions and correction affordance. Blank dates remain neutral, and marks never imply streak, goal success or missed status on their own.
-- **Accessibility and comprehension:** exercise narrow/large-text layouts, TalkBack labels/order, focus/keyboard state, contrast and non-colour cues. Confirm the label, period and unit are understandable without a tooltip, and that the summary is not mistaken for all types of habit progress.
-
-These are acceptance plans only. No test/build/device validation was run, and they do not authorise implementation or open the planning gate.
-
 ## 6. Release gate
 A release candidate must have:
 - all required automated tests passing;
