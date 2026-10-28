@@ -94,14 +94,14 @@ Each phase must produce evidence and pass its exit gate before the next phase be
 **Risks:** unreliable OS scheduling and inaccessible controls.  
 **Exit gate:** accessibility and reminder checklist passes.
 
-## Phase 10 — Monetisation (not part of initial v1 unless separately approved)
+## Phase 10 — Monetisation evaluation and optional implementation (initial-v1 candidate; not yet approved)
 
-**Prerequisites:** initial v1 core flows are accepted; privacy and store-policy review is complete; the product owner explicitly opens a separate monetisation decision.  
-**Deliverables:** evidence-based proposal for whether any future release should use no monetisation, ads, rewarded extras, a one-time supporter purchase, or another model; provider/SDK and policy review if applicable.  
+**Prerequisites:** the owner has requested an initial-v1 ads evaluation (O-11); review `docs/33-MONETISATION-AND-ADS-EVALUATION.md`, complete privacy and store-policy analysis, and obtain the owner's explicit choice of a specific model before any implementation. The planning gate and separate implementation/technical-validation controls still apply.  
+**Deliverables:** an evidence-based recommendation and owner decision for the current launch requirement. The first candidate is a modest, clearly labelled secondary-screen banner; rewarded extras, purchases and subscriptions are separate scope and are not included by default. Assess provider/SDK compatibility, privacy/data flow, audience/consent requirements, accessibility, offline failure and store declarations.  
 **Acceptance:** this phase does not add monetisation to initial v1 by default. Core habit, journal, history, insights, export, and backup/restore remain ungated. Journal text and personal habit records are never used for ad targeting or sent to ad systems.  
 **Tests:** privacy/data-flow review, offline behavior, consent and store-policy checks, accessibility, and confirmation that no core feature is paywalled.  
 **Risks:** trust damage, policy violations, SDK bloat, unexpected data collection.  
-**Exit gate:** explicit owner approval of a specific monetisation model and its data flows; otherwise initial v1 remains without ads, purchases, or subscriptions.
+**Exit gate:** explicit owner approval of a specific monetisation model and its data flows, plus the normal required project gates. Until that happens, no SDK, placement or purchase implementation is authorised. If a no-ads launch is proposed instead, obtain an explicit owner revision because the current launch requirement calls for at least ads.
 
 ## Phase 11 — Beta and release readiness
 
