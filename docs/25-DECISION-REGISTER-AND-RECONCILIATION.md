@@ -1,7 +1,7 @@
 # Decision Register and Planning Reconciliation
 
 **Status:** Working reconciliation register — planning only; implementation remains not authorised.
-**Last reconciled:** 2026-10-27
+**Last reconciled:** 2026-10-28
 **Canonical source:** GitHub `main`; the decision log records owner choices and this register makes their current operational status easy to review.
 
 ## Purpose and decision rules
