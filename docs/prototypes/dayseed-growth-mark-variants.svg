@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="920" viewBox="0 0 1600 920" role="img" aria-labelledby="title desc">
   <title id="title">Dayseed Growth Mark comparison</title>
-  <desc id="desc">Three planning-only variants represent the same synthetic monthly activity: six dates with a positive habit record in October 2026. Period, count and Progress destination stay identical while the wording or visual representation changes.</desc>
+  <desc id="desc">Planning-only comparison: G1 is a simple active-date summary; G2 is the owner-selected Collected moments card showing a readable duration total for duration-tracked habits; G3 is calendar/date-level detail where recorded duration sessions can be inspected. Synthetic example only.</desc>
   <defs>
     <style>
       .paper{fill:#f4f1e8}.card{fill:#fbf9f3;stroke:#d9d5c9;stroke-width:1.5}.ink{fill:#2c2e27}.muted{fill:#6d7167}.sage{fill:#e1e8da}.sageInk{fill:#506448}.line{stroke:#d9d5c9;stroke-width:1.5}.title{font-family:Georgia,'Times New Roman',serif;font-size:42px;fill:#2c2e27}.heading{font-family:Arial,sans-serif;font-size:22px;font-weight:700;fill:#2c2e27}.body{font-family:Arial,sans-serif;font-size:24px;fill:#2c2e27}.small{font-family:Arial,sans-serif;font-size:17px;fill:#6d7167}.micro{font-family:Arial,sans-serif;font-size:13px;fill:#73766d;letter-spacing:1.3px}.link{font-family:Arial,sans-serif;font-size:16px;font-weight:700;fill:#506448}
@@ -8,7 +8,7 @@
   </defs>
   <rect width="1600" height="920" class="paper"/>
   <text x="54" y="62" class="title">Dayseed · Growth Mark comparison</text>
-  <text x="56" y="96" class="small">Same sample period, count and destination; only the representation changes.</text>
+  <text x="56" y="96" class="small">Owner-selected direction: G2 duration summary + G3 calendar/detail; G1 remains an alternative.</text>
   <rect x="1300" y="35" width="244" height="52" rx="10" fill="#e2e8dc" stroke="#cbd5c2"/>
   <text x="1422" y="66" text-anchor="middle" class="link">PLANNING ONLY</text>
 
@@ -30,28 +30,28 @@
   <text x="96" y="688" class="small">least one positive qualifying habit record.</text>
 
   <rect x="557" y="132" width="486" height="640" rx="18" class="card"/>
-  <text x="585" y="174" class="micro">G2 · LABEL + COUNT</text>
-  <text x="585" y="208" class="small">Adds the proposed name, not a symbol.</text>
+  <text x="585" y="174" class="micro">G2 · COLLECTED TIME SUMMARY</text>
+  <text x="585" y="208" class="small">Friendly label + total recorded duration.</text>
   <line x1="585" y1="230" x2="1015" y2="230" class="line"/>
   <text x="585" y="285" class="heading">Collected moments</text>
-  <text x="585" y="325" class="body">6 active dates in October</text>
+  <text x="585" y="325" class="body">3 hr 40 min recorded this week</text>
   <text x="585" y="365" class="link">Progress →</text>
   <line x1="585" y1="394" x2="1015" y2="394" class="line"/>
   <text x="585" y="433" class="heading">What it communicates</text>
-  <text x="585" y="465" class="small">A warmer phrase with the same defined</text>
-  <text x="585" y="491" class="small">count and an inspectable destination.</text>
+  <text x="585" y="465" class="small">A warm summary with a clearly labelled</text>
+  <text x="585" y="491" class="small">time total and a detailed destination.</text>
   <text x="585" y="547" class="heading">Trade-off to review</text>
-  <text x="585" y="579" class="small">Could feel vague unless the count and</text>
-  <text x="585" y="605" class="small">meaning are immediately visible.</text>
+  <text x="585" y="579" class="small">Needs a clear period and unit; it</text>
+  <text x="585" y="605" class="small">must not mix incompatible habit units.</text>
   <rect x="585" y="641" width="430" height="82" rx="10" fill="#f0eee5"/>
-  <text x="605" y="671" class="micro">SAME COUNT + SAME LINK</text>
-  <text x="605" y="700" class="small">No XP, streak, level or plant-growth claim.</text>
+  <text x="605" y="671" class="micro">DURATION SUMMARY + DETAIL LINK</text>
+  <text x="605" y="700" class="small">Only compatible duration records contribute.</text>
 
   <rect x="1066" y="132" width="486" height="640" rx="18" class="card"/>
-  <text x="1094" y="174" class="micro">G3 · COUNT + DATE MARKS</text>
-  <text x="1094" y="208" class="small">The activity dates are visible clues.</text>
+  <text x="1094" y="174" class="micro">G3 · CALENDAR / DETAIL VIEW</text>
+  <text x="1094" y="208" class="small">Inspect duration across recorded dates.</text>
   <line x1="1094" y1="230" x2="1524" y2="230" class="line"/>
-  <text x="1094" y="275" class="heading">6 active dates in October</text>
+  <text x="1094" y="275" class="heading">Recorded time by date</text>
   <text x="1094" y="305" class="small">Example dates · synthetic only</text>
   <g>
     <rect x="1094" y="326" width="52" height="48" rx="9" fill="#e1e8da" stroke="#bccab3"/>
@@ -67,17 +67,17 @@
     <text x="1372" y="356" text-anchor="middle" class="small" style="font-size:15px;fill:#506448">21</text>
     <text x="1435" y="356" text-anchor="middle" class="small" style="font-size:15px;fill:#506448">27</text>
   </g>
-  <text x="1094" y="412" class="link">View dates in Progress →</text>
+  <text x="1094" y="412" class="link">Open calendar / session details →</text>
   <line x1="1094" y1="442" x2="1524" y2="442" class="line"/>
   <text x="1094" y="481" class="heading">What it communicates</text>
-  <text x="1094" y="513" class="small">The count is tied to dates the person</text>
-  <text x="1094" y="539" class="small">can inspect; marks are not streaks.</text>
+  <text x="1094" y="513" class="small">Each date opens records the user can</text>
+  <text x="1094" y="539" class="small">inspect; dates are not a streak score.</text>
   <text x="1094" y="595" class="heading">Trade-off to review</text>
-  <text x="1094" y="627" class="small">Needs enough room and a non-colour</text>
-  <text x="1094" y="653" class="small">label for accessibility.</text>
+  <text x="1094" y="627" class="small">Needs space; keep the detailed view</text>
+  <text x="1094" y="653" class="small">accessible with text and TalkBack labels.</text>
   <text x="1094" y="704" class="small">Blank dates remain neutral.</text>
 
-  <text x="50" y="823" class="small">Counting rule: distinct local dates in the selected period with ≥1 positive qualifying habit record.</text>
-  <text x="50" y="852" class="small">An explicit numeric zero is a real record but is not a positive activity moment. Journal entries do not add to this count.</text>
-  <text x="50" y="884" class="small" style="font-size:15px">Synthetic example only. None of these labels or visual treatments is approved; contrast, large text and accessibility review remain.</text>
+  <text x="50" y="823" class="small">Duration rule: sum saved, compatible duration sessions within the explicitly labelled reporting period.</text>
+  <text x="50" y="852" class="small">Quantity/completion records and journal entries do not add to duration. Explicit zero remains a record but adds no time; month is a reporting period, not a fixed duration unit.</text>
+  <text x="50" y="884" class="small" style="font-size:15px">Synthetic examples only. G2/G3 roles are selected planning directions; exact formatting, period controls, contrast, large text and accessibility review remain.</text>
 </svg>
