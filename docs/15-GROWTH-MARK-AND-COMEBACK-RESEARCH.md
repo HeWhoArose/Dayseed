@@ -3,7 +3,7 @@
 **Research date:** 2026-10-17  
 **Status:** Design hypothesis and copy examples; not approved for implementation.  
 
-**Current-status note (2026-10-27):** The visual Growth Mark measure/representation and the final comeback presentation/copy remain open design decisions. However, this older research predates approved trigger rules: D-047–D-056 and D-146–D-160 govern the v1 comeback experience, including the 14-complete-local-calendar-day app-inactivity trigger, 30-day broader trigger (including no active habits), 30-day precedence, and suppression for each qualifying episode. The 3-day and 90-day examples below are copy exploration only, not approved v1 triggers. Use the [Planning Completeness Review](27-PLANNING-COMPLETENESS-REVIEW.md) and [Requirement Traceability Matrix](28-REQUIREMENT-TRACEABILITY.md) for current planning status.
+**Current-status note (2026-10-28):** The owner clarified O-6 in D-199: use a modified G2-style “Collected moments” card showing a readable total duration from duration-tracked habits, and use G3 for calendar/date-level exploration or a separate detailed page. The period must be labelled and can support day, configured week and calendar month views; display-unit thresholds, compatible-unit aggregation and accessibility remain to be defined/reviewed. The remainder of this older research predates approved comeback trigger rules: D-047–D-056 and D-146–D-160 govern the v1 comeback experience, including the 14-complete-local-calendar-day app-inactivity trigger, 30-day broader trigger (including no active habits), 30-day precedence, and suppression for each qualifying episode. The 3-day and 90-day examples below are copy exploration only, not approved v1 triggers. Use the [Planning Completeness Review](27-PLANNING-COMPLETENESS-REVIEW.md) and [Requirement Traceability Matrix](28-REQUIREMENT-TRACEABILITY.md) for current planning status.
   
 **Purpose:** Define what the Growth Mark communicates and how Dayseed welcomes people back without turning absence into a penalty.
 
@@ -17,7 +17,7 @@ It is a summary, not a reward economy. No points, XP, loot, punitive decay, brok
 
 | Concept | What it measures | Display idea | Strength | Risk |
 |---|---|---|---|---|
-| **Collected moments** (preferred test candidate) | Number of dates with at least one valid user-recorded habit action in a selected period | A small branch/field of marks; each mark maps to a real recorded date | Concrete and explainable | Could be mistaken for daily compliance unless label and gaps are clear |
+| **Collected moments** (owner-selected G2 direction, modified) | Total recorded duration from duration-tracked habits within an explicitly labelled reporting period | Compact card with friendly label + human-readable time total; “See time by date” opens G3 calendar/detail | Easy to scan; shows time actually logged | Must not add incompatible units or confuse total-duration units with reporting-period labels |
 | **Effort rings** | Distribution of Tiny, Usual, and Extra actions, counted only where the habit supports effort levels | Three nested or segmented arcs with a text legend | Makes small efforts visible | Nested circles may imply Tiny is inferior or Extra is always better |
 | **Growing timeline** | Actual recorded activity over time, including pauses and rest days | A line of dated dots or short stems | Shows continuity without pretending it is unbroken | A timeline can look like a streak chart unless pauses are neutral |
 | **Personal garden** | No separate score; visual metaphor reflects collected records and user-chosen milestones | One or more leaves appear when a defined, explainable threshold is reached | Distinctive and emotionally warm | Risks becoming arbitrary gamification; defer decorative growth until each change has a clear rule |
@@ -25,7 +25,7 @@ It is a summary, not a reward economy. No points, XP, loot, punitive decay, brok
 
 ### Recommendation to test
 
-Test **Collected moments** against a plain editorial summary, not against an elaborate gamified tree. A growth illustration is permitted only if every visual change can be explained in one sentence and maps to a real, auditable event.
+The owner-selected planning direction is modified G2 **Collected moments**: show accumulated duration for duration-tracked habits as a readable time total; use G3 as the calendar/date-level detail view. G1's active-date summary remains a comparison alternative, not the chosen card. Do not switch back to an active-date count without an explicit new owner decision. A growth illustration is permitted only if every visual change can be explained in one sentence and maps to a real, auditable event.
 
 The initial Growth Mark should not combine unrelated measures into one composite score. Show one measure at a time and label its period.
 
@@ -34,14 +34,18 @@ The initial Growth Mark should not combine unrelated measures into one composite
 Candidate definitions for usability testing; not approved product semantics:
 
 - **Recorded effort:** number of habit actions the user explicitly logged in a period. If a single habit can be completed multiple times per day, count records according to the final data rules and label accordingly.
-- **Active dates:** distinct local calendar dates containing at least one qualifying user-recorded action. Do not treat an unrecorded date as proof of inactivity.
+- **Active dates:** distinct local calendar dates containing at least one qualifying user-recorded action. G1 may show this as an alternative summary; it is not the selected G2 headline metric. Do not treat an unrecorded date as proof of inactivity.
+- **Collected duration:** sum only saved duration-session values from duration-tracked habits within the named reporting period. Include only compatible time units, normalising them to one common time base in the calculation layer; never sum quantity units, completion-only/effort-aware outcomes, or journal entries. Recalculate after record correction/deletion and respect each record's effective-dated configuration.
 - **Scheduled completion rate:** qualifying completions divided by eligible scheduled opportunities, only if schedule and missed/rest semantics have been explicitly defined. Planned rest days are excluded from eligible opportunities.
 - **Effort mix:** counts of Tiny/Usual/Extra actions. Do not assign an invented numeric value to Tiny/Usual/Extra or imply that Extra is morally superior.
 - **Journal activity:** journal entries shown separately from habit actions. Journaling alone should not silently increment a habit metric.
 
 Rules:
 1. Every number has a plain-language label, time period, and accessible explanation.
-2. No streak is the sole or dominant progress measure.
+2. For G2, display the duration unit naturally by magnitude (for example, minutes, hours, then day/week equivalents for large totals) and state the reporting period separately. Day/week/month are reporting-period choices; a calendar month is not a fixed duration unit. Do not show a month-equivalent duration unless a precise approximation is explicitly defined and labelled.
+3. G3 must let users inspect date-level duration totals and underlying sessions; blank dates remain neutral, and example/sample dates must never be shown as personal records.
+4. Distinguish no record from an explicit zero duration record and from a failed/empty data query. No data must never imply a user's inactivity or failure.
+5. No streak is the sole or dominant progress measure.
 3. No score decays merely because time passes.
 4. No inferred events. An absence of records is “not recorded,” not “failed.”
 5. Corrections to historical records recompute summaries.
