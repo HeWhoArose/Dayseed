@@ -240,7 +240,9 @@ The user prefers the Today dashboard to primarily record today's activity, with 
 - The broader glimpse must remain visually secondary and must not displace habit logging below the fold on small Android screens.
 - Keep the panel useful offline and accessible without relying on colour alone.
 
-### Next prototype comparison
+### Historical next prototype comparison (2026-10-17; metric superseded by D-199)
+
+These variants were proposed before the owner selected the duration-total Growth Mark. They remain context for comparing hierarchy only; do not reintroduce the active-date metric as the chosen card. Use doc 34 and the current owner batch for today's remaining UX work.
 
 Build low-fidelity variants with identical content:
 - **Variant 1:** daily summary only.
@@ -250,39 +252,39 @@ Build low-fidelity variants with identical content:
 Compare scan speed, comprehension of the denominator, perceived pressure, and whether users notice the broader context without mistaking it for a score. These are test candidates, not implementation requirements.
 
 
-## Decision recorded: daily summary + one-line monthly context
+## Historical Today summary direction — amended by D-199
 
-**Status:** Selected direction for the next prototype round by the project owner on 2026-10-17. This is a research/design decision, not authorization to implement the app or a claim that the UI is final.
+**Status:** The owner selected a daily-first hierarchy on 2026-10-17; D-199 later changed the Growth Mark headline from active-date count to recorded duration. The daily-first W1 layout remains the starting direction, but this section's active-date example is not the current selected metric. This is a research/design direction, not final UI or implementation approval.
 
 Use the recommended combination:
 - **Today remains primary.** Today's habit list and logging actions are the main focus.
-- **Daily summary:** show a compact count such as “2 of 3 habits recorded” only after the denominator rules are defined for schedules, planned rest, paused habits, and skipped/missed records.
-- **Broader context:** a single restrained sentence such as “You've recorded habits on 8 days this month.” This is a candidate copy/metric, not yet approved wording or final data semantics.
-- **Deeper progress:** provide a quiet route to the Progress screen rather than a chart or decorative timeline on Today.
+- **Daily summary:** if shown, keep the record-presence count aligned with the current eligible/scheduled-habit contract in docs 01/26; explicit-zero is a record and no-record is distinct. Do not present the count as completed goals or treat journal activity as habit activity.
+- **Historical active-date metric (superseded):** “You've recorded habits on 8 days this month” was a copy/metric candidate from this 2026-10-17 exploration. D-199 later selected a duration-total G2 “Collected moments” card for the current calendar month instead. Use the proposed format/period details in doc 34 pending owner disposition.
+- **Deeper detail:** G2 opens G3 calendar/date-level or separate detail-page content so the user can inspect per-date totals and their underlying duration sessions. Do not imply that a compact duration-total card itself is the full history.
 - **No tiny timeline on the initial Today concept.** It can be researched later if user evidence suggests it adds value.
 
-The monthly measure should be explicitly labelled and computed from real qualifying habit records, using local calendar dates. It must not include journal entries, infer action from missing records, or treat a day without a record as failure. The broader context should remain visually secondary and must not push the habit actions down the screen on small Android devices.
+**Current replacement rule (D-199):** the selected G2 monthly measure is total recorded duration from saved, compatible duration sessions in the current calendar month; G3 exposes date totals and source sessions. Exclude journal records and other tracking modes, and distinguish no saved session from explicit zero and calculation failure. Keep this context visually secondary so it does not displace primary habit actions on small Android screens.
 
-### Prototype variants to prepare next
+### Historical prototype variants to compare (not the current backlog)
 
-Prepare two equivalent low-fidelity wireframes with the same content and viewport:
+These variants compared placement of the earlier active-date sentence. They are superseded for the selected metric by D-199; any reuse must display the G2 duration total and G3 detail route. The original comparison was:
 1. Daily summary + one-line monthly context + quiet Progress link.
 2. Daily summary + one-line monthly context, with no explicit Progress link in the card (Progress remains accessible through navigation).
 
 Compare whether the link is discoverable, whether the monthly sentence is understood, and whether the card draws too much attention. Keep the screenshot's restrained editorial direction and apply the anti-AI-slop checklist. Do not finalise colour, typography, or the full design system based on this decision alone.
 
 
-## Visual exploration: selected daily-first direction
+## Historical visual exploration: selected daily-first direction (2026-10-17)
 
-A visual concept was generated on 2026-10-17 to explore the selected direction. It places the daily habit summary first, keeps the habit list as the dominant working area, includes the optional “A note to yourself” entry, and adds a quiet monthly sentence with a route to Progress.
+A visual concept was generated on 2026-10-17 to explore the action-first hierarchy. It places the daily habit summary first, keeps the habit list dominant, includes an optional reflection entry, and adds the then-proposed active-date monthly sentence. D-199 subsequently replaced that active-date metric with the G2 duration-total card and G3 date/session detail.
 
 **This generated image is a discussion artifact only**, not a production-ready UI specification. It may contain invented or inconsistent details and must not be treated as validated product behaviour.
 
 Review notes for the next iteration:
 - Preserve the user's earlier screenshot as the stronger reference for restrained, practical styling; avoid letting large botanical artwork dominate usable space.
-- Keep the monthly context below or after the primary habit actions where possible. Test whether it should appear above reflection or below it, especially on short screens.
+- Keep the selected G2 duration-total context below or after the primary habit actions where practical. Test whether placement preserves the primary logging tasks on short screens.
 - Avoid duplicated settings access in the header and bottom navigation unless a clear need is established.
-- Verify that the daily count denominator is well-defined and that “recorded” matches the underlying event semantics.
+- If a daily record-presence count is shown, verify that its eligible-habit denominator is defined and that “has a record” matches saved records; do not confuse record presence with target completion.
 - Ensure effort controls remain usable at narrow widths and with large text; do not compress Tiny / Usual / Extra into undersized pills.
 - Do not use generated text, icons, or imagery as final assets without review.
 - Use the concept to discuss hierarchy only. Final typography, palette, iconography, spacing, states, and navigation remain open for comparative wireframing and accessibility review.
@@ -323,11 +325,11 @@ This most clearly communicates “today first, broader context second,” but th
 - Offers a gentle first action and neutral progress display.
 - Avoid “0” as a judgement or messages that assume failure. Confirm how planned rest, new habits, paused habits, and unscheduled days are represented before defining exact copy.
 
-### Recommended next wireframe baseline
+### Historical wireframe baseline — adapted for the current W1/G2 direction
 
-Use A as the baseline for the next round, with these refinements:
-1. Keep the daily summary first, using a denominator based on eligible habits for that local date.
-2. Keep the monthly context to one concise sentence with a quiet, optional route to Progress. Avoid adding a separate decorative plant illustration if the text and link already communicate the idea.
+The owner selected W1 Action-first Today; A's broad hierarchy (habit list remains dominant, reflection after logging) can inform its exploration. The old active-date metric and its exact placement comparison are superseded by D-199. The historic checklist follows, interpreted under the current screen/data contracts:
+1. Keep W1 Action-first: habit actions remain the dominant working area and record-presence status must be explicit.
+2. Use the selected G2 duration-total summary with an explicit current-calendar-month reporting label and a clear route into G3 detail. Do not substitute the historical active-date count. Avoid decorative illustration that displaces practical actions.
 3. Keep the habit list as the dominant working area.
 4. Keep “A note to yourself” after the habit list and make it clearly optional.
 5. Test whether the monthly sentence sits directly beneath the daily summary or after the reflection. Default hypothesis: beneath the daily summary if it is short enough not to push key actions down; compare on a small Android viewport.
@@ -355,9 +357,9 @@ Review each for:
 - Tap target size, wrapping, clipping, scrolling, and bottom-navigation overlap.
 - Whether any copy implies blame, a broken streak, or moral judgement.
 
-### Current conclusion
+### Current conclusion (reconciled 2026-10-28)
 
-The owner selected the daily summary + one-line monthly context + quiet route to Progress. The first visual baseline should be layout A, not the reflection-first or icon-compressed alternatives. This is a directional choice for research, not final design approval. No app implementation is authorised or started by this work.
+W1 Action-first Today remains the selected starting direction; a compact G2 duration-total summary for the current calendar month with G3 date/session detail is the selected Growth Mark direction under D-199. The old active-date count and the old exact copy/layout comparisons remain historical. The habit list should remain dominant, with reflection secondary. Final visual/tokens and the proposed Growth Mark formatting remain pending owner disposition; these are planning directions, not final UI approval. No app implementation is authorised or started by this work.
 
 
 ## Owner direction: screens 1–8, using the recommended Today baseline
@@ -370,7 +372,7 @@ The owner likes the generated design board's numbered screens 1–8 and wants th
 ### Eight-screen design set
 
 Use the numbered set from the concept board as the working scope:
-1. **Today** — recommended daily-first baseline: daily summary, one-line monthly context with quiet Progress link, habits as the main working area, optional reflection after habits, consistent bottom navigation.
+1. **Today** — W1 Action-first baseline: habits and logging actions dominate; preserve the explicit record-presence summary if shown; use G2 “Collected moments” as the duration-total card for the current calendar month and G3 for date/session detail; optional reflection after habits; consistent four-destination bottom navigation.
 2. **Habit Creation / Edit** — create and configure a habit with clear, beginner-friendly choices.
 3. **Habit Detail** — view a habit's records and relevant details without turning it into a scorecard.
 4. **History (Calendar)** — inspect dated habit records and navigate to a past day.
