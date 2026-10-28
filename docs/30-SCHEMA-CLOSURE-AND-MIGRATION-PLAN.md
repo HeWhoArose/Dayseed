@@ -60,9 +60,9 @@ These are schema recommendations based on approved behaviour, not new owner-appr
 - Do not transfer OS-specific scheduled-notification IDs as portable data. Preserve logical reminder-delivery keys/status where needed for deduplication, then rebuild eligible future scheduling on restore from current settings and source records.
 - The outbox is technical cleanup state, not a user record. Its retention must be limited to the minimum needed for reliable cancellation.
 
-#### Proposed record-type conflict mapping — owner review required
+#### Proposed record-type conflict mapping — planning baseline accepted; implementation approval pending
 
-The following mapping applies D-094–D-102 to the proposed schema. It is a conservative reconciliation proposal, not a new owner-approved conflict policy.
+The written compatibility/conflict rules below were accepted as a planning baseline under O-2. This table carries those rules into the proposed schema mapping; it is not approval of schema implementation, and runtime constraints/conflict recovery remain unverified.
 
 | Record type | Proposed restore/merge treatment | Safety boundary |
 |---|---|---|
@@ -178,16 +178,16 @@ No migration should be implemented from this document alone. The actual schema, 
 ## 7. Remaining closure checklist
 
 - [x] Review the lifecycle-state refinement and optional journal-habit link against D-071, D-149–D-160, and D-172 and include them in the architecture proposal: ACTIVE/PAUSED/COMPLETED/ARCHIVED are effective-dated states; an optional journal-habit link is cleared on habit deletion so the entry/text survives. These remain proposed schema details, not owner approval of the complete schema.
-- [x] Add proposed restore-session/conflict structures and the notification-cancellation outbox to the architecture schema proposal; their retention and portable-backup rules are documented and remain proposed pending owner review.
+- [x] Add proposed restore-session/conflict structures and the notification-cancellation outbox to the architecture schema proposal; retention and portable-backup rules are documented. O-1/O-2 accepted the written model as a planning baseline only; these structures remain proposed for implementation and runtime verification.
 - [x] Draft mask/target/mode constraints, minimum indexes, operation transaction boundaries and rollback acceptance cases in docs 03/30/07.
-- [x] Reconcile docs 03/30 on lifecycle source, the absence of a separate `archived_at_utc_ms` projection, draft `intended_journal_entry_id` plus partial uniqueness, field-level draft backup mapping, and atomic draft-to-journal save/retry behaviour. The full model remains a proposal for owner approval.
+- [x] Reconcile docs 03/30 on lifecycle source, the absence of a separate `archived_at_utc_ms` projection, draft `intended_journal_entry_id` plus partial uniqueness, field-level draft backup mapping, and atomic draft-to-journal save/retry behaviour. The owner accepted the written model as a planning baseline only; the full schema remains proposed and is not approved for implementation.
 - [x] Document the proposed cross-table activity idempotency guard for D-190 (table-local partial unique indexes plus cross-table write guards and domain-transaction validation) and add planned collision/rollback acceptance coverage in docs 07/28; enforcement remains unimplemented and the full schema remains proposed.
 - [x] Define the proposed restore-session state lifecycle across docs 03/30/07/28: durable `IN_PROGRESS` preflight record, atomic live-data/conflict/final-state transaction, `FAILED_SAFE` after an observed rollback, and `RECOVERY_REQUIRED` after startup verifies a process-interrupted transaction did not commit. Acceptance cases are planned only.
-- [ ] Complete the repository-wide semantic consistency review; runtime/transaction tests are post-gate. Written schema reconciliation is complete, but the owner must review the coherent model and approve it before any database schema change.
+- [ ] Complete the repository-wide semantic consistency review; runtime/transaction tests are post-gate. O-1/O-2 accepted the written schema and backup/restore rules as planning baselines only. No application schema change is permitted without the planning gate, separate technical-validation authorisation, and explicit approval for the proposed schema/implementation.
 - [x] Apply the delegated recovery default under D-196: guarded 8-second in-session Undo after a committed single-record mutation; deletion of one selected numeric/duration entry uses contextual Delete plus immediate Undo without a second confirmation. Owner may override this interaction in the grouped planning review. This is a UX/recovery default, not schema approval or implementation evidence.
 - [x] Draft the field-level mapping for each portable-backup entity/category, distinguishing preserved local-date keys, stable identities/idempotency, excluded device-only data, and conflict-session remapping. This is still a proposal, not owner approval.
 - [x] Reconcile the proposed field-level mapping against O-2's accepted planning baseline: accept the current format/schema and older versions only through a documented lossless converter; reject unsupported versions before live mutation; preserve distinct journal-entry IDs; choose one live habit/date note; never add conflicting numeric activity; and retain unresolved conflicts where “Keep both” cannot be represented safely. This records policy reconciliation, not implementation approval. The entity-by-entity mapping and complete schema remain proposed and must be validated under the authorised technical/schema gates.
-- [ ] Present docs 03 and 30 together for explicit owner review and approval before any application schema change. No change to the real database is authorised by this documentation milestone.
+- [ ] Keep the proposed schema and migration design gated. Planning-baseline acceptance does not approve implementation: no live database/schema change or migration is authorised until the planning gate, separate technical-validation authorisation, and explicit schema/implementation approval are recorded.
 - [ ] Only after the planning gate and separate technical-validation authorisation, inspect actual source/schema/build/toolchain, run synthetic migration tests, and verify backup/restore, deletion, notification and device behavior.
 
 **Status boundary:** This document improves planning detail only. No code, database, migration, build, test, APK, or device was modified or validated.
