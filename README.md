@@ -22,7 +22,7 @@ Important status distinctions:
 - The initial v1 is intended to work offline without a Dayseed account or cloud service. Actual network/data-flow behavior, privacy configuration, and Android platform-backup exclusion still require technical verification.
 - Human-readable journal export is separate from the versioned Dayseed portable-backup format. Neither should be considered release-verified from documentation alone.
 - The owner selected W1/N1/A2 and a plain explanatory Growth Mark label + count as planning directions on 2026-10-28; exact visual tokens and task/accessibility review remain open.
-- Initial-launch ads are being evaluated following the owner's O-11 request. No ad SDK, placement, or monetisation implementation is approved; core functionality must remain usable offline.
+- The requested initial-launch ads evaluation is documented in `docs/33-MONETISATION-AND-ADS-EVALUATION.md`; owner review and the include/defer decision remain pending. No ad SDK, placement, or monetisation implementation is approved; core functionality must remain usable offline.
 - The design system and UX remain subject to accessibility review; exact candidate colours, themes, and design tokens are not yet approved or accessibility-validated.
 
 This repository status does **not** claim a clean build or a functionally complete app. No Gradle build, automated test suite, APK installation, physical-device validation, or database migration has been verified in the current planning status.
