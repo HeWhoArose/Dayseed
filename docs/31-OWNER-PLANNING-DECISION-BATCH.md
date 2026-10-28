@@ -45,7 +45,7 @@ The remaining owner-level review is to confirm the coherent proposal, especially
 
 This is a reversible interaction detail and is **not a required owner checkbox**. The owner may override the default in the consolidated review. AC-023 remains planned, not executed; this default is not evidence of implementation.
 
-### C. Shared reminders and local timing personalisation — delegated defaults under D-196
+### C. Shared reminders and local timing personalisation — defaults under D-196; weekly reflection time needs owner choice
 
 **Defaults documented in docs 09/23/05/26/28; AC-011/AC-012:**
 - Ask once during setup whether reminders are wanted; No creates no reminders. Each habit's reminder time defaults to 9:00 a.m. local time; manually chosen times remain protected from automatic adjustment.
@@ -53,10 +53,10 @@ This is a reversible interaction detail and is **not a required owner checkbox**
 - Combine eligible events due within 15 minutes when one clear destination preserves their meaning; otherwise stagger within the daily cap. Priority: explicit per-habit reminder, weekly-goal-reached acknowledgement, week-start reflection, inactivity check-in, optional partial-progress tips.
 - Re-check global opt-in, Android permission, current local date/week, effective schedule, activity, quiet hours and suppression immediately before sending. Stable keys prevent duplicates. Do not backfill stale daily reminders.
 - Timing learning uses only local habit-record timestamps, never journal text/moods or network uploads. For system-managed daily habits, require at least seven positive activity timestamps on at least five local dates in 14 days, with at least 70% in a two-hour band; candidate time is median plus 30 minutes rounded up to a 15-minute boundary. Never auto-override a manual time. Validate for 28 days and revert if the evidence no longer supports the cluster.
-- Weekly reflection defaults to 9:00 a.m. device-local time on the first day of the user's configured week. The previously approved trigger/catch-up/deduplication behaviour remains unchanged; this clock time is a delegated, reversible default, not a new owner-approved product rule.
+- **Owner choice still required:** select the weekly reflection's local clock time for the configured week-start day. Do not infer or inherit the per-habit 9:00 a.m. default. D-045/D-046's trigger, catch-up, deduplication and no-backlog rules remain recorded.
 - Optional partial-progress tips default to at most three over seven days, at least 24 hours apart and maximum one/day; suppress after target-met, dismissal or opt-out. Phone tips require a separate opt-in. If tips are unwanted for v1, the safe default is in-app only or omit the automated sequence.
 
-These are conservative planning defaults, not proof of Android delivery. They may be overridden together in the consolidated review, but they do **not** require separate owner approval by default. Permission, reboot, clock/timezone, scheduling and deduplication behaviour remain post-gate technical-validation work; planned tests are not executed.
+The reminder coordination, local timing-learning and tip-cadence details above are conservative planning defaults, not proof of Android delivery, and do not require separate owner approval by default. The weekly reflection clock time is the exception: choose it as one explicit item in this grouped review, separately from per-habit reminders. Permission, reboot, clock/timezone, scheduling and deduplication behaviour remain post-gate technical-validation work; planned tests are not executed.
 
 ### D. Retrospective journal prompt (D-042) — delegated default under D-196
 
@@ -68,7 +68,7 @@ This routine cadence is delegated, reversible and not a separate Gate A blocker.
 
 **Proposal in doc 29:** prototype the user’s prior “a little of Concept C” direction as an action-first Today screen with a modest reflective element, compared with reduced-effort-controls and more-reflective variants. Compare four primary destinations (Today/History/Insights/Settings, Journal accessible from Today and History) with a dedicated Journal tab. Compare timeline-first, hybrid timeline/calendar and calendar-first archive. Test “Collected moments” against a plain labelled summary; no arbitrary XP, score or decorative growth is implied.
 
-- [ ] Review the rendered comparative prototypes when prepared and choose, modify or defer each unsettled choice.
+- [ ] Review the two rendered comparative SVG boards linked from doc 29 and choose, modify or explicitly defer each unsettled design choice.
 - [ ] Until reviewed, keep D-008 visual direction, D-016 Growth Mark, D-017 comeback presentation, D-018 archive pattern, D-019 typography/colour and Journal/History navigation marked open.
 - [ ] Keep platform typography as comparison baseline; do not mark a typeface, colour or light/dark theme as approved before contrast/accessibility review.
 
