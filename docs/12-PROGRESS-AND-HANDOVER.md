@@ -369,6 +369,7 @@ The canonical readiness snapshot is `docs/27-PLANNING-COMPLETENESS-REVIEW.md`; t
 
 ## Rendered UX comparison boards added — 2026-10-28
 
-- Created `docs/prototypes/dayseed-today-variants.svg`, with three comparable Today hierarchies using identical synthetic habit data.
-- Created `docs/prototypes/dayseed-navigation-archive-variants.svg`, with four- versus five-destination navigation and timeline-first, hybrid and calendar-first archive layouts.
-- Both SVG files were re-fetched from `main` and passed a simple XML tag-balance check. They are planning artefacts only—not approved UI, app code, or usability evidence. Next: review them against the task and accessibility scorecard, then record choices or explicit deferrals. No app code, build, tests, database, migration, APK, device state or implementation audit was changed or run.
+- Created `docs/prototypes/dayseed-today-variants.svg`, with three comparable Today hierarchies using identical synthetic habit data and the owner-selected monthly context/Progress route.
+- Created `docs/prototypes/dayseed-navigation-archive-variants.svg`, comparing four versus five bottom destinations and three journal archive layouts.
+- Created `docs/prototypes/dayseed-growth-mark-variants.svg`, isolating plain monthly context, a “Collected moments” label with count, and count plus inspectable date marks using the same synthetic activity.
+- All three SVG files were re-fetched from `main` and passed a simple XML tag-balance check. They are planning artefacts only—not approved UI, app code, or usability evidence. Next: review them against the task/accessibility scorecard, then record choices or explicit deferrals. No app code, build, tests, database, migration, APK, device state or implementation audit was changed or run.
