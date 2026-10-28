@@ -21,7 +21,7 @@
 
 ## 2. Owner review: accept, modify, or defer these proposals
 
-The batch separates **owner-level choices** from **delegated defaults**. The schema proposal and material design, privacy and scope choices require owner review. Undo, reminder coordination and retrospective-prompt cadence use the documented conservative defaults under D-196; they are not separate approval blockers, though the owner may override or safely defer them in this same review.
+The batch separates **owner-level choices** from **delegated defaults**. The schema proposal and material design, privacy and scope choices require owner review. The weekly reflection's local clock time is also an explicit owner choice; it must not be inherited from the per-habit default. Undo, routine reminder coordination and retrospective-prompt cadence use the documented conservative defaults under D-196; they are not separate approval blockers, though the owner may override or safely defer them in this same review.
 
 ### A. Complete relational schema proposal
 
