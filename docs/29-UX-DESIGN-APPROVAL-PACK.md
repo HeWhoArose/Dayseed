@@ -1,13 +1,13 @@
 # UX and Design Approval Pack
 
-**Review date:** 2026-10-27  
+**Review date:** 2026-10-28  
 **Status:** Recommendations prepared for owner review; **no visual direction, navigation pattern, token set, or prototype has been approved by this document**. The planning gate remains closed.
 
 **Related documents:** [UX and Design](02-UX-AND-DESIGN.md), [Today Dashboard Concepts](21-TODAY-DASHBOARD-CONCEPTS.md), [Design System](../DESIGN.md), [Growth Mark and Comeback Research](15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md), [Journal Archive Research](16-JOURNAL-ARCHIVE-RESEARCH.md), [Typography and Accessibility Research](17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md), [Design Review Checklist](DESIGN-REVIEW-CHECKLIST.md), [Requirement Traceability](28-REQUIREMENT-TRACEABILITY.md).
 
 ## 1. Current status
 
-The product rules are far more settled than the UI choices. Approved baseline requirements include Today’s separate Complete and Record actions; the local journal and its save/edit/delete rules; the History and Insight jobs; 14-day and 30-day comeback triggers; nonjudgmental copy; offline title/body journal search; local backup/restore settings; and the accessibility expectations. Those policies must shape the design rather than being treated as undecided.
+The product rules are far more settled than the UI choices. Approved baseline requirements include Today’s separate Complete and Record actions; the local journal and its save/edit/delete rules; the History and Insight jobs; 14-day and 30-day comeback triggers; nonjudgmental copy; offline title/body journal search; local backup/restore settings; and the accessibility expectations. Those policies must shape the design rather than being treated as undecided. Two rendered comparison boards are now available in `docs/prototypes/`; they are ready for owner review, but do not constitute accessibility validation or user-test evidence.
 
 Still open are the visual direction (D-008), Growth Mark representation (D-016), comeback presentation/copy (D-017), archive layout (D-018), type and colour tokens (D-019), and exact Journal/History navigation. The current Dashboard Concepts document includes a user-supplied screenshot discussion and a “little of Concept C” direction; use that as the design exploration anchor, not as approval of a finished screen.
 
@@ -107,7 +107,7 @@ The owner can approve a recommendation, request a variation, or explicitly defer
 
 | Decision | Current status | Recommendation to review | What makes it ready to approve |
 |---|---|---|---|
-| D-008 visual direction | Open | Prototype Field Journal warmth + Living Editorial hierarchy + Quiet Instrument controls | At least two comparable prototypes, actual colour pairs, small-screen and accessibility review |
+| D-008 visual direction | Open; two SVG comparison boards prepared | Prototype Field Journal warmth + Living Editorial hierarchy + Quiet Instrument controls | Review both rendered boards at small/typical widths and enlarged text; choose or defer the direction. Exact colour pairs, contrast, and accessibility still need review before final design approval |
 | Navigation / Journal placement | Open in UX | Test Today / History / Insights / Settings with Journal accessible from Today and History against a dedicated Journal tab | Task-based find/write/retrieve/edit results; no hidden core flow |
 | D-016 Growth Mark | Open | Test “Collected moments” versus plain editorial summary; omit illustrative growth until semantic value is proven | Metric is defined, inspectable and not misleading; representative users understand it |
 | D-017 comeback presentation | Trigger policy approved; presentation open | Compact, non-blocking, dismissible welcome using approved 14-/30-day rules | Copy/layout review; proves no mandatory reflection or duplicate episode |
