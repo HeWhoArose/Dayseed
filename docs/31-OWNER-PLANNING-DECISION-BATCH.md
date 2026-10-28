@@ -68,8 +68,8 @@ This routine cadence is delegated, reversible and not a separate Gate A blocker.
 
 **Proposal in doc 29:** prototype the user’s prior “a little of Concept C” direction as an action-first Today screen with a modest reflective element, compared with reduced-effort-controls and more-reflective variants. Compare four primary destinations (Today/History/Insights/Settings, Journal accessible from Today and History) with a dedicated Journal tab. Compare timeline-first, hybrid timeline/calendar and calendar-first archive. Test “Collected moments” against a plain labelled summary; no arbitrary XP, score or decorative growth is implied.
 
-- [ ] Review all three rendered comparative SVG boards linked from doc 29 and choose, modify or explicitly defer each unsettled design choice.
-- [ ] Until reviewed, keep D-008 visual direction, D-016 Growth Mark, D-017 comeback presentation, D-018 archive pattern, D-019 typography/colour and Journal/History navigation marked open.
+- [x] Owner selection recorded on 2026-10-28: W1 Today, N1 navigation, A2 archive, plain explanatory Growth Mark label + count, platform/system typography and appearance baseline, and compact non-blocking comeback direction. Review all three rendered SVG boards against the task/accessibility scorecard; choices are planning directions, not user-test findings or final UI approval.
+- [ ] Keep broad visual direction (D-008), exact colour/type tokens (D-019), Growth Mark qualifying-date definition/accessibility, comeback final copy/localisation, and Journal findability/accessibility review open. W1/N1/A2 and the Growth Mark display variant are selected starting directions; this list must not describe them as unselected.
 - [ ] Keep platform typography as comparison baseline; do not mark a typeface, colour or light/dark theme as approved before contrast/accessibility review.
 
 Three rendered planning boards now exist: `docs/prototypes/dayseed-today-variants.svg` compares W1/W2/W3 Today layouts, and `docs/prototypes/dayseed-navigation-archive-variants.svg` compares N1/N2 navigation plus A1/A2/A3 archive layouts; `docs/prototypes/dayseed-growth-mark-variants.svg` isolates G1/G2/G3 monthly-summary representations using the same data and destination. They use synthetic data and are not user-test evidence or approved UI. Review all variants against the same task/accessibility scorecard before owner selection.
@@ -78,9 +78,9 @@ Three rendered planning boards now exist: `docs/prototypes/dayseed-today-variant
 
 - **Retrospective prompt and optional partial tips:** can be deferred from v1 explicitly rather than shipping unspecified notification patterns.
 - **XP/rank, social/leaderboards, journal photos/audio, AI analysis and online features:** remain outside v1 unless separately approved.
-- **Monetisation:** no v1 ads, purchases or subscriptions approved. Keep out by default; no pricing decision is needed to finish core planning.
+- **Monetisation (O-11):** owner requested an initial-launch ads evaluation because a full launch needs at least ads. Use `docs/33-MONETISATION-AND-ADS-EVALUATION.md`; a restrained secondary-screen banner is the first candidate to evaluate, not approved implementation. Rewarded ads, purchases, subscriptions, Supporter Pack, SDK and placements remain unapproved.
 - **Minimum Android API/device matrix:** do not invent a version from assumption. Capture the actual project/toolchain and supported-device evidence during the separately authorised technical-validation stage.
-- **Privacy language:** candidate screen copy is drafted in docs/04 for owner review. Do not make blanket “never leaves this device,” encryption, or fully disabled platform-backup claims until actual manifest/data-extraction rules, export destinations and network/SDK behaviour have been verified. Wording distinguishes local use, portable backup, Android platform backup and user-selected provider syncing.
+- **Privacy language (O-10):** owner accepted the candidate screen copy in docs/04 as a draft baseline on 2026-10-28, not release-approved wording. Do not make blanket “never leaves this device,” encryption, or fully disabled platform-backup claims until actual manifest/data-extraction rules, export destinations and network/SDK behaviour have been verified. Wording distinguishes local use, portable backup, Android platform backup and user-selected provider syncing.
 
 ## 3. What still remains in the planning phase
 
