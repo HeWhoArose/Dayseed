@@ -1,7 +1,7 @@
 # UX and Design Approval Pack
 
 **Review date:** 2026-10-28  
-**Status:** Owner selections recorded on 2026-10-28: W1 Action-first Today, N1 four-destination navigation, A2 hybrid journal archive, platform/system typography and system light/dark baseline, plain explanatory Growth Mark label + count, and the recommended compact non-blocking comeback presentation. These remain planning directions for task/accessibility review; exact design tokens and broad visual identity are not approved. The planning gate remains closed.
+**Status:** Owner selections recorded on 2026-10-28: W1 Action-first Today, N1 four-destination navigation, A2 hybrid journal archive, platform/system typography and system light/dark baseline, the recommended compact non-blocking comeback presentation. O-6 was answered Modify without specifying the intended Growth Mark change, so no Growth Mark representation is selected. These remain planning directions for task/accessibility review; exact design tokens and broad visual identity are not approved. The planning gate remains closed.
 
 **Related documents:** [UX and Design](02-UX-AND-DESIGN.md), [Today Dashboard Concepts](21-TODAY-DASHBOARD-CONCEPTS.md), [Design System](../DESIGN.md), [Growth Mark and Comeback Research](15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md), [Journal Archive Research](16-JOURNAL-ARCHIVE-RESEARCH.md), [Typography and Accessibility Research](17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md), [Design Review Checklist](DESIGN-REVIEW-CHECKLIST.md), [Requirement Traceability](28-REQUIREMENT-TRACEABILITY.md).
 
@@ -43,9 +43,9 @@ If a summary is included, use a precise denominator and period. For example, sho
 
 ### Growth Mark
 
-**Owner-selected display (O-6):** use a plain explanatory label + count, for example, “You’ve recorded habits on 8 days this month.” The period and counting rule must be explicit, and the user should be able to inspect the underlying dates/records. Use distinct local calendar dates with at least one qualifying positive habit record as the proposed counting rule (positive numeric/duration amount or a valid completion/effort-aware outcome); an explicit numeric zero remains a real record but does not count as positive activity. Review copy comprehension, the qualifying-record definition, and accessibility before treating the metric as final.
+**O-6 response — Modify; exact change unspecified:** the owner did not describe what should change. Keep G1/G2/G3 as alternatives, not approved choices: G1 plain monthly summary, G2 “Collected moments” + count, and G3 count + inspectable date marks. Do not treat the recommendation for a plain explanatory label + count as accepted. When the owner clarifies the intended modification, define the period and counting rule and provide access to the underlying dates/records. Any chosen metric must count genuine records accurately; explicit numeric zero remains distinct from no record.
 
-Do not add a growing plant as a metric, arbitrary level, composite score, streak, or time-based decay. The plain count display is selected; exact metric validation/accessibility remains outstanding.
+Do not add a growing plant as a score, arbitrary level, composite score, streak, or time-based decay. Review all candidate treatments for comprehension and accessibility before selecting a display.
 
 ### Journal archive and search
 
@@ -64,7 +64,7 @@ The active v1 triggers are already approved: the two-week experience after 14 co
 - **W1 Today:** selected; preserve separate Complete and Record actions for measured habits and keep journaling optional.
 - **N1 navigation:** selected; check that Journal is findable from Today and History without ambiguous labels or icon-only routes.
 - **A2 archive:** selected; validate date jump, search, edit, delete, empty dates and multiple entries on a date.
-- **Growth Mark:** plain explanatory label + count selected; count rule and date drill-down still need validation.
+- **Growth Mark:** O-6 was marked Modify without specifying the intended change; G1/G2/G3 remain alternatives and no display is selected.
 - **Typography/theme baseline:** platform typography and system light/dark appearance accepted; exact colours/fonts/tokens are still open in DESIGN.md.
 - **Comeback:** compact, dismissible, non-blocking direction accepted; final copy/localisation/accessibility still needs review.
 - **Ads:** O-11 requested an initial-launch ads evaluation because ads are needed for full launch; see [the monetisation evaluation](33-MONETISATION-AND-ADS-EVALUATION.md). No SDK, placement or release integration is approved.
