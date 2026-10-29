@@ -1,6 +1,6 @@
 # Requirement-to-Test Traceability Matrix
 
-**Date:** 2026-10-28  
+**Date:** 2026-10-29  
 **Status:** Initial planning traceability pass; acceptance cases are **planned, not executed**. The matrix does not authorise code changes, technical validation, or release claims.
 
 **Purpose:** Keep each high-priority requirement connected to the screen/data contract and at least one acceptance case. The detailed behaviour authority remains the product specification, approved decision log, and feature contracts; the quality plan remains the test-strategy authority. This matrix is the navigation/index layer between them.
@@ -41,7 +41,7 @@
 ## Deferred or unapproved scope
 
 - **H5 XP/rank and social comparison:** not approved for v1; no acceptance case should block core release unless scope is explicitly changed.
-- **Online accounts, Dayseed-managed cloud backup, cross-device sync and AI processing:** excluded from initial v1 unless separately approved. **Ads:** the owner requested a separate initial-launch evaluation because at least ads are needed for a full launch; ads remain unapproved/unimplemented until an explicit decision. See [Monetisation and Ads Evaluation](33-MONETISATION-AND-ADS-EVALUATION.md). Rewarded ads, purchases, subscriptions and Supporter Pack are not approved by the banner-first evaluation proposal.
+- **Online accounts, Dayseed-managed cloud backup, cross-device sync and AI processing:** excluded from initial v1 unless separately approved. **Ads (D-200):** ads are deferred for initial v1 and monetisation will be revisited before launch. Keep [Monetisation and Ads Evaluation](33-MONETISATION-AND-ADS-EVALUATION.md) as pre-launch material. No SDK, placement, rewarded ads, purchases, subscriptions or Supporter Pack is approved for initial v1.
 - **Journal photos/audio/attachments and any unapproved search enhancement:** do not silently add; retain only expressly approved v1 scope.
 - **Optional partial-progress tips:** cadence is a delegated default under D-196 (up to three tips in seven days, at least 24 hours apart, no more than one per local day; suppress after goal-met/dismissal/opt-out). Final copy and whether to include phone tips in v1 can be reviewed or safely deferred; do not ship unspecified notification behaviour.
 
@@ -52,9 +52,9 @@ This matrix includes AC-022 for restore-conflict recovery (including D-202), AC-
 1. The written schema reconciliation across docs 03/30 is complete. During owner schema review, confirm the proposed format/schema compatibility boundary and unsafe “Keep both” cases, then ensure AC-001, AC-003–AC-008, AC-014, and AC-019 cover the accepted model.
 2. AC-011/AC-012/AC-024 use delegated defaults under D-196 for routine notification cadence, timing and retrospective prompt eligibility. Keep the defaults documented and testable; include them for visibility in the grouped owner review, but do not block Gate A on separate micro-decisions unless the owner wants to override/defer them.
 3. **AC-009 fixture review completed at the planning level:** the deterministic Mood Insights fixture in docs/07-TESTING-AND-QUALITY.md now explicitly covers Monday- and Sunday-start weeks, adjacent-month/week boundaries, primary-versus-secondary mood counting, untagged entries, sparse/empty states, opening only matching entries, and source-record correction/deletion. No further AC-009 gap is currently identified in the written fixture; this remains a plan, not a test result. Reopen only if later requirements change.
-4. Review selected W1/N1/A2 and the owner-selected G2/G3 Growth Mark roles against the accessibility/task scorecard. O-6 is clarified in D-199: G2 shows a duration total from duration-tracked habits (current calendar month by default), and G3 allows calendar/date-level inspection of the underlying duration records. Review readable units, explicit period labels/controls, compatible-unit aggregation, corrections, zero/no-record states, and access to source records. Keep exact theme/colour/type tokens open until measured and approved (AC-018/AC-021/AC-025).
+4. D-201's Growth Mark unit formatting, compatible-unit aggregation, current-month default, month navigation and date/session detail are recorded planning defaults, not open decisions. A 2026-10-29 static textual heuristic review of the SVG boards is recorded in docs 27/32/35; rendered UI, aggregation/correction behaviour, large text, TalkBack, contrast and task accessibility remain unverified for later authorised validation (AC-018/AC-021/AC-025). Keep exact theme/colour/type tokens open or deferred; do not re-open the settled duration/period defaults without a material reason.
 5. Complete planned ads/SDK privacy, consent, ad-load-failure, offline and accessibility acceptance cases before any approved ad-supported release; these are specifications only, not executed tests (see doc 33).
-6. Re-run the cross-document link, anchor, duplicate/conflict, and supported-claim audit after remaining edits.
+6. The targeted D-200/D-201/D-203 stale-status pass is recorded in docs 27/32/35. Complete the remaining repository-wide semantic/traceability reconciliation and re-run internal link, heading-fragment, table-shape and supported-claim checks after the final documentation edits.
 7. Keep all AC entries as **planned, not executed** until technical validation is explicitly authorised and the evidence is recorded.
 
 ## Status rules
