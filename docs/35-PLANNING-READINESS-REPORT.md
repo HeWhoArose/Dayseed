@@ -61,6 +61,10 @@ Other detail—exact theme tokens, large-text layout, TalkBack, focus, touch-tar
 
 The existing privacy and offline rules have been consolidated in `docs/04-DATA-AND-PRIVACY.md`. Core offline use is a product requirement, not yet a verified runtime result. Keep separate: Dayseed-managed network services; Android platform backup/device transfer; user-controlled portable backup/restore; readable exports and provider-backed destinations; diagnostic/third-party SDK flows; and local deletion. No initial-v1 analytics or advertising SDK is approved, and no “never leaves the device” or encryption-at-rest claim may be made without evidence. Manifest/data-extraction rules, dependencies, network traffic, export/provider behaviour, deletion effects and any storage-encryption implementation remain unverified. This checkpoint reconciles existing decisions only; it adds no owner decision and does not authorise technical validation or implementation.
 
+### Data lifecycle wording checkpoint (R-032)
+
+The privacy document now has a planning inventory separating habit/configuration data, tracking history, saved journal entries, unsaved drafts, preferences, restore-conflict context, device-specific/transient state and exported/provider-held files. The readable journal export is limited to saved journal entries; the portable backup has broader coverage and may include unresolved drafts where feasible and unresolved conflicts under the proposed mapping; Android platform backup is a distinct path governed by D-186/D-067. This clarifies intended wording but does not verify the current app's schema, output files, platform rules or deletion behaviour. Exact runtime inventory remains unverified and the planning gate remains closed.
+
 ## 6. Validation status — not performed
 
 The following have **not** been performed and must not be represented as passed:
