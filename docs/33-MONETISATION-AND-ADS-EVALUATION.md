@@ -51,3 +51,8 @@ Before release, planned acceptance evidence should cover at least: truthful Play
 - [AdMob — how Google's CMP works](https://support.google.com/admob/answer/16918505)
 
 **Implementation boundary:** This document is only a planning/policy evaluation. It does not open the planning gate or authorise adding an SDK, accessing a live database, running builds/tests, or shipping monetisation.
+
+
+## Owner follow-up — 2026-10-29 (D-200)
+
+The owner has decided to **defer ads for initial v1 and revisit monetisation before launch**. This supersedes the earlier request to evaluate ads as a possible initial-launch requirement. Keep this document as future pre-launch review material only. No ad SDK, placement, rewarded ad, purchase, subscription, or Supporter Pack is approved for initial v1. Revisit the decision before launch with current audience, privacy/data-flow, consent, accessibility, offline-failure, store-disclosure and SDK-compatibility evidence. This is a planning decision only and does not open the planning gate.
