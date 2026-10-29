@@ -16,6 +16,12 @@ This document reduces repeated micro-decisions while protecting owner control ov
 
 The decision log (`09-DECISION-LOG.md`) remains the detailed record of owner choices. This register is an index and reconciliation aid, not a replacement. Later explicit owner-approved decisions can supersede earlier ones, but the affected documents must be updated together. A file's existence is not proof that its behaviour works.
 
+## Privacy/offline reconciliation checkpoint (R-031)
+
+| Risk | Current reconciliation | Evidence status / boundary |
+|---|---|---|
+| R-031 — Privacy and offline promises may be broader than the evidence | Reconciled existing D-003/D-004/D-011/D-186/D-200 and O-10 wording in `04-DATA-AND-PRIVACY.md`: core use must work offline without an account; Dayseed-managed cloud/sync and AI processing are excluded from initial v1; portable backup, readable export, Android platform backup and user-selected file-provider storage are distinct paths; no third-party analytics or advertising SDK is implicitly approved; encryption and “never leaves this device” claims require evidence. | Planning reconciliation only. Actual dependencies, permissions, manifest/data-extraction rules, network traffic, SDK/data flows, provider behaviour, encryption and deletion effects have not been technically verified. Do not claim runtime privacy compliance or open the planning gate on the strength of documentation alone. |
+
 ## Confirmed product direction
 
 | Area | Current status | Operational interpretation |
