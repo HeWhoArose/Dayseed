@@ -61,3 +61,8 @@ Use this checklist before marking UX/design approved. Do not check items merely 
 - Decision: **Approved / Changes required / Deferred**
 
 Do not mark approved until outstanding issues have owners and the decision is recorded in docs/09-DECISION-LOG.md.
+
+
+## Review protocol
+- [ ] Follow `docs/34-UX-TASK-AND-ACCESSIBILITY-REVIEW-PROTOCOL.md` when an owner-authorised task/accessibility review is run; use its synthetic fixture and record actual evidence only.
+- [ ] Keep every task and accessibility check marked not run/not tested until supported by observed evidence from the relevant artefact or rendered screen.
