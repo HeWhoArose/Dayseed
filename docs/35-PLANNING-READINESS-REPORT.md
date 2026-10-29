@@ -89,7 +89,7 @@ The task/accessibility protocol in `docs/34-UX-TASK-AND-ACCESSIBILITY-REVIEW-PRO
 
 1. D-201 has recorded the conservative duration-formatting, period-control, and compatible-aggregation planning defaults in the decision log, screen/data contracts, and traceability matrix. Do not mark runtime behaviour as verified.
 2. **Documentation-only link and stale-claim audit completed on 2026-10-29:** checked 17 key Markdown files plus root/docs/prototype paths; found zero broken relative links and zero matches for the targeted stale-current-status claims.
-3. Decision-ID reconciliation was last rechecked after D-202. D-203 has now been added to the decision log and matrix; rerun the row/link/stale-claim checks after this reconciliation. All such checks are documentation-only and do not prove application behaviour.
+3. Focused decision-ID reconciliation was rerun after D-203 and R-034. The current decision log and decision register each contain 197 unique decision rows through D-203, with gaps preserved, and the D-203 follow-up now references the privacy inventory and R-033/R-034 reconciliation. This was a targeted count/reference check, not an exhaustive repository-wide link or stale-claim audit. All checks are documentation-only and do not prove application behaviour; planning gate remains closed.
 4. Present the owner with this report and the distinct gate choice. Do not open the gate unless the owner explicitly approves it.
 5. After a separate authorisation, inspect the existing native Kotlin/Jetpack Compose project and actual schema/build configuration. Technical validation and feature implementation remain separate decisions.
 
