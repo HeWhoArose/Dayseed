@@ -30,14 +30,14 @@ Authoritative decision history: `docs/09-DECISION-LOG.md`. The owner response sh
 - Use the owner reference to guide warmth, hierarchy, editorial headings, restrained rounded surfaces, and sage/neutral visual direction.
 - Do not copy the reference pixel-for-pixel or let an older example override a later written decision such as D-199.
 - Retain W1/N1/A2 and G2/G3 as the current planning directions unless a material issue emerges during implementation-time review.
-- Static source review corrected visible inconsistencies in the Today and navigation/archive boards and reconciled Growth Mark's synthetic date totals. This does not establish that the final UI is usable, accessible, or implemented.
+- Static source review corrected visible inconsistencies in the Today and navigation/archive boards and reconciled Growth Mark's synthetic date totals. On 2026-10-29, a further textual heuristic review of all three SVG boards confirmed the W1 logging-first hierarchy, the N1 Journal-under-History discoverability risk, A2's denser timeline/date-jump trade-off, clear G2 period/duration labels, and G3's synthetic date totals matching the G2 total (3 hr 40 min). SVG text/structure was inspected, not rendered-pixel contrast or the binary owner reference; this does not establish that the final UI is usable, accessible, or implemented.
 - Do not spend further planning time inventing empty/error screens in SVGs solely to simulate tests. Keep those states in requirements and verify them in the real app.
 
 Reference and review history: `docs/29-UX-DESIGN-APPROVAL-PACK.md`; prototype boards under `docs/prototypes/`.
 
-## 4. Remaining planning clarifications
+## 4. Recorded planning defaults and acceptance obligations
 
-These are the remaining material semantic questions identified in the current documents. Resolve them with conservative, consistent wording; do not escalate routine cosmetic details unless the owner wants to override the default.
+The following are no longer open planning choices: D-201 records the default semantics. Keep these as explicit acceptance obligations for later authorised implementation-time verification; do not describe the chosen defaults as runtime-verified. Do not escalate routine cosmetic details unless the owner wants to override a reversible default.
 
 1. **Duration presentation:** D-201 sets a conservative default: normalize compatible units before summing; preserve source precision and round only for display; show the largest useful whole unit plus a smaller-unit remainder; use 24-hour days and 7-day weeks; do not show month-equivalents in v1. Verify actual formatting during implementation-time testing.
 2. **Growth Mark period controls:** D-201 keeps current/selected calendar-month navigation and date/session drill-down in initial v1; separate day/week reporting selectors are deferred unless the owner reopens scope. Clearly label the calendar reporting period.
@@ -88,9 +88,9 @@ The task/accessibility protocol in `docs/34-UX-TASK-AND-ACCESSIBILITY-REVIEW-PRO
 ## 7. Recommended next steps
 
 1. D-201 has recorded the conservative duration-formatting, period-control, and compatible-aggregation planning defaults in the decision log, screen/data contracts, and traceability matrix. Do not mark runtime behaviour as verified.
-2. **Documentation-only link and stale-claim audit completed on 2026-10-29:** checked 17 key Markdown files plus root/docs/prototype paths; found zero broken relative links and zero matches for the targeted stale-current-status claims.
-3. Focused decision-ID reconciliation was rerun after D-203 and R-034. The current decision log and decision register each contain 197 unique decision rows through D-203, with gaps preserved, and the D-203 follow-up now references the privacy inventory and R-033/R-034 reconciliation. This was a targeted count/reference check, not an exhaustive repository-wide link or stale-claim audit. All checks are documentation-only and do not prove application behaviour; planning gate remains closed.
-4. Present the owner with this report and the distinct gate choice. Do not open the gate unless the owner explicitly approves it.
+2. **Targeted link and stale-claim checks:** earlier checks covered 17 key Markdown files plus root/docs/prototype paths. This continuation updated README, docs 19, 25, 27 and 32 and should not be described as an exhaustive post-update link audit.
+3. **Decision/reference reconciliation:** the current decision log and register each contain 197 unique decision rows through D-203, with gaps preserved. R-020 count, D-203 follow-up references, doc 19's D-201 status and README's D-200/D-201 claims were corrected. A textual static heuristic review of the three SVG boards is recorded in docs 27/32; the binary owner reference and rendered-pixel accessibility were not inspected. This remains documentation-only and does not prove application behaviour; planning gate remains closed.
+4. Reconcile the remaining checklist in doc 27 against this report, update the current progress handover, then present the bounded remaining planning items for owner review. Do not open the gate unless the owner explicitly approves it.
 5. After a separate authorisation, inspect the existing native Kotlin/Jetpack Compose project and actual schema/build configuration. Technical validation and feature implementation remain separate decisions.
 
 ## 8. Gate statement
