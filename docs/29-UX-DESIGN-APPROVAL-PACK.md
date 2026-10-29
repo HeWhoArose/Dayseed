@@ -118,6 +118,26 @@ Record task completion, wrong taps, backtracking, user explanation of metrics, a
 - Font candidate notes must include source, version, licensing, language coverage and bundle-size consequences before any font is bundled.
 - Preserve the approved semantic rules: “not recorded” differs from explicit zero; rest/non-scheduled days are neutral; paused days are excluded; missed is derived only after the scheduled local day passes; no explicit habit-day Skip action exists in v1.
 
+## 5.1 Static heuristic review of the three comparison boards — 2026-10-29
+
+**Review type and limits:** this is a source-content/heuristic review of the three SVG planning boards against the task/accessibility scorecard. It is not an observed user task study, rendered-device inspection, measured contrast audit, TalkBack test, touch-target measurement, or approval of the designs. No task-completion times, wrong-tap rates, usability scores, or accessibility pass claims are inferred.
+
+### Findings requiring correction before the next owner review
+
+1. **Today board conflicts with D-199 Growth Mark direction.** The W1 card currently shows “October · 6 active dates” (the former G1 measure), while D-199 selects the modified G2 “Collected moments” duration total with G3 date/session detail. W2 uses a “Your collected moments” label but still shows an active-date count. Update the selected W1 presentation to a compatible saved-duration total with an explicit reporting period, and ensure the comparative variants are clearly labelled as alternatives rather than presenting the obsolete active-date measure as the selected card.
+2. **Cross-variant Growth Mark comparison is not controlled.** The Today variants currently do not consistently show the same selected Growth Mark measure. For the hierarchy comparison, use identical underlying habit records, duration total, reporting period, zero/no-record semantics and detail destination; vary only the hierarchy element intended for the comparison. If an alternative intentionally tests omission of the card, label that as the variable.
+3. **Journal and navigation comprehension remains a task question, not a finding.** N1/A2 has clear text labels for Today, History, Insights and Settings and shows Journal/search/date-jump inside History. That supports the chosen direction, but the board itself cannot prove users will find Journal, distinguish saved entries from drafts, or locate privacy/export/backup/delete controls. Keep these as explicit owner/task-review checks.
+4. **A2 calendar density and date semantics need a closer pass.** The hybrid view combines search, date jump/calendar, and recent entries. Verify the calendar’s month-boundary dates are visually distinguished where needed, selected-date state is explicit without colour alone, multiple entries on one date remain discoverable, and blank dates do not imply failure. No user comprehension result is available yet.
+5. **Large text, keyboard, focus and touch-target behaviour are unverified across all boards.** The SVGs are fixed-size mockups and cannot demonstrate 200% text scaling, keyboard-open layout, TalkBack names/order, 48 dp target sizing, one-handed reachability, reduced-motion behaviour, or long-text/empty/error/destructive states. These remain mandatory checks; do not mark them passed from the drawings.
+6. **Contrast and typography are not ready for approval.** Candidate colours and font directions remain exploratory. The research notes a candidate muted text pairing that fails normal-text AA; do not carry that pairing forward. Measure exact foreground/background pairs in light and dark themes, and separately inspect non-text boundaries/focus and all interaction states. Compare the system typography baseline with candidates using identical copy and size; do not bundle a custom font without source/version/licence/language coverage and size review.
+7. **Comeback emotional safety is directionally supported but not fully reviewed.** The compact, dismissible, non-blocking direction is consistent with the decisions. The actual 3-/14-/30-/90-day edge cases, no-eligible-habit state, unsaved draft reuse, “Not now”/continue path, localisation, and enlarged-text layout still need scenario review.
+
+### Safe deferrals and next review scope
+
+- Keep the selected W1/N1/A2 and modified G2/G3 roles as the current planning directions; do not re-open them solely because evidence is still pending. Revisit a selected direction only if task/accessibility review exposes a material problem.
+- Defer final visual identity, exact colour/type/spacing tokens, custom-font selection, Growth Mark display thresholds and alternate-period controls until comparable samples and required accessibility evidence are available.
+- Before asking for owner approval, correct the W1/W2 Growth Mark inconsistency and make the Today comparison boards use controlled comparable content. Then conduct the task review listed above, recording observed results separately from static heuristics. The planning gate remains closed.
+
 ## 6. Owner decision batch
 
 The owner can approve a recommendation, request a variation, or explicitly defer any of these without blocking core features that do not depend on it. The suggestions below are recommendations, not approvals.
