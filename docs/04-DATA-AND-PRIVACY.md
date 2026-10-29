@@ -56,6 +56,23 @@ Owner accepted the candidate copy above as a **draft baseline** on 2026-10-28 (O
 - [ ] Privacy wording matches observed behaviour and platform settings.
 - [ ] Release privacy disclosures match actual SDKs and behaviour.
 
+## 10. Privacy and offline data-flow reconciliation (planning only)
+
+Keep the promise, data paths, and evidence status separate:
+
+| Path or claim | Initial-v1 planning rule | Evidence still required before release claims |
+|---|---|---|
+| Core use offline | Habit tracking, saved journaling, history, insights and comeback flows must not require network access or an account. | Inspect the actual dependency/permission configuration and observe network behaviour for core flows, including first launch and failure states. |
+| Dayseed-managed online services | Accounts, cloud backup, cross-device sync, AI processing and server-side personal-data processing are excluded from initial v1. | Inspect the actual source, dependencies and runtime traffic; any later addition needs a separate explicit approval gate. |
+| Android Auto Backup/device transfer | D-186 policy is to exclude sensitive app data and unsaved reflections by default. | Verify manifest and data-extraction rules plus supported OS/device-transfer paths. Policy approval alone does not prove exclusion works. |
+| Dayseed portable backup/restore | User-initiated portable backup/restore remains available for migration, with integrity checks and documented contents. | Verify actual exported fields, integrity checks, failure recovery and restore behaviour after separate technical-validation authorisation. |
+| Readable journal export / file provider | Export is user-directed and sensitive; a chosen provider may upload or sync the file under its own terms. | Verify scope, destination/share-sheet behaviour and user-facing warnings. Do not describe provider storage as Dayseed cloud sync. |
+| Diagnostics, analytics and SDKs | No third-party analytics or advertising SDK is approved for initial v1; crash reporting is not implicitly approved. | Inspect actual dependencies and data flows. If crash reporting or another SDK is proposed later, assess collected fields, identifiers, retention, opt-out and redaction before a separate approval. |
+| Deletion | Explain Dayseed-controlled deletion separately from exported, provider-held, OS-retained or other-app copies. | Verify the exact local-data inventory, database/cache deletion and copy-management guidance; never claim external copies were deleted without evidence. |
+| Encryption | No encryption-at-rest claim is approved by wording alone. | Inspect and verify the actual storage/encryption design before making a claim. |
+
+Do not collapse these into a single blanket promise such as “everything stays on this device” or “Dayseed never sends data.” The approved direction is local-first/offline core use; the actual network, platform-backup, SDK, file-provider and deletion behaviour is still unverified. This reconciliation records existing decisions and evidence gaps only. It does not create a new product decision, authorise technical inspection/testing, or open the planning gate.
+
 ## Date and history integrity (D-187)
 
 - Store the user-intended local calendar date separately from creation/update instants. Travel or a timezone change must not silently move existing habit records or journal entries to another date.
