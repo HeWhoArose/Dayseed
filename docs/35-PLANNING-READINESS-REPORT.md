@@ -15,7 +15,7 @@ The current planning gate should **remain closed**. The remaining work is a boun
 
 - **O-1 / O-2:** accepted the written schema and portable-backup/restore-conflict rules as planning baselines only. The actual database, migrations, and rollback behaviour remain uninspected and unverified.
 - **O-3 / O-4 / O-5:** W1 Action-first Today, N1 four-destination navigation, and A2 hybrid journal archive selected as current planning directions; not validated UI.
-- **O-6 / D-199:** modified G2 “Collected moments” shows recorded duration from duration-tracked habits, current calendar month by default; G3 exposes date-level totals and underlying duration records. Exact unit thresholds and period-control semantics remain open.
+- **O-6 / D-199 / D-201:** modified G2 “Collected moments” shows saved duration from duration-tracked habits, current calendar month by default; G3 exposes date-level totals and source sessions. D-201 sets a conservative duration display rule, canonical-unit aggregation, month navigation, and date/session drill-down. Independent day/week selectors and month-equivalent duration displays are deferred for initial v1.
 - **O-7:** system/platform typography and light/dark appearance accepted as baseline; exact tokens, contrast pairs, and final type/spacing choices remain open or safely deferrable.
 - **O-8:** compact, dismissible, non-blocking comeback direction accepted; final copy and runtime behaviour are not verified.
 - **O-9:** weekly reflection at 09:00 device-local on the configured week-start day; operating-system delivery remains unverified.
@@ -39,9 +39,9 @@ Reference and review history: `docs/29-UX-DESIGN-APPROVAL-PACK.md`; prototype bo
 
 These are the remaining material semantic questions identified in the current documents. Resolve them with conservative, consistent wording; do not escalate routine cosmetic details unless the owner wants to override the default.
 
-1. **Duration presentation:** define readable formatting thresholds for minutes/hours/day/week equivalents, including a clear rule for approximate month-equivalents if used. Do not imply a calendar month has a fixed duration.
-2. **Growth Mark period controls:** current calendar month is the default. Decide whether day/week/month alternatives are in initial v1 or can be deferred. Weekly boundaries follow the configured week-start. Clearly label every reporting period.
-3. **Compatible duration aggregation:** define how records with different source units, rounding/precision, zero duration, and corrections contribute. Only valid saved duration records from duration-tracked habits contribute; quantity, completion-only, effort-aware and journal records do not.
+1. **Duration presentation:** D-201 sets a conservative default: normalize compatible units before summing; preserve source precision and round only for display; show the largest useful whole unit plus a smaller-unit remainder; use 24-hour days and 7-day weeks; do not show month-equivalents in v1. Verify actual formatting during implementation-time testing.
+2. **Growth Mark period controls:** D-201 keeps current/selected calendar-month navigation and date/session drill-down in initial v1; separate day/week reporting selectors are deferred unless the owner reopens scope. Clearly label the calendar reporting period.
+3. **Compatible duration aggregation:** D-201 requires normalization to a canonical unit before summing, preserving source precision and recalculating from source records after corrections/deletions. Explicit zero contributes zero and remains distinct from no record. Only saved duration records from duration-tracked habits contribute; quantity, completion-only/effort-aware and journal records are excluded.
 4. **Zero versus no record:** preserve the distinction between an explicitly saved zero and absence of a record across Today, history, and Growth Mark. Keep this as a required acceptance rule.
 
 Other detail—exact theme tokens, large-text layout, TalkBack, focus, touch-target measurements, keyboard behaviour, contrast, error/empty states, and destructive-action recovery—should remain requirements for implementation-time verification rather than be falsely marked as tested now.
@@ -69,9 +69,9 @@ The task/accessibility protocol in `docs/34-UX-TASK-AND-ACCESSIBILITY-REVIEW-PRO
 
 ## 7. Recommended next steps
 
-1. Close the duration-formatting, period-control, and compatible-aggregation semantics in the planning contracts and traceability matrix.
+1. D-201 has recorded the conservative duration-formatting, period-control, and compatible-aggregation planning defaults in the decision log, screen/data contracts, and traceability matrix. Do not mark runtime behaviour as verified.
 2. Perform the remaining documentation-only cross-reference, heading, table-shape, and stale-claim audit; record any unresolved gaps rather than inferring evidence.
-3. Re-fetch and verify the decision log, response sheet, reconciliation matrix, readiness snapshot, and this report agree on D-199, D-200, and the closed gate.
+3. Re-fetch and verify the decision log, response sheet, reconciliation matrix, readiness snapshot, and this report agree on D-199, D-200, D-201, and the closed gate.
 4. Present the owner with this report and the remaining explicit gate choice. Do not open the gate unless the owner explicitly approves it.
 5. After a separate authorisation, inspect the existing native Kotlin/Jetpack Compose project and actual schema/build configuration. Technical validation and feature implementation remain separate decisions.
 
