@@ -162,6 +162,25 @@ After the SVG correction, the source text was re-fetched and checked: W1/W2/W3 e
 - The source drawing now clarifies the N1 New entry affordance, the partial calendar date window, and the A3 selected date. No app code or design-token authority changed.
 - Before owner approval, perform the same find/write/retrieve/edit/delete tasks against comparable variants. Include multiple entries per date, month boundaries, blank dates, search no-results, saved-entry versus draft distinction, cancel/confirm destructive actions, return-to-archive position, large text, keyboard, TalkBack/focus, and findability of privacy/export/backup/restore/delete settings. Record observed outcomes separately from static findings. The planning gate remains closed.
 
+## 5.3 Static Growth Mark and visual-reference alignment review — 2026-10-29
+
+**Review type and limits:** compared the Growth Mark SVG's source content and sample arithmetic with D-199, the Growth Mark research, and the owner-provided reference layout at `docs/prototypes/dayseed-owner-reference-layout.webp`. This is a planning-level visual/content review only. It does not establish rendered-device readability, usability, measured contrast, or accessibility.
+
+### Findings
+
+1. **G2 and G3 are directionally aligned with the owner reference and the later decision.** The reference uses a warm cream canvas, restrained sage/olive accents, editorial headings, rounded restrained surfaces, simple botanical identity, and clear mobile hierarchy. The Growth Mark comparison uses the warm neutral/sage palette, editorial title, rounded panels, and a deliberately restrained presentation. It is a comparison board rather than a finished phone screen, so it does not need to reproduce the full reference layout or add decorative plant artwork at this stage.
+2. **The owner-selected metric overrides the older reference's count example.** The reference's Habit Detail example shows “12 collected moments,” but D-199 explicitly modifies G2 to show a readable duration total from compatible saved duration sessions. Do not revert to a count of active dates or collected actions just to match the older image. Botanical decoration is not required; any future plant change must communicate a defined, explainable event rather than become a score.
+3. **The G3 sample totals did not match G2.** The original six displayed values summed to 4 hr 40 min, while G2 showed 3 hr 40 min for October. The SVG now changes the 14th from 45m to 25m and the 21st from 1h 10m to 30m. The six values now sum to 220 minutes (3 hr 40 min), matching the synthetic G2 month total.
+4. **The G2 destination label was vague.** “Progress →” did not explain what would open. It now reads “See time by date →”, consistent with the selected G3 calendar/date-level detail role.
+5. **Visual-system approval is still open.** The board's palette is a directional match, not a measured or approved token set. D-008's broader visual direction, exact colours/type/surfaces, contrast in both themes, large-text behaviour, accessible date labels, zero-versus-no-record states, alternate reporting periods, and task-based use remain open.
+
+### Safe deferrals and next review scope
+
+- Keep the modified G2 compact duration summary and G3 date/session detail as the selected planning direction; G1 remains an alternative only.
+- Use the owner reference now as a hierarchy/mood guardrail, but defer pixel-level matching, final design tokens, and detailed botanical styling until the visual direction and accessibility review. Do not block this content-level review on final colour or font choices.
+- Before final owner approval, verify period and unit comprehension; current-calendar-month default; compatible-unit totals; source-session inspection; corrections/deletions; explicit zero versus no records; empty/loading/error states; and large text/TalkBack/focus order. Record task observations separately.
+- The arithmetic and wording fixes are static prototype corrections only. No app code, design tokens, implementation, build, test, or device validation was performed; the planning gate remains closed.
+
 ## 6. Owner decision batch
 
 The owner can approve a recommendation, request a variation, or explicitly defer any of these without blocking core features that do not depend on it. The suggestions below are recommendations, not approvals.
