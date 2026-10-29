@@ -142,6 +142,26 @@ Record task completion, wrong taps, backtracking, user explanation of metrics, a
 
 After the SVG correction, the source text was re-fetched and checked: W1/W2/W3 each display the same October reporting period and 3 hr 40 min synthetic duration total, explicitly limited to duration-tracked habits. The terminology was tightened from “duration habits” to “duration-tracked habits” for precision. This was a source-text/coordinate review only, not a rendered-device readability inspection or accessibility/usability test.
 
+## 5.2 Static navigation and archive board review — 2026-10-29
+
+**Review type and limits:** static SVG source-content and coordinate review only. The board cannot prove task completion, touch accuracy, accessibility, rendered readability, or actual navigation. No user study or device test is claimed.
+
+### Findings
+
+1. **N1 creation entry point was underspecified in the drawing.** History showed a Journal switch and recent entries, but no explicit New entry action in that panel. The SVG now shows a labelled “New entry +” control alongside Journal. This is a prototype clarity fix, not approval of final placement or behaviour.
+2. **A2/A3 calendar labels overstated the displayed date range.** The grids show a late-October/early-November window, not a complete October month, while their headings previously said “October 2026.” The headings now explicitly identify a partial late-October/early-November view.
+3. **A3 selected-date highlight contradicted its own selected-date label.** The highlight was on the cell for 3 November while the detail caption said “Tue 27 Oct.” The highlight is now moved to the 27 October cell to match the shown entry/date.
+4. **Edit/delete and safety flows are not depicted.** The board shows retrieval entry points but not the entry detail/editor, saved-versus-unsaved distinction, edit-save/cancel, explicit permanent-delete confirmation/cancellation, or returning to the prior archive position. These remain mandatory task-review scenarios; do not infer they are solved by the current mockups.
+5. **Privacy and data portability remain discoverability questions.** Settings is visible in N1/N2 navigation, but the board does not show the Settings screen or demonstrate that privacy, readable export, portable backup/restore, and deletion controls can be found. Keep those in the owner task review.
+6. **The synthetic examples are incomplete by design.** A2/A3 show a partial date window, and the visible sample only shows one entry per date. Test month boundaries, multiple entries on one date, empty search results, long text, blank dates, and an entry with no title/only body using identical tasks across variants.
+7. **N1 remains the selected starting direction, not a proven winner.** The new entry affordance improves the static flow, but the board cannot establish whether users find Journal within History faster than a dedicated Journal tab. Keep N1 as the current planning direction unless task evidence reveals a material issue; do not treat N2 as owner-selected.
+
+### Safe deferrals and next review scope
+
+- Retain owner-selected N1/A2 as the current planning directions. Do not reopen them based solely on static-review gaps.
+- The source drawing now clarifies the N1 New entry affordance, the partial calendar date window, and the A3 selected date. No app code or design-token authority changed.
+- Before owner approval, perform the same find/write/retrieve/edit/delete tasks against comparable variants. Include multiple entries per date, month boundaries, blank dates, search no-results, saved-entry versus draft distinction, cancel/confirm destructive actions, return-to-archive position, large text, keyboard, TalkBack/focus, and findability of privacy/export/backup/restore/delete settings. Record observed outcomes separately from static findings. The planning gate remains closed.
+
 ## 6. Owner decision batch
 
 The owner can approve a recommendation, request a variation, or explicitly defer any of these without blocking core features that do not depend on it. The suggestions below are recommendations, not approvals.
