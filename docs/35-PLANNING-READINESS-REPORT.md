@@ -1,7 +1,7 @@
 # Dayseed Planning Readiness Report
 
 **Snapshot date:** 2026-10-29  
-**Status:** Planning reconciliation substantially complete; **planning gate not approved**.  
+**Status:** Documentation reconciliation complete for the reviewed planning set; owner review and an explicit gate decision remain; **planning gate not approved**.  
 **Repository:** `HeWhoArose/Dayseed`  
 **Scope:** Documentation and decision consistency only. This report does not authorise source inspection, technical validation, database changes, builds, tests, or implementation.
 
@@ -70,9 +70,9 @@ The task/accessibility protocol in `docs/34-UX-TASK-AND-ACCESSIBILITY-REVIEW-PRO
 ## 7. Recommended next steps
 
 1. D-201 has recorded the conservative duration-formatting, period-control, and compatible-aggregation planning defaults in the decision log, screen/data contracts, and traceability matrix. Do not mark runtime behaviour as verified.
-2. Perform the remaining documentation-only cross-reference, heading, table-shape, and stale-claim audit; record any unresolved gaps rather than inferring evidence.
-3. Re-fetch and verify the decision log, response sheet, reconciliation matrix, readiness snapshot, and this report agree on D-199, D-200, D-201, and the closed gate.
-4. Present the owner with this report and the remaining explicit gate choice. Do not open the gate unless the owner explicitly approves it.
+2. **Documentation-only link and stale-claim audit completed on 2026-10-29:** checked 17 key Markdown files plus root/docs/prototype paths; found zero broken relative links and zero matches for the targeted stale-current-status claims.
+3. **Decision reconciliation verified:** the decision log and matrix each contain 195 D-001–D-201 rows with no duplicate, missing, or extra IDs. D-199, D-200 and D-201 are present in both; current owner sheet, planning snapshot, handover, screen contract, traceability matrix and UX approval pack reflect the latest status. This verifies documentation consistency only, not application behaviour.
+4. Present the owner with this report and the distinct gate choice. Do not open the gate unless the owner explicitly approves it.
 5. After a separate authorisation, inspect the existing native Kotlin/Jetpack Compose project and actual schema/build configuration. Technical validation and feature implementation remain separate decisions.
 
 ## 8. Gate statement
