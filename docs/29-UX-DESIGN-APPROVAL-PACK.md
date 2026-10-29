@@ -327,3 +327,23 @@ This pack is a planning deliverable only. Until the owner approves the planning 
 - no visual tokens or layouts may be marked approved merely because a proposal exists.
 
 When the owner settles a consequential design decision, record it in the decision log, update the UX plan and DESIGN.md as applicable, align the dashboard concepts/research docs, update the screen/data contracts and traceability matrix, and re-fetch every changed file for verification.
+
+
+## 5.4 Cross-board visual-reference alignment review — 2026-10-29
+
+**Reference used:** `docs/prototypes/dayseed-owner-reference-layout.webp`, the owner-provided multi-screen collage. This review compares the reference with the Today, navigation/archive, and Growth Mark SVG planning boards. It is a static source/layout-direction review only; it is not a rendered-device inspection, contrast measurement, accessibility test, or usability study.
+
+### Findings
+
+1. **The boards are moving toward the reference rather than away from it.** The reference's warm paper-like canvas, restrained sage/olive accents, dark readable text, editorial serif screen headings, restrained rounded surfaces, and small seed/botanical identity recur in the Today board's palette and seed mark, and in the navigation/archive and Growth Mark boards' typography, surfaces, and accents. This is sufficient alignment for planning comparisons; exact pixel matching is not needed yet.
+2. **Keep the reference as a mood and hierarchy guardrail, not a specification to copy literally.** Its collage includes older screen examples and controls. Later owner decisions and written contracts take precedence where they differ, including D-199's duration-based “Collected moments” summary rather than the reference's older “12 collected moments” count example. The Growth Mark board need not add decorative plant art simply to resemble the reference.
+3. **No additional source-level visual correction is justified in this pass.** The three boards already share a restrained palette and editorial direction. Forcing exact colours, fonts, spacing, botanical decoration, or individual control shapes now would prematurely imply that D-008 and the token set are approved. Keep those choices open and use `DESIGN.md` as the only token/component authority.
+4. **The reference cannot prove accessibility.** Its small text in a multi-screen collage is not evidence that final phone UI should use the same text sizes. Actual compact-screen layouts, 200% text scaling where supported, contrast in light and dark themes, non-colour status cues, focus order, TalkBack names, touch targets, keyboard-open behaviour, and long/empty/error/destructive states remain unverified.
+5. **Important reference screens remain task-review targets, not completed design approvals.** Habit create/edit/detail, journal entry editing, insights, comeback return, and settings/privacy/export/backup/restore/delete need to be checked against their documented requirements when their flows are reviewed. Do not infer that a screen works or is discoverable merely because it appears in the collage.
+
+### Safe next step
+
+- Keep the owner reference visible alongside each prototype review.
+- Continue to compare hierarchy, tone, and information density, but defer pixel-level matching and final tokens until the owner reviews comparable samples and the required accessibility evidence is available.
+- Retain the current W1/N1/A2 and modified G2/G3 planning directions. Revisit them only if task or accessibility evidence identifies a material problem.
+- Record observed task results separately from static findings. The planning gate remains closed; no implementation, build, automated test, device test, or accessibility pass is claimed.
