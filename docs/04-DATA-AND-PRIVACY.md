@@ -42,6 +42,22 @@ Define a human-readable journal export and a versioned, integrity-checked portab
 ## 6. Deletion
 Provide separate, understandable options for deleting a journal entry, deleting a habit and its associated history, and deleting all app data. Confirm destructive actions. After deletion, verify records are removed from the active database and any derived caches. Explain that copies already exported or included in OS/device backups may require separate deletion.
 
+## 6A. Delete-all scope inventory (D-203; planning only)
+
+Before final confirmation, the delete-all screen must name the Dayseed-controlled local data covered by the operation in plain language. The following is the planning inventory to reconcile against the actual schema and runtime before release; it is not proof that every category exists or that deletion currently removes it:
+
+- Habit definitions and effective configuration/schedule history.
+- Tracking history, including numeric/duration entries, day outcomes, notes and derived history/cache data.
+- Saved journal entries and their titles, dates, mood tags and optional links.
+- Unsaved journal/comeback drafts and any persisted draft-save context.
+- App preferences and reminder preferences stored by Dayseed.
+- Local restore sessions, unresolved conflict payloads and related recovery context.
+- Dayseed-managed transient/cache state and pending notification-cancellation work, where present.
+
+The confirmation must separately explain that exported files, portable-backup files, provider-held/synced copies, OS-retained copies and copies saved by other apps may remain. Offer practical removal guidance for copies the user controls. Do not claim those external copies were deleted. Device-level notifications or other OS-managed state may require separate cancellation/cleanup; do not promise they have disappeared until the relevant behaviour is verified. Exact inventory, transactional scope, cache cleanup, notification cleanup and runtime deletion effects remain unverified and must be reconciled with the actual implementation before release.
+
+This section records the existing D-203 policy for planning consistency only. It does not approve implementation, technical inspection/testing, or open the planning gate.
+
 ## 7. Analytics and crash reporting
 Default proposal: no third-party analytics in the first release until a concrete need is demonstrated. If crash reporting is later adopted, review SDK collection, data residency, retention, identifiers, opt-out, and log scrubbing. Never attach database contents or journal text to crash reports. Do not use journal text to personalise ads.
 
