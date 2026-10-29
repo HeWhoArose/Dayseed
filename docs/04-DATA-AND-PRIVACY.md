@@ -40,7 +40,16 @@ The current written model distinguishes these data classes and destinations. Thi
 Define a human-readable journal export and a versioned, integrity-checked portable backup format before release. Export/backup must be user-initiated or follow the separately approved local Auto Backup settings, explain what is included, avoid accidental public sharing, and use the Android system file picker or share sheet where appropriate. Journal export must be clearly labelled as sensitive. A file picker may expose provider-backed destinations (including providers that sync files online); disclose that the chosen provider may upload/sync the saved file. This is user-directed file handling, not a Dayseed-managed cloud account, online backup service, or cross-device sync feature.
 
 ## 6. Deletion
-Provide separate, understandable options for deleting a journal entry, deleting a habit and its associated history, and deleting all app data. Confirm destructive actions. After deletion, verify records are removed from the active database and any derived caches. Explain that copies already exported or included in OS/device backups may require separate deletion.
+
+Keep deletion scopes separate and name the affected data before confirmation:
+
+- **Delete one saved journal entry:** remove only the selected saved entry and its Dayseed-controlled associated data; do not delete other entries from the same date, habit records, or unrelated drafts.
+- **Discard one unsaved draft:** remove only the selected draft and any persisted save-preparation context belonging to it. Do not treat it as a saved journal entry or affect other drafts.
+- **Permanently delete one habit:** remove that habit and its owned configuration, tracking history, notes and habit-scoped delivery records. Preserve independent journal entries and their text; clear only their optional link to the deleted habit. Preserve global reminder preferences/work not owned by that habit. Queue opaque OS-notification identifiers for post-commit cancellation; successful database deletion does not itself prove OS notifications were cancelled.
+- **Resolve one restore conflict:** clear the conflict payload only in the same successful transaction that commits a supported resolution. Keep both validated payloads and required parent-session context if resolution fails or remains unsupported. Do not treat conflict cleanup as a general delete-all action.
+- **Delete all Dayseed data:** remove the full disclosed scope of Dayseed-controlled local data, including applicable saved records, drafts, preferences, restore/recovery state and derived/transient data. The exact inventory and transaction boundary must be reconciled with the actual implementation before release.
+
+Confirm destructive actions where the screen contract requires it. Verify database rows, derived caches and relevant local state after the operation. Explain that copies already exported or included in portable backups, provider-held files, OS/device backups or other apps may require separate deletion. These are distinct planning contracts, not runtime evidence.
 
 ## 6A. Delete-all scope inventory (D-203; planning only)
 
@@ -57,6 +66,18 @@ Before final confirmation, the delete-all screen must name the Dayseed-controlle
 The confirmation must separately explain that exported files, portable-backup files, provider-held/synced copies, OS-retained copies and copies saved by other apps may remain. Offer practical removal guidance for copies the user controls. Do not claim those external copies were deleted. Device-level notifications or other OS-managed state may require separate cancellation/cleanup; do not promise they have disappeared until the relevant behaviour is verified. Exact inventory, transactional scope, cache cleanup, notification cleanup and runtime deletion effects remain unverified and must be reconciled with the actual implementation before release.
 
 This section records the existing D-203 policy for planning consistency only. It does not approve implementation, technical inspection/testing, or open the planning gate.
+
+### Deletion-scope comparison (R-034; planning only)
+
+| Action | Intended Dayseed-controlled scope | Must remain untouched / special handling |
+|---|---|---|
+| Delete saved journal entry | The selected saved entry only | Other same-date entries, habit activity and unrelated drafts |
+| Discard unsaved draft | The selected draft and its own persisted save-preparation context | Saved entries and other drafts |
+| Permanently delete habit | The selected habit and its owned configuration, tracking history, notes and habit-scoped delivery records | Independent journal entry/text survives with optional habit link cleared; global reminders remain; OS notification cancellation is post-commit and must be confirmed/retried |
+| Resolve restore conflict | The selected conflict only, atomically with a supported committed resolution | Both snapshots and parent context remain if unresolved or resolution fails; never silently discard/overwrite |
+| Delete all Dayseed data | The complete, disclosed Dayseed-controlled local data scope, including applicable drafts, preferences and recovery state | External/provider/other-app copies may remain; OS-managed cleanup is not guaranteed by database deletion alone |
+
+This comparison reconciles existing rules only. The exact stored entities, file/cache coverage, transactional boundaries, external effects and actual deletion behaviour are unverified. No implementation, technical validation or planning-gate approval is authorised.
 
 ## 7. Analytics and crash reporting
 Default proposal: no third-party analytics in the first release until a concrete need is demonstrated. If crash reporting is later adopted, review SDK collection, data residency, retention, identifiers, opt-out, and log scrubbing. Never attach database contents or journal text to crash reports. Do not use journal text to personalise ads.
