@@ -452,3 +452,10 @@ The canonical readiness snapshot is `docs/27-PLANNING-COMPLETENESS-REVIEW.md`; t
 - Internal links and heading fragments were not comprehensively re-crawled across the entire repository after every latest text edit. The edited paragraphs did not intentionally add or change Markdown destinations/headings; final repository-wide link/heading verification remains a closeout check if the docs continue changing.
 - No app code/schema/migration changes, build, tests, APK, device validation, runtime privacy/deletion/restore checks or user study were performed. **Planning gate remains CLOSED / NOT APPROVED.**
 - Next: present the bounded remaining planning items for owner review; do not treat that review as gate approval.
+
+
+### Follow-up consistency corrections — 2026-10-29
+
+- The final cross-check caught two remaining stale statements in the traceability/owner-decision documents: AC-014/gap 1 still described O-2's format/schema compatibility boundary as awaiting owner review, and the O-6 summary still presented period controls as open. Updated docs 28 and 31 to reflect O-2's accepted planning baseline and D-201's settled duration/period defaults. Updated R-029 in doc 25 to remove the stale owner-review claim and repaired its Markdown table row width along with R-030.
+- Re-fetched README and docs 19/25/27/28/31/32/35. The targeted stale-status scan found no remaining matches for the superseded ads-pending, D-201-open, O-2-pending or inaccurate accessibility-review wording. The decision log and register still each contain 197 unique IDs through D-203. Table-width checks for docs 25/27/28/31 found no malformed rows.
+- A full repository-wide post-edit link/heading-fragment crawl remains unclaimed; no destinations or heading anchors were intentionally changed in this correction. The broad semantic/traceability closeout remains open and all acceptance cases remain planned, not executed. Planning gate remains **CLOSED / NOT APPROVED**.
