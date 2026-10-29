@@ -92,7 +92,7 @@ For every issue: reproduce → identify root cause → implement the smallest sa
 
 - Planning gate decision: **Not approved**
 - Owner planning responses O-1–O-11 recorded: **2026-10-28** — this is not planning-gate approval.
-- Remaining planning items include final duration-unit/period semantics, cross-document traceability/semantic checks, and a readiness report. D-200 records the owner’s decision to defer ads for initial v1 and revisit before launch; `docs/33-MONETISATION-AND-ADS-EVALUATION.md` is retained as pre-launch material. Interaction/accessibility validation is reserved for coding against actual screens. No implementation or technical validation is authorised.
+- D-201 has recorded the conservative duration-unit, formatting, and period-control defaults in the decision log, screen/data contracts, and traceability matrix. Remaining planning work is the ongoing cross-document traceability/semantic review and owner review of the readiness report. D-200 defers ads for initial v1 and retains `docs/33-MONETISATION-AND-ADS-EVALUATION.md` as pre-launch material. Interaction/accessibility validation is reserved for coding against actual screens. No implementation or technical validation is authorised.
 - Owner approval date:
 - Approved scope/version:
 - Stack decision D-009: **Approved — continue the existing native Kotlin + Jetpack Compose Android project** (2026-10-26). This is not planning-gate approval or authorisation to implement features.
