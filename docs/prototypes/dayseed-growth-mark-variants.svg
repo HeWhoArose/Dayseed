@@ -35,7 +35,7 @@
   <line x1="585" y1="230" x2="1015" y2="230" class="line"/>
   <text x="585" y="285" class="heading">Collected moments</text>
   <text x="585" y="325" class="body">3 hr 40 min recorded this month</text>
-  <text x="585" y="365" class="link">Progress →</text>
+  <text x="585" y="365" class="link">See time by date →</text>
   <line x1="585" y1="394" x2="1015" y2="394" class="line"/>
   <text x="585" y="433" class="heading">What it communicates</text>
   <text x="585" y="465" class="small">A warm summary with a clearly labelled</text>
@@ -67,9 +67,9 @@
     <text x="1246" y="348" text-anchor="middle" class="small" style="font-size:15px;fill:#506448">09</text>
     <text x="1246" y="378" text-anchor="middle" class="small" style="font-size:12px;fill:#506448">1h</text>
     <text x="1309" y="348" text-anchor="middle" class="small" style="font-size:15px;fill:#506448">14</text>
-    <text x="1309" y="378" text-anchor="middle" class="small" style="font-size:12px;fill:#506448">45m</text>
+    <text x="1309" y="378" text-anchor="middle" class="small" style="font-size:12px;fill:#506448">25m</text>
     <text x="1372" y="348" text-anchor="middle" class="small" style="font-size:15px;fill:#506448">21</text>
-    <text x="1372" y="378" text-anchor="middle" class="small" style="font-size:12px;fill:#506448">1h 10m</text>
+    <text x="1372" y="378" text-anchor="middle" class="small" style="font-size:12px;fill:#506448">30m</text>
     <text x="1435" y="348" text-anchor="middle" class="small" style="font-size:15px;fill:#506448">27</text>
     <text x="1435" y="378" text-anchor="middle" class="small" style="font-size:12px;fill:#506448">50m</text>
   </g>
