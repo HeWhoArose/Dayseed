@@ -203,10 +203,10 @@ The owner can approve a recommendation, request a variation, or explicitly defer
 
 **Rendered navigation/archive planning artefact:** [N1/N2 navigation and A1/A2/A3 archive comparison](prototypes/dayseed-navigation-archive-variants.svg). This board compares four versus five bottom destinations and timeline-first, hybrid, and calendar-first archive layouts using matching synthetic entries. N1 four-destination navigation and A2 hybrid archive are selected planning directions; task/accessibility validation remains outstanding. The board is not approved application UI.
 
-**Rendered Growth Mark comparison:** [G1 plain active-date summary, G2 “Collected moments” duration total, and G3 calendar/date-level detail](prototypes/dayseed-growth-mark-variants.svg). The board uses synthetic duration examples. The owner selected the modified G2/G3 roles in D-199; it remains a planning artefact, not approved application UI or accessibility/usability evidence. Unit formatting, period controls and detailed-view interactions still need review.
+**Rendered Growth Mark comparison:** [G1 plain active-date summary, G2 “Collected moments” duration total, and G3 calendar/date-level detail](prototypes/dayseed-growth-mark-variants.svg). The board uses synthetic duration examples. The owner selected the modified G2/G3 roles in D-199; it remains a planning artefact, not approved application UI or accessibility/usability evidence. D-201 records the unit-formatting and period defaults; the remaining review is whether the presentation is understandable and accessible and whether detail interactions, corrections, deletion, explicit zero and empty states behave as specified.
 
 
-The linked SVG boards are rendered comparison prototypes with consistent synthetic data across variants. They are still planning artefacts, not usability findings, approved layout decisions, or application UI. The remaining step is a task-based review with large text, empty/error/destructive states and accessibility checks, followed by owner selection or explicit deferral.
+The linked SVG boards are rendered comparison prototypes with consistent synthetic data across variants. They are planning artefacts, not usability findings, approved final layout decisions, or application UI. W1/N1/A2 and modified G2/G3 are already selected planning directions; the remaining step is a task-based review with large text, empty/error/destructive states and accessibility checks. The owner can then confirm, modify, or defer a direction based on evidence; initial selection is not pending.
 
 ### Today layout variants
 
@@ -315,7 +315,7 @@ For each variant, record observed results rather than guesses:
 | Find privacy, export, backup/restore, and deletion settings | completion and any ambiguity |
 | Use the primary tasks with large text and keyboard visible | clipping, lost actions, focus order, scrolling and recovery issues |
 
-**Exit rule:** a wireframe is not approved because it looks cleaner. Choose a direction only after the variants use the same content/tasks, major empty/error/destructive states have been checked, accessibility concerns are logged, and the owner approves or explicitly defers each decision. No usability score or observed finding is claimed yet.
+**Exit rule:** a wireframe is not approved because it looks cleaner. W1/N1/A2 and modified G2/G3 are the current selected planning directions, but final UI approval requires comparable content/tasks, review of major empty/error/destructive states, logged accessibility concerns, and an explicit owner decision to confirm, modify, or defer based on evidence. No usability score or observed finding is claimed yet.
 
 ## 7. Approval and implementation boundary
 
