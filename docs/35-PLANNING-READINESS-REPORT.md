@@ -51,9 +51,9 @@ Other detail—exact theme tokens, large-text layout, TalkBack, focus, touch-tar
 - Core v1 remains offline-first; accounts, Dayseed-managed cloud backup/sync, and AI processing remain excluded unless separately approved.
 - Android platform Auto Backup/device-transfer exclusion is distinct from the user-controlled portable backup/restore feature.
 - Archive is the default for habits; permanent deletion is separate and explicit. Deletion scopes and consequences must remain distinct.
-- Backup/restore accepts only supported formats or documented lossless conversions; unsafe conflicts fail closed rather than silently merging or losing records.
+- Backup/restore accepts only supported formats or documented lossless conversions. **D-202:** preserve both validated payloads for an unsafe restore conflict and block the unsafe resolution or affected operation until a supported choice exists; never silently overwrite, merge, discard, or offer unsupported “Keep both.” This is a planning rule; the complete field-level mapping and supported format/schema compatibility boundary still require review.
 - Ads are deferred for initial v1. Revisit the evaluation before launch with current audience, region, privacy/data-flow, consent, accessibility, offline failure, SDK compatibility, and Play disclosure evidence.
-- Privacy language remains draft-only until actual SDK, manifest, data-extraction, network, export, and deletion behaviour is verified.
+- Privacy language remains draft-only until actual SDK, manifest, data-extraction, network, export, and deletion behaviour is verified. D-202 clarifies unsafe restore-conflict handling in planning only; restore/migration runtime behaviour remains unverified.
 
 ## 6. Validation status — not performed
 
