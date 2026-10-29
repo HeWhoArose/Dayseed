@@ -442,3 +442,13 @@ The canonical readiness snapshot is `docs/27-PLANNING-COMPLETENESS-REVIEW.md`; t
 - Verification: re-fetched each edited document from `main` after its write. Decision log and register each retain 197 unique rows through D-203. No application files, schema, migration, build, tests, APK, device state or runtime data were changed or tested.
 - Remaining: complete the final bounded semantic/traceability review and post-edit internal-link, heading-fragment and table-shape checks; then present the remaining planning items for owner review. This is not planning-gate approval.
 - **Current gate: CLOSED / NOT APPROVED.** No technical validation or implementation is authorised by this documentation work.
+
+
+## Final bounded planning reconciliation check — 2026-10-29
+
+- Re-fetched the current planning set after the latest edits. Corrected two malformed Markdown table rows (R-029/R-030) in `docs/25-DECISION-REGISTER-AND-RECONCILIATION.md`; the row-width check now passes for docs 25, 27, 28 and 31 with no malformed rows found.
+- Decision coverage remains consistent: `docs/09-DECISION-LOG.md` and the decision matrix each contain 197 unique decision IDs through D-203, with gaps preserved.
+- Targeted stale-status scans across README and docs 19/27/28/31/32/35/12/25 found no remaining matches for the specific superseded D-200 ads-pending, D-201 formatting/period-open, or inaccurate completed-accessibility-review wording that this pass targeted. This is a bounded phrase/status scan, not proof of exhaustive semantic consistency across every historical paragraph.
+- Internal links and heading fragments were not comprehensively re-crawled across the entire repository after every latest text edit. The edited paragraphs did not intentionally add or change Markdown destinations/headings; final repository-wide link/heading verification remains a closeout check if the docs continue changing.
+- No app code/schema/migration changes, build, tests, APK, device validation, runtime privacy/deletion/restore checks or user study were performed. **Planning gate remains CLOSED / NOT APPROVED.**
+- Next: present the bounded remaining planning items for owner review; do not treat that review as gate approval.
