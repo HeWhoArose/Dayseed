@@ -368,3 +368,8 @@ When the owner settles a consequential design decision, record it in the decisio
 - Before final design approval, review matching tasks across the comparable options: log a measured value including explicit zero; distinguish zero from no record; find/write/retrieve/edit/delete a journal entry; search with no results; inspect a Growth Mark date and its source sessions; correct/delete a session and verify the expected summary; find privacy/export/backup/restore/delete settings; return from a comeback screen without writing.
 - Record actual observations separately. The next authorised review should include compact and typical phone widths, largest supported text size, keyboard open, TalkBack/focus order, touch-target measurements, contrast measurements in light/dark themes, and empty/loading/error/destructive states.
 - The design checklist remains unchecked for these validations. No user study, rendered-device inspection, measured contrast audit, TalkBack test, build, app test, or device test is claimed. The planning gate remains closed.
+
+
+### Prepared task/accessibility review protocol
+
+A reusable, planning-only script and evidence template is now available in [`docs/34-UX-TASK-AND-ACCESSIBILITY-REVIEW-PROTOCOL.md`](34-UX-TASK-AND-ACCESSIBILITY-REVIEW-PROTOCOL.md). It defines a shared synthetic fixture, neutral task wording, observation fields, accessibility evidence matrix, severity triage and exit criteria. The protocol is prepared, not executed; no task outcomes or accessibility passes are claimed. The design checklist remains open and the planning gate remains closed.
