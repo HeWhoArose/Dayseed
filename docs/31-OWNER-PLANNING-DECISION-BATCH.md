@@ -114,7 +114,7 @@ This sheet preserves the consequential choices and the owner's actual responses.
 
 ### Follow-up decision D-202 — unsafe restore conflicts (2026-10-29)
 
-The owner accepted fail-safe handling for unsafe portable-restore conflicts: preserve both validated conflict payloads for review and block the unsafe resolution or affected operation until a supported choice exists. Never silently overwrite, merge, discard, or offer unsupported “Keep both.” This is a planning decision only. The broader field-level mapping and supported format/schema compatibility boundary still require review; no implementation, restore execution, or planning-gate approval is authorised.
+The owner accepted fail-safe handling for unsafe portable-restore conflicts: preserve both validated conflict payloads for review and block the unsafe resolution or affected operation until a supported choice exists. Never silently overwrite, merge, discard, or offer unsupported “Keep both.” O-2 also accepted the written format/schema compatibility boundary as a planning baseline. The field-level mapping and compatibility rules are documented in docs 03/30; implementation, restore execution and runtime verification remain unauthorised, and this acceptance does not open the planning gate.
 
 ## 5. Separate post-planning technical validation — not currently authorised
 
