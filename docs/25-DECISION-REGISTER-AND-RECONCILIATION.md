@@ -22,6 +22,12 @@ The decision log (`09-DECISION-LOG.md`) remains the detailed record of owner cho
 |---|---|---|
 | R-031 — Privacy and offline promises may be broader than the evidence | Reconciled existing D-003/D-004/D-011/D-186/D-200 and O-10 wording in `04-DATA-AND-PRIVACY.md`: core use must work offline without an account; Dayseed-managed cloud/sync and AI processing are excluded from initial v1; portable backup, readable export, Android platform backup and user-selected file-provider storage are distinct paths; no third-party analytics or advertising SDK is implicitly approved; encryption and “never leaves this device” claims require evidence. | Planning reconciliation only. Actual dependencies, permissions, manifest/data-extraction rules, network traffic, SDK/data flows, provider behaviour, encryption and deletion effects have not been technically verified. Do not claim runtime privacy compliance or open the planning gate on the strength of documentation alone. |
 
+## Delete-all data-class coverage cross-check (R-033)
+
+| Risk | Reconciliation | Evidence status / boundary |
+|---|---|---|
+| R-033 — Delete-all disclosure may not name all Dayseed-controlled data classes consistently | `04-DATA-AND-PRIVACY.md` now adds a planning inventory for the confirmation boundary: habit/configuration history; tracking records, notes and derived data; saved journal entries; unsaved drafts and draft-save context; preferences; restore sessions/conflict payloads/recovery context; and Dayseed-managed transient/cache state and pending notification-cancellation work where present. It separately identifies exported/portable-backup files, provider-held or synced copies, OS-retained copies and other-app copies as outside the promise of Dayseed-controlled deletion. | Documentation cross-check only. The confirmation must be reconciled with the actual schema, local files, caches, notification state and deletion transaction after separate authorisation. Do not imply OS-managed notifications or external copies are gone without evidence. No implementation, technical validation or planning-gate approval is authorised. |
+
 ## Data lifecycle/privacy wording cross-check (R-032)
 
 | Risk | Reconciliation | Evidence status / boundary |
