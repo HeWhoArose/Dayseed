@@ -432,3 +432,13 @@ The canonical readiness snapshot is `docs/27-PLANNING-COMPLETENESS-REVIEW.md`; t
 - Verification: re-fetched current `main`; counted 197 unique decision rows in both `docs/09-DECISION-LOG.md` and `docs/25-DECISION-REGISTER-AND-RECONCILIATION.md`; re-fetched updated README, workflow, decision register, completeness review, handover and readiness report. Targeted stale statements were corrected. This is not an exhaustive post-update repository-wide link/semantic audit.
 - Not done: no application source changes, schema/migration changes, build, automated tests, APK installation, physical-device validation, runtime privacy/deletion/restore tests, user study, rendered accessibility verification, or technical validation.
 - Current gate: **planning gate remains closed / not approved**. Next: reconcile any remaining stale status claims in historical/handover material, cross-check doc 27 against doc 35, and then present the bounded remaining planning items for owner review. Owner review is not gate approval.
+
+
+## Traceability and checklist reconciliation continuation — 2026-10-29
+
+- Reconciled `docs/27-PLANNING-COMPLETENESS-REVIEW.md`, `docs/28-REQUIREMENT-TRACEABILITY.md`, `docs/31-OWNER-PLANNING-DECISION-BATCH.md`, `docs/19-AI-STUDIO-GITHUB-WORKFLOW.md`, and `docs/35-PLANNING-READINESS-REPORT.md` after cross-checking their remaining-work statements.
+- Corrected stale claims that D-201's Growth Mark formatting/period defaults remained undecided and that the initial-v1 ads decision was pending. Doc 28 now identifies the D-200 deferral and treats D-201 semantics as settled planning defaults with later acceptance obligations. Doc 31 now reflects D-201 and D-203 in the current decision summary; docs 27/35 agree that final semantic/traceability and post-edit structural checks remain open.
+- Reconciled the design review wording: only the SVG text/structure received a static heuristic pass. Rendered UI, the binary owner reference image, actual contrast, TalkBack, large-text behaviour, user tasks and runtime accessibility remain unverified.
+- Verification: re-fetched each edited document from `main` after its write. Decision log and register each retain 197 unique rows through D-203. No application files, schema, migration, build, tests, APK, device state or runtime data were changed or tested.
+- Remaining: complete the final bounded semantic/traceability review and post-edit internal-link, heading-fragment and table-shape checks; then present the remaining planning items for owner review. This is not planning-gate approval.
+- **Current gate: CLOSED / NOT APPROVED.** No technical validation or implementation is authorised by this documentation work.
