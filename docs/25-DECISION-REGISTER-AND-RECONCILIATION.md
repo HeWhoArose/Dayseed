@@ -22,6 +22,12 @@ The decision log (`09-DECISION-LOG.md`) remains the detailed record of owner cho
 |---|---|---|
 | R-031 — Privacy and offline promises may be broader than the evidence | Reconciled existing D-003/D-004/D-011/D-186/D-200 and O-10 wording in `04-DATA-AND-PRIVACY.md`: core use must work offline without an account; Dayseed-managed cloud/sync and AI processing are excluded from initial v1; portable backup, readable export, Android platform backup and user-selected file-provider storage are distinct paths; no third-party analytics or advertising SDK is implicitly approved; encryption and “never leaves this device” claims require evidence. | Planning reconciliation only. Actual dependencies, permissions, manifest/data-extraction rules, network traffic, SDK/data flows, provider behaviour, encryption and deletion effects have not been technically verified. Do not claim runtime privacy compliance or open the planning gate on the strength of documentation alone. |
 
+## Data lifecycle/privacy wording cross-check (R-032)
+
+| Risk | Reconciliation | Evidence status / boundary |
+|---|---|---|
+| R-032 — Privacy copy may blur data classes, export scope, backup coverage and deletion reach | `04-DATA-AND-PRIVACY.md` now contains a planning inventory distinguishing habit/configuration data, tracking records, saved journal entries, unsaved drafts, preferences, restore-conflict context, device-specific/transient data, and files held outside Dayseed. Readable journal export excludes drafts/reminder metadata; portable backup has broader approved coverage, including unresolved drafts where feasible and unresolved conflicts under the proposed mapping; Android platform backup is a separate path governed by D-186/D-067. | Documentation reconciliation only. Actual schema, fields, export output, backup mapping, Android configuration, provider behaviour and deletion effects remain unverified. Treat portable mapping details as a proposal where marked; do not make runtime claims or open the planning gate. |
+
 ## Confirmed product direction
 
 | Area | Current status | Operational interpretation |
