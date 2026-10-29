@@ -468,3 +468,12 @@ The canonical readiness snapshot is `docs/27-PLANNING-COMPLETENESS-REVIEW.md`; t
 - Updated docs 27/28/35 so they distinguish this bounded comparison from the broader repository-wide semantic audit. No acceptance test, live database inspection, source-code audit, migration, build, APK, device validation, or runtime privacy/restore/deletion check was performed.
 - An exhaustive repository-wide link/heading crawl after all edits is still not claimed. Only the prior targeted table-shape and stale-status checks are established; any final internal-link/heading check must be described at the actual scope performed.
 - **Gate remains CLOSED / NOT APPROVED.** Next: present the bounded remaining planning items for owner review. Owner review is not gate approval; technical validation and implementation require separate explicit authorisation.
+
+
+## Repository-wide Markdown target and status reconciliation — 2026-10-29
+
+- Rebuilt the current repository file list from GitHub's recursive tree and checked relative Markdown link targets across all 42 Markdown files. The reviewed batches parsed 285 relative Markdown links; no missing relative file targets were found. Same-file heading fragments were checked in the audited batches with no missing fragments found. Cross-file heading-fragment targets were not exhaustively crawled, so this is not described as a complete heading-anchor audit.
+- The key planning-table width checks passed for docs 03/09/25/26/27/28/30/31. The bounded schema/restore/migration comparison remains consistent with the previous closeout.
+- The broader semantic pass identified stale current-status language in doc 29 (Navigation/Journal placement and Journal archive still labelled open; prototype descriptions said no style/navigation choice was approved) and doc 31 (D-201's period and compatible-aggregation defaults still described as awaiting specification). Updated those passages to reflect N1/A2 and modified G2/G3 as selected planning directions and D-201 as the current planning baseline. Validation remains outstanding and the directions are not approved/validated final UI.
+- Updated doc 27 and doc 35 to record the actual scope of link and semantic checks without claiming a full cross-file heading-anchor crawl. Historical dated records remain historical; unresolved accessibility, privacy/runtime, and implementation verification items are still open.
+- **Gate remains CLOSED / NOT APPROVED.** No source code, schema, migration, build, tests, APK, or device validation was performed.
