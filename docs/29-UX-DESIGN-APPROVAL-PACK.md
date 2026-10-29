@@ -373,3 +373,14 @@ When the owner settles a consequential design decision, record it in the decisio
 ### Prepared task/accessibility review protocol
 
 A reusable, planning-only script and evidence template is now available in [`docs/34-UX-TASK-AND-ACCESSIBILITY-REVIEW-PROTOCOL.md`](34-UX-TASK-AND-ACCESSIBILITY-REVIEW-PROTOCOL.md). It defines a shared synthetic fixture, neutral task wording, observation fields, accessibility evidence matrix, severity triage and exit criteria. The protocol is prepared, not executed; no task outcomes or accessibility passes are claimed. The design checklist remains open and the planning gate remains closed.
+
+## 5.6 Growth Mark semantic reconciliation — 2026-10-29 (D-201)
+
+D-201 records conservative planning defaults to reduce ambiguity without claiming the UI has been implemented or validated:
+
+- Normalize compatible duration units before aggregation; preserve source precision and round only for display.
+- Display a useful whole unit plus remainder using minutes, hours, 24-hour days and 7-day weeks; do not display month-equivalent duration totals in initial v1.
+- Keep G2's default period at the current calendar month. G3 uses calendar-month navigation and date/session drill-down; independent day/week period selectors are deferred unless the owner reopens scope.
+- Keep explicit zero distinct from no record, exclude incompatible habit/journal types, and recalculate totals after source-record correction or deletion.
+
+These defaults are documented in the screen/data contract (doc 26), acceptance criterion AC-025 (doc 28), decision log D-201 (doc 09), and planning readiness report (doc 35). They are planning defaults only. No rendered-device, aggregation, accessibility, correction, or deletion test has been performed. The earlier static-review findings in section 5.5 remain valid for what the SVGs do not demonstrate.
