@@ -191,3 +191,56 @@ No migration should be implemented from this document alone. The actual schema, 
 - [ ] Only after the planning gate and separate technical-validation authorisation, inspect actual source/schema/build/toolchain, run synthetic migration tests, and verify backup/restore, deletion, notification and device behavior.
 
 **Status boundary:** This document improves planning detail only. No code, database, migration, build, test, APK, or device was modified or validated.
+
+
+## Proposed mode/target and effort CHECK constraints — 2026-10-30
+
+The full relational schema remains a proposed implementation baseline, not canonical/finally approved for implementation. The following are proposed SQLite table-level CHECKs to reconcile with the actual final DDL; no live schema has been inspected or changed by this documentation update.
+
+**`habit_versions.target_value`** — measured modes require a positive integer. Non-numeric daily habits use an implicit daily outcome and NULL target; non-numeric flexible weekly targets count qualifying completed dates and require a positive integer target:
+
+```sql
+CHECK (
+	(
+		tracking_mode IN ('QUANTITY', 'DURATION')
+		AND target_value IS NOT NULL
+		AND typeof(target_value) = 'integer'
+		AND target_value > 0
+	)
+	OR
+	(
+		tracking_mode IN ('COMPLETION_ONLY', 'EFFORT_AWARE')
+		AND target_period = 'DAY'
+		AND target_value IS NULL
+	)
+	OR
+	(
+		tracking_mode IN ('COMPLETION_ONLY', 'EFFORT_AWARE')
+		AND target_period = 'WEEK'
+		AND target_value IS NOT NULL
+		AND typeof(target_value) = 'integer'
+		AND target_value > 0
+	)
+)
+```
+
+`tracking_mode` and `target_period` must each be NOT NULL and constrained to supported values. The domain/write guard must reject unsupported tracking-mode/target-period combinations and compare each row with the effective habit_versions configuration. This CHECK prevents measured rows with NULL targets and preserves the weekly completion-count requirement.
+
+**`habit_day_outcomes.outcome_kind` / `effort_level`** — `outcome_kind` must be NOT NULL and enum-constrained. Require NULL effort for completion-only and a non-NULL allowed effort for effort-aware:
+
+```sql
+CHECK (
+	(
+		outcome_kind = 'COMPLETION_ONLY'
+		AND effort_level IS NULL
+	)
+	OR
+	(
+		outcome_kind = 'EFFORT_AWARE'
+		AND effort_level IS NOT NULL
+		AND effort_level IN ('TINY', 'USUAL', 'EXTRA')
+	)
+)
+```
+
+The explicit `effort_level IS NOT NULL` is required because SQLite permits a CHECK expression evaluating to NULL. The write guard must also confirm that the outcome kind matches the effective tracking mode. Mirror these rules in domain validation and migration validation. They remain proposed until schema closure and explicit implementation authorisation.
