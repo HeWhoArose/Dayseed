@@ -456,3 +456,48 @@ The following are open validation scenarios, not proven defects:
 - Keep W1/N1/A2 and modified G2/G3 as selected planning directions. Do not reopen them solely because testing has not yet occurred.
 - Preserve doc 34 as a prepared protocol. Do not mark T-01–T-16 or A-01–A-12 passed; participant/device review has not been run or authorised.
 - Reconcile findings into doc 28 and the design checklist only after a separately authorised evidence-gathering review. The planning gate remains **CLOSED**; no implementation, build, test, APK or device validation is authorised or claimed.
+
+
+## 5.9 Growth Mark display review and requirement traceability closeout — 2026-10-30
+
+### Task 4 — Growth Mark display, units, periods and zero states
+
+**Review basis:** D-199/D-201, docs/15 section 9, docs/26 section 4.1, AC-025 in docs/28, the Growth Mark SVG, and T-10–T-12/A-11 in docs/34. This is a cross-document semantic review, not runtime verification.
+
+| Topic | Reconciled rule | Remaining review obligation |
+|---|---|---|
+| G2 meaning | “Collected moments” is a duration total from saved duration sessions of duration-tracked habits only | Ensure label and supporting text do not suggest action count, active dates, points or score |
+| Included/excluded records | Compatible saved duration sessions only; exclude quantity, completion-only/effort-aware outcomes and journal entries | Confirm source filtering and effective-dated habit mode against real records after separate authorisation |
+| Aggregation | Normalize compatible units before summing; preserve source precision; round only for display; recompute after corrections/deletions | Verify arithmetic and recomputation; no silent loss or upward rounding |
+| Display units | Largest useful whole unit plus smaller-unit remainder: minutes, hours, 24-hour days and 7-day weeks; no month-equivalent duration in v1 | Exact visual thresholds, pluralization/localization, compact layout and TalkBack phrasing remain to be reviewed |
+| Period | G2 defaults to current calendar month; G3 navigates calendar months and supports date/session drill-down; no independent day/week selectors in initial v1 unless scope is reopened | Show unambiguous month/year and selected-date context; verify previous/next navigation and matching session list |
+| Explicit zero | A saved zero-duration session is a real record, contributes zero and remains distinguishable from no record | Include a zero-only period and a date with no session; never imply zero means missing or failure |
+| Empty/error | No qualifying sessions, an empty month, loading, query failure and failed source retrieval are distinct states | These states are not drawn in the current SVG; define and review their presentation later |
+| Date detail | G3 exposes inspectable source sessions; blank dates remain neutral | Verify selected-date total equals visible compatible source sessions; edit/delete recalculates G2/G3 |
+
+**Arithmetic cross-check:** the six synthetic date values shown in G3 (35 + 20 + 60 + 25 + 30 + 50 minutes) total 220 minutes, or **3 hr 40 min**, matching the G2 headline. This is an arithmetic check of synthetic illustration data only, not an aggregation test.
+
+**Findings:**
+1. D-201 settles aggregation, display-unit family, v1 period defaults and explicit-zero semantics as planning defaults. These should not be listed as undecided owner choices.
+2. Main unresolved design details are actual screen hierarchy/wording at narrow widths, unit thresholds and localized labels, zero-only/no-session/empty/error states, source-session inspection, and accessible announcements.
+3. Growth Mark SVG shows only illustrative positive date totals. It does not demonstrate explicit-zero versus no-session, zero-only month, no qualifying sessions, failed query, correction/deletion, or selected-date TalkBack output.
+4. T-10/T-11/T-12 in doc 34 and AC-025 in doc 28 form the planned task/acceptance chain. All remain not run.
+
+### Task 5 — Requirement-to-screen/test traceability reconciliation
+
+A bounded cross-reference pass now aligns:
+- **Growth Mark:** D-199/D-201 → docs/15 and docs/26 section 4.1 → T-10–T-12 → AC-025.
+- **Journal lifecycle:** docs/26 Journal/editor contract → AC-007 → T-03/T-06–T-09.
+- **Journal navigation/retrieval:** N1/A2 in this pack and navigation/archive board → AC-021 → T-04/T-05/T-09, with limitations recorded in doc 34.
+- **Visual/accessibility:** D-205/D-207 → docs/17 and docs/29 → AC-018 and A-01–A-12 in doc 34.
+- **Comeback copy/interaction:** D-206 and docs/24 → AC-010 → T-15, with localization/accessibility still open.
+- **Privacy/settings discovery:** docs/04 and docs/26 → AC-016/AC-021 → T-13/T-14. The current navigation board shows Settings but not its contents; this is an explicit screen-map evidence gap, not a confirmed navigation defect.
+
+The updated matrix in doc 28 now identifies the relevant decision/source, contract, task/acceptance case and remaining evidence for these chains. This is a bounded planning traceability reconciliation, not an exhaustive audit of every historical repository statement or every implementation requirement.
+
+### Closeout
+
+- Growth Mark semantic rules are internally aligned across the decision, research, screen contract, visual board and acceptance matrix.
+- No new owner decision is required for D-201 settled defaults. Any proposed change to the chosen v1 period or unit semantics should be escalated as a scope change rather than silently altered.
+- Journal retrieval and Settings/privacy destination details remain explicit future design/task evidence gaps.
+- All acceptance cases remain planned/not executed. No user task study, rendered-screen inspection, accessibility measurement, build, test or device validation is claimed. Planning gate remains CLOSED.
