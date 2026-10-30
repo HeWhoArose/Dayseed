@@ -103,7 +103,7 @@ For every issue: reproduce → identify root cause → implement the smallest sa
 - Accepted blockers/deferred questions:
 - Reviewer notes:
 
-An agent may record/enact an approval only when the owner gives a clear, explicit written instruction; never infer it from “continue”, review, silence, documentation completion or an assistant recommendation. Stage B remains unauthorised until separately approved; Stage C requires the Stage B exit review and separate implementation-plan approval.
+An agent may record/enact an approval only when the owner gives a clear, explicit written instruction; never infer it from “continue”, review, silence, documentation completion or an assistant recommendation. Stage B implementation remains unauthorised until separately approved. Stage C is independent technical validation after committed Stage B implementation. Stage D requires explicit owner acceptance of the verified release candidate.
 
 
 ## Current environment note (2026-10-18)
