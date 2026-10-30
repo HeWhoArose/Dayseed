@@ -501,3 +501,8 @@ The updated matrix in doc 28 now identifies the relevant decision/source, contra
 - No new owner decision is required for D-201 settled defaults. Any proposed change to the chosen v1 period or unit semantics should be escalated as a scope change rather than silently altered.
 - Journal retrieval and Settings/privacy destination details remain explicit future design/task evidence gaps.
 - All acceptance cases remain planned/not executed. No user task study, rendered-screen inspection, accessibility measurement, build, test or device validation is claimed. Planning gate remains CLOSED.
+
+
+## Theme-token and daypart configuration guard — 2026-10-30
+
+The selected Soft Botanical direction (D-207) does not approve exact palette hex values, font choices, contrast pairings, production tokens or local-time daypart boundaries. Treat all existing candidate values/ranges as provisional. During implementation, keep semantic theme tokens and daypart boundaries in one centrally configurable source; do not scatter hardcoded values through components. DESIGN.md remains the sole authority for tokens only after explicit approval. Contrast, light/dark, text scaling, TalkBack, reduced-motion and owner review remain required; no accessibility pass is claimed.
