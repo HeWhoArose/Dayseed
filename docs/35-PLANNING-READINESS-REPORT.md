@@ -131,3 +131,8 @@ The owner explicitly instructed the project to open the Stage A planning gate. D
 This approval does not authorise Stage B bounded technical validation or Stage C feature implementation. Stage B requires separate explicit written owner authorisation. Stage C requires the Stage B exit review and separate owner approval of the implementation plan.
 
 Rendered-screen review, task comprehension, Journal discoverability, Growth Mark accuracy, contrast, large text, TalkBack, focus order, touch targets, reduced motion, empty/error/destructive states, runtime privacy/data-flow, backup/restore/delete, migrations and device behaviour remain post-build acceptance or technical-validation obligations. They are **not passed, waived, or completed** by D-208.
+
+
+## Current authoritative workflow correction — 2026-10-30
+
+This addendum supersedes earlier stage labels in this readiness report. Stage A planning is complete and approved/open under D-208. The corrected sequence is **Stage B full initial-v1 implementation in Google AI Studio** (not yet authorised) → **Stage C independent technical validation after implementation** → **Stage D final owner acceptance/release readiness**. This documentation correction does not authorise Stage B. The proposed relational schema remains proposed, not canonical/finally approved; candidate palette values, typography, contrast pairings and automatic daypart boundaries remain unapproved and centrally configurable. No application code, schema, migration, build, test, APK or device validation was performed by this update.
