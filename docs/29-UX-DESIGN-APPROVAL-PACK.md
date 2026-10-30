@@ -13,7 +13,7 @@
 
 The product rules are far more settled than the UI choices. Approved baseline requirements include Today’s separate Complete and Record actions; the local journal and its save/edit/delete rules; the History and Insight jobs; 14-day and 30-day comeback triggers; nonjudgmental copy; offline title/body journal search; local backup/restore settings; and the accessibility expectations. Those policies must shape the design rather than being treated as undecided. Three rendered comparison boards are now available in `docs/prototypes/`; they are ready for owner review, but do not constitute accessibility validation or user-test evidence.
 
-Still open are the broad visual direction (D-008), Growth Mark duration-unit formatting/report-period defaults and accessibility review (D-016/D-199), final comeback copy/layout/localisation (D-017), accessibility/findability review for the selected A2 archive (D-018), and exact colour/type token values (D-019). The owner has selected W1 Today, N1 navigation and A2 archive as the starting directions; these are not usability-test results or final approved UI. The current Dashboard Concepts document includes a user-supplied screenshot discussion and a “little of Concept C” direction; use that as the design exploration anchor, not as approval of a finished screen.
+Still open are the broad visual identity (D-008), whether exact colour/type tokens (D-019) are fixed now or explicitly deferred, and final comeback copy/localisation (D-017). W1/N1/A2 and modified G2/G3 are selected planning directions. D-201 settles Growth Mark duration formatting, compatible-unit aggregation and period defaults; actual UI/aggregation and Journal findability/accessibility remain validation obligations, not undecided owner choices. The owner has selected W1 Today, N1 navigation and A2 archive as the starting directions; these are not usability-test results or final approved UI. The current Dashboard Concepts document includes a user-supplied screenshot discussion and a “little of Concept C” direction; use that as the design exploration anchor, not as approval of a finished screen.
 
 ## 2. Recommended starting direction
 
@@ -66,10 +66,10 @@ The active v1 triggers are already approved: the two-week experience after 14 co
 - **W1 Today:** selected; preserve separate Complete and Record actions for measured habits and keep journaling optional.
 - **N1 navigation:** selected; check that Journal is findable from Today and History without ambiguous labels or icon-only routes.
 - **A2 archive:** selected; validate date jump, search, edit, delete, empty dates and multiple entries on a date.
-- **Growth Mark:** modified G2 “Collected moments” duration-total summary selected; G3 reserved for Calendar/date-level or separate-page details. Display thresholds, reporting-period defaults and accessibility remain to review.
+- **Growth Mark:** modified G2 “Collected moments” duration-total summary selected; G3 reserved for Calendar/date-level or separate-page details. D-201 records conservative formatting, aggregation and period defaults; actual UI and runtime behaviour remain unverified.
 - **Typography/theme baseline:** platform typography and system light/dark appearance accepted; exact colours/fonts/tokens are still open in DESIGN.md.
 - **Comeback:** compact, dismissible, non-blocking direction accepted; final copy/localisation/accessibility still needs review.
-- **Ads:** O-11 requested an initial-launch ads evaluation because ads are needed for full launch; see [the monetisation evaluation](33-MONETISATION-AND-ADS-EVALUATION.md). No SDK, placement or release integration is approved.
+- **Ads:** D-200 defers ads for initial v1 and retains [the monetisation evaluation](33-MONETISATION-AND-ADS-EVALUATION.md) as pre-launch material only. No SDK, placement or release integration is approved for v1.
 
 These responses do not approve a final UI system, usability/accessibility outcomes, implementation, or the planning gate.
 ## 3. Primary screens and states to prototype
@@ -364,7 +364,7 @@ When the owner settles a consequential design decision, record it in the decisio
 ### Review disposition
 
 - **No further prototype edits are justified from source inspection alone.** Adding invented empty/error screens or changing tokens without comparable owner review would risk turning unresolved design choices into implied approvals. The existing boards are adequate for comparing high-level direction; they are not adequate evidence to approve detailed interactions or accessibility.
-- Keep the selected W1/N1/A2 and G2/G3 planning directions, the owner reference as a visual guardrail, and exact tokens/spacing/typography open.
+- Keep W1/N1/A2 and modified G2/G3 as the selected planning directions, use the owner reference as a visual guardrail, and record exact tokens/spacing/typography as an unresolved owner planning choice. Do not imply that rendered accessibility or the binary reference image has been inspected.
 - Before final design approval, review matching tasks across the comparable options: log a measured value including explicit zero; distinguish zero from no record; find/write/retrieve/edit/delete a journal entry; search with no results; inspect a Growth Mark date and its source sessions; correct/delete a session and verify the expected summary; find privacy/export/backup/restore/delete settings; return from a comeback screen without writing.
 - Record actual observations separately. The next authorised review should include compact and typical phone widths, largest supported text size, keyboard open, TalkBack/focus order, touch-target measurements, contrast measurements in light/dark themes, and empty/loading/error/destructive states.
 - The design checklist remains unchecked for these validations. No user study, rendered-device inspection, measured contrast audit, TalkBack test, build, app test, or device test is claimed. The planning gate remains closed.
