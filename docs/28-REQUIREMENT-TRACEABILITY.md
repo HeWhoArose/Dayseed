@@ -1,7 +1,7 @@
 # Requirement-to-Test Traceability Matrix
 
 **Date:** 2026-10-30  
-**Status:** Initial planning traceability pass; acceptance cases are **planned, not executed**. The matrix does not authorise code changes, technical validation, or release claims.
+**Status:** Initial planning traceability pass; acceptance cases are **planned, not executed**. Stage A planning gate is **APPROVED / OPEN under D-208 (2026-10-30)**. Stage B technical validation is **NOT YET AUTHORISED**; Stage C implementation is **NOT AUTHORISED**. The matrix does not itself authorise code changes, technical validation, or release claims.
 
 **Purpose:** Keep each high-priority requirement connected to the screen/data contract and at least one acceptance case. The detailed behaviour authority remains the product specification, approved decision log, and feature contracts; the quality plan remains the test-strategy authority. This matrix is the navigation/index layer between them.
 
@@ -101,4 +101,4 @@ This pass checks planning-document links and status statements for Growth Mark a
 5. Cross-file heading/link coverage: existing repository checks cover relative Markdown targets and same-file fragments only; cross-file heading fragments and external URL availability were not exhaustive. Do not claim complete repository-wide semantic or link validation.
 6. Execution status: all acceptance cases remain planned/not executed. A matrix entry is a traceability link, not proof of implementation or passing tests.
 
-No acceptance criterion is marked passed by this reconciliation. The planning gate remains CLOSED; no code, schema, migration, build, test or device validation is authorised.
+No acceptance criterion is marked passed by this reconciliation. D-208 approves the Stage A planning baseline only. Stage B technical validation requires separate explicit owner authorisation; Stage C implementation requires the Stage B exit review and separate implementation-plan approval. No code, schema, migration, build, test or device validation was authorised or performed by this traceability reconciliation.
