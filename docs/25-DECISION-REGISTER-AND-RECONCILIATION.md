@@ -424,3 +424,12 @@ The original 2026-10-23 source rows did not state next actions. The current next
 | Source-backup preservation follow-up (D-105) | docs 26/30; AC-014/019 | Original user-selected backup remains untouched after restore; runtime source-file immutability is unverified. |
 
 This closes R-019's missing-documentation-follow-up gap only. It does not close technical validation, security review, UX destination mapping, or implementation acceptance. The register now contains 201 unique decision rows through D-207 (gaps preserved), matching the decision log.
+
+
+## Owner planning gate approval — D-208 (2026-10-30)
+
+D-208 records the owner's explicit written approval to open the Stage A planning gate. The gate is **APPROVED / OPEN** for the documented initial-v1 planning baseline on GitHub `main`. This is not approval for technical validation or feature implementation.
+
+- Stage B bounded technical validation: **NOT YET AUTHORISED**; requires separate explicit written owner authorisation.
+- Stage C feature implementation: **NOT AUTHORISED**; requires the Stage B exit review and separate owner approval of the implementation plan.
+- Rendered-screen, task-comprehension, accessibility, runtime privacy/data-flow, backup/restore/delete, migration and device checks requiring a functioning app remain post-build acceptance obligations. They are neither passed nor waived.
