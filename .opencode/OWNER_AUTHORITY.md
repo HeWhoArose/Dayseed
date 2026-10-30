@@ -23,11 +23,12 @@ An agent must not:
 
 The Dayseed Stage A planning gate is **APPROVED / OPEN as of 2026-10-30 (D-208)**, based on the owner's explicit written instruction. The approved scope is the documented initial-v1 planning baseline on GitHub `main`, including recorded owner decisions through D-208 and explicit deferrals.
 
-This does **not** authorise Stage B or Stage C:
+This does **not** authorise Stage B implementation, Stage C validation, or Stage D release acceptance:
 
-- **Stage B — bounded technical validation: NOT YET AUTHORISED.** Do not inspect application source/build configuration, edit schemas or migrations, inspect the live database, run builds/tests, install an APK, or perform device/runtime validation until the owner separately authorises Stage B in writing.
-- **Stage C — feature implementation: NOT AUTHORISED.** It requires the Stage B exit review and separate explicit owner approval of the implementation plan.
-- Rendered-screen, task-comprehension, accessibility, runtime privacy/data-flow, backup/restore/delete, migration and device checks requiring a functioning app remain post-build acceptance/technical-validation obligations. D-208 does not mark them passed or waived.
+- **Stage B — full initial-v1 implementation in Google AI Studio: NOT YET AUTHORISED.** It requires a separate explicit written owner instruction. The implementation preflight must compare the imported workspace with the latest GitHub main and preserve newer remote work.
+- **Stage C — independent technical validation: NOT AUTHORISED.** It follows completed/committed Stage B work and requires its own authorised validation scope. Stage B self-checks do not count as independent Stage C evidence.
+- **Stage D — final owner acceptance/release readiness: NOT OPEN.** It requires the verified release candidate and explicit owner acceptance.
+- Rendered-screen, task-comprehension, accessibility, runtime privacy/data-flow, backup/restore/delete, migration and device checks remain unverified until performed with evidence.
 
 An agent may record/enact an approval only when the owner gives a clear, explicit written instruction. Record the exact approved scope and date in the canonical decision log and approval record. Never infer approval from “continue”, review, silence, documentation completion, or an assistant recommendation.
 
@@ -66,3 +67,19 @@ If a request appears to conflict with a canonical owner decision or gate:
 4. Ask for clarification or explicit authorisation when necessary.
 
 Never resolve an owner-authority conflict by choosing the interpretation that permits more implementation.
+
+
+## Current stage sequence — authoritative correction (2026-10-30)
+
+This section supersedes older stage labels and sequencing in this document and historical handover text:
+
+- **Stage A — Planning:** complete and approved/open under D-208.
+- **Stage B — Full initial-v1 implementation:** implementation in Google AI Studio, beginning with a dated implementation preflight against the latest GitHub main. Preserve useful existing code, reconcile gaps, implement approved scope and commit the work. Stage B is **NOT YET AUTHORISED**; it requires a separate explicit written owner instruction.
+- **Stage C — Independent technical validation:** after Stage B is implemented and committed, independently inspect and validate the resulting project from the current GitHub commit; run agreed builds/tests and runtime/device/accessibility/privacy/data-integrity checks, report defects, fix under the authorised workflow, and revalidate. Stage B self-checks are not independent Stage C evidence.
+- **Stage D — Final owner acceptance/release readiness:** present the verified release candidate and evidence to the owner for explicit acceptance. No release claim/action without that acceptance.
+
+**Inspection evidence:** Every project inspection must state date/time and timezone, repository, branch, exact inspected remote commit SHA, imported workspace/base SHA (or UNKNOWN), inspected paths plus line ranges/symbols, findings, and uninspected areas. Evidence must be specific to the inspected commit.
+
+**AI Studio/GitHub protection:** GitHub main is canonical. Before editing and immediately before pushing, compare the imported workspace with the latest remote head. If remote main is newer, fetch and reconcile before editing/pushing; never overwrite, force-push, reset away, or push stale workspace state over newer GitHub work. If remote advances during work, stop and reconcile.
+
+**Test-result integrity:** report NOT RUN, BLOCKED, FAILED, or PASSED accurately. PASSED requires actual execution and inspected evidence: exact command/task, date/time, commit SHA, environment/toolchain (and device where relevant), exit result, and retained log/artifact. Planned, inferred, generated, preview-only, or unexecuted checks must never be reported as passed. Never fabricate results.
