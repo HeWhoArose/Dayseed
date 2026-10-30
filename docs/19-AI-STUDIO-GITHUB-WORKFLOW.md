@@ -1,6 +1,6 @@
 # AI Studio–GitHub Workflow and Project Gate
 
-**Status:** Stage A planning complete; planning gate APPROVED / OPEN (owner instruction, 2026-10-30, D-208). Stage B technical validation and Stage C feature implementation remain separately gated.  
+**Status:** Stage A planning complete; planning gate APPROVED / OPEN (owner instruction, 2026-10-30, D-208). Stage B implementation, Stage C independent validation, and Stage D final acceptance remain separately gated.  
 **Repository:** https://github.com/HeWhoArose/Dayseed  
 **Source of truth:** GitHub repository, default branch `main`.
 
@@ -22,9 +22,9 @@ Required before coding:
 - documentation links, duplicate/outdated plans, contradictions, and unsupported claims audited;
 - owner approval is recorded in D-208 and this workflow; post-build acceptance obligations and explicit deferrals remain visible;
 
-### Stage B — Bounded stack-specific feasibility validation
+### Stage B — Full initial-v1 implementation in Google AI Studio
 
-This is not full feature implementation. D-009 is now resolved: the owner approved continuing the existing native Kotlin + Jetpack Compose Android project. Do not scaffold a second app or rewrite to React Native/Expo. When—and only when—the owner separately authorises Stage B in writing, inspect the existing source/build configuration and validate that same native project. D-208 opened Stage A only; it does not authorise Stage B or feature implementation.
+D-009 is resolved: continue the existing native Kotlin + Jetpack Compose Android project. Do not scaffold a second app or rewrite to React Native/Expo. Stage B starts with a dated implementation preflight against the latest GitHub main; compare the imported AI Studio workspace/base SHA with the remote SHA, preserve useful existing work, reconcile newer remote changes, and then implement the approved initial-v1 scope in the sequenced phases of implementation_plan.md. Stage B is NOT YET AUTHORISED; it requires a separate explicit written owner instruction. D-208 approved Stage A planning only.
 
 Acceptance:
 1. Confirm the project type, platform build path, and installable Android artifact for the owner-approved stack; do not substitute a website or preview for the Android app.
@@ -40,9 +40,13 @@ Acceptance:
 
 Do not add analytics, advertising, billing, cloud backup, cross-device sync, or AI APIs during the spike. Initial v1 remains account-free and offline-first for core use; premium online backup/sync is future scope and requires a separate approval gate. Do not put private journal content, secrets, signing keys, API keys, or local machine paths containing personal information in Git.
 
-### Stage C — Feature implementation
+### Stage C — Independent technical validation
 
-Only after the spike passes (or its blocker is consciously accepted) and the owner approves the stack and implementation plan. Build in roadmap phases, with a working native app and tests at every stage.
+Begin only after Stage B implementation is complete and committed. Inspect the resulting project from the exact current GitHub commit independently of the implementation pass. Verify build/toolchain, schema/migration, persistence, tests, offline operation, backup/restore/delete, notifications, accessibility, privacy/data flow and physical-device behaviour. Record failures and limitations; fix defects within the authorised scope and repeat affected checks. Stage B developer self-checks are not independent Stage C evidence.
+
+### Stage D — Final owner acceptance and release readiness
+
+Present the release candidate, exact commit SHA, executed test/evidence report, known limitations, unresolved risks and privacy/security review for explicit owner acceptance. Do not claim release readiness or perform a release action without that acceptance.
 
 ## 2. AI Studio as the active development environment
 
@@ -50,7 +54,7 @@ AI Studio is the active AI-assisted development environment for Dayseed. Treat t
 
 ### Required operating instructions for AI Studio
 
-> Read README.md, DESIGN.md, docs/09-DECISION-LOG.md, docs/11-RISKS-AND-OPEN-QUESTIONS.md, docs/12-PROGRESS-AND-HANDOVER.md, docs/14-STACK-COMPARISON.md, and this workflow before changing files. Use the latest owner-approved scope and decisions recorded in GitHub. Continue the existing native Kotlin + Jetpack Compose Android project as approved in D-009. Do not create a website, web dashboard, or web app as a substitute. Do not start a rewrite or second app scaffold without a new explicit owner decision. Follow DESIGN.md as the sole authoritative design-token/component reference. Follow the approved product specification and architecture. Apply D-196 and `docs/25-DECISION-REGISTER-AND-RECONCILIATION.md`: for routine, low-risk, reversible implementation or UX details, use the documented delegated default, record rationale and acceptance checks, and do not interrupt the owner with a micro-question. If a choice affects product scope/philosophy, data integrity, privacy/security, accessibility, monetisation, an irreversible action, or owner-level visual/product identity—or conflicts with an approved decision—keep it proposed/open and include it in the consolidated owner decision batch. Never turn a delegated default into approval for new scope. Work in small, testable phases. Commit to GitHub frequently, keep main usable, run targeted tests and the full available suite, and report exact build/test evidence. Do not put secrets or private journal data in the repository.
+> Read README.md, DESIGN.md, docs/09-DECISION-LOG.md, docs/11-RISKS-AND-OPEN-QUESTIONS.md, docs/12-PROGRESS-AND-HANDOVER.md, docs/14-STACK-COMPARISON.md, and this workflow before changing files. Use the latest owner-approved scope and decisions recorded in GitHub. Continue the existing native Kotlin + Jetpack Compose Android project as approved in D-009. Do not create a website, web dashboard, or web app as a substitute. Do not start a rewrite or second app scaffold without a new explicit owner decision. Follow DESIGN.md as the sole authoritative design-token/component reference. Follow the approved product specification and architecture. Apply D-196 and `docs/25-DECISION-REGISTER-AND-RECONCILIATION.md`: for routine, low-risk, reversible implementation or UX details, use the documented delegated default, record rationale and acceptance checks, and do not interrupt the owner with a micro-question. If a choice affects product scope/philosophy, data integrity, privacy/security, accessibility, monetisation, an irreversible action, or owner-level visual/product identity—or conflicts with an approved decision—keep it proposed/open and include it in the consolidated owner decision batch. Never turn a delegated default into approval for new scope. Work in small, testable phases. Commit to GitHub frequently, keep main usable, run only checks appropriate to the current authorised stage, and report exact evidence. Before editing and immediately before pushing, compare the workspace with latest remote main; never overwrite or force-push over newer remote commits. If remote advances, stop and reconcile. Never fabricate test/build results: mark checks NOT RUN, BLOCKED, FAILED, or PASSED; PASSED requires actual execution, inspected output, exact command, date/time, commit SHA, environment/toolchain and retained log/artifact. Do not put secrets or private journal data in the repository.
 
 Do not use an agent-generated preview page as proof of native app success. A QR preview may be useful for development but is not a replacement for a built Android artifact and physical-device checks.
 
@@ -105,3 +109,19 @@ An agent may record/enact an approval only when the owner gives a clear, explici
 ## Current environment note (2026-10-18)
 
 AI Studio is the active development environment. Remove and avoid reintroducing instructions, quota-recovery procedures, filenames, or assumptions from previous coding environments in current project documentation. GitHub remains the canonical shared source of truth. This note updates environment guidance only; it does not by itself change implementation authorization or product decisions.
+
+
+## Current stage sequence — authoritative correction (2026-10-30)
+
+This section supersedes older stage labels and sequencing in this document and historical handover text:
+
+- **Stage A — Planning:** complete and approved/open under D-208.
+- **Stage B — Full initial-v1 implementation:** implementation in Google AI Studio, beginning with a dated implementation preflight against the latest GitHub main. Preserve useful existing code, reconcile gaps, implement approved scope and commit the work. Stage B is **NOT YET AUTHORISED**; it requires a separate explicit written owner instruction.
+- **Stage C — Independent technical validation:** after Stage B is implemented and committed, independently inspect and validate the resulting project from the current GitHub commit; run agreed builds/tests and runtime/device/accessibility/privacy/data-integrity checks, report defects, fix under the authorised workflow, and revalidate. Stage B self-checks are not independent Stage C evidence.
+- **Stage D — Final owner acceptance/release readiness:** present the verified release candidate and evidence to the owner for explicit acceptance. No release claim/action without that acceptance.
+
+**Inspection evidence:** Every project inspection must state date/time and timezone, repository, branch, exact inspected remote commit SHA, imported workspace/base SHA (or UNKNOWN), inspected paths plus line ranges/symbols, findings, and uninspected areas. Evidence must be specific to the inspected commit.
+
+**AI Studio/GitHub protection:** GitHub main is canonical. Before editing and immediately before pushing, compare the imported workspace with the latest remote head. If remote main is newer, fetch and reconcile before editing/pushing; never overwrite, force-push, reset away, or push stale workspace state over newer GitHub work. If remote advances during work, stop and reconcile.
+
+**Test-result integrity:** report NOT RUN, BLOCKED, FAILED, or PASSED accurately. PASSED requires actual execution and inspected evidence: exact command/task, date/time, commit SHA, environment/toolchain (and device where relevant), exit result, and retained log/artifact. Planned, inferred, generated, preview-only, or unexecuted checks must never be reported as passed. Never fabricate results.
