@@ -1,12 +1,12 @@
 # AI Studio–GitHub Workflow and Project Gate
 
-**Status:** Proposed operating procedure; implementation is not authorised until the owner explicitly approves the planning gate.  
+**Status:** Stage A planning complete; planning gate APPROVED / OPEN (owner instruction, 2026-10-30, D-208). Stage B technical validation and Stage C feature implementation remain separately gated.  
 **Repository:** https://github.com/HeWhoArose/Dayseed  
 **Source of truth:** GitHub repository, default branch `main`.
 
 ## 1. Work stages
 
-### Stage A — Finish planning (current stage)
+### Stage A — Planning baseline (COMPLETE; owner-approved 2026-10-30, D-208)
 
 Required before coding:
 - product requirements and v1 boundaries reconciled;
@@ -20,12 +20,11 @@ Required before coding:
 - accessibility and test strategy defined;
 - implementation roadmap, acceptance criteria, and release gates reconciled;
 - documentation links, duplicate/outdated plans, contradictions, and unsupported claims audited;
-- owner reviews and explicitly approves the planning gate;
-- the current status and remaining blockers are captured consistently in docs 27/28/29/30/31/35 and the handover;
+- owner approval is recorded in D-208 and this workflow; post-build acceptance obligations and explicit deferrals remain visible;
 
 ### Stage B — Bounded stack-specific feasibility validation
 
-This is not full feature implementation. D-009 is now resolved: the owner approved continuing the existing native Kotlin + Jetpack Compose Android project. Do not scaffold a second app or rewrite to React Native/Expo. When—and only when—the owner explicitly authorises the planning gate and technical validation, inspect the existing source/build configuration and validate that same native project. This decision does not authorise validation or feature implementation by itself.
+This is not full feature implementation. D-009 is now resolved: the owner approved continuing the existing native Kotlin + Jetpack Compose Android project. Do not scaffold a second app or rewrite to React Native/Expo. When—and only when—the owner separately authorises Stage B in writing, inspect the existing source/build configuration and validate that same native project. D-208 opened Stage A only; it does not authorise Stage B or feature implementation.
 
 Acceptance:
 1. Confirm the project type, platform build path, and installable Android artifact for the owner-approved stack; do not substitute a website or preview for the Android app.
@@ -90,17 +89,17 @@ For every issue: reproduce → identify root cause → implement the smallest sa
 
 ## 6. Approval record
 
-- Planning gate decision: **Not approved**
-- Owner planning responses O-1–O-11 recorded: **2026-10-28** — this is not planning-gate approval.
+- Planning gate decision: **APPROVED / OPEN — 2026-10-30 (D-208), owner explicit written instruction.**
+- Owner planning responses O-1–O-11 recorded: **2026-10-28**; subsequent decisions D-204–D-208 are in the canonical decision log.
 - D-200 defers ads for initial v1 and retains `docs/33-MONETISATION-AND-ADS-EVALUATION.md` as pre-launch material. D-201's duration-unit, formatting, aggregation, and period-control defaults are recorded in the decision log, screen/data contracts, and traceability matrix; they are not pending planning choices. The bounded semantic/traceability closeout is recorded in docs 27/28/32/35. The remaining owner planning choices and explicit deferrals are listed in docs 27/31/35. Rendered interaction/accessibility and runtime validation are reserved for separately authorised later stages. No implementation or technical validation is authorised.
-- Owner approval date:
-- Approved scope/version:
+- Owner approval date: **2026-10-30**
+- Approved scope/version: **Dayseed initial-v1 planning baseline on GitHub `main`, including owner decisions and documented acceptance criteria/deferrals through D-208.**
 - Stack decision D-009: **Approved — continue the existing native Kotlin + Jetpack Compose Android project** (2026-10-26). This is not planning-gate approval or authorisation to implement features.
 - UX/design decision D-008:
 - Accepted blockers/deferred questions:
 - Reviewer notes:
 
-Only the owner may change the approval status. Documentation completion by an assistant or coding agent does not itself authorise implementation.
+An agent may record/enact an approval only when the owner gives a clear, explicit written instruction; never infer it from “continue”, review, silence, documentation completion or an assistant recommendation. Stage B remains unauthorised until separately approved; Stage C requires the Stage B exit review and separate implementation-plan approval.
 
 
 ## Current environment note (2026-10-18)
