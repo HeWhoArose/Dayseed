@@ -1,0 +1,2 @@
+# Ignore runtime recovery log — machine-specific session state, not reusable config
+.opencode/recovery/provider-errors.jsonl
