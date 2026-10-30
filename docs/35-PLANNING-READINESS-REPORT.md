@@ -119,7 +119,7 @@ The traceability follow-up in docs/28 explicitly connects Growth Mark, Journal l
 
 ## 10. Decision-count and D-091–D-105 reconciliation correction — 2026-10-30
 
-The earlier section 8 count is a dated 2026-10-29 snapshot (197 decision rows through D-203), not the current count. After D-204–D-207 were recorded, the decision log and register each contain 201 unique decision IDs through D-207, with gaps preserved. R-019 is now closed as a documentation-follow-up mapping: D-091–D-105 next-action cells reference later decisions, screen/data contracts and planned acceptance coverage. This does not imply those behaviours are implemented, tested, security-reviewed or runtime verified.
+The earlier section 8 count is a dated 2026-10-29 snapshot (197 decision rows through D-203), not the current count. After D-204–D-208 were recorded, the decision log and register each contain 202 unique decision IDs through D-208, with gaps preserved. R-019 is now closed as a documentation-follow-up mapping: D-091–D-105 next-action cells reference later decisions, screen/data contracts and planned acceptance coverage. This does not imply those behaviours are implemented, tested, security-reviewed or runtime verified.
 
 The owner choices D-205–D-208 are reconciled across the decision log/register, UX pack, owner batch and README. The exact-token deferral is explicit; DESIGN.md remains unchanged. Stage A planning is complete and approved/open under D-208. Stage B technical validation and Stage C feature implementation remain separately gated.
 
