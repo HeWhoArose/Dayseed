@@ -479,4 +479,11 @@ The canonical readiness snapshot is `docs/27-PLANNING-COMPLETENESS-REVIEW.md`; t
 - **Gate remains CLOSED / NOT APPROVED.** No source code, schema, migration, build, tests, APK, or device validation was performed.
 
 
-- Follow-up UX status correction (2026-10-29): updated doc 29 to distinguish already-selected planning directions (W1/N1/A2 and modified G2/G3) from final UI approval. D-201's formatting/period defaults are treated as settled planning defaults; task comprehension, corrections/deletion, zero/empty states, large text and accessibility remain unverified review obligations. Initial selection is not described as pending, and the gate remains closed.
+- Follow-up UX status correction (2026-10-29): updated doc 29 to distinguish selected planning directions from final UI approval. D-201 formatting/period defaults are settled planning defaults; actual UI, aggregation/correction, task comprehension, large text and accessibility remain unverified.
+
+## Bounded planning closeout — 2026-10-30
+
+- Reconciled docs 28/29/33/19 and docs 11/27/35 against current decisions. AC-018/AC-021/AC-025 now distinguish selected W1/N1/A2 and modified G2/G3 planning directions from later task/accessibility/runtime evidence. D-200's initial-v1 ads deferral is reflected in the risk register, UX pack and monetisation evaluation; D-201 defaults are not presented as open choices.
+- Remaining owner planning choices: (1) confirm or explicitly defer D-008 broad visual identity; (2) decide whether D-019 exact colour/type tokens must be fixed before the gate or explicitly deferred to a later design stage; (3) approve or revise D-017 final comeback copy/localisation. These can be resolved as a concise owner decision batch; no need to reopen settled N1/A2 or D-201 semantics without a material reason.
+- After those choices, perform one final current-set reconciliation of docs 27/28/29/31/35/12/19, update the approval record only if the owner explicitly approves the planning gate, and record approved scope/version. The gate remains **CLOSED / NOT APPROVED**.
+- Separate later authorisation is required for source/build/schema/migration/tests/device validation and any implementation. Rendered accessibility, user tasks, runtime privacy/deletion/restore and platform behaviour are not proven by this documentation pass.
