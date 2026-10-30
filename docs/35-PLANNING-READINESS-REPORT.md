@@ -1,7 +1,7 @@
 # Dayseed Planning Readiness Report
 
 **Snapshot date:** 2026-10-29  
-**Status:** Bounded documentation/traceability reconciliation complete for the reviewed current planning set; three owner-level planning choices and final gate sign-off remain; **planning gate not approved**.  
+**Status:** Bounded documentation/traceability reconciliation updated through 2026-10-30; D-205–D-207 owner choices are now recorded; remaining documentation gaps and final gate sign-off remain; **planning gate not approved**.  
 **Repository:** `HeWhoArose/Dayseed`  
 **Scope:** Documentation and decision consistency only. This report does not authorise source inspection, technical validation, database changes, builds, tests, or implementation.
 
@@ -98,3 +98,20 @@ The task/accessibility protocol in `docs/34-UX-TASK-AND-ACCESSIBILITY-REVIEW-PRO
 ## 8. Gate statement
 
 **Planning gate: CLOSED / NOT APPROVED.** This report is a readiness snapshot, not a request interpreted as approval. No code, schema, migration, build, test, device validation, or implementation was performed by preparing it.
+
+
+## 9. 2026-10-30 Growth Mark and UX traceability follow-up
+
+The owner has now recorded D-205 visual identity synthesis, D-206 comeback copy, and D-207 Soft Botanical palette direction with exact tokens deferred. These decisions close the corresponding owner-choice questions; they do not close detailed design, localization, accessibility or rendered-screen evidence obligations. See docs/09, /25, /29 and /31.
+
+The bounded follow-up review reconciled D-201 Growth Mark semantics across docs/15, /26, /28 and /29:
+- compatible saved duration sessions only; compatible-unit normalization; source precision preserved; round only for display;
+- largest useful whole unit plus remainder using minutes/hours/24-hour days/7-day weeks; no month-equivalent duration in v1;
+- current calendar month default for G2; calendar-month navigation and date/session drill-down for G3; separate day/week selectors deferred;
+- explicit zero distinct from no record; blank dates neutral; corrections/deletions recalculate totals.
+
+The six illustrative G3 date values total 220 minutes (3 hr 40 min), matching G2. This is a synthetic arithmetic check, not runtime verification. T-10–T-12 and AC-025 remain planned/not run.
+
+The traceability follow-up in docs/28 explicitly connects Growth Mark, Journal lifecycle/retrieval, visual/accessibility, comeback copy and privacy/settings discovery to their planning sources, screen contracts and acceptance/task coverage. Remaining bounded gaps include: Settings destination content is not shown in the navigation board; Journal body-only/draft/no-results/multiple-entry/edit/delete edge states are not drawn; Growth Mark zero-only/no-session/empty/error/source-edit states are not drawn; and cross-file heading/external-link checks were not exhaustive. These are documented coverage gaps, not proven implementation defects.
+
+**Current status:** owner choices D-205–D-207 recorded; detailed design and accessibility evidence still open; acceptance cases planned/not executed; planning gate remains CLOSED / NOT APPROVED. No code, schema, migration, build, test, APK or device validation was performed or authorised.
