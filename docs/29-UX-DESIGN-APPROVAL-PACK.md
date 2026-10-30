@@ -392,3 +392,15 @@ D-201 records conservative planning defaults to reduce ambiguity without claimin
 - Keep explicit zero distinct from no record, exclude incompatible habit/journal types, and recalculate totals after source-record correction or deletion.
 
 These defaults are documented in the screen/data contract (doc 26), acceptance criterion AC-025 (doc 28), decision log D-201 (doc 09), and planning readiness report (doc 35). They are planning defaults only. No rendered-device, aggregation, accessibility, correction, or deletion test has been performed. The earlier static-review findings in section 5.5 remain valid for what the SVGs do not demonstrate.
+
+## 5.7 Owner direction decisions — 2026-10-30 (D-205–D-207)
+
+The owner selected the following planning directions for reconciliation:
+
+- **Visual identity (D-205 / D-008):** choose the synthesis — Field Journal warmth and overall identity, Living Editorial typography and hierarchy, and Quiet Instrument discipline for controls and data presentation. The owner reference remains a guardrail, not blanket approval of detailed UI.
+- **Palette (D-207 / D-019):** choose Soft Botanical: warm ivory, muted olive and earthy accents. Exact colour values, font selections and token approval are deferred. Any palette values elsewhere in this pack remain exploratory.
+- **Two-week comeback copy (D-206 / D-017):** “Good to see you again. Your progress is still here. Take today at your own pace.”
+- **One-month comeback copy (D-206 / D-017):** “Welcome back! 🌿 What's new with you? You can pick up an old habit, start something new, or simply continue into Dayseed.”
+- No modifications were requested.
+
+These choices settle broad direction and candidate wording only. They do not approve final screens, component details, exact tokens, font packaging, measured contrast, localization, TalkBack, text scaling, reduced-motion behaviour or rendered-device usability. The design review remains incomplete and the planning gate remains closed. No implementation or tests are authorised.
