@@ -1,7 +1,7 @@
 # UX and Design Approval Pack
 
 **Review date:** 2026-10-30  
-**Status:** Owner planning selections recorded through 2026-10-30: W1 Action-first Today, N1 four-destination navigation, A2 hybrid Journal archive, modified G2/G3 Growth Mark roles, D-205 synthesis visual identity, D-207 Soft Botanical palette direction (exact tokens deferred), D-206 comeback copy, platform/system typography and system light/dark baseline, and compact non-blocking comeback presentation. D-201 records Growth Mark duration/period defaults; D-204 records automatic time-of-day and fixed-theme modes with gradual automatic transitions. Exact theme boundaries, palettes/tokens, font selection and accessibility evidence remain open. The planning gate remains closed.
+**Status:** Owner planning selections recorded through 2026-10-30: W1 Action-first Today, N1 four-destination navigation, A2 hybrid Journal archive, modified G2/G3 Growth Mark roles, D-205 synthesis visual identity, D-207 Soft Botanical palette direction (exact tokens deferred), D-206 comeback copy, platform/system typography and system light/dark baseline, and compact non-blocking comeback presentation. D-201 records Growth Mark duration/period defaults; D-204 records automatic time-of-day and fixed-theme modes with gradual automatic transitions. Exact theme boundaries, palettes/tokens, font selection and accessibility evidence remain open. The Stage A planning gate is APPROVED / OPEN under D-208; implementation and later validation remain separately gated.
 
 **Related documents:** [UX and Design](02-UX-AND-DESIGN.md), [Today Dashboard Concepts](21-TODAY-DASHBOARD-CONCEPTS.md), [Design System](../DESIGN.md), [Growth Mark and Comeback Research](15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md), [Journal Archive Research](16-JOURNAL-ARCHIVE-RESEARCH.md), [Typography and Accessibility Research](17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md), [Design Review Checklist](DESIGN-REVIEW-CHECKLIST.md), [Requirement Traceability](28-REQUIREMENT-TRACEABILITY.md).
 
@@ -500,7 +500,7 @@ The updated matrix in doc 28 now identifies the relevant decision/source, contra
 - Growth Mark semantic rules are internally aligned across the decision, research, screen contract, visual board and acceptance matrix.
 - No new owner decision is required for D-201 settled defaults. Any proposed change to the chosen v1 period or unit semantics should be escalated as a scope change rather than silently altered.
 - Journal retrieval and Settings/privacy destination details remain explicit future design/task evidence gaps.
-- All acceptance cases remain planned/not executed. No user task study, rendered-screen inspection, accessibility measurement, build, test or device validation is claimed. Planning gate remains CLOSED.
+- All acceptance cases remain planned/not executed. No user task study, rendered-screen inspection, accessibility measurement, build, test or device validation is claimed. Stage A planning gate is APPROVED / OPEN under D-208; Stage B implementation remains not authorised.
 
 
 ## Theme-token and daypart configuration guard — 2026-10-30
