@@ -2,13 +2,13 @@
 
 **Review date:** 2026-10-28  
 **Status:** Research/planning only. Ads are a requested full-launch requirement to evaluate, not approved or implemented. No SDK, ad account, placement, revenue assumption, or release configuration is selected by this document.
-**Owner decision:** O-11 / D-198 — the owner says a full launch needs at least ads and requests evaluation for initial v1. The existing hybrid concept remains a candidate; this evaluation does not approve the wider package of rewarded ads, purchases, or a Supporter Pack.
+**Current owner decision (D-200, 2026-10-29):** ads are deferred for initial v1 and monetisation will be revisited before launch. This document is retained as pre-launch evaluation material only. The earlier O-11 request for evaluation is historical context, not current v1 scope.
 
 ## Executive recommendation
 
-Evaluate a **single, clearly labelled, modest banner placement on a secondary screen** as the smallest v1 monetisation candidate—for example, below Insights content, where it does not interrupt reading or push core controls out of reach. Keep the Today habit-recording path, Journal writing/editing, comeback flow, privacy screens, backup/restore, and deletion flows free of ads. Do not start with app-open ads, launch interstitials, forced ad views, misleading native placements, or ads required to unlock core habit/journal functionality. Keep rewarded ads, in-app purchases, subscriptions and the proposed Supporter Pack out of this first evaluation unless separately requested.
+If monetisation is reconsidered before launch, a **single, clearly labelled, modest banner placement on a secondary screen** may be evaluated as one candidate—for example, below Insights content, where it does not interrupt reading or push core controls out of reach. This is not approved for initial v1. Keep the Today habit-recording path, Journal writing/editing, comeback flow, privacy screens, backup/restore, and deletion flows free of ads. Do not start with app-open ads, launch interstitials, forced ad views, misleading native placements, or ads required to unlock core habit/journal functionality. Keep rewarded ads, in-app purchases, subscriptions and the proposed Supporter Pack out of this first evaluation unless separately requested.
 
-This is a recommendation for the next owner decision, **not a decision to ship**. Actual revenue cannot be forecast credibly without a selected ad network, placement/fill design, target markets, usage/impression expectations and current network terms. Do not use an earnings estimate as evidence for the product decision.
+This is historical pre-decision analysis, **not a recommendation to ship or include ads in initial v1**. Any future revenue estimate would require a selected ad network, placement/fill design, target markets, usage/impression expectations and current network terms. Do not use an earnings estimate as evidence for the product decision.
 
 ## Confirmed policy constraints to design around
 
