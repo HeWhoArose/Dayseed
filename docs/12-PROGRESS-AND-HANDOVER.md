@@ -497,3 +497,13 @@ The canonical readiness snapshot is `docs/27-PLANNING-COMPLETENESS-REVIEW.md`; t
 - Cross-checked docs 09/12/17/25/27/28/29/30/31/32/35 and README. The bounded current planning set is aligned on owner choices, Growth Mark, backup/restore follow-up, traceability and gate boundaries. Cross-file heading-fragment and external-URL checks were not exhaustive; older dated history is retained as historical evidence rather than rewritten wholesale.
 - Re-fetched and verified each updated document after writing. No acceptance case was marked passed. No source/runtime audit, schema inspection, migration, build, test, APK installation, device validation or user study was performed.
 - **Planning gate: CLOSED / NOT APPROVED.** The next action is owner review of `docs/35-PLANNING-READINESS-REPORT.md` and a distinct explicit gate decision. The handover and approval record must not be changed to Approved unless the owner expressly authorises it.
+
+
+## Owner-approved Stage A planning gate — 2026-10-30
+
+- Owner explicitly instructed the project to open the planning gate; the decision is recorded as D-208 in `docs/09-DECISION-LOG.md`.
+- Stage A planning baseline: **COMPLETE; APPROVED / OPEN**.
+- Stage B bounded technical validation: **NOT YET AUTHORISED**. Do not inspect or change source/schema/database, build, test, install APKs or perform device/runtime checks until separate written owner authorisation.
+- Stage C feature implementation: **NOT AUTHORISED**; requires Stage B exit review and separate approval of the implementation plan.
+- Rendered UI, task comprehension, accessibility, runtime privacy/data-flow, backup/restore/delete, migration and device checks remain post-build acceptance obligations. None is marked passed or waived.
+- No technical validation or implementation was performed as part of recording D-208.
