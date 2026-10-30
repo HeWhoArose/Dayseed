@@ -98,7 +98,7 @@ Stage A planning is complete and the gate is approved/open under D-208. The next
 
 ## Final bounded documentation and handover reconciliation — 2026-10-30
 
-- Re-fetched the current decision log and register after updates. Each contains **201 unique decision rows through D-207**, with historical gaps preserved; no decision IDs were renumbered.
+- Re-fetched the current decision log and register after updates. Each contains **202 unique decision rows through D-208**, with historical gaps preserved; no decision IDs were renumbered.
 - D-091–D-105 next-action gaps are now mapped to later decisions, docs 03/26/28/30 and planned acceptance coverage. R-019 is closed as a documentation-follow-up issue only; no implementation/security verification is implied.
 - D-205/D-206/D-207 are reflected in the current decision log/register, owner batch, UX pack and typography/accessibility research. Exact palette/font tokens remain deferred; DESIGN.md was not changed.
 - Growth Mark D-201 rules and traceability are aligned across docs 15/26/28/29/35. AC-025 and T-10–T-12 remain planned, not executed.
