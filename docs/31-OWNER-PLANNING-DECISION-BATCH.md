@@ -146,3 +146,8 @@ Tasks 4 and 5 were completed as a bounded documentation review. See docs/29 sect
 - Current boards omit body-only/draft/no-results/multiple-entry Journal cases; Growth Mark zero-only/no-session/empty/error/source-edit cases; and actual Settings destination detail. These remain planned evidence/design gaps, not proven defects.
 
 No acceptance case was marked passed. No code, schema, migration, build, test, APK, or device validation was performed. The planning gate remains CLOSED.
+
+
+## Workflow correction — Stage B/C/D sequence (2026-10-30)
+
+The stage labels in older planning-batch notes are historical and superseded by the current governance correction: Stage A planning complete; Stage B full initial-v1 implementation in Google AI Studio; Stage C independent technical validation after implementation; Stage D final owner acceptance/release readiness. Stage B still requires a separate explicit owner instruction. This note does not authorise implementation or change any product decision. D-207 continues to defer exact theme tokens, fonts, contrast pairings and daypart clock boundaries.
