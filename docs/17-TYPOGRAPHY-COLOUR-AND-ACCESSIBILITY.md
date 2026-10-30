@@ -130,3 +130,9 @@ Atkinson Hyperlegible's public Google Fonts repository describes the font's legi
 - Colour-independent indicators and TalkBack descriptions are reviewed.
 - Exact font sources and licenses are recorded.
 - Owner explicitly approves the token set; approved tokens are maintained only in DESIGN.md.
+
+## 8. Owner palette-direction response — 2026-10-30 (D-207)
+
+The owner selected **B — Soft Botanical** as the palette direction: warm ivory, muted olive and earthy accents. The owner explicitly deferred exact colour values, font selections and token approval.
+
+This is a direction choice, not approval of any specific hex value, font family, contrast pair or production token. Existing light/dark values and font candidates in this document remain exploratory. Continue the contrast audit across semantic text/control states and both themes, test text scaling and TalkBack, and verify font source/version/licensing before presenting an exact token set for approval. Keep DESIGN.md as the sole authority for tokens actually approved later. Do not change it to imply approval from this direction-only response. Planning gate remains closed; no implementation authorised.
