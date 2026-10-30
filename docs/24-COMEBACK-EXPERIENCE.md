@@ -754,3 +754,19 @@ Planned checks must cover no prior entry, an existing prior entry, habit activit
 - Exact return-screen handling for active daily and weekly goals; the approved invariant is that app inactivity alone never changes their status, schedules, progress, or history and never automatically marks days missed or resets progress.
 - Exact date-boundary and timezone handling for the 30-day no-active-goal period, including how goal status changes are timestamped. The trigger and reset rules are approved: start when the last active goal becomes completed, paused, archived, or deleted with no other active goal remaining; creating/reactivating a goal resets the timer. Repeat suppression is approved: each experience appears once per qualifying inactivity episode, and the one-month experience takes precedence when both triggers qualify.
 - Final copy and interaction details for the choice screen, including how deliberately restarting a completed habit is presented; accessibility, localization, privacy-conscious wording, and acceptance tests. Optional reflection is approved and can be skipped. Any typed reflection should be retained locally as an unsaved draft until the user explicitly saves, deletes, or discards it. Discarding requires a confirmation prompt explaining that deletion is permanent and cannot be undone; delete only after explicit confirmation. If the user cancels, close the prompt and return to the reflection field with the draft unchanged. Leaving or closing the screen is not a discard action; app closure, phone restart, and returning later must not erase it. Keep the draft quietly in local storage and restore it directly into the text field when the same comeback reflection is reopened, without an extra confirmation step. In v1, do not add a dashboard card, notification, or Journal-list entry for the unsaved draft. If another comeback reflection would otherwise begin while an unresolved draft exists, reuse and restore that existing draft rather than creating another comeback-reflection draft; never silently replace its text. Do not auto-expire or automatically replace an unresolved draft. It must not become a journal entry until explicitly saved through the normal journal flow. After confirmed successful saving, remove the unsaved-draft copy; if saving fails or success is uncertain, retain the draft unchanged. The no-eligible-habit state is approved: omit resume and show create-new and continue options only.
+
+## Owner-selected comeback copy — 2026-10-30 (D-206)
+
+The owner selected the following wording without modifications:
+
+**Two-week return (calm and simple, option B)**
+
+> Good to see you again.  
+> Your progress is still here. Take today at your own pace.
+
+**One-month return (warm and open, option A)**
+
+> Welcome back! 🌿  
+> What's new with you? You can pick up an old habit, start something new, or simply continue into Dayseed.
+
+These selections settle the candidate copy only. Preserve the previously approved triggers, precedence, non-blocking/dismissible presentation, optional reflection and choice behaviour. Localization, accessible presentation and final interaction review remain outstanding. Planning only; no implementation or gate approval is authorised.
