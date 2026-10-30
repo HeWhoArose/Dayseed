@@ -1,7 +1,7 @@
 # Dayseed Planning Readiness Report
 
 **Snapshot date:** 2026-10-29  
-**Status:** Documentation reconciliation complete for the reviewed planning set; owner review and an explicit gate decision remain; **planning gate not approved**.  
+**Status:** Bounded documentation/traceability reconciliation complete for the reviewed current planning set; three owner-level planning choices and final gate sign-off remain; **planning gate not approved**.  
 **Repository:** `HeWhoArose/Dayseed`  
 **Scope:** Documentation and decision consistency only. This report does not authorise source inspection, technical validation, database changes, builds, tests, or implementation.
 
@@ -91,8 +91,9 @@ The task/accessibility protocol in `docs/34-UX-TASK-AND-ACCESSIBILITY-REVIEW-PRO
 2. **Targeted link and stale-claim checks:** earlier checks covered 17 key Markdown files plus root/docs/prototype paths. This continuation updated README, docs 19, 25, 27 and 32 and should not be described as an exhaustive post-update link audit.
 3. **Decision/reference reconciliation:** the current decision log and register each contain 197 unique decision rows through D-203, with gaps preserved. R-020 count, D-203 follow-up references, doc 19's D-201 status and README's D-200/D-201 claims were corrected. A textual static heuristic review of the three SVG boards is recorded in docs 27/32; the binary owner reference and rendered-pixel accessibility were not inspected. This remains documentation-only and does not prove application behaviour; planning gate remains closed.
 4. The checklist in doc 27 and this readiness snapshot are reconciled against D-200/D-201/D-202/D-203. The bounded comparison of docs 03/07/28/30 found the written migration, idempotency, draft-save, restore-session, and conflict-resolution rules aligned; no clear contradiction was found. A repository-tree pass covered all 42 Markdown files and 285 relative Markdown links, with no missing relative file targets and no missing same-file heading fragments in the audited batches. Cross-file heading-fragment targets and the broader semantic audit are not claimed exhaustive. Acceptance cases remain planned, not executed.
-5. The latest semantic pass corrected stale UX/owner-batch wording so N1/A2 and modified G2/G3 are presented as selected planning directions and D-201's settled aggregation/period defaults are not treated as open choices. Remaining planning review is limited to unresolved visual/copy details and a final owner decision on the planning gate; runtime/accessibility/privacy verification is a later authorised stage. Do not open the gate unless the owner explicitly approves it.
-6. After a separate authorisation, inspect the existing native Kotlin/Jetpack Compose project and actual schema/build configuration. Technical validation and feature implementation remain separate decisions.
+5. The bounded semantic pass also corrected stale risk and monetisation language: D-200 defers ads for initial v1; N1/A2 and modified G2/G3 remain selected; D-201 defaults are settled planning rules. Remaining owner planning choices are D-008 broad visual identity, D-019 exact tokens (decide now or explicitly defer), and D-017 final comeback copy/localisation. Journal findability and rendered accessibility are later validation obligations, not pending choices of navigation/archive direction.
+6. Before requesting the gate decision, reconcile docs 27/28/29/31/35/12/19 one final time, ensure remaining items are either owner-decided or explicitly deferred with safe rationale, and update the approval record only after explicit owner sign-off. Do not open the gate unless the owner explicitly approves it.
+7. After a separate authorisation, inspect the existing native Kotlin/Jetpack Compose project and actual schema/build configuration. Technical validation and feature implementation remain separate decisions.
 
 ## 8. Gate statement
 
