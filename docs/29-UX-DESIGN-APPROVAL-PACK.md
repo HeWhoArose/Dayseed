@@ -15,7 +15,7 @@ The owner selected **both** appearance modes: Dayseed may follow automatic time-
 
 The four-part Morning / Afternoon / Evening / Night concept is a proposed design structure for further exploration, not approval of exact clock boundaries, colour palettes, theme names, transition duration, or final screens. Define boundaries using device-local time; consider reduced-motion settings and avoid transitions that obscure content or interfere with interaction. Each theme must independently meet contrast, text scaling, TalkBack and other accessibility requirements. A user-selected fixed theme should remain fixed until the user changes it; automatic switching should not silently overwrite that preference.
 
-This decision records theme behaviour only. It does not settle D-008 broad visual identity, D-019 exact colour/type tokens, or final UI approval, and it does not open the planning gate or authorise implementation, builds, tests or device validation.
+At the time D-204 was recorded, D-008 and D-019 were still open. Subsequent owner responses D-205/D-207 now select the synthesis visual identity and Soft Botanical palette direction respectively; exact colour/type tokens remain deferred. This sequence still does not approve final UI or open the planning gate, and it does not authorise implementation, builds, tests or device validation.
 
 ## 1. Current status
 
