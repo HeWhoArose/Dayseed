@@ -122,3 +122,14 @@ The owner accepted fail-safe handling for unsafe portable-restore conflicts: pre
 Only after explicit owner authorisation: inspect the current native source, Gradle/toolchain and actual SQLite schema; reconcile source; run build/tests with synthetic data; inspect migration and rollback; verify Android platform-backup exclusion, offline persistence, notification delivery, backup/restore/export/delete; and install on a physical device. Record exact evidence and limitations. Feature implementation is a later stage and is not authorised by approval of the schema or stack alone.
 
 **Current truth:** planning has progressed beyond brainstorming and the planning gate remains closed. O-1/O-2 accepted written baselines only; O-3/O-4/O-5 selected planning directions; O-6 selected modified G2 duration summary with G3 calendar/detail, and D-201 records the conservative formatting/aggregation/period defaults; O-9 selected 09:00 local; O-10 accepted draft privacy copy; D-200 defers ads for initial v1; D-202 records unsafe restore-conflict handling; D-203 records delete-all scope/external-copy disclosure. Actual aggregation, rendered UI/accessibility and runtime behaviour remain unverified. No application code/database change, build, test, migration, APK installation, device validation or implementation audit is claimed.
+
+### Follow-up owner decisions — 2026-10-30 (D-205–D-207)
+
+| Decision | Owner response | Recorded disposition |
+|---|---|---|
+| D-008 — Visual identity direction | **D — Synthesis** | Field Journal warmth and overall identity; Living Editorial typography/hierarchy; Quiet Instrument discipline for controls and data. Recorded as D-205. |
+| D-019 — Palette direction | **B — Soft Botanical** | Warm ivory, muted olive and earthy accents. Exact colour values, font selections and token approval are **deferred**; existing candidates remain exploratory. Recorded as D-207. |
+| D-017 — Two-week comeback copy | **B — Calm and simple:** “Good to see you again. Your progress is still here. Take today at your own pace.” | Selected without modification. |
+| D-017 — One-month comeback copy | **A — Warm and open:** “Welcome back! 🌿 What's new with you? You can pick up an old habit, start something new, or simply continue into Dayseed.” | Selected without modification. Both copy selections recorded together as D-206. |
+
+These are owner planning responses for review and reconciliation only. The visual identity and palette directions do not approve final UI, exact tokens, font packaging, contrast or accessibility. The selected comeback wording does not waive localization, accessibility or interaction review. No implementation, code/database change, build, test, device validation or planning-gate approval is authorised. **Planning gate remains CLOSED.**
