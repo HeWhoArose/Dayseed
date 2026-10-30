@@ -434,3 +434,10 @@ D-208 records the owner's explicit written approval to open the Stage A planning
 - Stage B bounded technical validation: **NOT YET AUTHORISED**; requires separate explicit written owner authorisation.
 - Stage C feature implementation: **NOT AUTHORISED**; requires the Stage B exit review and separate owner approval of the implementation plan.
 - Rendered-screen, task-comprehension, accessibility, runtime privacy/data-flow, backup/restore/delete, migration and device checks requiring a functioning app remain post-build acceptance obligations. They are neither passed nor waived.
+
+
+## D-209 — Documentation governance correction (2026-10-30)
+
+| D-209 | Documentation governance correction: implementation/validation sequence and evidence integrity | Owner instruction to reconcile documentation only (2026-10-30); no implementation-gate approval | Correct the workflow to Stage A planning complete → Stage B full initial-v1 implementation in Google AI Studio → Stage C independent technical validation after implementation → Stage D final owner acceptance/release readiness. Require dated commit-specific project inspection evidence, protect newer GitHub work from stale AI Studio overwrites, prohibit fabricated test/build success, retain proposed schema status, and keep unapproved theme values/boundaries centrally configurable. | Reconcile AGENTS.md, OWNER_AUTHORITY.md, README, docs 12/17/19/29/31/32/35, docs 03/30, and implementation_plan.md. This is a documentation/process correction only. Stage B remains not authorised until a separate explicit owner instruction; no source/schema/database/build/test/device work is authorised by this entry. |
+
+The decision log and register now contain 203 unique decision IDs through D-209 (gaps preserved). D-209 changes documentation and process wording only; it does not approve implementation, technical validation, schema changes, or release.
