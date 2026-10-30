@@ -1,10 +1,10 @@
 # Progress and Handover
 
 **Last updated:** 2026-10-30
-**Status:** Planning phase; planning gate not approved; feature implementation is not authorised. Existing source files/preview are evidence for the later audit, not proof of a verified build or approval to add features.
+**Status:** Stage A planning complete; planning gate APPROVED / OPEN under D-208 (2026-10-30). Correct sequence: Stage B full initial-v1 implementation in Google AI Studio (not yet authorised), Stage C independent technical validation after implementation, Stage D final owner acceptance/release readiness. Existing source files/preview are not proof of a verified build.
 
 
-> **Start here for any new AI/session:** [Continuation Handover and Decision Protocol](32-CONTINUATION-HANDOVER.md). It defines the source-of-truth order, D-196 decision rules, what to delegate versus escalate, current blockers, owner response batch, GitHub verification discipline, and the closed planning gate. Root [AGENTS.md](../AGENTS.md) points contributors to the same canonical handover. Do not use historical next-action lists below when they conflict with the current readiness snapshot or handover.
+> **Start here for any new AI/session:** [Continuation Handover and Decision Protocol](32-CONTINUATION-HANDOVER.md). It defines source-of-truth order, D-196 decision rules, owner authority, current Stage A approval, corrected Stage B/C/D sequence, GitHub verification discipline and evidence requirements. Root [AGENTS.md](../AGENTS.md) points contributors to the same canonical handover. Do not use historical next-action lists below when they conflict with the current readiness snapshot or handover.
 
 ## Repository status
 
