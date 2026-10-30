@@ -1,7 +1,7 @@
 # UX and Design Approval Pack
 
 **Review date:** 2026-10-30  
-**Status:** Owner selections recorded on 2026-10-28: W1 Action-first Today, N1 four-destination navigation, A2 hybrid journal archive, platform/system typography and system light/dark baseline, and the recommended compact non-blocking comeback presentation. O-6 is clarified in D-199: modified G2-style “Collected moments” duration-total summary, with G3 reserved for calendar/date-level details or a separate detailed page. Unit formatting, period defaults, data edge cases and accessibility review remain open; D-204 now records both automatic time-of-day themes and a user-selected fixed theme, with gradual transitions between automatic dayparts. Exact daypart boundaries, palettes, names, transition timing, reduced-motion behaviour, exact design tokens and broad visual identity are not approved. The planning gate remains closed.
+**Status:** Owner planning selections recorded through 2026-10-30: W1 Action-first Today, N1 four-destination navigation, A2 hybrid Journal archive, modified G2/G3 Growth Mark roles, D-205 synthesis visual identity, D-207 Soft Botanical palette direction (exact tokens deferred), D-206 comeback copy, platform/system typography and system light/dark baseline, and compact non-blocking comeback presentation. D-201 records Growth Mark duration/period defaults; D-204 records automatic time-of-day and fixed-theme modes with gradual automatic transitions. Exact theme boundaries, palettes/tokens, font selection and accessibility evidence remain open. The planning gate remains closed.
 
 **Related documents:** [UX and Design](02-UX-AND-DESIGN.md), [Today Dashboard Concepts](21-TODAY-DASHBOARD-CONCEPTS.md), [Design System](../DESIGN.md), [Growth Mark and Comeback Research](15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md), [Journal Archive Research](16-JOURNAL-ARCHIVE-RESEARCH.md), [Typography and Accessibility Research](17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md), [Design Review Checklist](DESIGN-REVIEW-CHECKLIST.md), [Requirement Traceability](28-REQUIREMENT-TRACEABILITY.md).
 
@@ -404,3 +404,55 @@ The owner selected the following planning directions for reconciliation:
 - No modifications were requested.
 
 These choices settle broad direction and candidate wording only. They do not approve final screens, component details, exact tokens, font packaging, measured contrast, localization, TalkBack, text scaling, reduced-motion behaviour or rendered-device usability. The design review remains incomplete and the planning gate remains closed. No implementation or tests are authorised.
+
+## 5.8 Consolidated static review of Today, navigation and Journal archive — 2026-10-30
+
+**Scope and evidence boundary:** Re-fetched and reviewed the current source text of the three planning SVG boards against the shared synthetic fixture and task/accessibility protocol in doc 34, the selected W1/N1/A2 directions, D-199/D-201 Growth Mark rules, and written Journal/archive requirements. This is a source-level heuristic review only. No rendered Android screen, participant session, actual task completion, contrast measurement, TalkBack walkthrough, touch-target measurement, build, or device test was performed.
+
+### Task 1 — Today board and Growth Mark correction
+
+**Disposition: already corrected in the current board; verified, no further SVG edit required.**
+
+- W1, W2 and W3 all display “Collected moments · October” and the same synthetic **3 hr 40 min** total, with scope explicitly limited to **duration-tracked habits only**.
+- W1 and W2 state “3 hr 40 min recorded this month”; W3 includes the same total and scope in its compact line. The reporting period is visible and consistent.
+- The board retains the semantic distinction between Walk's explicitly recorded zero (“0 / 20 min · recorded”) and a separate “Not recorded” example. Measured-habit Complete and Record actions remain distinct; journaling is optional and does not change habit progress.
+- The 3 hr 40 min total is consistent with the six synthetic date totals in G3 (220 minutes). The Growth Mark board states that quantity/completion records and journal entries do not contribute and that explicit zero remains a record but adds no time.
+
+**Remaining limits:** the SVG does not prove aggregation, correction/deletion recalculation, actual G3 navigation, empty/error states, or readable presentation at device text scales. Do not reinterpret the example as an active-date count.
+
+### Task 2 — Cross-board task/accessibility scorecard review
+
+The three SVGs provide comparable high-level concepts and shared synthetic content, but they do not contain enough detail to score actual task success or accessibility. Protocol T-01–T-16 and A-01–A-12 remain planned checks, not completed tests.
+
+| Area | Static evidence present | Gap / next evidence required | Disposition |
+|---|---|---|---|
+| Today logging (T-01/T-02) | Recorded zero and “Not recorded” are separately labelled; Complete and Record are separate for measured habits | No save/failure/validation feedback, no-habits state, long-name/many-habit layout, or enlarged-text rendering | Semantics represented; interaction/accessibility unverified |
+| Reflection (T-03/T-15) | Write/reflection entry point is visible and optional | No editor, draft/save/cancel, comeback continue-without-writing flow | Entry point only |
+| Growth Mark (T-10–T-12) | G2 period and duration scope are stated; G3 shows six date totals matching 220 minutes | No selected-date source-session list, zero-session versus no-session state, empty month, correction/delete flow or accessible date announcement | Metric concept consistent; detail interaction unverified |
+| Journal creation/search (T-03/T-04/T-09) | N1 has a labelled Journal route, New entry action and saved-entry search; N2 provides the dedicated-Journal comparator | No body-only result, saved-versus-unsaved draft distinction, empty/no-results state, or long-result behaviour | Entry points represented; retrieval edge cases absent |
+| Journal date retrieval (T-05) | A1/A2/A3 compare timeline, hybrid date jump and calendar-first navigation; A2 keeps timeline and date navigation together | Board sample does not visibly demonstrate two entries on one date or the complete cross-month retrieval fixture | Direction comparable; fixture coverage incomplete |
+| Journal edit/delete (T-06–T-08) | Review prompt calls out safe edit/delete tasks | No editor, unsaved-change cancellation, permanent-delete confirmation/cancel or return-position flow is drawn | Not represented |
+| Settings/privacy (T-13/T-14/T-16) | Settings destination is labelled in primary navigation | Settings content and separate privacy/export/portable backup/restore/deletion destinations are absent | Not represented |
+| Accessibility (A-01–A-12) | Boards use text labels and do not rely solely on icons for primary navigation | No device viewport, 200% text, contrast measurements, TalkBack/focus order, dp targets, keyboard-open, reduced-motion, or failure-state evidence | Not testable from SVG |
+
+### Task 3 — Journal archive findability and retrieval review
+
+**N1/A2 remains the selected planning direction; no evidence currently justifies reopening it.** The board gives N1 a visible History destination, a text-labelled Journal switch, a labelled New entry action, date selection and search for saved entries. A2 places compact date navigation alongside a chronological entry list, balancing phrase search, date-based retrieval and browsing. N2/A1/A3 remain comparators, not owner-selected directions.
+
+The following are open validation scenarios, not proven defects:
+
+1. **Findability:** determine whether people understand that Journal is inside History, and whether the Journal switch is sufficiently prominent. Verify that the Today reflection entry point and History/Journal route do not appear to be two different kinds of journal.
+2. **Search scope:** verify search covers saved title and body text, including body-only entries, and never returns an unsaved comeback/reflection draft as a saved entry. The current board does not show this distinction or a no-results state.
+3. **Multiple entries/date:** the shared fixture requires two saved entries on one date, but the board's visible sample does not demonstrate both. Confirm both remain independently visible and retrievable after selecting that date.
+4. **Date boundaries and blank dates:** test the last days of one month and first days of the next; show month/year context, distinguish adjacent-month dates where needed, and keep blank dates neutral. The board labels its sample as a partial late-October/early-November view; preserve that precision.
+5. **Edit and destructive recovery:** verify edit/save, cancel/back with unchanged content, permanent-delete scope, explicit confirmation, cancellation, and return to a predictable archive position. None is demonstrated by the static board.
+6. **Content/layout states:** test body-only and long entries, empty archive, empty search, keyboard-open search/editor, large text, TalkBack headings/controls, and non-colour selected-date cues.
+7. **Settings discoverability:** separately test privacy/data explanation, readable export, portable backup/restore, and distinct entry/habit/delete-all actions. A Settings tab alone does not demonstrate these controls can be found or understood.
+
+### Consolidated disposition and next evidence
+
+- Task 1 is closed as a **source-content correction/verification**: the current Today SVG already matches D-199 and the synthetic G3 total; no SVG mutation was needed.
+- Tasks 2 and 3 are completed as **static planning reviews only**. The board/protocol gaps above remain explicit future task and accessibility evidence obligations.
+- Keep W1/N1/A2 and modified G2/G3 as selected planning directions. Do not reopen them solely because testing has not yet occurred.
+- Preserve doc 34 as a prepared protocol. Do not mark T-01–T-16 or A-01–A-12 passed; participant/device review has not been run or authorised.
+- Reconcile findings into doc 28 and the design checklist only after a separately authorised evidence-gathering review. The planning gate remains **CLOSED**; no implementation, build, test, APK or device validation is authorised or claimed.
