@@ -144,7 +144,7 @@ Record task completion, wrong taps, backtracking, user explanation of metrics, a
 
 - Keep the selected W1/N1/A2 and modified G2/G3 roles as the current planning directions; do not re-open them solely because evidence is still pending. Revisit a selected direction only if task/accessibility review exposes a material problem.
 - Defer final visual identity, exact colour/type/spacing tokens, custom-font selection, Growth Mark display thresholds and alternate-period controls until comparable samples and required accessibility evidence are available.
-- The W1/W2 Growth Mark inconsistency has been corrected and the three Today variants now show a consistent synthetic duration summary. Before owner approval, conduct the task review listed above and record observed results separately from static heuristics. The planning gate remains closed.
+- The W1/W2 Growth Mark inconsistency has been corrected and the three Today variants now show a consistent synthetic duration summary. Before owner approval, conduct the task review listed above and record observed results separately from static heuristics. The Stage A planning gate is APPROVED / OPEN under D-208; Stage B implementation remains NOT YET AUTHORISED.
 
 ### Follow-up static consistency check — 2026-10-29
 
@@ -168,7 +168,7 @@ After the SVG correction, the source text was re-fetched and checked: W1/W2/W3 e
 
 - Retain owner-selected N1/A2 as the current planning directions. Do not reopen them based solely on static-review gaps.
 - The source drawing now clarifies the N1 New entry affordance, the partial calendar date window, and the A3 selected date. No app code or design-token authority changed.
-- Before owner approval, perform the same find/write/retrieve/edit/delete tasks against comparable variants. Include multiple entries per date, month boundaries, blank dates, search no-results, saved-entry versus draft distinction, cancel/confirm destructive actions, return-to-archive position, large text, keyboard, TalkBack/focus, and findability of privacy/export/backup/restore/delete settings. Record observed outcomes separately from static findings. The planning gate remains closed.
+- Before owner approval, perform the same find/write/retrieve/edit/delete tasks against comparable variants. Include multiple entries per date, month boundaries, blank dates, search no-results, saved-entry versus draft distinction, cancel/confirm destructive actions, return-to-archive position, large text, keyboard, TalkBack/focus, and findability of privacy/export/backup/restore/delete settings. Record observed outcomes separately from static findings. The Stage A planning gate is APPROVED / OPEN under D-208; Stage B implementation remains NOT YET AUTHORISED.
 
 ## 5.3 Static Growth Mark and visual-reference alignment review — 2026-10-29
 
@@ -187,7 +187,7 @@ After the SVG correction, the source text was re-fetched and checked: W1/W2/W3 e
 - Keep the modified G2 compact duration summary and G3 date/session detail as the selected planning direction; G1 remains an alternative only.
 - Use the owner reference now as a hierarchy/mood guardrail, but defer pixel-level matching, final design tokens, and detailed botanical styling until the visual direction and accessibility review. Do not block this content-level review on final colour or font choices.
 - Before final owner approval, verify period and unit comprehension; current-calendar-month default; compatible-unit totals; source-session inspection; corrections/deletions; explicit zero versus no records; empty/loading/error states; and large text/TalkBack/focus order. Record task observations separately.
-- The arithmetic and wording fixes are static prototype corrections only. No app code, design tokens, implementation, build, test, or device validation was performed; the planning gate remains closed.
+- The arithmetic and wording fixes are static prototype corrections only. No app code, design tokens, implementation, build, test, or device validation was performed; the Stage A planning gate is APPROVED / OPEN under D-208; Stage B implementation remains NOT YET AUTHORISED.
 
 ## 6. Owner decision batch
 
@@ -354,7 +354,7 @@ When the owner settles a consequential design decision, record it in the decisio
 - Keep the owner reference visible alongside each prototype review.
 - Continue to compare hierarchy, tone, and information density, but defer pixel-level matching and final tokens until the owner reviews comparable samples and the required accessibility evidence is available.
 - Retain the current W1/N1/A2 and modified G2/G3 planning directions. Revisit them only if task or accessibility evidence identifies a material problem.
-- Record observed task results separately from static findings. The planning gate remains closed; no implementation, build, automated test, device test, or accessibility pass is claimed.
+- Record observed task results separately from static findings. The Stage A planning gate is APPROVED / OPEN under D-208; Stage B implementation remains NOT YET AUTHORISED; no implementation, build, automated test, device test, or accessibility pass is claimed.
 
 
 ## 5.5 Static small-screen, state-clarity and accessibility-risk review — 2026-10-29
@@ -375,12 +375,12 @@ When the owner settles a consequential design decision, record it in the decisio
 - Keep W1/N1/A2 and modified G2/G3 as the selected planning directions, use the owner reference as a visual guardrail, and record exact tokens/spacing/typography as an unresolved owner planning choice. Do not imply that rendered accessibility or the binary reference image has been inspected.
 - Before final design approval, review matching tasks across the comparable options: log a measured value including explicit zero; distinguish zero from no record; find/write/retrieve/edit/delete a journal entry; search with no results; inspect a Growth Mark date and its source sessions; correct/delete a session and verify the expected summary; find privacy/export/backup/restore/delete settings; return from a comeback screen without writing.
 - Record actual observations separately. The next authorised review should include compact and typical phone widths, largest supported text size, keyboard open, TalkBack/focus order, touch-target measurements, contrast measurements in light/dark themes, and empty/loading/error/destructive states.
-- The design checklist remains unchecked for these validations. No user study, rendered-device inspection, measured contrast audit, TalkBack test, build, app test, or device test is claimed. The planning gate remains closed.
+- The design checklist remains unchecked for these validations. No user study, rendered-device inspection, measured contrast audit, TalkBack test, build, app test, or device test is claimed. The Stage A planning gate is APPROVED / OPEN under D-208; Stage B implementation remains NOT YET AUTHORISED.
 
 
 ### Prepared task/accessibility review protocol
 
-A reusable, planning-only script and evidence template is now available in [`docs/34-UX-TASK-AND-ACCESSIBILITY-REVIEW-PROTOCOL.md`](34-UX-TASK-AND-ACCESSIBILITY-REVIEW-PROTOCOL.md). It defines a shared synthetic fixture, neutral task wording, observation fields, accessibility evidence matrix, severity triage and exit criteria. The protocol is prepared, not executed; no task outcomes or accessibility passes are claimed. The design checklist remains open and the planning gate remains closed.
+A reusable, planning-only script and evidence template is now available in [`docs/34-UX-TASK-AND-ACCESSIBILITY-REVIEW-PROTOCOL.md`](34-UX-TASK-AND-ACCESSIBILITY-REVIEW-PROTOCOL.md). It defines a shared synthetic fixture, neutral task wording, observation fields, accessibility evidence matrix, severity triage and exit criteria. The protocol is prepared, not executed; no task outcomes or accessibility passes are claimed. The design checklist remains open and the Stage A planning gate is APPROVED / OPEN under D-208; Stage B implementation remains NOT YET AUTHORISED.
 
 ## 5.6 Growth Mark semantic reconciliation — 2026-10-29 (D-201)
 
@@ -403,7 +403,7 @@ The owner selected the following planning directions for reconciliation:
 - **One-month comeback copy (D-206 / D-017):** “Welcome back! 🌿 What's new with you? You can pick up an old habit, start something new, or simply continue into Dayseed.”
 - No modifications were requested.
 
-These choices settle broad direction and candidate wording only. They do not approve final screens, component details, exact tokens, font packaging, measured contrast, localization, TalkBack, text scaling, reduced-motion behaviour or rendered-device usability. The design review remains incomplete and the planning gate remains closed. No implementation or tests are authorised.
+These choices settle broad direction and candidate wording only. They do not approve final screens, component details, exact tokens, font packaging, measured contrast, localization, TalkBack, text scaling, reduced-motion behaviour or rendered-device usability. The design review remains incomplete and the Stage A planning gate is APPROVED / OPEN under D-208; Stage B implementation remains NOT YET AUTHORISED. No implementation or tests are authorised.
 
 ## 5.8 Consolidated static review of Today, navigation and Journal archive — 2026-10-30
 
