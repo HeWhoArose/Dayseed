@@ -2,7 +2,7 @@
 
 **Last reconciled:** 2026-10-28  
 **Repository / canonical source:** `HeWhoArose/Dayseed`, branch `main`  
-**Current stage:** Stage A planning complete; planning gate **APPROVED / OPEN under D-208 (2026-10-30)**. Stage B technical validation is **NOT YET AUTHORISED**. Stage C feature implementation is **NOT AUTHORISED**.  
+**Current stage:** Stage A planning complete; planning gate **APPROVED / OPEN under D-208 (2026-10-30)**. Correct sequence: Stage B full initial-v1 implementation in Google AI Studio (**NOT YET AUTHORISED**); Stage C independent technical validation after implementation; Stage D final owner acceptance/release readiness.  
 **Purpose:** Let the next AI assistant or coding agent continue from the current agreed state without asking the owner to re-explain the product, decision rules, or working constraints.
 
 > **First rule:** Read this file before proposing work. Then refresh the current GitHub `main` state and read the canonical documents listed below. This is a handover, not permission to start implementation.
@@ -172,3 +172,21 @@ A handover is successful when a new agent can start with this file, refresh GitH
 - Growth Mark D-201 is mapped to docs 15/26/28/29 and AC-025/T-10–T-12. Acceptance cases remain planned/not run.
 - Bounded current-set semantic/status reconciliation completed. Cross-file heading-fragment/external-URL validation was not exhaustive. No acceptance case marked passed; no source/runtime audit, schema inspection, migration, build, test or device validation performed.
 - **Planning gate: APPROVED / OPEN (D-208, 2026-10-30).** Next: prepare the Stage B technical-validation plan and obtain separate explicit owner authorisation before starting it. Stage C remains gated by the Stage B exit review and separate implementation-plan approval. An agent may record an approval only when the owner gives a clear, explicit written instruction; never infer approval from “continue”, review, silence or documentation completion.
+
+
+## Current stage sequence — authoritative correction (2026-10-30)
+
+This section supersedes older stage labels and sequencing in this document and historical handover text:
+
+- **Stage A — Planning:** complete and approved/open under D-208.
+- **Stage B — Full initial-v1 implementation:** implementation in Google AI Studio, beginning with a dated implementation preflight against the latest GitHub main. Preserve useful existing code, reconcile gaps, implement approved scope and commit the work. Stage B is **NOT YET AUTHORISED**; it requires a separate explicit written owner instruction.
+- **Stage C — Independent technical validation:** after Stage B is implemented and committed, independently inspect and validate the resulting project from the current GitHub commit; run agreed builds/tests and runtime/device/accessibility/privacy/data-integrity checks, report defects, fix under the authorised workflow, and revalidate. Stage B self-checks are not independent Stage C evidence.
+- **Stage D — Final owner acceptance/release readiness:** present the verified release candidate and evidence to the owner for explicit acceptance. No release claim/action without that acceptance.
+
+**Inspection evidence:** Every project inspection must state date/time and timezone, repository, branch, exact inspected remote commit SHA, imported workspace/base SHA (or UNKNOWN), inspected paths plus line ranges/symbols, findings, and uninspected areas. Evidence must be specific to the inspected commit.
+
+**AI Studio/GitHub protection:** GitHub main is canonical. Before editing and immediately before pushing, compare the imported workspace with the latest remote head. If remote main is newer, fetch and reconcile before editing/pushing; never overwrite, force-push, reset away, or push stale workspace state over newer GitHub work. If remote advances during work, stop and reconcile.
+
+**Test-result integrity:** report NOT RUN, BLOCKED, FAILED, or PASSED accurately. PASSED requires actual execution and inspected evidence: exact command/task, date/time, commit SHA, environment/toolchain (and device where relevant), exit result, and retained log/artifact. Planned, inferred, generated, preview-only, or unexecuted checks must never be reported as passed. Never fabricate results.
+
+This correction supersedes earlier sections in this handover that label Stage B as technical validation and Stage C as implementation. Stage B requires separate explicit owner authorisation; this documentation update does not grant it.
