@@ -122,3 +122,12 @@ The traceability follow-up in docs/28 explicitly connects Growth Mark, Journal l
 The earlier section 8 count is a dated 2026-10-29 snapshot (197 decision rows through D-203), not the current count. After D-204–D-207 were recorded, the decision log and register each contain 201 unique decision IDs through D-207, with gaps preserved. R-019 is now closed as a documentation-follow-up mapping: D-091–D-105 next-action cells reference later decisions, screen/data contracts and planned acceptance coverage. This does not imply those behaviours are implemented, tested, security-reviewed or runtime verified.
 
 The owner choices D-205–D-207 are reconciled across docs 09/25/29/31/17 and README. The exact-token deferral is explicit; DESIGN.md remains unchanged. The current readiness status remains planning-only and the gate remains CLOSED / NOT APPROVED.
+
+
+## 11. Owner gate decision and post-build obligations — 2026-10-30
+
+The owner explicitly instructed the project to open the Stage A planning gate. D-208 records this decision. **Stage A planning is complete and the planning gate is APPROVED / OPEN** for the documented initial-v1 planning baseline on GitHub `main`.
+
+This approval does not authorise Stage B bounded technical validation or Stage C feature implementation. Stage B requires separate explicit written owner authorisation. Stage C requires the Stage B exit review and separate owner approval of the implementation plan.
+
+Rendered-screen review, task comprehension, Journal discoverability, Growth Mark accuracy, contrast, large text, TalkBack, focus order, touch targets, reduced motion, empty/error/destructive states, runtime privacy/data-flow, backup/restore/delete, migrations and device behaviour remain post-build acceptance or technical-validation obligations. They are **not passed, waived, or completed** by D-208.
