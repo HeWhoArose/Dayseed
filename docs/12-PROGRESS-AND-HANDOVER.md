@@ -1,6 +1,6 @@
 # Progress and Handover
 
-**Last updated:** 2026-10-28  
+**Last updated:** 2026-10-30
 **Status:** Planning phase; planning gate not approved; feature implementation is not authorised. Existing source files/preview are evidence for the later audit, not proof of a verified build or approval to add features.
 
 

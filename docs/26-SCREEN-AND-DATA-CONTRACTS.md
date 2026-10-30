@@ -45,7 +45,29 @@ Until the owner approves the model:
 - A failed save retains the entered data and communicates that it was not saved; do not show success optimistically.
 - A repeated tap/retry of one logical action must not double-count. Legitimate repeated sessions remain available.
 - Journal entry point is optional and independent of habit completion.
-- **Growth Mark (O-6/D-199; conservative planning default D-201):** Today uses a compact G2 **Collected moments** summary showing the total saved duration from duration-tracked habits in the current calendar month by default. Label the period (for example, “this month”) and use a readable duration format. Tapping opens G3 month/calendar detail with per-date totals and inspection of the underlying saved duration sessions. For initial v1, keep the reporting period to the current/selected calendar month; allow previous/next month navigation and selecting a date, but defer separate day/week period-selector modes unless the owner reopens scope. Calendar dates and reporting periods are calendar concepts; duration units are elapsed-time equivalents and must not imply that a calendar month has a fixed duration. Normalize compatible source units to one canonical duration unit before summing; retain source precision and round only for display. Show the largest useful whole unit plus a smaller-unit remainder without rounding upward or silently losing time (for example, 45 min; 3 hr 40 min; 1 day 2 hr; 1 wk 2 days). Treat a displayed day as 24 hours and a week as 7 days. Do not use month-equivalents for duration totals in v1. An explicitly saved zero contributes zero and remains distinguishable from no saved record; no-record dates remain neutral. Corrections/deletions recalculate totals from source records. Only valid saved duration records from duration-tracked habits contribute; exclude quantity, completion-only/effort-aware outcomes and journal entries. D-201 is a delegated planning default, not implementation approval; visual thresholds and interaction/accessibility behaviour remain unverified.
+- **Growth Mark (O-6/D-199; conservative planning default D-201):** Today uses a compact G2 **Collected moments** summary showing the total saved duration from duration-tracked habits in the current calendar month by default. Label the period (for example, "this month") and use a readable duration format. Tapping opens G3 month/calendar detail with per-date totals and inspection of the underlying saved duration sessions. For initial v1, keep the reporting period to the current/selected calendar month; allow previous/next month navigation and selecting a date, but defer separate day/week period-selector modes unless the owner reopens scope. Calendar dates and reporting periods are calendar concepts; duration units are elapsed-time equivalents and must not imply that a calendar month has a fixed duration. Normalize compatible source units to one canonical duration unit before summing; retain source precision and round only for display. Show the largest useful whole unit plus a smaller-unit remainder without rounding upward or silently losing time (for example, 45 min; 3 hr 40 min; 1 day 2 hr; 1 wk 2 days). Treat a displayed day as 24 hours and a week as 7 days. Do not use month-equivalents for duration totals in v1. An explicitly saved zero contributes zero and remains distinguishable from no saved record; no-record dates remain neutral. Corrections/deletions recalculate totals from source records. Only valid saved duration records from duration-tracked habits contribute; exclude quantity, completion-only/effort-aware outcomes and journal entries. D-201 is a delegated planning default, not implementation approval; visual thresholds and interaction/accessibility behaviour remain unverified.
+
+### Growth Mark (G2/G3) — screen states and edge cases (planning coverage)
+
+**Purpose:** Explicitly enumerate the states that must be handled and verified during implementation-time task/accessibility review.
+
+| State / scenario | Required behaviour |
+|---|---|
+| **G2 — Normal month (positive totals)** | Show "Collected moments · X this month" with readable duration format. Tapping opens G3. |
+| **G2 — Zero-only month (only explicit zero sessions)** | Show "Collected moments · 0 min this month" (or similar) — distinguish from no-data. Zero sessions are real records and contribute zero. |
+| **G2 — No qualifying sessions (empty month)** | Show "Collected moments · No duration recorded this month" — neutral, not failure. |
+| **G2 — Loading / query failure** | Show a non-blocking loading shimmer, then on failure: "Unable to load — tap to retry". Never show stale data as current. |
+| **G3 — Date with saved duration sessions** | List each session (habit name, amount, unit) with total for the date. Sessions are inspectable and editable (navigate to Record detail). |
+| **G3 — Date with explicit zero session** | Show "0 min · recorded" for that habit; total for date includes the zero. Distinguish from no session. |
+| **G3 — Date with no session (blank date)** | Neutral — no mark, no implied failure. |
+| **G3 — Empty month (no qualifying sessions at all)** | "No duration recorded this month" with a gentle prompt to log a duration habit. |
+| **G3 — Correction / deletion of a session** | Editing/deleting a session in Record detail recalculates the date total and the G2 month total immediately. Undo (8-second snackbar) available for the single mutation. |
+| **G3 — Navigation** | Previous/next month buttons; tapping a date opens its session list; TalkBack announces month/year and selected date. |
+| **Period label clarity** | Always show the calendar month/year (e.g., "October 2026") in G2 and G3 headers. Do not imply a fixed duration for "month". |
+| **Large text (200%)** | G2 card and G3 calendar reflow; touch targets ≥48 dp; no horizontal scrolling; session amounts readable. |
+| **TalkBack / accessibility** | G2 announces "Collected moments, 3 hours 40 minutes this month, button, opens date detail". G3 date cells announce date, total, and "button, opens sessions". Non-colour cues for selected date. |
+| **Reduced motion** | Month transitions use simple slide or instant swap; no parallax or decorative animation. |
+| **Source-session inspection** | Tapping a session in G3 opens Record detail for that habit/date; user can edit/delete and see totals update. |
 
 ### Record detail / edit
 
@@ -66,6 +88,30 @@ Until the owner approves the model:
 - Deleting a saved entry or permanently discarding a draft requires explicit confirmation.
 - Journal operations never mark habits complete or move habit records.
 
+### Journal editor — screen states and edge cases (planning coverage)
+
+**Purpose:** Explicitly enumerate the states that must be handled and verified during implementation-time task/accessibility review.
+
+| State / scenario | Required behaviour |
+|---|---|
+| **Body-only entry (no title)** | Save succeeds; entry appears in archive with date and body; mood labels optional. |
+| **Unsaved draft persistence** | Draft survives app close, process death, and navigation away. On reopening Journal for the same date, the draft is restored with cursor position. |
+| **Draft vs. saved distinction** | UI must clearly differentiate a draft (e.g., "Draft" badge, different background, no "Saved" timestamp) from a saved entry. Drafts never appear in the saved-entries list or search results. |
+| **Multiple entries on one date** | Each entry is a separate card/row with its own title/body/mood, edit, and delete actions. Selecting the date in archive shows all entries for that date. |
+| **Search — body-only match** | Local title/body search returns entries matching the query in either field. Body-only entries are findable. |
+| **Search — no results** | Show a neutral "No entries found for '…'" message with a clear "Clear search" action. Do not show a generic error. |
+| **Search — empty archive** | If no saved entries exist, search shows "No journal entries yet" with a "Write your first entry" affordance. |
+| **Edit — save** | Updates entry text/mood; preserves ID and creation timestamp; shows "Saved" confirmation. |
+| **Edit — cancel / back with unsaved changes** | Prompt to discard changes or keep editing. Discard restores the last saved version; no silent loss. |
+| **Delete saved entry** | Explicit confirmation dialog stating "Delete this entry? This cannot be undone." Cancel returns to list; confirm removes entry and updates archive/search immediately. |
+| **Delete / discard draft** | Explicit confirmation (may be lighter than saved-entry delete). Discard removes draft locally; no server/network action. |
+| **Keyboard-open layout** | Editor remains usable at 200% text scaling with keyboard visible; no clipping of save/cancel/actions; scrollable content area. |
+| **Large text (up to 200%)** | All text reflows; touch targets ≥48 dp; no horizontal scrolling required for primary actions. |
+| **TalkBack / accessibility** | Entry cards announce: title (or "Untitled"), date, mood if present, "Saved" or "Draft" state. Edit/Delete actions have clear accessibility labels. Search field has "Search journal entries" label. |
+| **Reduced motion** | No decorative animations on save/delete/transition; simple cross-fade or instant update. |
+| **Empty state (no entries ever)** | "No journal entries yet. Tap + to write your first reflection." |
+| **Archive-position recovery** | After editing/deleting an entry from a date list, return to the same scroll position in the archive. After creating a new entry from Today's reflection action, return to Today. |
+
 ### Optional retrospective journal prompt (D-042; delegated proposal)
 
 - On the first eligible app opening each local date, optionally offer a small in-app-only invitation to journal the most recent fully completed local date if it has no saved entry.
@@ -83,6 +129,17 @@ Until the owner approves the model:
 - Rest/non-scheduled days are neutral; paused periods are excluded from scheduled opportunities. Before a scheduled day has passed, no record is unrecorded rather than zero. After a scheduled day passes without qualifying activity, missed status is derived; users cannot manually mark a day missed. Genuine backdated activity can recalculate the result, but a journal memo alone cannot change habit status.
 - Date/time behaviour follows approved D-187 and D-188 in `03-TECHNICAL-ARCHITECTURE.md`: stable local-date keys separate from event instants, explicit date selection for genuine backdated activity, conservative clock-change handling, saved week-start consistency, no implicit historical rewrite, derived missed status for past scheduled days with no qualifying activity, and no habit-status changes from journal memos.
 - **G3 calendar/detail:** show date-level duration totals and allow inspection of the source duration sessions for the selected date/period. A calendar mark indicates only that a qualifying duration record exists, not goal success or a streak. Blank dates are neutral. Corrections/deletions must recalculate the relevant totals. Show records from duration-tracked habits only; do not mix quantity records, completion-only/effort-aware outcomes, or journal entries into this metric.
+
+### History / Journal archive — Navigation discoverability note
+
+**N1 places Journal inside History.** This creates a discoverability risk: journal-first users may not find the Journal section quickly, and the "Write reflection" action on Today plus the Journal switch in History could be perceived as two different journaling flows.
+
+**Mitigation to validate during implementation-time task review:**
+- Journal switch in History must use a clear text label (e.g., "Journal") and a distinct icon, not an ambiguous symbol.
+- Today's "Write reflection" action should open the Journal editor with today's date pre-selected, making the connection explicit.
+- The Journal archive (A2 hybrid) must show a prominent "New entry" affordance alongside the date jump/search.
+- Task validation must include: "Find and write a journal entry from Today" and "Find and write a journal entry from History" — measure wrong taps, backtracking, and user explanation of the two entry points.
+- If task evidence reveals a material findability issue, N2 (dedicated Journal tab) may be revisited as a scope change.
 
 ### Insights
 
@@ -138,6 +195,30 @@ Until the owner approves the model:
 - Deleting a journal entry, deleting a habit with its associated tracking history, and deleting all app data are separate actions with clear consequences and confirmation.
 - Habit deletion must preserve independent journal entries and their text. Existing exported/provider/OS backup copies may require separate deletion.
 - No analytics/crash SDK or advertising SDK is implicitly approved; inspect actual dependencies/data flows before making release privacy claims.
+
+### Settings → Account & data (planning screen map)
+
+**Purpose:** Provide clear, findable controls for privacy, export, backup/restore, and deletion with honest scope disclosure.
+
+- **Privacy explanation:** Summarise local-first storage, Dayseed portable backup, Android platform backup exclusion (D-186), readable export, and user-selected provider syncing as separate paths. Link to the full privacy screen.
+- **Readable journal export:** One-tap export of saved journal entries (title, body, mood, date) in a human-readable format (e.g., Markdown/CSV). Clearly state what is and is not included (habit data not included).
+- **Portable backup & restore:** Manual backup to user-chosen destination (system file picker). Optional password protection (two matching entries required). Pre-backup summary of categories. Restore preview with backup date, version, category counts, and conflict review. Replace requires verified safety backup + final confirmation. Auto Backup (opt-in) uses chosen destination and intervals; never auto-prunes.
+- **Delete controls (three distinct actions):**
+  1. **Delete one journal entry** — removes that saved entry only; draft for same date is unaffected.
+  2. **Delete one habit** — permanently removes habit configuration, tracking history, notes, and queued notifications; preserves independent journal entries and global reminders; cancels OS notifications post-commit.
+  3. **Delete all app data** — **D-203 disclosure:** before final confirmation, list the Dayseed-controlled local data covered (habit/config history, tracking records/notes/derived data, saved journal entries, unsaved drafts & draft context, preferences, restore sessions & unresolved conflict/recovery data, transient/cache/pending notification-cancellation work). Separately state that exported files, provider-held copies, OS-retained copies, and copies in other apps may remain; give practical removal guidance for user-controlled copies; never claim external copies were deleted without verification.
+- **Android platform backup disclosure:** Explain that D-186 excludes sensitive Dayseed data from platform Auto Backup/device transfer by default; direct users to create a complete Dayseed portable backup for migration. Keep platform backup separate from the app's own opt-in file-based Auto Backup.
+- **Settings accessibility:** All controls must have TalkBack-announceable names, visible focus order, minimum 48 dp touch targets, and work at 200% text scaling. Destructive actions (delete habit, delete all) require explicit confirmation with clear scope text.
+
+### Settings → Reminders (expanded screen states)
+
+- **Global opt-in state:** first launch asks once; if declined, no reminders are scheduled. Permission denial leaves core app usable; a re-enable affordance is shown only when the user attempts a reminder-dependent action.
+- **Per-habit reminder time:** defaults to 9:00 a.m. local; manual entry is protected (system-managed timing may not override unless user explicitly returns to automatic timing). Show current status: "Manual" vs "System-managed (learning…)" vs "System-managed (active)".
+- **Quiet hours editor:** default 21:00–08:00 local, editable; no OS notification posted inside window; next permitted time re-checks relevance.
+- **Shared cap & collision handling:** three OS notifications per local date max; at most one ordinary reminder per habit/date; combine eligible events within 15 min where one destination explains them (Today default). Priority order: explicit per-habit reminder → weekly-goal-reached → week-start reflection → inactivity check-in → optional partial tip.
+- **System-managed timing learning (local-only):** evidence threshold = 7 positive activity timestamps on ≥5 distinct local dates in 14 days, with 70% in a 2-hour band. Candidate = median + 30 min rounded up to 15-min boundary. Hold 28 days; revert if evidence no longer supports cluster. Manual times never auto-overridden.
+- **Optional partial-progress tips:** max 3 in 7 days, ≥24 h apart, max 1/day; suppressed after goal-met/dismissal/opt-out. Separate tips-notification setting for phone tips.
+- **Error/uncertainty states:** if permission denied, show inline explanation with "Open settings" affordance; if scheduling fails, retain entered time and allow retry.
 
 ## 3. Cross-screen state and failure handling
 
