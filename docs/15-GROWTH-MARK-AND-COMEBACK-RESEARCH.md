@@ -3,7 +3,7 @@
 **Research date:** 2026-10-17  
 **Status:** Design hypothesis and copy examples; not approved for implementation.  
 
-**Current-status note (2026-10-28):** The owner clarified O-6 in D-199: use a modified G2-style “Collected moments” card showing a readable total duration from duration-tracked habits, and use G3 for calendar/date-level exploration or a separate detailed page. The period must be labelled and can support day, configured week and calendar month views; display-unit thresholds, compatible-unit aggregation and accessibility remain to be defined/reviewed. The remainder of this older research predates approved comeback trigger rules: D-047–D-056 and D-146–D-160 govern the v1 comeback experience, including the 14-complete-local-calendar-day app-inactivity trigger, 30-day broader trigger (including no active habits), 30-day precedence, and suppression for each qualifying episode. The 3-day and 90-day examples below are copy exploration only, not approved v1 triggers. Use the [Planning Completeness Review](27-PLANNING-COMPLETENESS-REVIEW.md) and [Requirement Traceability Matrix](28-REQUIREMENT-TRACEABILITY.md) for current planning status.
+**Current-status note (2026-10-30):** D-199 selects the modified G2 “Collected moments” duration summary and G3 calendar/date/session detail. D-201 records planning defaults: compatible-unit normalisation before aggregation; preserve source precision and round only for display; largest useful whole unit plus remainder using minutes, hours, 24-hour days and 7-day weeks; no month-equivalent duration in v1; G2 defaults to current calendar month; G3 uses calendar-month navigation and date/session inspection; independent day/week selectors are deferred; explicit zero differs from no record. These are planning rules, not verified implementation or approved final UI. Display/accessibility evidence, correction/deletion recalculation, empty/error states and actual screen behaviour remain acceptance obligations. The remainder of this older research predates approved comeback trigger rules: D-047–D-056 and D-146–D-160 govern the v1 comeback experience, including the 14-complete-local-calendar-day app-inactivity trigger, 30-day broader trigger (including no active habits), 30-day precedence, and suppression for each qualifying episode. The 3-day and 90-day examples below are copy exploration only, not approved v1 triggers. Use the [Planning Completeness Review](27-PLANNING-COMPLETENESS-REVIEW.md) and [Requirement Traceability Matrix](28-REQUIREMENT-TRACEABILITY.md) for current planning status.
   
 **Purpose:** Define what the Growth Mark communicates and how Dayseed welcomes people back without turning absence into a penalty.
 
@@ -162,3 +162,19 @@ Record observed behaviour, confusion, quotes only with consent, participant cont
 - Should users disable comeback prompts entirely?
 
 No implementation should encode these choices until the decision log is updated and the owner approves the relevant semantics.
+
+
+## 9. D-201 semantic closeout and remaining Growth Mark evidence — 2026-10-30
+
+The earlier open questions about unit aggregation, display magnitude, and v1 reporting-period controls are settled as conservative planning defaults in D-201 and docs/26, not unresolved owner choices. The canonical reference is the D-201 contract in docs/26 section 4.1 and AC-025 in docs/28.
+
+| Concern | Settled planning rule | Still requires later evidence |
+|---|---|---|
+| Source eligibility | Saved duration sessions from duration-tracked habits only; exclude quantity, completion-only/effort-aware outcomes and journal entries | Confirm source-record filtering against real records |
+| Aggregation | Normalize compatible units to a common base; preserve source precision; recompute after correction/deletion | Verify arithmetic, unit compatibility and recalculation |
+| Display units | Largest useful whole unit plus smaller-unit remainder; minutes/hours/24-hour days/7-day weeks; no month-equivalent duration in v1 | Review actual thresholds, localization/plurals, compact widths and TalkBack announcements |
+| Reporting period | G2 current calendar month; G3 previous/next calendar month and date/session drill-down; no separate day/week selector in initial v1 unless scope is reopened | Confirm visible month/year context, date selection, navigation and matching source sessions |
+| Zero and empty | Explicit saved zero remains a record and adds zero; absence is not zero; blank dates neutral | Cover zero-only month, no qualifying sessions, query failure/loading and empty month distinctly |
+| Corrections/deletion | Totals recalculate from eligible source records | Verify after edit/delete and preserve record identity/recovery semantics |
+
+The synthetic board arithmetic (six date totals = 220 minutes = 3 hr 40 min) is internally consistent, but is not a runtime aggregation test. Growth Mark acceptance work is represented by T-10–T-12 in docs/34 and AC-025 in docs/28; all remain planned/not run. This section does not authorise implementation, build, tests or device validation.
