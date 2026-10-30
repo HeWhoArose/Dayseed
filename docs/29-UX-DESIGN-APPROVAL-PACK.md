@@ -1,13 +1,21 @@
 # UX and Design Approval Pack
 
-**Review date:** 2026-10-28  
-**Status:** Owner selections recorded on 2026-10-28: W1 Action-first Today, N1 four-destination navigation, A2 hybrid journal archive, platform/system typography and system light/dark baseline, and the recommended compact non-blocking comeback presentation. O-6 is clarified in D-199: modified G2-style “Collected moments” duration-total summary, with G3 reserved for calendar/date-level details or a separate detailed page. Unit formatting, period defaults, data edge cases and accessibility review remain open; exact design tokens and broad visual identity are not approved. The planning gate remains closed.
+**Review date:** 2026-10-30  
+**Status:** Owner selections recorded on 2026-10-28: W1 Action-first Today, N1 four-destination navigation, A2 hybrid journal archive, platform/system typography and system light/dark baseline, and the recommended compact non-blocking comeback presentation. O-6 is clarified in D-199: modified G2-style “Collected moments” duration-total summary, with G3 reserved for calendar/date-level details or a separate detailed page. Unit formatting, period defaults, data edge cases and accessibility review remain open; D-204 now records both automatic time-of-day themes and a user-selected fixed theme, with gradual transitions between automatic dayparts. Exact daypart boundaries, palettes, names, transition timing, reduced-motion behaviour, exact design tokens and broad visual identity are not approved. The planning gate remains closed.
 
 **Related documents:** [UX and Design](02-UX-AND-DESIGN.md), [Today Dashboard Concepts](21-TODAY-DASHBOARD-CONCEPTS.md), [Design System](../DESIGN.md), [Growth Mark and Comeback Research](15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md), [Journal Archive Research](16-JOURNAL-ARCHIVE-RESEARCH.md), [Typography and Accessibility Research](17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md), [Design Review Checklist](DESIGN-REVIEW-CHECKLIST.md), [Requirement Traceability](28-REQUIREMENT-TRACEABILITY.md).
 
 ## Owner-provided visual reference — 2026-10-28
 
 [Open the multi-screen Dayseed UI reference layout](prototypes/dayseed-owner-reference-layout.webp). This owner-supplied collage shows five Today states/variants and supporting screens for Habit Create/Edit, Habit Detail, History calendar, Journal Entry, Insights Overview, return after a break, and Settings. Use it as the persistent visual north star for hierarchy and mood while comparing designs and reviewing accessibility. The image communicates a direction—not final approval of its exact controls, information architecture, colours, type, components, or every screen detail. Keep all unsettled choices open in the owner decision batch; DESIGN.md remains the only token/component authority. It does not authorise implementation or change the closed planning gate.
+
+## Time-aware theme behaviour — owner response recorded 2026-10-30 (D-204)
+
+The owner selected **both** appearance modes: Dayseed may follow automatic time-of-day themes, or the user may select one theme to keep throughout the day. A fixed selection takes precedence over automatic switching. The owner also selected **gradual transitions** between automatic daypart themes.
+
+The four-part Morning / Afternoon / Evening / Night concept is a proposed design structure for further exploration, not approval of exact clock boundaries, colour palettes, theme names, transition duration, or final screens. Define boundaries using device-local time; consider reduced-motion settings and avoid transitions that obscure content or interfere with interaction. Each theme must independently meet contrast, text scaling, TalkBack and other accessibility requirements. A user-selected fixed theme should remain fixed until the user changes it; automatic switching should not silently overwrite that preference.
+
+This decision records theme behaviour only. It does not settle D-008 broad visual identity, D-019 exact colour/type tokens, or final UI approval, and it does not open the planning gate or authorise implementation, builds, tests or device validation.
 
 ## 1. Current status
 
