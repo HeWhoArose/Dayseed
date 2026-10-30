@@ -507,3 +507,10 @@ The canonical readiness snapshot is `docs/27-PLANNING-COMPLETENESS-REVIEW.md`; t
 - Stage C feature implementation: **NOT AUTHORISED**; requires Stage B exit review and separate approval of the implementation plan.
 - Rendered UI, task comprehension, accessibility, runtime privacy/data-flow, backup/restore/delete, migration and device checks remain post-build acceptance obligations. None is marked passed or waived.
 - No technical validation or implementation was performed as part of recording D-208.
+
+
+## Current authoritative workflow correction — 2026-10-30
+
+This dated addendum supersedes earlier status statements and next-action lists in this chronological document where they describe Stage B as technical validation or Stage C as implementation. Stage A planning remains complete/approved-open under D-208. The correct sequence is **Stage B full initial-v1 implementation in Google AI Studio** (not yet authorised) → **Stage C independent technical validation after implementation** → **Stage D final owner acceptance/release readiness**. The documentation correction does not authorise Stage B. No app code, database, migration, build, test, APK or device validation was performed by this documentation update.
+
+Every future project inspection must record date/time/timezone, repository, branch, exact inspected remote commit SHA, imported workspace/base SHA (or UNKNOWN), inspected paths and line ranges/symbols, findings, and uninspected areas. AI Studio must refresh/reconcile against latest GitHub main before editing and before pushing; never overwrite or force-push newer remote work. Test results must be marked NOT RUN/BLOCKED/FAILED/PASSED honestly; PASSED requires actual execution and retained command/log/environment/commit evidence.
