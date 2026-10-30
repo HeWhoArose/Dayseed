@@ -21,7 +21,7 @@ Required before coding:
 - implementation roadmap, acceptance criteria, and release gates reconciled;
 - documentation links, duplicate/outdated plans, contradictions, and unsupported claims audited;
 - owner reviews and explicitly approves the planning gate;
-- the current status and remaining blockers are captured in `docs/27-PLANNING-COMPLETENESS-REVIEW.md`, the requirement map in `docs/28-REQUIREMENT-TRACEABILITY.md`, the UX recommendations in `docs/29-UX-DESIGN-APPROVAL-PACK.md`, the proposed schema closure plan in `docs/30-SCHEMA-CLOSURE-AND-MIGRATION-PLAN.md`, the consolidated owner review in `docs/31-OWNER-PLANNING-DECISION-BATCH.md`, and the handover.
+- the current status and remaining blockers are captured consistently in docs 27/28/29/30/31/35 and the handover;
 
 ### Stage B — Bounded stack-specific feasibility validation
 
@@ -92,7 +92,7 @@ For every issue: reproduce → identify root cause → implement the smallest sa
 
 - Planning gate decision: **Not approved**
 - Owner planning responses O-1–O-11 recorded: **2026-10-28** — this is not planning-gate approval.
-- D-200 defers ads for initial v1 and retains `docs/33-MONETISATION-AND-ADS-EVALUATION.md` as pre-launch material. D-201's duration-unit, formatting, aggregation, and period-control defaults are recorded in the decision log, screen/data contracts, and traceability matrix; they are not pending planning choices. The targeted semantic pass is recorded in docs 27/32/35, but the specific remaining traceability gaps in docs 27/28 and the final readiness reconciliation remain open. Rendered interaction/accessibility and runtime validation are reserved for separately authorised later stages. No implementation or technical validation is authorised.
+- D-200 defers ads for initial v1 and retains `docs/33-MONETISATION-AND-ADS-EVALUATION.md` as pre-launch material. D-201's duration-unit, formatting, aggregation, and period-control defaults are recorded in the decision log, screen/data contracts, and traceability matrix; they are not pending planning choices. The bounded semantic/traceability closeout is recorded in docs 27/28/32/35. The remaining owner planning choices and explicit deferrals are listed in docs 27/31/35. Rendered interaction/accessibility and runtime validation are reserved for separately authorised later stages. No implementation or technical validation is authorised.
 - Owner approval date:
 - Approved scope/version:
 - Stack decision D-009: **Approved — continue the existing native Kotlin + Jetpack Compose Android project** (2026-10-26). This is not planning-gate approval or authorisation to implement features.
