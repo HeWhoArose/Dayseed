@@ -13,7 +13,7 @@
 7. Protect secrets and private data. The repository tree includes `.env`; do not display, quote, copy, or log its contents. Do not commit credentials, signing material, or private journal data.
 8. Preserve and consult [the owner-provided UI reference](docs/prototypes/dayseed-owner-reference-layout.webp) during UX planning. It is directional, not final UI/token approval. DESIGN.md remains the sole design-token/component authority.
 
-Feature implementation is a later stage after technical validation and separate owner approval. A documentation commit, schema review, or approval of the stack alone does not authorise it.
+Stage B implementation is the next product stage after Stage A planning, followed by independent Stage C technical validation and Stage D owner acceptance. Stage B still requires separate explicit owner authorisation. A documentation commit, schema review, or approval of the stack alone does not authorise it.
 
 
 ## Shared OpenCode governance policies
