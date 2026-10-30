@@ -1,7 +1,7 @@
 # Dayseed Planning Readiness Report
 
 **Snapshot date:** 2026-10-30
-**Status:** Stage A planning complete; owner approved/opened the planning gate on 2026-10-30 (D-208). Stage B technical validation and Stage C feature implementation remain separately gated. Post-build acceptance evidence is outstanding and is not passed or waived.
+**Status:** Stage A planning complete; planning gate APPROVED / OPEN under D-208 (2026-10-30). Correct sequence: Stage B full initial-v1 implementation in Google AI Studio (not yet authorised), Stage C independent technical validation after implementation, Stage D final owner acceptance/release readiness. Post-build acceptance evidence is outstanding and is not passed or waived.
 **Repository:** `HeWhoArose/Dayseed`  
 **Scope:** Documentation and decision consistency only. This report does not authorise source inspection, technical validation, database changes, builds, tests, or implementation.
 
@@ -97,7 +97,7 @@ The task/accessibility protocol in `docs/34-UX-TASK-AND-ACCESSIBILITY-REVIEW-PRO
 
 ## 8. Gate statement
 
-**Stage A planning gate: APPROVED / OPEN under D-208 (2026-10-30).** This approval is based on the owner's explicit written instruction. Stage B technical validation remains NOT YET AUTHORISED; Stage C feature implementation remains NOT AUTHORISED. No code, schema, migration, build, test, device validation, or implementation was performed by preparing this report.
+**Stage A planning gate: APPROVED / OPEN under D-208 (2026-10-30).** Stage B full initial-v1 implementation in Google AI Studio is the next stage but remains NOT YET AUTHORISED pending a separate explicit owner instruction. Stage C independent technical validation follows committed implementation; Stage D requires explicit owner acceptance. No code, schema, migration, build, test, device validation, or implementation was performed by preparing this report.
 
 
 ## 9. 2026-10-30 Growth Mark and UX traceability follow-up
@@ -121,14 +121,14 @@ The traceability follow-up in docs/28 explicitly connects Growth Mark, Journal l
 
 The earlier section 8 count is a dated 2026-10-29 snapshot (197 decision rows through D-203), not the current count. After D-204–D-208 were recorded, the decision log and register each contain 202 unique decision IDs through D-208, with gaps preserved. R-019 is now closed as a documentation-follow-up mapping: D-091–D-105 next-action cells reference later decisions, screen/data contracts and planned acceptance coverage. This does not imply those behaviours are implemented, tested, security-reviewed or runtime verified.
 
-The owner choices D-205–D-208 are reconciled across the decision log/register, UX pack, owner batch and README. The exact-token deferral is explicit; DESIGN.md remains unchanged. Stage A planning is complete and approved/open under D-208. Stage B technical validation and Stage C feature implementation remain separately gated.
+The owner choices D-205–D-208 are reconciled across the decision log/register, UX pack, owner batch and README. The exact-token deferral is explicit; DESIGN.md remains unchanged. Stage A planning is complete and approved/open under D-208. Stage B implementation, Stage C independent validation and Stage D final acceptance remain separately gated.
 
 
 ## 11. Owner gate decision and post-build obligations — 2026-10-30
 
 The owner explicitly instructed the project to open the Stage A planning gate. D-208 records this decision. **Stage A planning is complete and the planning gate is APPROVED / OPEN** for the documented initial-v1 planning baseline on GitHub `main`.
 
-This approval does not authorise Stage B bounded technical validation or Stage C feature implementation. Stage B requires separate explicit written owner authorisation. Stage C requires the Stage B exit review and separate owner approval of the implementation plan.
+This approval does not authorise Stage B implementation, Stage C independent validation or Stage D release acceptance. Stage B requires separate explicit written owner authorisation. Stage C follows committed Stage B implementation. Stage D requires explicit owner acceptance of the verified release candidate.
 
 Rendered-screen review, task comprehension, Journal discoverability, Growth Mark accuracy, contrast, large text, TalkBack, focus order, touch targets, reduced motion, empty/error/destructive states, runtime privacy/data-flow, backup/restore/delete, migrations and device behaviour remain post-build acceptance or technical-validation obligations. They are **not passed, waived, or completed** by D-208.
 
