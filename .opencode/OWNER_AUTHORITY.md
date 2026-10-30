@@ -7,30 +7,29 @@
 
 The product owner is the final authority for owner-reserved product, scope, philosophy, privacy, security, data-integrity, monetisation, major design, and approval-gate decisions.
 
-Agents may research, analyse, challenge, recommend, document, and prepare alternatives. They may not convert their own recommendations, model consensus, silence, inferred intent, delegated routine defaults, or existing code into owner approval.
+Agents may research, analyse, challenge, recommend, document, and prepare alternatives. They may record and enact an owner approval only when the owner gives a clear, explicit written instruction identifying the approval or action. They may never convert recommendations, model consensus, silence, inferred intent, delegated routine defaults, or existing code into owner approval.
 
 An agent must not:
 
 - Approve a decision on the owner's behalf.
 - Mark a proposal as owner-approved without an explicit owner response.
-- Open, waive, or bypass a project approval gate.
+- Open, waive, or bypass a project approval gate without the owner's clear, explicit written instruction.
+- Infer gate approval from “continue”, review, silence, documentation completion, or an assistant recommendation.
 - Expand the authorised scope because implementation appears straightforward.
 - Treat a documentation/configuration change as permission to implement product features.
 - Change the canonical decision log to manufacture approval.
 
 ## 2. Dayseed's current gate
 
-The Dayseed product-planning gate is **CLOSED / NOT APPROVED**.
+The Dayseed Stage A planning gate is **APPROVED / OPEN as of 2026-10-30 (D-208)**, based on the owner's explicit written instruction. The approved scope is the documented initial-v1 planning baseline on GitHub `main`, including recorded owner decisions through D-208 and explicit deferrals.
 
-Until the owner explicitly approves that gate and separately authorises technical validation:
+This does **not** authorise Stage B or Stage C:
 
-- Continue only within the currently permitted planning and documentation scope.
-- Do not edit application source, schemas, or migrations.
-- Do not inspect the live database.
-- Do not run builds, application tests, APK installation, or device validation.
-- Do not claim implementation or runtime validation has occurred.
+- **Stage B — bounded technical validation: NOT YET AUTHORISED.** Do not inspect application source/build configuration, edit schemas or migrations, inspect the live database, run builds/tests, install an APK, or perform device/runtime validation until the owner separately authorises Stage B in writing.
+- **Stage C — feature implementation: NOT AUTHORISED.** It requires the Stage B exit review and separate explicit owner approval of the implementation plan.
+- Rendered-screen, task-comprehension, accessibility, runtime privacy/data-flow, backup/restore/delete, migration and device checks requiring a functioning app remain post-build acceptance/technical-validation obligations. D-208 does not mark them passed or waived.
 
-A later planning-gate approval does not automatically authorise every technical action. Follow the exact scope and any separate technical-validation authorisation.
+An agent may record/enact an approval only when the owner gives a clear, explicit written instruction. Record the exact approved scope and date in the canonical decision log and approval record. Never infer approval from “continue”, review, silence, documentation completion, or an assistant recommendation.
 
 ## 3. Owner decisions and status labels
 
