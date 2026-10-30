@@ -40,3 +40,8 @@ The project declares a native Android/Kotlin + Jetpack Compose stack with SQLite
 ## Project status and audits
 
 - [Implementation Reality Audit](docs/22-IMPLEMENTATION-REALITY-AUDIT.md) — reconciles planning claims with source files actually present.
+
+
+## Current implementation and validation sequence
+
+Stage A planning is complete and approved/open under D-208. The corrected sequence is **Stage B: full initial-v1 implementation in Google AI Studio** → **Stage C: independent technical validation after implementation** → **Stage D: final owner acceptance and release readiness**. Stage B is not authorised yet; this documentation update does not authorise app implementation. The 12-table relational schema remains a proposed implementation baseline, not a finally approved/canonical schema. Soft Botanical is a selected palette direction only: exact colour/font tokens, contrast pairings and automatic daypart boundaries remain provisional and must stay centrally configurable. See `implementation_plan.md` and `docs/19-AI-STUDIO-GITHUB-WORKFLOW.md`.
