@@ -1,0 +1,1161 @@
+# DAYSEED — CORRECTED MASTER V1 IMPLEMENTATION PLAN
+## Reconciled implementation specification for Google AI Studio
+
+**Repository:** `HeWhoArose/Dayseed`  
+**Branch:** `main`  
+**Product:** Dayseed initial v1  
+**Technology direction:** Native Android, Kotlin, Jetpack Compose, SQLiteOpenHelper  
+**Decision baseline:** Owner decisions and reconciled documentation through D-208  
+**Purpose:** Complete implementation of the approved Dayseed initial v1  
+**Status:** Corrected implementation-plan candidate; awaiting owner review and separate implementation authorisation.
+
+---
+
+# 1. MISSION AND AUTHORITY
+
+The purpose of this plan is to turn the approved Dayseed product specifications into a complete, functional Android application.
+
+The product planning work has been completed. Do not restart planning or ask the owner to repeat decisions already recorded.
+
+The implementation agent must:
+
+1. Inspect the existing imported project.
+2. Preserve useful existing work.
+3. Identify incomplete, incorrect and missing functionality.
+4. Reconcile the actual source against the approved specifications.
+5. Implement the complete approved initial v1.
+6. Test the implementation throughout development.
+7. Preserve the project in GitHub.
+8. Produce a verifiable implementation handover.
+
+A screen is not a completed feature merely because it renders. Features must be connected to their real data, application logic, persistence, navigation and interactions.
+
+## 1.1 Source-of-truth hierarchy
+
+Use the following documents as the governing sources:
+
+| Subject | Authority |
+|---|---|
+| Owner decisions | `docs/09-DECISION-LOG.md` |
+| Current decision interpretation | `docs/25-DECISION-REGISTER-AND-RECONCILIATION.md` |
+| Product requirements | `docs/01-PRODUCT-SPECIFICATION.md` |
+| Technical architecture | `docs/03-TECHNICAL-ARCHITECTURE.md` |
+| Privacy and data rules | `docs/04-DATA-AND-PRIVACY.md` |
+| Testing and quality | `docs/07-TESTING-AND-QUALITY.md` |
+| Comeback behaviour | `docs/24-COMEBACK-EXPERIENCE.md` |
+| Screen and data contracts | `docs/26-SCREEN-AND-DATA-CONTRACTS.md` |
+| Requirement traceability | `docs/28-REQUIREMENT-TRACEABILITY.md` |
+| Schema and migration refinements | `docs/30-SCHEMA-CLOSURE-AND-MIGRATION-PLAN.md` |
+| Visual design | `DESIGN.md` |
+| Agent operating rules | `AGENTS.md` |
+| Current project status | `README.md` and `docs/32-CONTINUATION-HANDOVER.md` |
+
+Do not assume that every decision number from D-001 to D-208 represents an approved implementation instruction. Follow the actual status of each decision.
+
+### Decision status rules
+
+- **Approved:** Implement as specified.
+- **Delegated default:** Use the documented default and record its rationale.
+- **Proposed:** Do not present it as an owner-approved requirement. Reconcile it with the authoritative documents before implementing it as a permanent contract.
+- **Open:** Do not silently decide a material issue.
+- **Deferred:** Keep it outside initial v1 unless the owner changes the decision.
+- **Rejected or superseded:** Do not reintroduce it.
+- **Unverified:** Do not claim it has been implemented or tested successfully.
+
+For routine, reversible implementation details, use the documented delegated authority. Escalate material changes affecting product scope, privacy, security, data integrity, accessibility, monetisation, irreversible actions or owner-level product identity.
+
+---
+
+# 2. PROJECT DISCOVERY AND PREFLIGHT
+
+The imported AI Studio workspace is understood to contain an existing native Android project and prototype implementation. The inventory in the uploaded candidate plan must be checked against the actual refreshed workspace before relying on it.
+
+Inspect:
+
+- Project root and module structure.
+- `settings.gradle.kts`.
+- Root and application `build.gradle.kts`.
+- Gradle version catalog.
+- Gradle wrapper.
+- Kotlin and Android Gradle Plugin versions.
+- JDK and Android SDK requirements.
+- Android manifest and resources.
+- Existing Kotlin source files.
+- Existing Compose screens and components.
+- ViewModels and repositories.
+- Database helper and current schema.
+- Existing tests and test dependencies.
+- Git branch, current commit and uncommitted changes.
+
+The earlier candidate reported a prototype with:
+
+- `MainActivity.kt`
+- `DayseedViewModel.kt`
+- `DayseedDatabaseHelper.kt`
+- `DayseedRepository.kt`
+- `Models.kt`
+- Today, History, Insights and Settings screens
+- Habit and journal editor components
+- Comeback and Growth Mark components
+
+These names are a discovery checklist, not proof that the files still exist or are complete.
+
+Record the actual state of each item.
+
+## 2.1 Existing implementation classification
+
+For every requirement, assign one of these states:
+
+- Missing.
+- Scaffold only.
+- Partially implemented.
+- Implemented but untested.
+- Implemented and tested.
+- Implemented but contradicts an approved decision.
+- Blocked by an unresolved owner decision.
+
+Do not rewrite functioning components unnecessarily. Do not preserve code that violates an approved data-integrity or privacy requirement merely because it already exists.
+
+---
+
+# 3. TECHNICAL AND PRODUCT BOUNDARIES
+
+## 3.1 Technology
+
+Continue the approved native Android implementation:
+
+- Kotlin.
+- Jetpack Compose.
+- SQLiteOpenHelper.
+- Existing approved application architecture.
+- ViewModel and StateFlow for screen state.
+- Repository boundaries for persistence.
+- Independently testable domain logic.
+- Deterministic clock abstraction for date-sensitive logic.
+
+Do not create a separate website or web application as a substitute for the native Android application.
+
+Do not replace the approved stack with React Native, Expo or another framework.
+
+Do not create a second Android application if the existing project can be continued.
+
+## 3.2 Privacy and offline operation
+
+Initial v1 remains:
+
+- Account-free.
+- Offline-first.
+- Usable for core functionality without an internet connection.
+- Free of unapproved cloud synchronisation.
+- Free of unapproved AI processing.
+- Free of advertising and analytics SDKs.
+- Free of unnecessary permissions.
+
+Do not add accounts, online backup, cross-device synchronisation, analytics, advertising, billing or AI APIs without separate owner approval.
+
+Keep Android platform backup/device-transfer behaviour separate from Dayseed's own portable backup feature.
+
+Implement the approved D-186 exclusion policy using the correct Android manifest and data-extraction configuration. Verify the actual configuration; do not assume that a single manifest attribute proves all platform backup and transfer paths are excluded.
+
+Never log journal text, habit names, passwords, keys or private personal content.
+
+## 3.3 Design
+
+Follow the approved design direction:
+
+- Field Journal warmth and identity.
+- Living Editorial typography and hierarchy.
+- Quiet Instrument controls and data discipline.
+- Soft Botanical palette direction.
+
+Use semantic design tokens.
+
+Candidate colour values in `DESIGN.md` must not be presented as final production-approved colours merely because they exist in the file.
+
+D-204's automatic daypart boundaries, exact palettes, transitions and reduced-motion details remain subject to their documented approval status.
+
+Do not silently promote proposed font, palette, contrast or timing values into owner-approved brand decisions.
+
+Verify text and control contrast against the applicable accessibility requirements.
+
+---
+
+# 4. CANONICAL 12-TABLE DATABASE CONTRACT
+
+The proposed 12-table architecture is the implementation baseline to reconcile and implement. The table definitions below follow the canonical architecture rather than the inconsistent column definitions in the uploaded candidate.
+
+Do not add duplicate sources of truth or unapproved fields merely to make the schema easier to implement.
+
+## 4.1 `habits`
+
+Purpose: stable habit identity.
+
+Canonical fields:
+
+- `habit_id` — UUID primary key.
+- `created_at_utc_ms`.
+- `updated_at_utc_ms`.
+
+Do not add:
+
+- `archived_at_epoch_ms`.
+- `paused_at_epoch_ms`.
+- `completed_at_epoch_ms`.
+- A second authoritative lifecycle-status field.
+
+The current lifecycle state is derived from the latest effective `habit_versions.lifecycle_state`.
+
+Permanent deletion is a separate explicit operation.
+
+## 4.2 `habit_versions`
+
+Purpose: effective-dated snapshots of habit configuration.
+
+Canonical fields:
+
+- `version_id` — UUID primary key.
+- `habit_id` — foreign key to `habits`.
+- `effective_from_local_date`.
+- `name`.
+- Nullable `description`.
+- `tracking_mode`.
+- Nullable `unit_code`.
+- `target_period`.
+- Positive integer `target_value`.
+- `schedule_kind`.
+- Nullable `scheduled_weekdays_mask`.
+- Nullable `preferred_weekdays_mask`.
+- `lifecycle_state`.
+- Reminder mode and local reminder time.
+- `created_at_utc_ms`.
+
+Required uniqueness:
+
+`UNIQUE(habit_id, effective_from_local_date)`
+
+Lifecycle values:
+
+- `ACTIVE`
+- `PAUSED`
+- `COMPLETED`
+- `ARCHIVED`
+
+Tracking modes:
+
+- Quantity.
+- Duration.
+- Completion-only.
+- Effort-aware.
+
+Schedule kinds:
+
+- `DAILY`
+- `SELECTED_WEEKDAYS`
+- `FLEXIBLE_WEEKLY_TARGET`
+
+Apply the approved D-191 and D-195 constraints:
+
+- DAILY uses DAY target period and no scheduled or preferred weekday mask.
+- SELECTED_WEEKDAYS uses DAY target period and a valid non-empty scheduled mask.
+- FLEXIBLE_WEEKLY_TARGET uses WEEK target period, no mandatory scheduled mask, and may have an optional preferred mask.
+- Monday = 1, Tuesday = 2, Wednesday = 4, Thursday = 8, Friday = 16, Saturday = 32, Sunday = 64.
+- Valid weekday masks contain only the seven defined bits.
+- Reject invalid combinations; do not silently trim invalid mask bits.
+
+Do not introduce Every-N-days or other rejected/historical schedule proposals.
+
+Do not add `effective_to_local_date` unless the canonical documents are formally reconciled to require it. The effective configuration is resolved by selecting the latest version whose effective date is not after the requested local date.
+
+Preserve past versions.
+
+Apply D-194:
+
+- Repeated Apply-today edits may replace the current-date version only while no qualifying activity exists today.
+- Once qualifying activity exists, preserve today's configuration and offer Apply tomorrow.
+- Apply tomorrow changes only the future effective version.
+- Cancel changes nothing.
+
+## 4.3 `habit_entries`
+
+Purpose: individual quantity/duration activity entries.
+
+Canonical fields:
+
+- `entry_id` — UUID primary key.
+- `habit_id` — foreign key to `habits`.
+- `local_date`.
+- Non-negative whole-number `value_units`.
+- Nullable `entry_note`.
+- `created_at_utc_ms`.
+- `updated_at_utc_ms`.
+- Nullable `idempotency_key`.
+
+Requirements:
+
+- Multiple entries per habit/date are valid.
+- Do not impose `UNIQUE(habit_id, local_date)`.
+- Explicit zero is a valid saved record.
+- No record is distinct from a zero-valued record.
+- Use a partial unique index for non-null idempotency keys.
+- A retry of the same logical action reuses the same identity and key.
+- A distinct intentional action receives a new identity and key.
+- Unit interpretation must follow the effective habit configuration.
+- Never aggregate incompatible units.
+
+Do not introduce `canonical_amount` or other redundant authoritative totals without reconciling the architecture. D-201 requires compatible-unit normalization before aggregation, preservation of source precision and display-only rounding. This should be implemented in the domain/aggregation layer unless an explicitly reconciled schema requirement establishes otherwise.
+
+## 4.4 `habit_day_outcomes`
+
+Purpose: non-numeric habit outcomes.
+
+Canonical fields:
+
+- `outcome_id` — UUID primary key.
+- `habit_id`.
+- `local_date`.
+- `outcome_kind`.
+- Nullable `effort_level`.
+- Nullable `idempotency_key`.
+- `created_at_utc_ms`.
+- `updated_at_utc_ms`.
+
+Required uniqueness:
+
+`UNIQUE(habit_id, local_date)`
+
+Completion-only outcomes represent completion and must not invent a numeric amount or effort value.
+
+Effort-aware outcomes must use a valid approved effort value.
+
+Do not use a generic numeric amount for these outcomes.
+
+Do not add a user-entered `SKIPPED` or `MISSED` outcome.
+
+## 4.5 `habit_date_notes`
+
+Purpose: optional date-level context for a habit.
+
+Canonical fields:
+
+- `note_id`.
+- `habit_id`.
+- `local_date`.
+- `body`.
+- `created_at_utc_ms`.
+- `updated_at_utc_ms`.
+
+Required uniqueness:
+
+`UNIQUE(habit_id, local_date)`
+
+Keep these notes independent from individual numeric-entry notes.
+
+A note never creates completion or changes missed status.
+
+## 4.6 `journal_entries`
+
+Purpose: saved independent journal reflections.
+
+Canonical fields:
+
+- `journal_entry_id`.
+- `local_date`.
+- `body`.
+- Nullable `title`.
+- Nullable primary mood code.
+- Nullable secondary mood code.
+- Nullable `prompt_id`.
+- Nullable `linked_habit_id`.
+- `created_at_utc_ms`.
+- `updated_at_utc_ms`.
+
+Use `ON DELETE SET NULL` for the optional habit link.
+
+Multiple journal entries on one date are valid.
+
+A journal entry must survive permanent deletion of its linked habit.
+
+Editing preserves the entry ID and original creation instant.
+
+Changing a journal date does not move habit activity.
+
+Reject whitespace-only journal bodies.
+
+## 4.7 `journal_drafts`
+
+Purpose: unsaved journal and comeback content.
+
+Canonical fields:
+
+- `draft_id`.
+- Optional `local_date`.
+- Body and supported optional title/mood/prompt fields.
+- Optional `intended_journal_entry_id`.
+- `created_at_utc_ms`.
+- `updated_at_utc_ms`.
+- Optional supported `source_context`.
+
+Important correction:
+
+`intended_journal_entry_id` is optional until a save is first prepared.
+
+When a save is prepared:
+
+1. Assign a stable intended journal-entry ID.
+2. Persist that ID on the draft.
+3. Reuse the same ID on every retry.
+4. Save the journal entry and resolve/remove the source draft in one transaction.
+
+A failed save leaves the draft and its intended ID intact.
+
+An uncertain result must be resolved by inspecting persisted state, not generating another ID.
+
+A draft is not a saved journal entry until explicit Save.
+
+## 4.8 `app_settings`
+
+Purpose: typed, versioned local preferences.
+
+Use stable setting keys and validated values.
+
+Examples include:
+
+- Week-start preference.
+- Theme preference.
+- Reminder preferences.
+- Quiet hours.
+- Approved backup preferences.
+
+Do not put journal text or secrets inside generic settings values.
+
+## 4.9 `reminder_deliveries`
+
+Purpose: durable reminder-delivery deduplication.
+
+Canonical fields include:
+
+- Unique logical `delivery_key`.
+- Reminder type.
+- Optional habit ID.
+- Intended local date or week key.
+- Delivery status.
+- Scheduled, attempted and delivered instants.
+- Opaque platform notification identifiers where needed.
+- Minimum approved dismissal/suppression metadata.
+
+Persist the logical delivery identity so app restart and rescheduling cannot create duplicate deliveries.
+
+Do not store copies of personal journal or habit text.
+
+## 4.10 `restore_sessions`
+
+Purpose: durable Replace/Merge recovery state.
+
+Canonical fields include:
+
+- Stable session ID.
+- Restore mode.
+- Format version.
+- Session state.
+- Start/update instants.
+- Validated manifest and count information.
+- Local safety-backup reference and verification status.
+
+Supported states:
+
+- `IN_PROGRESS`
+- `RECOVERY_REQUIRED`
+- `COMPLETED`
+- `COMPLETED_WITH_CONFLICTS`
+- `FAILED_SAFE`
+
+Do not export local safety-backup references or active transaction state in portable backups.
+
+## 4.11 `restore_conflicts`
+
+Purpose: durable unresolved restore conflicts.
+
+Canonical fields:
+
+- Stable conflict ID.
+- Required `restore_session_id` foreign key.
+- Canonical `record_type`.
+- Canonical `record_key`.
+- Both validated payload versions.
+- Creation instant.
+
+Required uniqueness:
+
+`UNIQUE(restore_session_id, record_type, record_key)`
+
+The existence of the conflict row means it is unresolved. Do not add a redundant status column.
+
+Do not introduce an `allowed_resolutions_mask` or generic resolution list as an authoritative schema field without reconciling it with the record-type-specific conflict rules.
+
+Preserve both validated payloads until a supported resolution commits successfully.
+
+A conflict must survive process death and application restart.
+
+## 4.12 `notification_cancel_outbox`
+
+Purpose: temporary retryable work for cancelling Android notifications.
+
+Canonical fields include:
+
+- `cancel_id`.
+- Non-null opaque platform notification tag.
+- Non-null platform notification ID.
+- Creation/last-attempt instants.
+- Attempt count.
+- Status.
+- Minimal error category.
+
+Enforce uniqueness of the non-null opaque tag/ID pair.
+
+Do not store:
+
+- Habit names.
+- Journal text.
+- Stable habit IDs.
+- Personal message content.
+
+Do not export this device-specific table in portable backups.
+
+Remove an item only after confirmed cancellation. Retry outstanding work safely.
+
+---
+
+# 5. CROSS-TABLE AND DATABASE INVARIANTS
+
+Implement these requirements in both the domain layer and database-level safeguards where appropriate.
+
+## 5.1 Activity idempotency
+
+A non-null idempotency key identifies one logical activity submission across both activity tables.
+
+Enforce:
+
+- Partial unique indexes in each activity table.
+- Cross-table collision guards using SQLite triggers or an equivalently verified mechanism.
+- Domain transaction checks.
+- Safe rollback on duplicate-key attempts.
+
+Never count a retry as a new activity.
+
+Never silently discard an intentional distinct entry.
+
+## 5.2 Tracking-mode exclusivity
+
+A quantity/duration entry must match the effective tracking mode.
+
+A completion-only/effort-aware outcome must match the effective tracking mode.
+
+Reject contradictory numeric-entry/day-outcome combinations for the same habit/date.
+
+Perform the validation within the write transaction.
+
+## 5.3 Local dates and instants
+
+- Local calendar dates use canonical ISO `YYYY-MM-DD` keys.
+- Validate that the date is real.
+- Store creation/update instants as UTC epoch milliseconds.
+- Never derive a saved local-date key by converting a UTC instant.
+- Preserve saved date keys through timezone travel.
+- Use effective-dated configuration for historical interpretation.
+
+## 5.4 Foreign keys and transactions
+
+Enable foreign-key enforcement on every SQLite connection.
+
+Required transaction boundaries include:
+
+- Create habit plus initial version.
+- Save numeric entry or day outcome.
+- Save/edit/delete individual records.
+- Change effective-dated configuration.
+- Save draft to journal.
+- Permanently delete habit and queue notification cancellations.
+- Create/verify backup.
+- Replace/Merge restore.
+- Resolve restore conflict.
+
+A failed multi-row operation must leave the previous valid state intact.
+
+---
+
+# 6. MIGRATION REQUIREMENTS
+
+The existing source was previously reported to contain a version-1 database with four legacy tables, including `daily_records` with a unique habit/date constraint.
+
+That report must be checked against the actual imported workspace.
+
+Do not assume the database remains unchanged.
+
+## 6.1 Migration sequence
+
+1. Inspect the actual old schema and all relevant indexes.
+2. Identify all existing rows and relationships.
+3. Define a deterministic mapping from each legacy record to the new model.
+4. Map old weekday representations to the approved Monday-first bitmask using actual stored weekday identities.
+5. Validate every source row before live migration.
+6. Execute the migration within a controlled transaction.
+7. Create the new tables, constraints and indexes.
+8. Migrate the validated records.
+9. Recheck row counts, foreign keys and derived summaries.
+10. Update the SQLite user version only after all checks succeed.
+
+## 6.2 Fail-closed rule
+
+Follow D-197.
+
+If any source record cannot be mapped without inventing history or losing information:
+
+- Roll back the complete migration.
+- Preserve the old database.
+- Report the exact blocker.
+- Do not silently drop, coerce or quarantine the record.
+- Do not mark the migration complete.
+
+Do not add a quarantine table by assumption. Any alternative recovery mechanism requires a separately reviewed design.
+
+## 6.3 Migration tests
+
+Use synthetic v1 fixtures covering:
+
+- Every historical tracking mode.
+- Multiple records where supported.
+- Zero values.
+- Invalid values.
+- Invalid dates.
+- Orphaned references.
+- Unsupported legacy outcomes such as SKIPPED.
+- Historical weekday representations.
+- Duplicate or conflicting activity.
+- Injected failure at each significant migration step.
+
+Verify that failed migration leaves the v1 database unchanged.
+
+Do not experiment on real user data.
+
+---
+
+# 7. SEQUENCED IMPLEMENTATION PHASES
+
+The seven-phase structure is retained, with corrected dependencies.
+
+## PHASE 1 — Native foundation, database and migration
+
+Implement:
+
+- Android project foundation.
+- Application entry point.
+- Compose theme/navigation foundation.
+- Repository and ViewModel integration.
+- StateFlow screen state.
+- Deterministic clock abstraction.
+- Twelve-table database.
+- Constraints and indexes.
+- Foreign-key enforcement.
+- Cross-table guards.
+- Fail-closed migration.
+- Synthetic database fixtures.
+
+Acceptance:
+
+- Application builds.
+- Database creation succeeds.
+- All table and relationship constraints are tested.
+- Invalid writes are rejected.
+- Migration rollback works.
+- No synthetic seed data pollutes production database creation.
+
+## PHASE 2 — Habit management and tracking
+
+Implement:
+
+- Create/edit habit.
+- Pause/resume.
+- Complete.
+- Archive/reactivate.
+- Permanent deletion.
+- Quantity, duration, completion-only and effort-aware modes.
+- Daily and flexible weekly targets.
+- Selected weekdays.
+- Optional preferred weekdays.
+- Effective-dated configuration.
+- Apply today/Apply tomorrow behaviour.
+- Multiple numeric entries per date.
+- Individual record editing/deletion.
+- Optional entry notes.
+- Habit/date context notes.
+- Explicit zero.
+- Progress-band classification.
+- Eight-second guarded Undo.
+
+Acceptance:
+
+- Correct tracking-mode behaviour.
+- No duplicate activity on retry.
+- No incompatible units.
+- Historical configuration remains intact.
+- Exact progress-band boundaries pass.
+- Undo affects only the intended stable record.
+
+## PHASE 3 — Today, Growth Mark and Habit History
+
+Implement W1 Today:
+
+- Date header.
+- Eligible comeback/retrospective content.
+- G2 Collected Moments.
+- Habit cards.
+- One-tap Complete.
+- Detailed Record.
+- Quick Journal entry.
+
+Implement G2:
+
+- Current calendar-month duration aggregation.
+- Duration-tracked habits only.
+- Compatible-unit normalization before aggregation.
+- Preserve source precision.
+- Round only for display.
+- Minutes, hours, 24-hour days and 7-day weeks as specified by D-201.
+- No month-equivalent duration display.
+- Recalculate after editing or deleting source sessions.
+
+Implement G3:
+
+- Calendar/month detail.
+- Previous/next month.
+- Per-date totals.
+- Individual session inspection and correction.
+
+Implement Habit History:
+
+- Saved week-start preference.
+- Daily and weekly target interpretation.
+- Derived missed status only after a scheduled local day passes without qualifying activity.
+- Neutral rest/non-scheduled days.
+- Paused periods excluded.
+- Explicit backdating.
+- Historical configuration applied to the selected date.
+
+Acceptance:
+
+- G2/G3 aggregation and correction tests.
+- Date-boundary tests.
+- Backdated activity tests.
+- Week-start tests.
+- Derived missed-state tests.
+
+## PHASE 4 — Journal, drafts, moods and A2 archive
+
+Implement:
+
+- Independent journal entries.
+- Optional habit links.
+- Multiple entries per date.
+- Optional title.
+- Non-empty body validation.
+- Approved primary and secondary moods.
+- Deterministic offline prompts.
+- Stable journal identity.
+- Journal date correction.
+- Journal editing and confirmed deletion.
+- Persistent drafts.
+- Atomic draft-to-entry saving.
+- Retry-safe intended IDs.
+
+Implement A2 hybrid archive:
+
+- Chronological timeline.
+- Compact calendar/date navigation.
+- Local title/body search.
+- Mood labels and filters.
+- Entry detail.
+- Empty and no-results states.
+
+Implement retrospective prompts according to the approved prompt rules, including suppression and draft reuse.
+
+Acceptance:
+
+- Journal entries survive habit deletion.
+- Journal date correction never moves habit records.
+- Draft retries never duplicate journal entries.
+- Multiple entries on the same date remain independent.
+- Mood filters use the correct primary/secondary semantics.
+
+## PHASE 5 — Comeback and Insights
+
+Implement the approved 14-day and 30-day comeback experiences.
+
+Use the exact triggers, precedence, copy, suppression and draft lifecycle in `docs/24-COMEBACK-EXPERIENCE.md` and the decision documents.
+
+Do not confuse app inactivity with inactivity of a particular habit.
+
+Use the exact approved comeback wording:
+
+**14-day experience**
+
+"Good to see you again. Your progress is still here. Take today at your own pace."
+
+**30-day experience**
+
+"Welcome back! 🌿 What's new with you? You can pick up an old habit, start something new, or simply continue into Dayseed."
+
+Implement:
+
+- Correct 14-day and 30-day boundary calculations.
+- 30-day precedence where specified.
+- Once-per-episode suppression.
+- Adaptive resume/restart flow.
+- No resume action when no eligible paused/archived habit exists.
+- Persistent comeback reflection draft.
+- Correct dismissal and recovery behaviour.
+
+Implement Insights:
+
+- Habit completion summaries.
+- Progress-band distribution.
+- Weekly versus daily targets.
+- Mood Insights.
+- This Week and This Month.
+- Optional previous-period comparison.
+- Tap-a-mood entry filtering.
+- Correct treatment of entries without mood tags.
+
+Do not infer a user's personality, motivation or mental state from activity or mood records.
+
+Acceptance:
+
+- Synthetic date fixtures.
+- Monday and Sunday week-start coverage.
+- 14-day and 30-day boundaries.
+- Timezone and clock-change behaviour.
+- Precedence and suppression.
+- Draft preservation.
+- Mood distribution and filtering.
+
+## PHASE 6 — Reminders, exports, backup, restore and deletion
+
+Implement reminders using the approved reminder specification.
+
+Include:
+
+- First-run consent.
+- Per-habit reminders.
+- Weekly reflection reminder.
+- Quiet hours.
+- Delivery limits.
+- Approved local timing behaviour.
+- Delivery ledger.
+- Duplicate prevention.
+- Notification cancellation outbox.
+- Restart recovery.
+- Permission-denial handling.
+- Cancellation retry.
+
+Do not assume an exact delivery time can be guaranteed by Android.
+
+Implement readable export:
+
+- Markdown.
+- CSV.
+- JSON.
+
+Readable journal export includes saved journal entries only. Do not silently include drafts or reminder metadata.
+
+Implement portable Dayseed backup:
+
+- Dedicated format version.
+- Separate schema version.
+- Creation instant.
+- Integrity metadata.
+- Accurate category/count summaries.
+- Stable entity identities.
+- Explicit relationship mapping.
+- Approved preference and draft coverage.
+- Unresolved conflict preservation.
+- No secrets.
+- No platform notification work.
+- No local safety-backup reference.
+- No cache-only totals.
+
+Implement optional password protection only after the cryptographic envelope and parameters have undergone documented security review.
+
+Do not treat the candidate plan's PBKDF2 iteration count, AES-GCM parameters, salt length or IV length as approved production security decisions merely because they appear in the uploaded plan.
+
+Implement Replace and Merge.
+
+Before live mutation:
+
+1. Validate the complete backup.
+2. Verify format/schema compatibility.
+3. Verify integrity and counts.
+4. Create a safety backup.
+5. Verify the safety backup.
+6. Persist an `IN_PROGRESS` restore session.
+7. Execute the live mutation and conflict/session updates atomically.
+
+Conflict requirements:
+
+- Preserve both validated payloads.
+- Keep conflicts durable across restart.
+- Offer only record-type-safe resolutions.
+- Do not sum conflicting numeric activity.
+- Do not concatenate journal entries.
+- Do not offer Keep both when the model cannot safely represent both.
+- Do not silently choose a winner.
+- Clear conflict payloads only when a supported resolution commits successfully.
+
+Implement safe process-interruption recovery.
+
+Implement the three distinct deletion boundaries:
+
+1. Delete one saved journal entry.
+2. Permanently delete one habit and its owned records while preserving independent journal entries.
+3. Delete all Dayseed-controlled local data using the approved disclosure.
+
+Do not claim to delete external copies that Dayseed does not control.
+
+Acceptance:
+
+- Backup/restore round-trip.
+- Invalid/corrupt/unsupported backup handling.
+- Safety-backup failure.
+- Replace/Merge conflict matrix.
+- Interrupted restore recovery.
+- Conflict persistence and resolution.
+- Reminder cancellation retry.
+- Deletion-boundary verification.
+
+## PHASE 7 — Settings, themes, accessibility and polish
+
+Implement:
+
+- Settings.
+- Week-start preference.
+- Theme selection.
+- Automatic time-aware themes.
+- Fixed user-selected themes.
+- Reminder settings.
+- Quiet hours.
+- Backup and restore.
+- Restore conflict review.
+- Privacy and deletion controls.
+- Adaptive launcher icon.
+- Loading, empty, error and success states.
+- Accessible controls.
+- Text scaling.
+- TalkBack semantics.
+- Keyboard and focus behaviour.
+- Reduced-motion handling.
+- Touch-target verification.
+- Contrast measurement.
+
+Respect D-204 and D-207. Do not invent final palette values or daypart boundaries where the decision remains open.
+
+Acceptance:
+
+- Contrast checks.
+- Accessibility checks.
+- Theme override tests.
+- Time-aware theme tests using a deterministic clock.
+- Reduced-motion checks.
+- Screen scaling and navigation checks.
+
+---
+
+# 8. CONTINUOUS TESTING AND ACCEPTANCE TRACEABILITY
+
+Testing is part of implementation.
+
+For every phase:
+
+1. Identify relevant acceptance requirements.
+2. Implement the feature.
+3. Write or update tests.
+4. Run targeted tests.
+5. Inspect failures.
+6. Fix the root cause.
+7. Run regression tests.
+8. Update traceability.
+9. Commit the verified milestone.
+
+Use `docs/28-REQUIREMENT-TRACEABILITY.md` as the acceptance source.
+
+Do not invent new acceptance IDs where existing cases already cover the requirement. If a genuine coverage gap is found, propose a traceability addition and record its rationale.
+
+For each acceptance case, record:
+
+- Requirement ID.
+- Expected behaviour.
+- Test method.
+- Test fixture.
+- Actual result.
+- Pass/fail/blocked status.
+- Evidence or test reference.
+- Known limitations.
+
+A test is not passed merely because it was written or because generated code appears plausible.
+
+Do not report a build or test as successful unless it was actually executed and its result inspected.
+
+---
+
+# 9. TOOLCHAIN AND BUILD EVIDENCE
+
+Use the actual Gradle wrapper and project configuration.
+
+The versions reported in the uploaded candidate — including AGP, Kotlin, Java, SDK and target SDK — must be rechecked against the refreshed project before implementation.
+
+Do not upgrade dependencies simply because a newer version exists.
+
+Do not invent a command such as `compile_applet` unless the current AI Studio environment actually exposes that task or tool.
+
+Record:
+
+- Exact build command.
+- Exact test command.
+- Toolchain versions.
+- Dependency resolution result.
+- Build result.
+- Test count and failures.
+- APK artifact location where available.
+- Environment limitations.
+
+If AI Studio cannot execute a required native build or test, state that limitation explicitly. Do not substitute a web preview for native Android evidence.
+
+---
+
+# 10. GITHUB AND CHANGE CONTROL
+
+GitHub `main` remains canonical.
+
+Before substantial changes:
+
+- Refresh the latest branch.
+- Check the latest commit.
+- Inspect uncommitted changes.
+- Preserve owner work.
+- Avoid overwriting newer commits.
+
+Commit coherent implementation milestones.
+
+Keep:
+
+- `docs/12-PROGRESS-AND-HANDOVER.md`
+- `docs/28-REQUIREMENT-TRACEABILITY.md`
+- The implementation report
+
+updated as work progresses.
+
+Never commit secrets, `.env` values, signing credentials, private journal content or personal device data.
+
+If AI Studio and GitHub diverge, reconcile the changes explicitly. Never push an older workspace over newer GitHub history.
+
+---
+
+# 11. IMPLEMENTATION COMPLETION CRITERIA
+
+Stage B implementation is complete only when:
+
+1. All approved initial-v1 requirements have an implementation status.
+2. All in-scope features are implemented or have an explicitly documented blocker.
+3. The native Android application builds successfully in the available environment.
+4. Relevant automated tests have been executed.
+5. Database schema and migration work have evidence.
+6. Data-integrity rules have test coverage.
+7. Backup and restore paths have test coverage.
+8. Privacy and deletion requirements have implementation evidence.
+9. The requirement traceability document reflects actual results.
+10. The GitHub branch contains the implementation and coherent commits.
+11. Known defects and unresolved owner decisions are documented.
+12. A complete implementation handover is available.
+
+Do not claim final release readiness.
+
+Implementation completion does not automatically pass independent technical validation or final product acceptance.
+
+---
+
+# 12. REQUIRED IMPLEMENTATION HANDOVER
+
+At the end of Stage B, produce:
+
+## A. Project status
+- Actual project structure.
+- Implemented application architecture.
+- Current branch and commit SHA.
+- Current native build status.
+
+## B. Feature inventory
+For every phase:
+- Implemented functionality.
+- Existing code reused.
+- New files and components.
+- Requirements satisfied.
+- Incomplete or blocked requirements.
+
+## C. Database report
+- Final 12-table schema.
+- Actual constraints and indexes.
+- Foreign-key configuration.
+- Cross-table guards.
+- Migration design and implementation.
+- Synthetic migration test results.
+
+## D. Testing report
+- Commands executed.
+- Environment and versions.
+- Test totals.
+- Passing tests.
+- Failing tests.
+- Tests not executable.
+- Outstanding risks.
+
+## E. Security and privacy report
+- Platform backup configuration.
+- Local data boundaries.
+- Export and backup behaviour.
+- Restore and conflict safety.
+- Deletion behaviour.
+- Remaining security review items.
+
+## F. Remaining work
+- Known defects.
+- Open decisions.
+- Deferred requirements.
+- Environment limitations.
+- Recommended next steps.
+
+## G. Independent validation readiness
+Explain whether the implementation is ready for the separate technical validation stage.
+
+Do not describe unexecuted tests as passed.
+
+---
+
+# 13. STOPPING AND ESCALATION RULES
+
+Do not silently change the product.
+
+When blocked:
+
+1. Identify the affected requirement.
+2. Explain the technical or product conflict.
+3. Provide evidence.
+4. Describe safe alternatives.
+5. Identify whether the owner must decide.
+6. Continue unrelated work where safe.
+
+Do not interrupt the owner for routine reversible details already covered by delegated defaults.
+
+Do not use a proposed implementation detail to override an approved decision.
+
+Do not perform destructive operations on real user data.
+
+Do not start independent technical validation or claim final acceptance merely because the implementation phases are complete.
+
+**Final objective: deliver the complete approved Dayseed initial v1 as a coherent native Android application, with preserved decisions, reliable local data, tested functionality and an auditable implementation handover.**
