@@ -109,12 +109,21 @@ CHECK (
 	OR
 	(
 		tracking_mode IN ('COMPLETION_ONLY', 'EFFORT_AWARE')
+		AND target_period = 'DAY'
 		AND target_value IS NULL
+	)
+	OR
+	(
+		tracking_mode IN ('COMPLETION_ONLY', 'EFFORT_AWARE')
+		AND target_period = 'WEEK'
+		AND target_value IS NOT NULL
+		AND typeof(target_value) = 'integer'
+		AND target_value > 0
 	)
 )
 ```
 
-This prevents a measured habit from passing the CHECK with a missing target. It also prevents a non-numeric mode from carrying a numeric target. `tracking_mode` itself must be `NOT NULL` and constrained to the four supported values. Do not silently reuse `target_value` for a non-numeric weekly count target; if that product requirement is needed, define and approve a separate representation before schema closure.
+This prevents a measured habit from passing the CHECK with a missing target. It also prevents a non-numeric mode from carrying a numeric target. `tracking_mode` itself must be `NOT NULL` and constrained to the four supported values. This reflects the architecture rule that a daily completion/effort habit has an implicit one-day outcome, while a flexible weekly target counts qualifying completed dates and therefore needs a positive integer count. `target_period` must be `NOT NULL`; mode/period combinations and the applicable effective configuration must also be checked by the domain/write guard.
 
 **B. `habit_day_outcomes.outcome_kind` / `effort_level` — reject missing effort values**
 
