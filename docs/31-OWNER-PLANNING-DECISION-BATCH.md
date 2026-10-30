@@ -21,7 +21,7 @@
 
 ## 2. Recorded owner responses and remaining planning choices
 
-This batch separates **owner-level choices** from **delegated defaults**. O-1/O-2 accepted the written schema and backup/restore rules as planning baselines only; that does not approve implementation. W1/N1/A2 and modified G2/G3 are selected planning directions, not final UI approval or user-test evidence. O-6 is clarified: use modified G2 “Collected moments” for saved duration totals and G3 for calendar/date/session detail. D-201 settles the current-month default, month navigation, compatible-unit normalization, precision/display rounding, largest useful whole unit plus remainder, 24-hour days/7-day weeks, and deferral of month-equivalent displays and separate day/week selectors. Accuracy, correction/deletion, explicit-zero/no-record, empty-state and accessibility remain later acceptance/validation obligations, not unresolved period or aggregation decisions. O-9 sets weekly reflection to 9:00 a.m. local on the configured week-start day; O-10 accepts privacy wording as draft-only; D-200 defers ads for initial v1. The remaining owner planning choices are D-008 broad visual identity, D-019 exact colour/type tokens (approve now or explicitly defer), and D-017 final comeback copy/localisation. Undo, routine reminder coordination and retrospective-prompt cadence use the documented conservative defaults under D-196.
+This batch separates **owner-level choices** from **delegated defaults**. O-1/O-2 accepted the written schema and backup/restore rules as planning baselines only; that does not approve implementation. W1/N1/A2 and modified G2/G3 are selected planning directions, not final UI approval or user-test evidence. O-6 is clarified: use modified G2 “Collected moments” for saved duration totals and G3 for calendar/date/session detail. D-201 settles the current-month default, month navigation, compatible-unit normalization, precision/display rounding, largest useful whole unit plus remainder, 24-hour days/7-day weeks, and deferral of month-equivalent displays and separate day/week selectors. Accuracy, correction/deletion, explicit-zero/no-record, empty-state and accessibility remain later acceptance/validation obligations, not unresolved period or aggregation decisions. O-9 sets weekly reflection to 9:00 a.m. local on the configured week-start day; O-10 accepts privacy wording as draft-only; D-200 defers ads for initial v1. D-205 records the D-008 synthesis visual identity; D-207 selects Soft Botanical while deferring exact tokens/font selection; D-206 records selected comeback copy. These owner choices are now recorded. Detailed visual design, accessibility, localization and token approval remain open evidence/design work, not unrecorded owner choices. Undo, routine reminder coordination and retrospective-prompt cadence use the documented conservative defaults under D-196.
 
 ### A. Complete relational schema proposal
 
@@ -133,3 +133,16 @@ Only after explicit owner authorisation: inspect the current native source, Grad
 | D-017 — One-month comeback copy | **A — Warm and open:** “Welcome back! 🌿 What's new with you? You can pick up an old habit, start something new, or simply continue into Dayseed.” | Selected without modification. Both copy selections recorded together as D-206. |
 
 These are owner planning responses for review and reconciliation only. The visual identity and palette directions do not approve final UI, exact tokens, font packaging, contrast or accessibility. The selected comeback wording does not waive localization, accessibility or interaction review. No implementation, code/database change, build, test, device validation or planning-gate approval is authorised. **Planning gate remains CLOSED.**
+
+
+### Follow-up reconciliation — Growth Mark and traceability (2026-10-30)
+
+Tasks 4 and 5 were completed as a bounded documentation review. See docs/29 section 5.9 and docs/28 “Traceability reconciliation — 2026-10-30”.
+
+- D-201's unit aggregation, display-unit family, current-month default, month/date drill-down, no-month-equivalent rule, and zero/no-record semantics are settled planning defaults, not open owner choices.
+- G2/G3 contract maps through docs/26 section 4.1 to T-10–T-12 in docs/34 and AC-025 in docs/28. The synthetic G3 sample totals 220 minutes / 3 hr 40 min, but this does not verify runtime aggregation.
+- Journal save/edit/delete lifecycle maps to AC-007; N1/A2 retrieval/findability maps to AC-021 and T-03–T-09. Settings/privacy discoverability maps to AC-016/AC-021 and T-13/T-14, but the current board does not show Settings contents.
+- D-205/D-207 visual direction and palette status map to AC-018; D-206 comeback wording maps to AC-010 and T-15. Localization and accessibility remain open.
+- Current boards omit body-only/draft/no-results/multiple-entry Journal cases; Growth Mark zero-only/no-session/empty/error/source-edit cases; and actual Settings destination detail. These remain planned evidence/design gaps, not proven defects.
+
+No acceptance case was marked passed. No code, schema, migration, build, test, APK, or device validation was performed. The planning gate remains CLOSED.
