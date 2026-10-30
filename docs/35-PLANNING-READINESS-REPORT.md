@@ -1,7 +1,7 @@
 # Dayseed Planning Readiness Report
 
 **Snapshot date:** 2026-10-30
-**Status:** Bounded documentation/traceability reconciliation updated through 2026-10-30; D-205–D-207 owner choices are now recorded; remaining documentation gaps and final gate sign-off remain; **planning gate not approved**.
+**Status:** Stage A planning complete; owner approved/opened the planning gate on 2026-10-30 (D-208). Stage B technical validation and Stage C feature implementation remain separately gated. Post-build acceptance evidence is outstanding and is not passed or waived.
 **Repository:** `HeWhoArose/Dayseed`  
 **Scope:** Documentation and decision consistency only. This report does not authorise source inspection, technical validation, database changes, builds, tests, or implementation.
 
@@ -9,7 +9,7 @@
 
 Dayseed has a coherent planning baseline for the initial offline-first Android product, with owner choices and important safety rules recorded. The selected design directions are W1 Today, N1 four-destination navigation, A2 hybrid journal archive, and the modified G2 “Collected moments” duration summary with G3 date-level detail. The owner-provided reference image is a visual mood/hierarchy guardrail, not a pixel specification.
 
-The current planning gate should **remain closed**. The remaining work is a bounded set of planning clarifications and a final owner review, not another round of simulated usability testing against static SVGs. Detailed interaction, device, and accessibility validation should happen during coding against actual rendered screens, as the owner requested.
+The Stage A planning gate is **APPROVED / OPEN under D-208**. The remaining work is not a prerequisite to that approval: detailed interaction, task-comprehension, device, and accessibility validation should be performed against a functioning app during separately authorised technical validation and post-build acceptance, rather than simulated against static SVGs.
 
 ## 2. Owner decisions reconciled
 
@@ -63,7 +63,7 @@ The existing privacy and offline rules have been consolidated in `docs/04-DATA-A
 
 ### Deletion-scope consistency checkpoint (R-034)
 
-The deletion contract now explicitly distinguishes deleting one saved journal entry, discarding one unsaved draft and its own save-preparation context, permanently deleting a habit while preserving independent journal entries and global reminders, resolving one restore conflict only with a supported committed choice, and deleting all disclosed Dayseed-controlled local data. Habit-scoped OS notification cancellation is post-commit cleanup and cannot be treated as complete until confirmed; unresolved conflict payloads remain protected if resolution fails; external/provider/other-app copies may remain. This is documentation-only. Exact entities, local file/cache coverage, transaction boundaries and runtime effects remain unverified; planning gate remains closed.
+The deletion contract now explicitly distinguishes deleting one saved journal entry, discarding one unsaved draft and its own save-preparation context, permanently deleting a habit while preserving independent journal entries and global reminders, resolving one restore conflict only with a supported committed choice, and deleting all disclosed Dayseed-controlled local data. Habit-scoped OS notification cancellation is post-commit cleanup and cannot be treated as complete until confirmed; unresolved conflict payloads remain protected if resolution fails; external/provider/other-app copies may remain. This is documentation-only. Exact entities, local file/cache coverage, transaction boundaries and runtime effects remain unverified; Stage A planning gate is approved/open under D-208; Stage B and Stage C remain separately gated.
 
 ### Delete-all data-class checkpoint (R-033)
 
@@ -97,7 +97,7 @@ The task/accessibility protocol in `docs/34-UX-TASK-AND-ACCESSIBILITY-REVIEW-PRO
 
 ## 8. Gate statement
 
-**Planning gate: CLOSED / NOT APPROVED.** This report is a readiness snapshot, not a request interpreted as approval. No code, schema, migration, build, test, device validation, or implementation was performed by preparing it.
+**Stage A planning gate: APPROVED / OPEN under D-208 (2026-10-30).** This approval is based on the owner's explicit written instruction. Stage B technical validation remains NOT YET AUTHORISED; Stage C feature implementation remains NOT AUTHORISED. No code, schema, migration, build, test, device validation, or implementation was performed by preparing this report.
 
 
 ## 9. 2026-10-30 Growth Mark and UX traceability follow-up
@@ -114,14 +114,14 @@ The six illustrative G3 date values total 220 minutes (3 hr 40 min), matching G2
 
 The traceability follow-up in docs/28 explicitly connects Growth Mark, Journal lifecycle/retrieval, visual/accessibility, comeback copy and privacy/settings discovery to their planning sources, screen contracts and acceptance/task coverage. Remaining bounded gaps include: Settings destination content is not shown in the navigation board; Journal body-only/draft/no-results/multiple-entry/edit/delete edge states are not drawn; Growth Mark zero-only/no-session/empty/error/source-edit states are not drawn; and cross-file heading/external-link checks were not exhaustive. These are documented coverage gaps, not proven implementation defects.
 
-**Current status:** owner choices D-205–D-207 recorded; detailed design and accessibility evidence still open; acceptance cases planned/not executed; planning gate remains CLOSED / NOT APPROVED. No code, schema, migration, build, test, APK or device validation was performed or authorised.
+**Current status:** owner choices D-205–D-208 recorded; Stage A planning gate APPROVED / OPEN; detailed design and accessibility evidence remain post-build obligations; acceptance cases are planned/not executed. Stage B technical validation is NOT YET AUTHORISED; Stage C implementation is NOT AUTHORISED. No code, schema, migration, build, test, APK or device validation was performed.
 
 
 ## 10. Decision-count and D-091–D-105 reconciliation correction — 2026-10-30
 
 The earlier section 8 count is a dated 2026-10-29 snapshot (197 decision rows through D-203), not the current count. After D-204–D-207 were recorded, the decision log and register each contain 201 unique decision IDs through D-207, with gaps preserved. R-019 is now closed as a documentation-follow-up mapping: D-091–D-105 next-action cells reference later decisions, screen/data contracts and planned acceptance coverage. This does not imply those behaviours are implemented, tested, security-reviewed or runtime verified.
 
-The owner choices D-205–D-207 are reconciled across docs 09/25/29/31/17 and README. The exact-token deferral is explicit; DESIGN.md remains unchanged. The current readiness status remains planning-only and the gate remains CLOSED / NOT APPROVED.
+The owner choices D-205–D-208 are reconciled across the decision log/register, UX pack, owner batch and README. The exact-token deferral is explicit; DESIGN.md remains unchanged. Stage A planning is complete and approved/open under D-208. Stage B technical validation and Stage C feature implementation remain separately gated.
 
 
 ## 11. Owner gate decision and post-build obligations — 2026-10-30
