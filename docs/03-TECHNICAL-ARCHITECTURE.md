@@ -178,3 +178,10 @@ Exact Android Gradle Plugin, Gradle, Kotlin, Android SDK, and library versions m
 ### Dependency and migration caution
 
 Do not introduce Room or replace `SQLiteOpenHelper` merely because Room is available. Evaluate that migration as a separate architectural change only if the evidence and maintenance needs justify it. Use compatible, pinned dependency versions and avoid independently upgrading “latest” packages. The historical [stack comparison](14-STACK-COMPARISON.md) is research context, not the active stack instruction.
+
+
+## Schema approval and constraint clarification — 2026-10-30
+
+The complete relational schema remains a **proposed implementation baseline**, not canonical/finally approved for implementation. Partial owner decisions about effective-dated versions, separate measured entries/non-numeric outcomes, structured schedules, IDs and idempotency do not approve the entire schema. Reconcile the schema against docs/30-SCHEMA-CLOSURE-AND-MIGRATION-PLAN.md before implementation.
+
+For `habit_versions.target_value`, the proposed CHECK must reject NULL for measured (`QUANTITY`/`DURATION`) targets and require a positive integer for non-numeric `FLEXIBLE_WEEKLY_TARGET` weekly completion counts; for non-numeric daily targets, the value is NULL because the daily outcome is implicit. For `habit_day_outcomes`, the proposed CHECK must require `effort_level IS NULL` for `COMPLETION_ONLY` and `effort_level IS NOT NULL AND effort_level IN ('TINY','USUAL','EXTRA')` for `EFFORT_AWARE`. `outcome_kind` and `target_period` must be NOT NULL and enum-constrained. SQLite CHECK expressions that evaluate to NULL do not reject a row, so explicit NOT NULL tests are required. Cross-table effective-mode matching remains a domain/write-guard responsibility. These are proposed constraints, not implemented DDL or test evidence.
