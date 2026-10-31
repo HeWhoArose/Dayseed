@@ -60,7 +60,7 @@ fun GrowthMarkBadge(
             .fillMaxWidth()
             .testTag("growth_mark_badge")
             .semantics {
-                contentDescription = "Growth Mark summary: ${metrics.totalActiveDates} active days tended, " +
+                contentDescription = "Collected moments summary: ${metrics.totalActiveDates} active days tended, " +
                     "$formattedMonthDuration focused duration this month, $currentMonthSessions sessions this month"
             },
         shape = RoundedCornerShape(16.dp),
@@ -87,7 +87,7 @@ fun GrowthMarkBadge(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = "Growth Mark (G2 + G3)",
+                            text = "Collected moments",
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -113,7 +113,7 @@ fun GrowthMarkBadge(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Info,
-                            contentDescription = "Explain Growth Mark metric",
+                            contentDescription = "Explain Collected moments metric",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             modifier = Modifier.size(20.dp)
                         )

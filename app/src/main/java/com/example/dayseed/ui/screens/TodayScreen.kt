@@ -380,7 +380,7 @@ fun TodayScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        "• Growth Mark (G2 + G3): Shows your monthly duration total across compatible time-tracked habits alongside your daily session rhythm.",
+                        "• Collected moments: Shows your monthly duration total across compatible time-tracked habits alongside your daily session rhythm.",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(

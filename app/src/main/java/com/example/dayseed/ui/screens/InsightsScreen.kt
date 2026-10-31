@@ -132,7 +132,7 @@ fun InsightsScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Monthly Growth Mark: $formattedDuration • $totalMonthSessions sessions",
+                        text = "Monthly Collected moments: $formattedDuration • $totalMonthSessions sessions",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.primary
