@@ -168,22 +168,20 @@ An audit of `app/src/main/java/com/example/dayseed/ui/theme/` and `TodayScreen.k
 
 ---
 
-## 5. Implementation Roadmap to Match the Design
+## 5. Implementation status (updated 2026-10-31, commit `137790d`)
 
-To bring the current codebase into 100% compliance with the owner's design:
+Under D-211 the owner instructed this be implemented. Status of the roadmap items above:
 
-1. **Update `Color.kt`:**
-   - Define exact swatches for the 5 themes:
-     - `MorningSage`, `MorningLeafGreen`, `MorningStone`
-     - `EveningClay` (rich terracotta), `EveningSunsetPeach`, `EveningWarmStone`
-     - `NightPineDeep`, `NightMoonGlow` (golden crescent amber)
-2. **Update `Theme.kt`:**
-   - Ensure `EveningColorScheme` sets `primary = EveningClay` so buttons and active highlights turn terracotta during evening hours.
-3. **Create Daypart Header Illustrations:**
-   - Add composable/vector illustrations or assets representing:
-     - Morning leafy branch
-     - Midday field botanicals
-     - Evening sunset rolling hills
-     - Night crescent moon with foliage
-4. **Integrate Header into `TodayScreen.kt`:**
-   - Render the appropriate daypart illustration in the top-right of the Today screen header beside the date and greeting.
+1. **Tokens (DONE, provisional):** `Color.kt` now intends Morning leaf-green `#3E7C59` on airy `#F7F9F1` and Evening terracotta `#AC5530` on warm stone `#F4EBDD` (border `#DECDB4`), while daylight and night keep the canonical `DESIGN.md`-derived candidate tokens. See `MaterialBackground`/`MaterialBrand` usage in `DaypartArtwork.kt` and the copy-based schemes in `Theme.kt`.
+2. **Schemes wired (DONE):** `Theme.kt` resolves Morning/Evening as full unique schemes (primary action, containers, canvas, surface, outline), and Night already uses the canonical dark pine family.
+3. **Header artwork (DONE):** four fully static vector Canvas compositions in `ui/components/DaypartArtwork.kt` — morning sprig, daylight branch, sunset hills with low sun, and the golden crescent moon with night foliage — no bitmap assets, no new dependencies, semantics cleared so TalkBack never stops on decoration. Selected through the central rule in `ui/theme/DaypartVisuals.kt`; fixed light/dark use stable artwork by mode.
+4. **Header integration (DONE):** `TodayScreen.kt` renders the left-aligned header: serif date line, time-aware greeting (Good morning / Good afternoon / Good evening / Good night), the product tagline, and the 104dp artwork.
+5. **Embedded evidence limits:** `DayseedVisualResolutionTest` (7 tests) pins artwork mapping, distinct evening/morning primaries, unchanged D-204 clock boundaries (05/11/17/21), and greeting copy; the full unit suite passes 19/19 at commit `137790d`.
+
+**Still outstanding (not claimed):**
+
+- Contrast: the evening terracotta/white pairing is estimated ≈5:1 by luminance arithmetic but **not measured** with a tool; morning/night artwork colour pairings are decorative and unmeasured.
+- Rendered-device review per `docs/34` (A-01–A-12): large text (200%) with the artwork beside the greeting, TalkBack traversal/reading order (artwork is decoration-cleared but the header announces nothing yet about the part of day), focus order, touch targets and keyboard behaviour are unverified.
+- Serif display type is implemented provisionally using the platform system serif and remains **deferred** under O-7/D-019/pending the D-019 readability review.
+- Gradual daypart transitions and reduced-motion confirmation (no motion was added, which is the safe default until `docs/17` review) remain open.
+- The clock boundaries are the unchanged provisional D-204 defaults; theme selection preview and fixed-mode strings were not changed in this pass.
