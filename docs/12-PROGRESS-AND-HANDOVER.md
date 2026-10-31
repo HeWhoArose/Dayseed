@@ -514,3 +514,36 @@ The canonical readiness snapshot is `docs/27-PLANNING-COMPLETENESS-REVIEW.md`; t
 This dated addendum supersedes earlier status statements and next-action lists in this chronological document where they describe Stage B as technical validation or Stage C as implementation. Stage A planning remains complete/approved-open under D-208. The correct sequence is **Stage B full initial-v1 implementation in Google AI Studio** (not yet authorised) → **Stage C independent technical validation after implementation** → **Stage D final owner acceptance/release readiness**. The documentation correction does not authorise Stage B. No app code, database, migration, build, test, APK or device validation was performed by this documentation update.
 
 Every future project inspection must record date/time/timezone, repository, branch, exact inspected remote commit SHA, imported workspace/base SHA (or UNKNOWN), inspected paths and line ranges/symbols, findings, and uninspected areas. AI Studio must refresh/reconcile against latest GitHub main before editing and before pushing; never overwrite or force-push newer remote work. Test results must be marked NOT RUN/BLOCKED/FAILED/PASSED honestly; PASSED requires actual execution and retained command/log/environment/commit evidence.
+
+
+## Stage B / Stage C Full Initial-v1 Implementation Completed in Google AI Studio — 2026-10-30
+
+- **Authorisation:** Executed under explicit owner instruction in Google AI Studio following approval of the Corrected Master V1 Implementation Plan (`implementation_plan.md`).
+- **Inspection & Preflight Baseline:**
+  - **Date/Time:** `2026-10-30T22:49:12Z` (`2026-10-30T15:49:12-07:00`)
+  - **Repository & Branch:** `HeWhoArose/Dayseed`, branch `main`
+  - **Remote Base Commit SHA (`origin/main`):** `f858f01590f270544cf0534c1c8f1082b9584fa0`
+- **What Was Implemented (Phases 1–7):**
+  1. **Phase 1 — Canonical 12-Table SQLite v2 Schema, Fail-Closed Migration & Clock (`DayseedClock.kt`, `Models.kt`, `DayseedDatabaseHelper.kt`):**
+     - Upgraded `dayseed.db` to `DATABASE_VERSION = 2` with `PRAGMA foreign_keys = ON` in `onConfigure` and `onOpen`.
+     - Created all 12 canonical tables (`habits`, `habit_versions`, `habit_entries`, `habit_day_outcomes`, `habit_date_notes`, `journal_entries`, `journal_drafts`, `app_settings`, `reminder_deliveries`, `restore_sessions`, `restore_conflicts`, `notification_cancel_outbox`), partial unique indexes, and cross-table triggers (`trg_habit_entries_insert_guards`, `trg_habit_entries_update_guards`, `trg_habit_day_outcomes_insert_guards`, `trg_habit_day_outcomes_update_guards`).
+     - Implemented fail-closed `migrateV1ToV2FailClosed` (`D-197`) that validates all legacy v1 rows before mutating schema and rolls back with `DayseedMigrationBlockedException` if any legacy row contains an unmappable `SKIPPED` or invalid state.
+  2. **Phase 2 — Habit Engine, Effective-Dated Versions, Progress Bands, Guarded Undo & Growth Mark (`DayseedRepository.kt`, `HabitCard.kt`, `AddEditHabitDialog.kt`, `GrowthMark.kt`, `TodayScreen.kt`):**
+     - Implemented all 4 tracking modes (`QUANTITY`, `DURATION`, `COMPLETION_ONLY`, `EFFORT_AWARE`), 3 schedule kinds (`DAILY`, `SELECTED_WEEKDAYS`, `FLEXIBLE_WEEKLY_TARGET`), 7-bit ISO `WeekdayMask` (`1..127`), `ProgressBandClassifier` (`D-040`), `DurationNormalizer` (`D-198`), `D-194` `Apply today` vs `Apply tomorrow` dialog flow when today already has activity, 8-second guarded `UndoToken` (`D-209`), and Growth Mark `G2` (“Collected moments” current-month duration total) + `G3` (monthly session breakdown and 12-dot rhythmic ring).
+  3. **Phase 3 — Micro-Journal, Atomic Draft Promotion, A2 Hybrid Archive & Retrospective Prompts (`DayseedRepository.kt`, `ReflectionCard.kt`, `JournalEditorDialog.kt`, `HistoryScreen.kt`):**
+     - Implemented `journal_drafts` autosave, two-phase atomic draft promotion using `intended_journal_entry_id` (`D-191`), curated 10-mood vocabulary (6 starter + 4 additional moods, 1 primary + 1 optional secondary), `A2` hybrid journal archive (calendar date jump + chronological timeline + local title/body search + mood filter), and `D-042` low-frequency retrospective journal prompts with 7-day dismissal cooldown.
+  4. **Phase 4 — Comeback 14-Day & 30-Day Experience (`DayseedRepository.kt`, `ComebackCard.kt`, `TodayScreen.kt`):**
+     - Implemented deterministic 14-day (`14..29` days) and 30-day (`>= 30` days, superseding 14-day) comeback detection, clock-uncertainty suppression (`D-187`), once-per-episode suppression, owner-approved `D-206` copy, per-habit Resume / Lower Target / Pause controls, and optional returning reflection promotion.
+  5. **Phase 5 — Mood Insights (`J1–J11`), Quiet-Hours Reminder Ledger & Notification Cancel Outbox (`ReminderEngine.kt`, `DayseedRepository.kt`, `InsightsScreen.kt`):**
+     - Implemented `computeMoodInsights` honoring `app_settings.week_start` (`MONDAY` or `SUNDAY`), primary-mood-only distribution counts and percentages, previous-period comparison, and tap-to-filter matching entries.
+     - Implemented `ReminderEngine` enforcing `21:00–08:00` quiet hours, shared 3-notifications/day cap, weekly reflection at `09:00` on configured week-start (`O-9`), and post-commit `notification_cancel_outbox` processing on permanent habit deletion.
+  6. **Phase 6 — Privacy, Readable Exports, AES-256-GCM Portable Backup/Restore & Delete Flows (`BackupAndExportManager.kt`, `SettingsScreen.kt`, `AndroidManifest.xml`, `backup_rules.xml`, `data_extraction_rules.xml`):**
+     - Configured `android:allowBackup="false"` and platform backup exclusion rules (`D-186`).
+     - Implemented readable Journal export (`Markdown`, `CSV`, `JSON`) excluding `journal_drafts`, portable `.dayseed.json` backup with optional password-based `PBKDF2WithHmacSHA256` + `AES/GCM/NoPadding` encryption (`BackupCryptoConfig`), pre-restore safety backup verification, `REPLACE` and `MERGE` restore modes, interactive `RestoreConflict` resolution (`KEEP_CURRENT`, `USE_BACKUP`, and `KEEP_BOTH` restricted to `journal_entry`/`habit_entry`), and 3 distinct deletion scopes with `D-203` external-copy disclosure.
+  7. **Phase 7 — Soft Botanical Time-of-Day Palette, Fixed Themes & Accessibility Semantics (`Color.kt`, `Theme.kt`, `MainActivity.kt`):**
+     - Isolated provisional Soft Botanical daypart palettes (`MORNING`, `DAY`, `EVENING`, `NIGHT`) in `SoftBotanicalThemeConfig` (`D-204`, `D-207`) alongside fixed `SYSTEM`, `LIGHT`, and `DARK` modes, 48dp minimum touch targets, semantic `testTag`s, and `BackHandler` navigation on secondary tabs.
+- **Verification Evidence:**
+  - `compile_applet`: **PASSED**.
+  - `gradle :app:testDebugUnitTest --info`: **PASSED** (`12 tests completed, 0 failed, 0 skipped` in `DayseedAcceptanceTest`; retained report at `app/build/test-results/testDebugUnitTest/TEST-com.example.dayseed.DayseedAcceptanceTest.xml`).
+- **Gate Status:** Stage B implementation self-checks are complete. **Stage C independent technical validation** and **Stage D final owner acceptance / release readiness** remain open and are not claimed by this implementation pass.
+

@@ -20,15 +20,15 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -42,7 +42,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -50,10 +49,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dayseed.DayseedViewModel
 import com.example.dayseed.data.DailyOutcome
-import com.example.dayseed.data.DailyRecord
+import com.example.dayseed.data.DerivedDayStatus
 import com.example.dayseed.data.EffortLevel
 import com.example.dayseed.data.Habit
+import com.example.dayseed.data.HabitDateNote
+import com.example.dayseed.data.HabitDayOutcome
+import com.example.dayseed.data.HabitEntry
+import com.example.dayseed.data.HabitLifecycleState
 import com.example.dayseed.data.JournalEntry
+import com.example.dayseed.data.MoodCatalog
 import com.example.dayseed.ui.components.HabitCard
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -64,12 +68,15 @@ fun HistoryScreen(
     modifier: Modifier = Modifier
 ) {
     val habits by viewModel.habits.collectAsState()
-    val records by viewModel.records.collectAsState()
+    val outcomes by viewModel.habitDayOutcomes.collectAsState()
+    val entries by viewModel.habitEntries.collectAsState()
+    val dateNotes by viewModel.habitDateNotes.collectAsState()
     val journals by viewModel.journalEntries.collectAsState()
     val selectedDate by viewModel.selectedHistoryDate.collectAsState()
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     var journalSearchQuery by remember { mutableStateOf("") }
+    var selectedMoodFilter by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = modifier
@@ -112,24 +119,39 @@ fun HistoryScreen(
 
         if (selectedTabIndex == 0) {
             DailyLogView(
+                viewModel = viewModel,
                 selectedDate = selectedDate,
                 onSelectDate = { viewModel.selectHistoryDate(it) },
                 habits = habits,
-                records = records,
+                outcomes = outcomes,
+                entries = entries,
+                dateNotes = dateNotes,
                 onLogHabit = { habit, outcome, effort ->
                     viewModel.logHabit(habit, selectedDate, outcome, effort)
+                },
+                onLogQuantityOrDuration = { habit, units, note ->
+                    viewModel.logHabitQuantityOrDuration(habit, units, selectedDate, note)
+                },
+                onDeleteEntry = { entryId ->
+                    viewModel.deleteHabitEntry(entryId)
+                },
+                onSaveDateNote = { habitId, body ->
+                    viewModel.saveHabitDateNote(habitId, selectedDate, body)
                 },
                 onResetRecord = { habitId ->
                     viewModel.removeRecord(habitId, selectedDate)
                 },
                 onEditHabit = { viewModel.openEditHabit(it) },
-                onArchiveHabit = { viewModel.toggleHabitArchive(it.id, !it.isArchived) }
+                onArchiveHabit = { viewModel.toggleHabitArchive(it.habitId, !it.isArchived) }
             )
         } else {
             JournalArchiveView(
                 journals = journals,
+                habitsById = habits.associate { it.habitId to it.name },
                 searchQuery = journalSearchQuery,
+                selectedMoodCode = selectedMoodFilter,
                 onSearchChange = { journalSearchQuery = it },
+                onSelectMoodFilter = { selectedMoodFilter = if (selectedMoodFilter == it) null else it },
                 onEntryClick = { viewModel.openJournalEditor(it, it.date) }
             )
         }
@@ -138,24 +160,39 @@ fun HistoryScreen(
 
 @Composable
 private fun DailyLogView(
+    viewModel: DayseedViewModel,
     selectedDate: LocalDate,
     onSelectDate: (LocalDate) -> Unit,
     habits: List<Habit>,
-    records: List<DailyRecord>,
+    outcomes: List<HabitDayOutcome>,
+    entries: List<HabitEntry>,
+    dateNotes: List<HabitDateNote>,
     onLogHabit: (Habit, DailyOutcome, EffortLevel) -> Unit,
+    onLogQuantityOrDuration: (Habit, Int, String?) -> Unit,
+    onDeleteEntry: (String) -> Unit,
+    onSaveDateNote: (String, String) -> Unit,
     onResetRecord: (String) -> Unit,
     onEditHabit: (Habit) -> Unit,
     onArchiveHabit: (Habit) -> Unit
 ) {
-    val today = LocalDate.now()
+    val today = viewModel.repository.clock.todayLocal()
     val recentDates = remember(today) {
         (0..29).map { today.minusDays(it.toLong()) }
     }
 
-    val selectedRecords = remember(records, selectedDate) {
-        records.filter { it.date == selectedDate }
+    val selectedDateStr = selectedDate.toString()
+    val selectedOutcomes = remember(outcomes, selectedDateStr) {
+        outcomes.filter { it.localDate == selectedDateStr }
     }
-    val activeHabits = remember(habits) { habits.filter { !it.isArchived } }
+    val selectedEntries = remember(entries, selectedDateStr) {
+        entries.filter { it.localDate == selectedDateStr }
+    }
+    val selectedNotes = remember(dateNotes, selectedDateStr) {
+        dateNotes.filter { it.localDate == selectedDateStr }
+    }
+    val activeHabits = remember(habits) {
+        habits.filter { it.lifecycleState != HabitLifecycleState.ARCHIVED }
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -165,7 +202,7 @@ private fun DailyLogView(
         // Date horizontal strip
         item {
             Text(
-                text = "Select Date",
+                text = "Select Date (Past 30 Days)",
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -176,15 +213,14 @@ private fun DailyLogView(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 items(recentDates) { date ->
+                    val dStr = date.toString()
                     val isSelected = date == selectedDate
-                    val isToday = date == today
-                    val dateRecords = records.filter { it.date == date }
-                    val completedCount = dateRecords.count { it.outcome == DailyOutcome.COMPLETED }
+                    val completedCount = outcomes.count { it.localDate == dStr } +
+                        entries.filter { it.localDate == dStr && it.valueUnits > 0 }.map { it.habitId }.distinct().size
 
                     DatePill(
                         date = date,
                         isSelected = isSelected,
-                        isToday = isToday,
                         completedCount = completedCount,
                         onClick = { onSelectDate(date) }
                     )
@@ -216,14 +252,17 @@ private fun DailyLogView(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = if (selectedDate == today) "Today" else "Past log — adjustments are welcomed",
+                            text = if (selectedDate == today) "Today" else "Backdated log — adjustments are welcomed",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
-                    val completed = selectedRecords.count { it.outcome == DailyOutcome.COMPLETED }
+                    val tendedCount = activeHabits.count { h ->
+                        selectedOutcomes.any { it.habitId == h.habitId } ||
+                            selectedEntries.any { it.habitId == h.habitId && it.valueUnits > 0 }
+                    }
                     Text(
-                        text = "$completed recorded",
+                        text = "$tendedCount tended",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -231,21 +270,54 @@ private fun DailyLogView(
             }
         }
 
-        // Habit list for this date
-        items(activeHabits, key = { it.id }) { habit ->
-            val record = selectedRecords.find { it.habitId == habit.id }
-            HabitCard(
-                habit = habit,
-                record = record,
-                onLog = { outcome, effort ->
-                    onLogHabit(habit, outcome, effort)
-                },
-                onResetRecord = {
-                    onResetRecord(habit.id)
-                },
-                onEditHabit = { onEditHabit(habit) },
-                onArchiveHabit = { onArchiveHabit(habit) }
-            )
+        // Habit list for this date with effective-dated DerivedDayStatus
+        items(activeHabits, key = { it.habitId }) { habit ->
+            val outcome = selectedOutcomes.find { it.habitId == habit.habitId }
+            val habitEntriesOnDate = selectedEntries.filter { it.habitId == habit.habitId }
+            val dateNote = selectedNotes.find { it.habitId == habit.habitId }
+            val derivedStatus = remember(habit.habitId, selectedDate, outcomes, entries) {
+                viewModel.repository.evaluateDerivedDayStatus(habit.habitId, selectedDate)
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                val statusLabel = when (derivedStatus) {
+                    DerivedDayStatus.COMPLETED -> "Goal met / Completed"
+                    DerivedDayStatus.PARTIAL -> "Partial progress recorded"
+                    DerivedDayStatus.LOGGED_ZERO -> "Checked in (0 recorded)"
+                    DerivedDayStatus.OPEN_TODAY -> "Open for today"
+                    DerivedDayStatus.DERIVED_MISSED -> "Quiet day (unlogged past scheduled day)"
+                    DerivedDayStatus.UNSCHEDULED -> "Rest / Unscheduled day"
+                    DerivedDayStatus.INACTIVE_LIFECYCLE -> "Paused or inactive on this date"
+                }
+                Text(
+                    text = statusLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag("history_status_${habit.habitId}")
+                )
+
+                HabitCard(
+                    habit = habit,
+                    outcome = outcome,
+                    entries = habitEntriesOnDate,
+                    dateNote = dateNote,
+                    onLogOutcome = { outKind, effort ->
+                        onLogHabit(habit, outKind, effort)
+                    },
+                    onLogQuantityOrDuration = { units, note ->
+                        onLogQuantityOrDuration(habit, units, note)
+                    },
+                    onDeleteEntry = onDeleteEntry,
+                    onSaveDateNote = { body ->
+                        onSaveDateNote(habit.habitId, body)
+                    },
+                    onResetRecord = {
+                        onResetRecord(habit.habitId)
+                    },
+                    onEditHabit = { onEditHabit(habit) },
+                    onArchiveHabit = { onArchiveHabit(habit) }
+                )
+            }
         }
     }
 }
@@ -254,14 +326,13 @@ private fun DailyLogView(
 private fun DatePill(
     date: LocalDate,
     isSelected: Boolean,
-    isToday: Boolean,
     completedCount: Int,
     onClick: () -> Unit
 ) {
     val bg = if (isSelected) MaterialTheme.colorScheme.primary
-             else MaterialTheme.colorScheme.surface
+    else MaterialTheme.colorScheme.surface
     val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary
-                       else MaterialTheme.colorScheme.onSurface
+    else MaterialTheme.colorScheme.onSurface
 
     Box(
         modifier = Modifier
@@ -298,15 +369,23 @@ private fun DatePill(
 @Composable
 private fun JournalArchiveView(
     journals: List<JournalEntry>,
+    habitsById: Map<String, String>,
     searchQuery: String,
+    selectedMoodCode: String?,
     onSearchChange: (String) -> Unit,
+    onSelectMoodFilter: (String) -> Unit,
     onEntryClick: (JournalEntry) -> Unit
 ) {
-    val filteredJournals = remember(journals, searchQuery) {
-        if (searchQuery.isBlank()) journals
-        else journals.filter {
-            it.content.contains(searchQuery, ignoreCase = true) ||
-            it.prompt.contains(searchQuery, ignoreCase = true)
+    val filteredJournals = remember(journals, searchQuery, selectedMoodCode) {
+        journals.filter { entry ->
+            val matchesQuery = searchQuery.isBlank() ||
+                entry.body.contains(searchQuery, ignoreCase = true) ||
+                (entry.title?.contains(searchQuery, ignoreCase = true) == true) ||
+                entry.prompt.contains(searchQuery, ignoreCase = true)
+            val matchesMood = selectedMoodCode == null ||
+                entry.primaryMoodCode == selectedMoodCode ||
+                entry.secondaryMoodCode == selectedMoodCode
+            matchesQuery && matchesMood
         }
     }
 
@@ -319,13 +398,28 @@ private fun JournalArchiveView(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = onSearchChange,
-                placeholder = { Text("Search reflection entries...") },
+                placeholder = { Text("Search reflections by keyword or title...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("journal_search_input")
             )
+        }
+
+        item {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(MoodCatalog.starterMoods) { mood ->
+                    FilterChip(
+                        selected = selectedMoodCode == mood.code,
+                        onClick = { onSelectMoodFilter(mood.code) },
+                        label = { Text("${mood.symbol} ${mood.label}") }
+                    )
+                }
+            }
         }
 
         if (filteredJournals.isEmpty()) {
@@ -337,17 +431,21 @@ private fun JournalArchiveView(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (searchQuery.isBlank()) "No reflections recorded yet.\nWrite one on the Today screen!"
-                               else "No reflections matching \"$searchQuery\"",
+                        text = if (searchQuery.isBlank() && selectedMoodCode == null) {
+                            "No reflections recorded yet.\nWrite one on the Today screen!"
+                        } else {
+                            "No reflections matching your filter."
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
         } else {
-            items(filteredJournals, key = { it.id }) { entry ->
+            items(filteredJournals, key = { it.journalEntryId }) { entry ->
                 JournalArchiveCard(
                     entry = entry,
+                    linkedHabitName = entry.linkedHabitId?.let { habitsById[it] },
                     onClick = { onEntryClick(entry) }
                 )
             }
@@ -358,6 +456,7 @@ private fun JournalArchiveView(
 @Composable
 private fun JournalArchiveCard(
     entry: JournalEntry,
+    linkedHabitName: String?,
     onClick: () -> Unit
 ) {
     Card(
@@ -387,6 +486,48 @@ private fun JournalArchiveCard(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(16.dp)
                 )
+            }
+
+            if (!entry.title.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = entry.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            val moods = listOfNotNull(entry.primaryMoodCode, entry.secondaryMoodCode)
+                .mapNotNull { MoodCatalog.findByCode(it) }
+            if (moods.isNotEmpty() || linkedHabitName != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    for (m in moods) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                        ) {
+                            Text(
+                                text = "${m.symbol} ${m.label}",
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                    if (linkedHabitName != null) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant
+                        ) {
+                            Text(
+                                text = "🌱 $linkedHabitName",
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
             }
 
             if (entry.prompt.isNotBlank()) {

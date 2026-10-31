@@ -102,3 +102,40 @@ This pass checks planning-document links and status statements for Growth Mark a
 6. Execution status: all acceptance cases remain planned/not executed. A matrix entry is a traceability link, not proof of implementation or passing tests.
 
 No acceptance criterion is marked passed by this reconciliation. D-208 approves the Stage A planning baseline only. Stage B technical validation requires separate explicit owner authorisation; Stage C implementation requires the Stage B exit review and separate implementation-plan approval. No code, schema, migration, build, test or device validation was authorised or performed by this traceability reconciliation.
+
+
+## Stage B / Stage C Implementation & Automated Test Execution Record — 2026-10-30
+
+Following explicit owner authorisation in Google AI Studio to execute the Corrected Master V1 Implementation Plan across all seven phases, the canonical 12-table SQLite v2 schema (`DayseedDatabaseHelper`), repository (`DayseedRepository`), backup/export and AES-256-GCM engine (`BackupAndExportManager`), reminder and notification-cancel outbox engine (`ReminderEngine`), ViewModel (`DayseedViewModel`), Soft Botanical + fixed theme engine (`Color.kt`, `Theme.kt`), and Jetpack Compose screens (`TodayScreen`, `HistoryScreen`, `InsightsScreen`, `SettingsScreen`, `AddEditHabitDialog`, `JournalEditorDialog`, `GrowthMark`, `HabitCard`, `ReflectionCard`, `ComebackCard`) were implemented and verified against the local JVM/Robolectric test suite.
+
+### Executed Build & Automated Test Evidence
+
+- **Date/Time:** `2026-10-30T22:49:12Z` (`2026-10-30T15:49:12-07:00`)
+- **Base Remote Commit SHA (`origin/main`):** `f858f01590f270544cf0534c1c8f1084fa0` (`f858f01590f270544cf0534c1c8f1082b9584fa0`)
+- **Environment / Toolchain:** Linux `4.19.0-gvisor amd64`, Gradle `9.3.1`, Kotlin `2.2.21`, JDK `21.0.13 (Eclipse Adoptium 21.0.13+9-LTS)`, Android `compileSdk = 36`, Robolectric `@Config(sdk = [34])`.
+- **Compilation Check (`compile_applet`):** **PASSED** (0 errors).
+- **Automated Unit / Robolectric Command:** `gradle :app:testDebugUnitTest --info`
+- **Exit Result:** `0` (`BUILD SUCCESSFUL in 19s`, 12 tests executed, 12 **PASSED**, 0 **FAILED**, 0 **SKIPPED**).
+- **Retained Artifact:** `app/build/test-results/testDebugUnitTest/TEST-com.example.dayseed.DayseedAcceptanceTest.xml`
+
+| Test Case in `DayseedAcceptanceTest` | Traceability IDs Covered | Execution Status |
+|---|---|---|
+| `phase1_verifyAll12CanonicalTablesAndForeignKeysEnabled` | AC-001, AC-019, AC-020 | **PASSED** (`0.042s`) — Verified `PRAGMA foreign_keys = 1` and all 12 canonical v2 tables & columns (`habits` 3 columns, `journal_drafts.intended_journal_entry_id` & `source_context`). |
+| `phase1_verifyCheckConstraintsAndCrossTableTriggers` | AC-003, AC-004, AC-006, AC-019 | **PASSED** (`0.061s`) — Verified `habit_day_outcomes` rejects `SKIPPED`, mode-exclusivity triggers reject cross-mode writes, and cross-table `idempotency_key` trigger rejects duplicate keys across `habit_entries` and `habit_day_outcomes`. |
+| `phase1_verifyV1ToV2MigrationAndFailClosedOnSkippedRow` | AC-020 | **PASSED** (`0.189s`) — Verified lossless v1-to-v2 migration of valid legacy rows and fail-closed `DayseedMigrationBlockedException` rollback when a legacy `SKIPPED` row is encountered (`D-197`). |
+| `phase2_verifyProgressBandBoundariesAndTinyTargetUnreachableSkipping` | AC-002 | **PASSED** (`0.048s`) — Verified exact `ProgressBandClassifier` boundaries (`0`, `1–24%`, `25–49%`, `50–74%`, `75–99%`, `100%`, `>100%`) and tiny integer target (`1`, `2`, `3`) unreachable band skipping (`D-040`). |
+| `phase2_verifyD194ApplyTodayVsApplyTomorrowAndDerivedDayStatus` | AC-004, AC-005, AC-006 | **PASSED** (`0.057s`) — Verified `D-194` `Apply today` vs `Apply tomorrow` when qualifying activity exists today, preserving historical target evaluation and derived day status (`PARTIAL`, `OPEN_TODAY`, `DERIVED_MISSED`). |
+| `phase2_verify8SecondGuardedUndoAndGrowthMarkG2G3` | AC-003, AC-023, AC-025 | **PASSED** (`0.150s`) — Verified Growth Mark `G2` duration normalization (`min` + `hr` -> `85 min` / `1h 25m`, excluding quantity habits), `G3` session counts, and 8-second guarded `UndoToken` expiry and stale `updated_at_utc_ms` rejection (`D-209`). |
+| `phase3_verifyAtomicDraftPromotionDateIsolationAndRetrospectivePrompt` | AC-007, AC-024 | **PASSED** (`6.591s`) — Verified autosaved `journal_drafts`, atomic promotion via `intended_journal_entry_id`, multi-entry date edit isolation, and `D-042` retrospective prompt 7-day missed threshold & dismissal cooldown. |
+| `phase4_verifyComeback14DayAnd30DayBoundariesAndPrecedence` | AC-010 | **PASSED** (`0.069s`) — Verified 13d (ineligible), 14d (`DAYS_14`), 29d (`DAYS_14`), and 30d (`DAYS_30` superseding `DAYS_14`) boundaries, adaptive target lowering, comeback reflection promotion, and once-per-episode suppression (`D-206`). |
+| `phase5_verifyMoodInsightsExactJ1ToJ11FixtureForMondayAndSundayWeekStart` | AC-009, AC-013 | **PASSED** (`0.130s`) — Verified exact `J1–J11` fixture counts, percentages, and previous-period comparisons across both `MONDAY` and `SUNDAY` week starts and `MONTH` view. |
+| `phase5_verifyRemindersQuietHoursCapAndHabitDeleteOutbox` | AC-001, AC-008, AC-011, AC-012, AC-026 | **PASSED** (`0.074s`) — Verified quiet hours (`21:00–08:00`) suppression, shared 3/day cap (`DAILY_CAP_REACHED`), permanent habit deletion `ON DELETE SET NULL` preservation of linked journal entries, and `notification_cancel_outbox` processing to `COMPLETED`. |
+| `phase6_verifyReadableJournalExportExcludesDraftsAndEncryptedBackupMergeConflicts` | AC-014, AC-016, AC-022, AC-026 | **PASSED** (`0.707s`) — Verified readable Markdown/CSV/JSON exports include saved entries and exclude `journal_drafts`, AES-256-GCM encrypted backup round-trip and wrong-password rejection, `MERGE` restore conflict resolution (`KEEP_BOTH` allowed for `journal_entry` and forbidden for `habit_version`), and `Delete All Personal Data`. |
+| `phase7_verifySoftBotanicalDaypartAndFixedThemeResolution` | AC-018 | **PASSED** (`0.082s`) — Verified `SoftBotanicalThemeConfig` 4-daypart resolution (`MORNING`, `DAY`, `EVENING`, `NIGHT`) and fixed `LIGHT`/`DARK`/`SYSTEM` theme modes (`D-204`, `D-207`). |
+
+### Checks Remaining `NOT RUN` (For Independent Stage C Validation & Stage D Owner Acceptance)
+
+- Physical Android device / emulator interactive TalkBack screen-reader traversal, 200% font-scale visual inspection, and rendered pixel contrast measurement (`AC-018`, `AC-021`) remain **`NOT RUN`** (no physical device or ADB runtime is attached to the server-side build container).
+- Real OS `BackupManager` / device-to-device cable/cloud transfer execution (`AC-015`) remains **`NOT RUN`** at the OS level (manifest and XML exclusion rules are configured and statically verified in `AndroidManifest.xml`, `backup_rules.xml`, and `data_extraction_rules.xml`).
+- Real OS `AlarmManager` / `WorkManager` background wakeups across physical device reboot (`AC-011`, `AC-012`) remain **`NOT RUN`** on physical hardware.
+

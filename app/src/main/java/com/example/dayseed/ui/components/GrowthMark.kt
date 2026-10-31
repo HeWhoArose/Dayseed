@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
@@ -23,10 +22,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,24 +32,37 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.dayseed.data.DurationNormalizer
 import com.example.dayseed.data.GrowthMetrics
 import com.example.dayseed.ui.theme.ExtraBranchColor
 import com.example.dayseed.ui.theme.TinySproutColor
 import com.example.dayseed.ui.theme.UsualLeafColor
+import java.time.LocalDate
+import java.time.YearMonth
 
 @Composable
 fun GrowthMarkBadge(
     metrics: GrowthMetrics,
     modifier: Modifier = Modifier,
+    referenceDate: LocalDate = LocalDate.now(),
     onInfoClick: (() -> Unit)? = null
 ) {
+    val formattedMonthDuration = DurationNormalizer.formatTotalMinutes(metrics.currentMonthDurationMinutes)
+    val currentMonthSessions = metrics.currentMonthDateSessionCounts.values.sum()
+
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .testTag("growth_mark_badge"),
+            .testTag("growth_mark_badge")
+            .semantics {
+                contentDescription = "Growth Mark summary: ${metrics.totalActiveDates} active days tended, " +
+                    "$formattedMonthDuration focused duration this month, $currentMonthSessions sessions this month"
+            },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
@@ -74,12 +82,12 @@ fun GrowthMarkBadge(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     GrowthMarkCanvas(
                         activeDates = metrics.totalActiveDates,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(38.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = "Collected Moments",
+                            text = "Growth Mark (G2 + G3)",
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -88,6 +96,12 @@ fun GrowthMarkBadge(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "This month: $formattedMonthDuration logged • $currentMonthSessions ${if (currentMonthSessions == 1) "session" else "sessions"}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.testTag("growth_mark_g2_summary")
                         )
                     }
                 }
@@ -107,7 +121,39 @@ fun GrowthMarkBadge(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // G3 Current-Month Session Dot Strip (up to 14 recent days of the current month)
+            val yearMonth = YearMonth.from(referenceDate)
+            val monthDays = (1..yearMonth.lengthOfMonth()).map { yearMonth.atDay(it) }
+            val recentMonthDays = monthDays.filter { !it.isAfter(referenceDate) }.takeLast(14)
+
+            if (recentMonthDays.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("growth_mark_g3_dots"),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    for (d in recentMonthDays) {
+                        val sessions = metrics.currentMonthDateSessionCounts[d] ?: 0
+                        val dotColor = when {
+                            sessions >= 3 -> ExtraBranchColor
+                            sessions == 2 -> UsualLeafColor
+                            sessions == 1 -> TinySproutColor
+                            else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(dotColor)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+            }
 
             // Effort mix pill row
             Row(
@@ -188,7 +234,6 @@ fun GrowthMarkCanvas(
         val w = size.width
         val h = size.height
 
-        // Ground base arc
         drawArc(
             color = brandColor.copy(alpha = 0.2f),
             startAngle = 0f,
@@ -199,7 +244,6 @@ fun GrowthMarkCanvas(
             style = Stroke(width = 3.dp.toPx())
         )
 
-        // Seed / Stem
         val stemPath = Path().apply {
             moveTo(w * 0.5f, h * 0.8f)
             cubicTo(
@@ -214,7 +258,6 @@ fun GrowthMarkCanvas(
             style = Stroke(width = 3.dp.toPx())
         )
 
-        // Left Sprout Leaf (represents tiny & showing up)
         val leftLeaf = Path().apply {
             moveTo(w * 0.5f, h * 0.42f)
             quadraticTo(w * 0.25f, h * 0.38f, w * 0.22f, h * 0.28f)
@@ -226,7 +269,6 @@ fun GrowthMarkCanvas(
             style = Fill
         )
 
-        // Right Sprout Leaf
         val rightLeaf = Path().apply {
             moveTo(w * 0.5f, h * 0.32f)
             quadraticTo(w * 0.75f, h * 0.28f, w * 0.78f, h * 0.18f)

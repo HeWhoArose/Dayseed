@@ -2,6 +2,7 @@ package com.example.dayseed.ui.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,37 +19,37 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Eco
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dayseed.DayseedViewModel
-import com.example.dayseed.data.DailyOutcome
+import com.example.dayseed.data.DurationNormalizer
 import com.example.dayseed.ui.components.GrowthMarkCanvas
 import com.example.dayseed.ui.theme.ExtraBranchColor
 import com.example.dayseed.ui.theme.RestColor
 import com.example.dayseed.ui.theme.TinySproutColor
 import com.example.dayseed.ui.theme.UsualLeafColor
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 @Composable
 fun InsightsScreen(
@@ -56,12 +57,26 @@ fun InsightsScreen(
     modifier: Modifier = Modifier
 ) {
     val growthMetrics by viewModel.growthMetrics.collectAsState()
-    val records by viewModel.records.collectAsState()
+    val outcomes by viewModel.habitDayOutcomes.collectAsState()
+    val entries by viewModel.habitEntries.collectAsState()
     val journals by viewModel.journalEntries.collectAsState()
+    val appSettings by viewModel.appSettings.collectAsState()
 
-    val today = LocalDate.now()
+    var moodPeriodKind by remember { mutableStateOf("WEEK") }
+    var compareWithPrevious by remember { mutableStateOf(false) }
+    var selectedMoodFilter by remember { mutableStateOf<String?>(null) }
+
+    val today = viewModel.repository.clock.todayLocal()
     val past30Days = remember(today) {
         (0..29).map { today.minusDays(it.toLong()) }.reversed()
+    }
+
+    val moodInsights = remember(journals, appSettings, moodPeriodKind, selectedMoodFilter, today) {
+        viewModel.repository.computeMoodInsights(
+            periodKind = moodPeriodKind,
+            referenceDate = today,
+            selectedMoodFilter = selectedMoodFilter
+        )
     }
 
     LazyColumn(
@@ -88,8 +103,10 @@ fun InsightsScreen(
             }
         }
 
-        // Big Growth Mark Hero Card
+        // Big Growth Mark Hero Card (G2 + G3)
         item {
+            val formattedDuration = DurationNormalizer.formatTotalMinutes(growthMetrics.currentMonthDurationMinutes)
+            val totalMonthSessions = growthMetrics.currentMonthDateSessionCounts.values.sum()
             Card(
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
@@ -115,10 +132,162 @@ fun InsightsScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Every day you showed up, took a tiny step, or rested.",
+                        text = "Monthly Growth Mark: $formattedDuration • $totalMonthSessions sessions",
                         style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "Every day you showed up, took a tiny step, or reflected.",
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            }
+        }
+
+        // Mood Insights Card (D-096..D-102, AC-009)
+        item {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("mood_insights_card")
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Mood Insights",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = moodInsights.periodLabel,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            FilterChip(
+                                selected = moodPeriodKind == "WEEK",
+                                onClick = { moodPeriodKind = "WEEK" },
+                                label = { Text("This Week") },
+                                modifier = Modifier.testTag("mood_period_week_chip")
+                            )
+                            FilterChip(
+                                selected = moodPeriodKind == "MONTH",
+                                onClick = { moodPeriodKind = "MONTH" },
+                                label = { Text("This Month") },
+                                modifier = Modifier.testTag("mood_period_month_chip")
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Compare with previous period (${moodInsights.previousPeriodTotalEntries} entries)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Switch(
+                            checked = compareWithPrevious,
+                            onCheckedChange = { compareWithPrevious = it },
+                            modifier = Modifier.testTag("mood_compare_switch")
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    if (moodInsights.distribution.isEmpty()) {
+                        Text(
+                            text = "No mood-tagged journal entries in this period yet. Add a primary mood when writing a reflection.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            for (item in moodInsights.distribution) {
+                                val isSelected = selectedMoodFilter == item.moodCode
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(
+                                            if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                                            else Color.Transparent
+                                        )
+                                        .clickable {
+                                            selectedMoodFilter = if (isSelected) null else item.moodCode
+                                        }
+                                        .padding(6.dp)
+                                        .testTag("mood_dist_row_${item.moodCode.lowercase()}")
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = "${item.symbol} ${item.label}",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        val prevSuffix = if (compareWithPrevious) {
+                                            " (prev: ${item.previousPeriodCount})"
+                                        } else {
+                                            ""
+                                        }
+                                        Text(
+                                            text = "${item.count} (${item.percentage}%)$prevSuffix",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    LinearProgressIndicator(
+                                        progress = { (item.percentage / 100f).coerceIn(0f, 1f) },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(6.dp)
+                                            .clip(RoundedCornerShape(3.dp)),
+                                        color = MaterialTheme.colorScheme.primary,
+                                        trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    )
+                                }
+                            }
+                        }
+
+                        if (selectedMoodFilter != null) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                text = "Matching entries for $selectedMoodFilter (${moodInsights.matchingEntries.size}):",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            for (entry in moodInsights.matchingEntries) {
+                                Text(
+                                    text = "• ${entry.localDate}: ${entry.title ?: entry.body.take(60)}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontStyle = FontStyle.Italic,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -145,7 +314,6 @@ fun InsightsScreen(
                     )
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // Grid of 30 days
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -156,14 +324,13 @@ fun InsightsScreen(
                                     val itemIdx = week * 7 + dayIndex
                                     if (itemIdx < past30Days.size) {
                                         val d = past30Days[itemIdx]
-                                        val dayRecords = records.filter { it.date == d }
-                                        val hasCompleted = dayRecords.any { it.outcome == DailyOutcome.COMPLETED }
-                                        val hasRest = dayRecords.any { it.outcome == DailyOutcome.PLANNED_REST }
-                                        val hasJournal = journals.any { it.date == d }
+                                        val dStr = d.toString()
+                                        val hasCompleted = outcomes.any { it.localDate == dStr } ||
+                                            entries.any { it.localDate == dStr && it.valueUnits > 0 }
+                                        val hasJournal = journals.any { it.localDate == dStr }
 
                                         val dotColor = when {
                                             hasCompleted -> MaterialTheme.colorScheme.primary
-                                            hasRest -> RestColor
                                             hasJournal -> TinySproutColor
                                             else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
                                         }
@@ -177,8 +344,8 @@ fun InsightsScreen(
                                         ) {
                                             if (hasCompleted) {
                                                 Text("🌱", fontSize = 10.sp)
-                                            } else if (hasRest) {
-                                                Text("🌿", fontSize = 10.sp)
+                                            } else if (hasJournal) {
+                                                Text("✍️", fontSize = 10.sp)
                                             }
                                         }
                                     }
@@ -193,9 +360,9 @@ fun InsightsScreen(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        LegendItem(color = MaterialTheme.colorScheme.primary, label = "Completed")
-                        LegendItem(color = RestColor, label = "Rest Day")
-                        LegendItem(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f), label = "Unrecorded")
+                        LegendItem(color = MaterialTheme.colorScheme.primary, label = "Habit Logged")
+                        LegendItem(color = TinySproutColor, label = "Journaled")
+                        LegendItem(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f), label = "Quiet Day")
                     }
                 }
             }
@@ -276,8 +443,8 @@ fun InsightsScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "1. No streak resets. Taking a break is natural human life.\n" +
-                               "2. Zero cloud surveillance. All metrics computed locally.\n" +
-                               "3. No artificial gamification, badges, or moral pressure.",
+                            "2. Zero cloud surveillance. All metrics computed locally.\n" +
+                            "3. No artificial gamification, badges, or moral pressure.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

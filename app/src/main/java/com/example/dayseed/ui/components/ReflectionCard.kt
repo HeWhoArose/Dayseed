@@ -21,6 +21,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -30,11 +31,14 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.dayseed.data.JournalDraft
 import com.example.dayseed.data.JournalEntry
+import com.example.dayseed.data.MoodCatalog
 
 @Composable
 fun ReflectionCard(
     entry: JournalEntry?,
+    draft: JournalDraft? = null,
     onOpenEditor: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -78,7 +82,9 @@ fun ReflectionCard(
                     OutlinedButton(
                         onClick = onOpenEditor,
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.height(34.dp).testTag("edit_reflection_btn")
+                        modifier = Modifier
+                            .height(34.dp)
+                            .testTag("edit_reflection_btn")
                     ) {
                         Text("Edit", style = MaterialTheme.typography.labelMedium)
                     }
@@ -88,6 +94,35 @@ fun ReflectionCard(
             Spacer(modifier = Modifier.height(10.dp))
 
             if (entry != null) {
+                if (!entry.title.isNullOrBlank()) {
+                    Text(
+                        text = entry.title,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                }
+                val moodLabels = listOfNotNull(entry.primaryMoodCode, entry.secondaryMoodCode)
+                    .mapNotNull { MoodCatalog.findByCode(it) }
+                if (moodLabels.isNotEmpty()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        for (m in moodLabels) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                            ) {
+                                Text(
+                                    text = "${m.symbol} ${m.label}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                }
                 if (entry.prompt.isNotBlank()) {
                     Text(
                         text = entry.prompt,
@@ -106,12 +141,23 @@ fun ReflectionCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
             } else {
-                Text(
-                    text = "A quiet pause for your thoughts. Optional, private, and always yours.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(12.dp))
+                if (draft != null && draft.body.isNotBlank()) {
+                    Text(
+                        text = "Unsaved draft saved locally: \"${draft.body.take(80)}\"",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontStyle = FontStyle.Italic,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.testTag("unsaved_draft_banner")
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                } else {
+                    Text(
+                        text = "A quiet pause for your thoughts. Optional, private, and always yours.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
                 Button(
                     onClick = onOpenEditor,
                     shape = RoundedCornerShape(12.dp),
@@ -125,7 +171,10 @@ fun ReflectionCard(
                 ) {
                     Icon(Icons.Default.Create, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Write a few lines", style = MaterialTheme.typography.labelLarge)
+                    Text(
+                        text = if (draft != null && draft.body.isNotBlank()) "Continue Draft" else "Write a few lines",
+                        style = MaterialTheme.typography.labelLarge
+                    )
                 }
             }
         }

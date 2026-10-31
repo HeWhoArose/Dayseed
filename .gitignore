@@ -1,2 +1,19 @@
 # Ignore runtime recovery log — machine-specific session state, not reusable config
 .opencode/recovery/provider-errors.jsonl
+
+# Secrets and signing credentials — NEVER COMMIT
+.env
+local.properties
+*.keystore
+*.keystore.base64
+*.jks
+
+# Android / Gradle build caches and outputs
+.gradle/
+build/
+app/build/
+.build-outputs/
+.kotlin/
+.idea/
+*.iml
+public/assets/aistudio/

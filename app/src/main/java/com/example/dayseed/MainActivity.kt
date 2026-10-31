@@ -39,6 +39,7 @@ import com.example.dayseed.ui.screens.JournalEditorDialog
 import com.example.dayseed.ui.screens.SettingsScreen
 import com.example.dayseed.ui.screens.TodayScreen
 import com.example.dayseed.ui.theme.DayseedTheme
+import com.example.dayseed.ui.theme.ThemeModeOption
 
 class MainActivity : ComponentActivity() {
     private val viewModel: DayseedViewModel by viewModels()
@@ -48,7 +49,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            DayseedTheme {
+            val appSettings by viewModel.appSettings.collectAsState()
+            val themeMode = remember(appSettings) {
+                ThemeModeOption.fromSetting(appSettings["theme_mode"]?.valueText)
+            }
+            DayseedTheme(
+                themeMode = themeMode,
+                localTime = viewModel.repository.clock.nowLocalTime()
+            ) {
                 DayseedApp(viewModel = viewModel)
             }
         }
@@ -62,6 +70,11 @@ fun DayseedApp(viewModel: DayseedViewModel) {
     val editingHabit by viewModel.editingHabit.collectAsState()
     val isJournalOpen by viewModel.isJournalEditorOpen.collectAsState()
     val editingJournal by viewModel.editingJournalEntry.collectAsState()
+    val journalEditorDate by viewModel.journalEditorDate.collectAsState()
+    val journalInitialLinkedHabitId by viewModel.journalInitialLinkedHabitId.collectAsState()
+    val journalInitialPromptId by viewModel.journalInitialPromptId.collectAsState()
+    val habits by viewModel.habits.collectAsState()
+    val drafts by viewModel.journalDrafts.collectAsState()
     val userMessage by viewModel.userMessage.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -158,10 +171,22 @@ fun DayseedApp(viewModel: DayseedViewModel) {
     }
 
     if (isAddHabitOpen) {
+        val today = viewModel.repository.clock.todayLocal()
+        val alreadyLogged = editingHabit?.let {
+            viewModel.repository.hasQualifyingActivityOnDate(it.habitId, today)
+        } ?: false
+        val suggestedReminder = editingHabit?.let {
+            viewModel.repository.getSuggestedReminderTimeForHabit(it.habitId)
+        }
+
         AddEditHabitDialog(
             initialHabit = editingHabit,
+            alreadyLoggedToday = alreadyLogged,
+            suggestedReminderTime = suggestedReminder,
             onDismiss = { viewModel.closeAddEditHabit() },
-            onSave = { habit -> viewModel.saveHabit(habit) },
+            onSave = { habit, applyTodayWhenLogged ->
+                viewModel.saveHabit(habit, applyTodayWhenLogged)
+            },
             onDelete = { habitId ->
                 viewModel.deleteHabit(habitId)
                 viewModel.closeAddEditHabit()
@@ -170,8 +195,29 @@ fun DayseedApp(viewModel: DayseedViewModel) {
     }
 
     if (isJournalOpen) {
+        val activeDraft = drafts.find {
+            it.localDate == journalEditorDate.toString() && it.sourceContext == "JOURNAL_COMPOSER"
+        }
         JournalEditorDialog(
             initialEntry = editingJournal,
+            initialDraft = activeDraft,
+            selectedDate = journalEditorDate,
+            habits = habits,
+            initialLinkedHabitId = journalInitialLinkedHabitId,
+            initialPromptId = journalInitialPromptId,
+            onAutosaveDraft = { title, body, primaryMood, secondaryMood, promptId, linkedHabitId, date ->
+                viewModel.repository.saveJournalDraftSync(
+                    draftId = "active_draft_$date",
+                    localDate = date,
+                    title = title,
+                    body = body,
+                    primaryMoodCode = primaryMood,
+                    secondaryMoodCode = secondaryMood,
+                    promptId = promptId,
+                    linkedHabitId = linkedHabitId,
+                    sourceContext = "JOURNAL_COMPOSER"
+                )
+            },
             onDismiss = { viewModel.closeJournalEditor() },
             onSave = { entry -> viewModel.saveJournalEntry(entry) },
             onDelete = { id -> viewModel.deleteJournalEntry(id) }
