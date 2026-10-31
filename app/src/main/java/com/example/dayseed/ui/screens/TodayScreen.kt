@@ -37,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -45,9 +46,16 @@ import androidx.compose.ui.unit.dp
 import com.example.dayseed.DayseedViewModel
 import com.example.dayseed.data.HabitLifecycleState
 import com.example.dayseed.ui.components.ComebackCard
+import com.example.dayseed.ui.components.DaypartArtwork
 import com.example.dayseed.ui.components.GrowthMarkBadge
 import com.example.dayseed.ui.components.HabitCard
 import com.example.dayseed.ui.components.ReflectionCard
+import com.example.dayseed.ui.theme.DayseedDateStyle
+import com.example.dayseed.ui.theme.DayseedGreetingStyle
+import com.example.dayseed.ui.theme.SoftBotanicalThemeConfig
+import com.example.dayseed.ui.theme.ThemeModeOption
+import com.example.dayseed.ui.theme.greetingFor
+import com.example.dayseed.ui.theme.resolveDayseedArtwork
 import java.time.format.DateTimeFormatter
 
 @Composable
@@ -120,28 +128,47 @@ fun TodayScreen(
             contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header: Date and humane motto
+            // Header: date, time-aware greeting, and the daypart artwork (D-210)
             item {
-                Column {
-                    Text(
-                        text = today.format(DateTimeFormatter.ofPattern("EEEE, MMMM d")),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "Dayseed",
-                        style = MaterialTheme.typography.displayLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Your progress is more than your streak.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                val themeMode = remember(appSettings) {
+                    ThemeModeOption.fromSetting(appSettings["theme_mode"]?.valueText)
+                }
+                val isSystemDark = isSystemInDarkTheme()
+                val nowLocal = remember(today) { viewModel.repository.clock.nowLocalTime() }
+                val daypart = remember(nowLocal) {
+                    SoftBotanicalThemeConfig.resolveDaypart(nowLocal)
+                }
+                val artwork = remember(themeMode, isSystemDark, nowLocal) {
+                    resolveDayseedArtwork(themeMode, isSystemDark, nowLocal)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = today.format(DateTimeFormatter.ofPattern("EEEE, MMMM d")),
+                            style = DayseedDateStyle,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = greetingFor(daypart),
+                            style = DayseedGreetingStyle,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Your progress is more than your streak.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    DaypartArtwork(artwork, modifier = Modifier.size(104.dp))
                 }
             }
 

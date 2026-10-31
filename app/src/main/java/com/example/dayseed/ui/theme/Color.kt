@@ -63,17 +63,20 @@ object SoftBotanicalThemeConfig {
     const val EVENING_START_HOUR = 17  // 17:00 - 20:59
     const val NIGHT_START_HOUR = 21    // 21:00 - 04:59
 
-    // Provisional Morning tokens (warm mist & fresh sage)
-    val MorningCanvas = Color(0xFFF8F6EF)
+    // Provisional Morning tokens — "Sage Modern" (D-210): airy parchment canvas, fresh leaf green action,
+    // soft sage wash. Deliberately distinct from the canonical daylight Field Journal green (#286143).
+    val MorningCanvas = Color(0xFFF7F9F1)
     val MorningSurface = Color(0xFFFFFFFF)
-    val MorningGrowthSubtle = Color(0xFFE6EFE2)
-    val MorningBrand = Color(0xFF2D6A4F)
+    val MorningGrowthSubtle = Color(0xFFE7EFE6)
+    val MorningBrand = Color(0xFF3E7C59)
 
-    // Provisional Evening tokens (soft amber parchment & deep moss)
-    val EveningCanvas = Color(0xFFF4EFE6)
-    val EveningSurface = Color(0xFFFCF9F2)
-    val EveningGrowthSubtle = Color(0xFFE2E5D8)
-    val EveningBrand = Color(0xFF286143)
+    // Provisional Evening tokens — "Earth & Clay" (D-210): warm stone canvas, terracotta/clay action
+    // per the owner reference, sunset-hills supporting tones.
+    val EveningCanvas = Color(0xFFF4EBDD)
+    val EveningSurface = Color(0xFFFBF6EC)
+    val EveningGrowthSubtle = Color(0xFFEFE2D0)
+    val EveningBrand = Color(0xFFAC5530)
+    val EveningBorder = Color(0xFFDECDB4)
 
     fun resolveDaypart(localTime: LocalTime): BotanicalDaypart {
         val h = localTime.hour

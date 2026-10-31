@@ -48,20 +48,29 @@ private val LightColorScheme = lightColorScheme(
     onError = LightOnBrand
 )
 
+// Provisional daypart schemes (D-210). Morning is "Sage Modern": fresh leaf action on airy parchment.
+// Evening is "Earth & Clay": terracotta action on warm stone. Text keeps the canonical light palette
+// (dark green on cream passes everywhere we already use it) so component behaviour stays consistent.
 private val MorningColorScheme = LightColorScheme.copy(
     primary = SoftBotanicalThemeConfig.MorningBrand,
+    onPrimary = LightOnBrand,
     primaryContainer = SoftBotanicalThemeConfig.MorningGrowthSubtle,
+    onPrimaryContainer = LightTextPrimary,
     background = SoftBotanicalThemeConfig.MorningCanvas,
     surface = SoftBotanicalThemeConfig.MorningSurface,
-    surfaceVariant = SoftBotanicalThemeConfig.MorningGrowthSubtle
+    surfaceVariant = SoftBotanicalThemeConfig.MorningGrowthSubtle,
+    outline = LightBorder
 )
 
 private val EveningColorScheme = LightColorScheme.copy(
     primary = SoftBotanicalThemeConfig.EveningBrand,
+    onPrimary = LightOnBrand,
     primaryContainer = SoftBotanicalThemeConfig.EveningGrowthSubtle,
+    onPrimaryContainer = LightTextPrimary,
     background = SoftBotanicalThemeConfig.EveningCanvas,
     surface = SoftBotanicalThemeConfig.EveningSurface,
-    surfaceVariant = SoftBotanicalThemeConfig.EveningGrowthSubtle
+    surfaceVariant = SoftBotanicalThemeConfig.EveningGrowthSubtle,
+    outline = SoftBotanicalThemeConfig.EveningBorder
 )
 
 fun resolveDayseedColorScheme(
