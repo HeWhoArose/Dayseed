@@ -19,6 +19,7 @@ Canonical branch: `main`. GitHub is the source of truth for planning and future 
 - Growth Mark: D-199 records the owner's clarification. G2 is the compact “Collected moments” card showing recorded duration from duration-tracked habits (current calendar month by default), in readable units; G3 is calendar/date-level detail or a separate page with underlying duration sessions. Define unit-formatting thresholds, period controls, compatible-duration aggregation, empty/zero/correction states and accessibility before any final UI decision. G1's active-date summary remains a comparison alternative, not the selected headline metric. Comeback: compact, dismissible, non-blocking direction accepted; final copy/accessibility review remains. Research is in [docs/15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md](15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md).
 - Journal archive: owner selected A2 hybrid timeline + compact date jump/calendar and local title/body search as the starting direction; task/accessibility review remains. See [docs/16-JOURNAL-ARCHIVE-RESEARCH.md](16-JOURNAL-ARCHIVE-RESEARCH.md).
 - Typography, light/dark candidate palettes, contrast checks, font licensing notes, and small-screen tests documented in [docs/17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md](17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md).
+- Time-of-day theme direction (D-210): owner-supplied five-panel reference persisted at `docs/prototypes/dayseed-theme-time-of-day-reference.jpeg`; per-daypart palettes, header artwork, shared components and a code-vs-design audit are recorded in [docs/36-TIME-OF-DAY-THEME-SPECIFICATION.md](36-TIME-OF-DAY-THEME-SPECIFICATION.md).
 - DESIGN.md is now specified as the sole authoritative token/component reference; candidate values remain unapproved.
 - Competitor screenshot evidence for Loop Habit Tracker and Daylio is recorded in [docs/18-COMPETITOR-SCREENSHOT-AUDIT.md](18-COMPETITOR-SCREENSHOT-AUDIT.md). Public listing screenshots were inspected; current live app flows have not been tested.
 - AI Studio/GitHub workflow and native-app feasibility-spike acceptance criteria are in [docs/19-AI-STUDIO-GITHUB-WORKFLOW.md](19-AI-STUDIO-GITHUB-WORKFLOW.md).
@@ -546,4 +547,15 @@ Every future project inspection must record date/time/timezone, repository, bran
   - `compile_applet`: **PASSED**.
   - `gradle :app:testDebugUnitTest --info`: **PASSED** (`12 tests completed, 0 failed, 0 skipped` in `DayseedAcceptanceTest`; retained report at `app/build/test-results/testDebugUnitTest/TEST-com.example.dayseed.DayseedAcceptanceTest.xml`).
 - **Gate Status:** Stage B implementation self-checks are complete. **Stage C independent technical validation** and **Stage D final owner acceptance / release readiness** remain open and are not claimed by this implementation pass.
+
+
+## Time-of-day theme direction recorded and audited — 2026-10-31 (D-210)
+
+The owner supplied a five-panel theme reference sheet and instructed that Dayseed's theme direction is the **colours, designs and per-time-of-day pictures** in that sheet, ignoring its sample items and wording, and asked for it to be recorded explicitly and audited against the current implementation.
+
+- **Reference persisted:** `docs/prototypes/dayseed-theme-time-of-day-reference.jpeg`, copied from the owner submission so the direction survives independently of the chat attachment.
+- **Recorded:** D-210 in `09-DECISION-LOG.md`; register row plus finding R-035 in `25-DECISION-REGISTER-AND-RECONCILIATION.md`; extended notes in `17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md` §9 and `29-UX-DESIGN-APPROVAL-PACK.md` §5.8; direction pointer in `DESIGN.md` with candidate tokens explicitly left unapproved.
+- **Audit scope:** `ui/theme/Color.kt`, `ui/theme/Theme.kt`, `ui/theme/Type.kt`, `ui/screens/TodayScreen.kt`, and `app/src/main/res/drawable` at commit `444dc41`.
+- **Audit result — does not match yet:** evening still uses a green primary instead of the reference's terracotta/clay action; no daypart header artwork exists anywhere (only launcher assets in `res/drawable`); the night theme has no crescent-moon/night-foliage treatment; morning and day tokens are nearly identical; display typography is system-default without the reference's serif headings (a known O-7/D-019 deferral); and no time-aware greeting is rendered. What does align is the broad botanical palette family and the four-slot daypart mechanism with centralised provisional config.
+- **Status of the gaps:** recorded as findings only. Exact hex values, clock boundaries, typography, transition timing and reduced-motion remain delegated or deferred, are not approved tokens, and carry no contrast, large-text, TalkBack or rendered-device evidence. Resolving the gaps is implementation work and is not authorised by D-210.
 

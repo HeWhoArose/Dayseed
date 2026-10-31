@@ -27,6 +27,8 @@ The owner accepted platform/system typography and following system light/dark ap
 
 **Current hypothesis:** a synthesis of Field Journal warmth and Living Editorial clarity, with Quiet Instrument discipline for controls and data. This is not an approved direction. See [UX and Design](docs/02-UX-AND-DESIGN.md), [Growth Mark and Comeback Research](docs/15-GROWTH-MARK-AND-COMEBACK-RESEARCH.md), [Journal Archive Research](docs/16-JOURNAL-ARCHIVE-RESEARCH.md), and [Typography, Colour, and Accessibility Research](docs/17-TYPOGRAPHY-COLOUR-AND-ACCESSIBILITY.md).
 
+**Time-of-day direction (D-210, 2026-10-31):** the owner supplied a five-panel theme sheet (`docs/prototypes/dayseed-theme-time-of-day-reference.jpeg`) defining per-daypart palettes and header artwork, catalogued in [Time-of-Day Theme Specification](docs/36-TIME-OF-DAY-THEME-SPECIFICATION.md). This is a **direction** record, not token approval: the candidate tokens in §3 below remain exploratory, and any exact value still requires measured contrast, scaling and accessibility evidence before it can be promoted into this file.
+
 ## 3. Candidate semantic colour tokens
 
 These are candidate values for prototype comparisons, not final approvals. UI code must use semantic token names, never scatter raw hex values through components.

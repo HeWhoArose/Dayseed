@@ -506,3 +506,20 @@ The updated matrix in doc 28 now identifies the relevant decision/source, contra
 ## Theme-token and daypart configuration guard — 2026-10-30
 
 The selected Soft Botanical direction (D-207) does not approve exact palette hex values, font choices, contrast pairings, production tokens or local-time daypart boundaries. Treat all existing candidate values/ranges as provisional. During implementation, keep semantic theme tokens and daypart boundaries in one centrally configurable source; do not scatter hardcoded values through components. DESIGN.md remains the sole authority for tokens only after explicit approval. Contrast, light/dark, text scaling, TalkBack, reduced-motion and owner review remain required; no accessibility pass is claimed.
+
+
+## 5.8 Time-of-day theme direction — D-210 (2026-10-31)
+
+**Reference used:** `docs/prototypes/dayseed-theme-time-of-day-reference.jpeg`, the owner-supplied five-panel theme sheet. The owner instructed that the theme direction is defined by its **colours, designs and per-time-of-day pictures**, explicitly not by the sample items or wording in the sheet.
+
+**What the owner selected as direction (D-210):**
+- **Morning** — airy "Sage Modern": soft sage + cream + stone + leaf green, light canvas, botanical leaf sprig in the header.
+- **Daylight** — warm "Field Journal": parchment/cream canvas, sage cards, olive text, botanical branch illustration.
+- **Evening** — "Earth & Clay": warm stone/sunset canvas, **terracotta/clay primary action**, rolling sunset hills artwork.
+- **Fixed light alternative** — "Minimal Calm": clean neutral cream/sage/grey, restrained single-stem sprig.
+- **Night** — "Night Garden": deep pine (not pure black) canvas, luminous sage action, **golden crescent moon with night foliage** artwork.
+- Shared across themes: four-destination navigation, full-width "Log today" pill, focus list rows, journal card, compact growth summary — restyled per theme, not restructured.
+
+**Recorded as direction only:** exact hex values, clock boundaries, typography, transition timing, reduced-motion behaviour, contrast pairs and token approval remain delegated/defaulted or deferred and unverified. D-210 does not approve production tokens, and `DESIGN.md` remains the sole token authority.
+
+**Audit outcome (see [docs/36](36-TIME-OF-DAY-THEME-SPECIFICATION.md) §4 and register R-035):** the current implementation does not yet match the reference. Evening still uses a green primary rather than terracotta; no daypart header artwork exists anywhere in `res/drawable`; the night theme has no crescent-moon/foliage treatment; morning and day tokens are nearly identical; display typography remains system-default without the reference's serif headings (a known O-7/D-019 deferral). Only the broad botanical palette family and the four-slot daypart mechanism align. Resolving these gaps is implementation work and is not authorised by D-210.

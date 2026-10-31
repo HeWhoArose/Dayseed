@@ -141,3 +141,15 @@ This is a direction choice, not approval of any specific hex value, font family,
 ## Configuration boundary for provisional theme values — 2026-10-30
 
 D-207 selects Soft Botanical as a direction only. Exact colour values, fonts, production tokens, contrast pairings and daypart clock boundaries remain unapproved. Keep candidate semantic token values and local-time daypart start/end boundaries in one central configuration/resource source (with clear provisional status) so they can be changed without editing individual UI components. Do not copy candidate hex values into DESIGN.md as approved tokens, hardcode boundaries across screens, or describe any pairing as WCAG-verified until measured and reviewed. Fixed-theme override, gradual automatic transitions, reduced-motion behaviour and per-theme accessibility still require review.
+
+
+## 9. Time-of-day theme direction — 2026-10-31 (D-210)
+
+The owner supplied a five-panel theme sheet (`docs/prototypes/dayseed-theme-time-of-day-reference.jpeg`) and instructed that Dayseed's theme direction is defined by the **colours, designs and per-time-of-day pictures**, not by the sample items or wording. The explicit breakdown and code audit are in [Time-of-Day Theme Specification](36-TIME-OF-DAY-THEME-SPECIFICATION.md); D-210 records the decision.
+
+Relevant consequences for this document:
+
+- **Colour:** each daypart now has a named concept — morning "Sage Modern" (soft sage/cream/stone/leaf green), daylight "Field Journal" (parchment/olive/sage/clay), evening "Earth & Clay" (**terracotta/clay primary action** + warm stone/sunset surfaces), fixed light "Minimal Calm" (neutral cream/sage/grey), night "Night Garden" (deep pine, luminous sage, golden moon glow). None of these has an approved hex value; contrast is unmeasured.
+- **Imagery:** the reference treats per-daypart header artwork (leaf sprig, botanical branch, sunset hills, crescent moon with foliage) as part of the visual identity, not decoration. The current build has no such artwork; see docs 36 §4.
+- **Typography:** the reference shows serif editorial headings. O-7/D-019 still defer the font family to the platform/system baseline, so serif display remains a deferred candidate requiring readability, licensing and bundle-cost review.
+- **Accessibility:** the moon-glow evening/night palettes and warm-on-warm morning surfaces are the highest contrast-risk pairs. Measure every foreground/background pair (text, icons, borders, focus rings, selected states) in all five treatments before proposing tokens; reduced-motion must also govern any gradual daypart transition.
