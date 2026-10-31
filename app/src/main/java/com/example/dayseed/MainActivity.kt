@@ -37,6 +37,8 @@ import com.example.dayseed.ui.screens.HistoryScreen
 import com.example.dayseed.ui.screens.InsightsScreen
 import com.example.dayseed.ui.screens.JournalEditorDialog
 import com.example.dayseed.ui.screens.SettingsScreen
+import androidx.compose.runtime.produceState
+import kotlinx.coroutines.delay
 import com.example.dayseed.ui.screens.TodayScreen
 import com.example.dayseed.ui.theme.DayseedTheme
 import com.example.dayseed.ui.theme.ThemeModeOption
@@ -53,9 +55,15 @@ class MainActivity : ComponentActivity() {
             val themeMode = remember(appSettings) {
                 ThemeModeOption.fromSetting(appSettings["theme_mode"]?.valueText)
             }
+            val liveLocalTime by produceState(initialValue = viewModel.repository.clock.nowLocalTime()) {
+                while (true) {
+                    delay(30_000L)
+                    value = viewModel.repository.clock.nowLocalTime()
+                }
+            }
             DayseedTheme(
                 themeMode = themeMode,
-                localTime = viewModel.repository.clock.nowLocalTime()
+                localTime = liveLocalTime
             ) {
                 DayseedApp(viewModel = viewModel)
             }

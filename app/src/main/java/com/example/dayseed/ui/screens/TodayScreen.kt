@@ -2,6 +2,7 @@ package com.example.dayseed.ui.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -35,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -47,6 +49,7 @@ import com.example.dayseed.DayseedViewModel
 import com.example.dayseed.data.HabitLifecycleState
 import com.example.dayseed.ui.components.ComebackCard
 import com.example.dayseed.ui.components.DaypartArtwork
+import com.example.dayseed.ui.components.DaypartBackgroundLayer
 import com.example.dayseed.ui.components.GrowthMarkBadge
 import com.example.dayseed.ui.components.HabitCard
 import com.example.dayseed.ui.components.ReflectionCard
@@ -55,7 +58,8 @@ import com.example.dayseed.ui.theme.DayseedGreetingStyle
 import com.example.dayseed.ui.theme.SoftBotanicalThemeConfig
 import com.example.dayseed.ui.theme.ThemeModeOption
 import com.example.dayseed.ui.theme.greetingFor
-import com.example.dayseed.ui.theme.resolveDayseedArtwork
+import com.example.dayseed.ui.theme.resolveDayseedArtworkBlend
+import kotlinx.coroutines.delay
 import java.time.format.DateTimeFormatter
 
 @Composable
@@ -107,6 +111,24 @@ fun TodayScreen(
 
     var showMetricInfoDialog by remember { mutableStateOf(false) }
 
+    val themeMode = remember(appSettings) {
+        ThemeModeOption.fromSetting(appSettings["theme_mode"]?.valueText)
+    }
+    val isSystemDark = isSystemInDarkTheme()
+    val nowLocal by produceState(initialValue = viewModel.repository.clock.nowLocalTime(), key1 = today) {
+        value = viewModel.repository.clock.nowLocalTime()
+        while (true) {
+            delay(30_000L)
+            value = viewModel.repository.clock.nowLocalTime()
+        }
+    }
+    val daypart = remember(nowLocal) {
+        SoftBotanicalThemeConfig.resolveDaypart(nowLocal)
+    }
+    val artworkBlend = remember(themeMode, isSystemDark, nowLocal) {
+        resolveDayseedArtworkBlend(themeMode, isSystemDark, nowLocal)
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         floatingActionButton = {
@@ -120,57 +142,61 @@ fun TodayScreen(
             }
         }
     ) { innerPadding ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .testTag("today_screen_list"),
-            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header: date, time-aware greeting, and the daypart artwork (D-210)
-            item {
-                val themeMode = remember(appSettings) {
-                    ThemeModeOption.fromSetting(appSettings["theme_mode"]?.valueText)
-                }
-                val isSystemDark = isSystemInDarkTheme()
-                val nowLocal = remember(today) { viewModel.repository.clock.nowLocalTime() }
-                val daypart = remember(nowLocal) {
-                    SoftBotanicalThemeConfig.resolveDaypart(nowLocal)
-                }
-                val artwork = remember(themeMode, isSystemDark, nowLocal) {
-                    resolveDayseedArtwork(themeMode, isSystemDark, nowLocal)
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(
-                        modifier = Modifier.weight(1f)
+            // Subtle atmospheric background washes & edge foliage matching the reference sheet
+            DaypartBackgroundLayer(
+                artworkBlend = artworkBlend,
+                modifier = Modifier.fillMaxSize()
+            )
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .testTag("today_screen_list"),
+                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Header: date, time-aware greeting, and the painterly daypart picture (D-210)
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = today.format(DateTimeFormatter.ofPattern("EEEE, MMMM d")),
-                            style = DayseedDateStyle,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = greetingFor(daypart),
-                            style = DayseedGreetingStyle,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Your progress is more than your streak.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = today.format(DateTimeFormatter.ofPattern("EEEE, MMMM d")),
+                                style = DayseedDateStyle,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = greetingFor(daypart),
+                                style = DayseedGreetingStyle,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Your progress is more than your streak.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        DaypartArtwork(
+                            artwork = artworkBlend.primaryArtwork,
+                            secondaryArtwork = artworkBlend.secondaryArtwork,
+                            blendFraction = artworkBlend.blendFraction,
+                            modifier = Modifier.size(width = 132.dp, height = 112.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    DaypartArtwork(artwork, modifier = Modifier.size(104.dp))
                 }
-            }
 
             // First-run Onboarding Banner (D-015..D-021)
             if (!onboardingCompleted) {
@@ -394,6 +420,7 @@ fun TodayScreen(
             // Bottom breathing room for FAB
             item {
                 Spacer(modifier = Modifier.height(64.dp))
+            }
             }
         }
     }
