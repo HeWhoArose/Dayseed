@@ -1,7 +1,7 @@
 # Dayseed Planning Readiness Report
 
 **Snapshot date:** 2026-11-01 (status addendum)
-**Status:** Stage A planning complete/approved under D-208. Stage B full initial-v1 implementation is explicitly authorised by owner under D-213 on `main` (`ebeca3ebff1155c220f8e09f1e00e07fdb28209b`; PR #3 closed as superseded); Phase 0 preflight is PARTIAL / SUBSTANTIALLY COMPLETE (`docs/37-PHASE-0-PREFLIGHT-RECONCILIATION.md`, with `D-215`–`D-218` recorded and the `D-040` vs. `D-216` progress-band label mapping open for owner confirmation before Phase 1 progress-band label changes). Stage C independent validation is not authorised until Stage B is complete and committed. Stage D final owner acceptance remains closed pending Stage C evidence.
+**Status:** Stage A planning complete/approved under D-208. Stage B full initial-v1 implementation is explicitly authorised by owner under D-213 on `main` (`ebeca3ebff1155c220f8e09f1e00e07fdb28209b`; PR #3 closed as superseded); Phase 0 preflight is PASSED (`docs/37-PHASE-0-PREFLIGHT-RECONCILIATION.md`); the owner resolved the D-040/D-216 item as Option A, retaining all seven bands and requiring both an encouragement quote and a distinct motivation quote for each detailed band. Stage C independent validation is not authorised until Stage B is complete and committed. Stage D final owner acceptance remains closed pending Stage C evidence.
 **Repository:** `HeWhoArose/Dayseed`
 **Scope:** The original body below is a historical Stage A planning-readiness snapshot. Its dated gate statements are superseded by the 2026-11-01 D-213 addendum at the end of this report. This status update is not independent Stage C validation evidence.
 **Repository:** `HeWhoArose/Dayseed`  
@@ -146,11 +146,11 @@ The owner explicitly authorised the complete initial-v1 Stage B implementation i
 
 During Phase 0 preflight and its reconciliation pass on 2026-11-01 (`docs/37-PHASE-0-PREFLIGHT-RECONCILIATION.md`), the owner confirmed the Section 5 product decisions:
 - **D-215:** 5-tab navigation (`Today`, `Habits`, `Journal`, `Insights`, `Settings`), superseding 4-tab N1.
-- **D-216:** `Quantity`, `Duration`, and `Simple check-off` modes for new habits with lossless preservation of legacy `EFFORT_AWARE` records (while the `D-040` 7-band vs. `D-216` 5-label mapping remains visibly open for owner confirmation before Phase 1 progress-band label changes).
+- **D-216:** `Quantity`, `Duration`, and `Simple check-off` modes for new habits with lossless preservation of legacy `EFFORT_AWARE` records. The owner confirmed Option A: keep all seven D-040 bands and pair every detailed band with both a distinct encouragement quote and a distinct motivation quote.
 - **D-217:** Individual habit streaks, elapsed-span longest-streak display (`days`/`weeks`), neutral explicit zero, and the permanent Grove.
 - **D-218:** One-off `Take a rest day` (`REST_DAY`) exception extending D-193 to hold a streak neutrally for one habit/date without creating activity or reducing a flexible weekly target.
 
-**Current gate status:** Stage A planning is complete/approved (D-208). Stage B full initial-v1 implementation is **AUTHORISED** (D-213) and Phase 0 preflight is **PARTIAL / SUBSTANTIALLY COMPLETE** (`30/30` baseline tests and build verified; `D-040`/`D-216` progress-band label mapping open for owner confirmation before Phase 1 progress-band label changes; all other Phase 1 work ready to begin). Stage C independent technical validation remains **NOT AUTHORISED** and requires separate owner approval after Stage B is complete and committed. Stage D final owner acceptance/release readiness remains **NOT OPEN**.
+**Current gate status:** Stage A planning is complete/approved (D-208). Stage B full initial-v1 implementation is **AUTHORISED** (D-213) and Phase 0 preflight is **PASSED** (`30/30` baseline tests and build verified; the D-040/D-216 mapping is resolved by owner-confirmed Option A). The seven-band progress presentation and paired quote requirement are owner-approved and ready for Phase 1 implementation. Stage C independent technical validation remains **NOT AUTHORISED** and requires separate owner approval after Stage B is complete and committed. Stage D final owner acceptance/release readiness remains **NOT OPEN**.
 
 This addendum supersedes earlier “Stage B not authorised” statements in this historical readiness snapshot. Stage B self-checks do not count as independent Stage C validation. Older progress entries must not be treated as evidence that the newly audited initial-v1 scope is complete.
 
