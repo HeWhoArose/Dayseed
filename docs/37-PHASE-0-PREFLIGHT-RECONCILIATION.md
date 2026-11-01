@@ -178,13 +178,14 @@ The actual committed `DayseedDatabaseHelper.kt` (`DATABASE_NAME = "dayseed.db"`,
      - *Question:* `"Should new habits offer only Quantity, Duration, and Simple check-off while preserving legacy Effort-aware records?"`
      - *Owner Response:* `"Accept Quantity, Duration, and Simple check-off for new habits"`
    - The owner's question and response did **not** propose or approve replacing the seven `D-040` band names (`Tiny`, `Small`, `Halfway`, `Nearly there`, `Goal met`, `Extra`, `Huge`) with five labels (`Minimal`, `Partial`, `Target met`, `Extra`, `Huge`). That five-label parenthetical was introduced by the agent's Phase 0 summary when writing `D-216`, conflating coarse calendar/status summary buckets (`Partial`, `Target met`, `Above target` in `implementation_plan.md` §5.6) with `D-040`'s seven detailed progress bands in `implementation_plan.md` §5.5.
-4. **Why This Must Not Be Silently Invented:**
-   - If the five labels were treated as a replacement, it is undefined which of `Tiny` (`<25%`), `Small` (`25–49%`), `Halfway` (`50–74%`), and `Nearly there` (`75–99%`) map to `Minimal` vs. `Partial`.
-   - Therefore, this discrepancy is kept **visibly OPEN** for explicit owner decision before implementing `ProgressBand` / `ProgressBandClassifier` label changes (`AUD-008`, `AUD-029`) in Phase 1:
-     - **Option A (Recommended — Preserve `D-040` 7 bands for classification & encouragement; use coarse buckets only for calendar cells):** Keep all seven `D-040` progress bands (`Tiny` `<25%`, `Small` `25–49%`, `Halfway` `50–74%`, `Nearly there` `75–99%`, `Goal met` `100%`, `Extra` `>100–150%`, `Huge` `>150%`) for habit progress classification, badges, and encouragement (`implementation_plan.md` §5.5), while using coarse visual groupings (`Partial` = `1–99%`, `Target met` = `100%`, `Above target` = `>100%`) only on compact Calendar/History cells (`implementation_plan.md` §5.6).
-     - **Option B (Two-tier mapping — 7 `D-040` thresholds grouped into 5 summary labels in Insights):** Keep all seven `D-040` bands on habit cards/encouragement, and define an explicit 5-bucket rollup for Insights distributions (`Minimal` = `1–24%` [`Tiny`], `Partial` = `25–99%` [`Small` + `Halfway` + `Nearly there`], `Goal met` = `100%`, `Extra` = `101–150%`, `Huge` = `>150%`).
-     - **Option C (Supersede `D-040` with 5 bands):** Replace the four sub-100% bands in `D-040` with two sub-100% bands (`Minimal` and `Partial`) at an owner-specified percentage cut-off (e.g., `<50%` vs. `50–99%`).
-
+4. **Owner resolution (2026-11-01 — Option A accepted):**
+   - The owner confirmed: preserve all seven D-040 progress bands and their existing percentage thresholds. Do not collapse them into the five labels previously written into D-216.
+   - The canonical labels remain **Tiny**, **Small**, **Halfway**, **Nearly there**, **Goal met**, **Extra**, and **Huge**. The exact D-040 thresholds remain unchanged.
+   - The separate coarse `Partial` / `Target met` / `Above target` groupings in implementation_plan.md §5.6 are restricted to compact Calendar/History cells. They do not replace the seven detailed progress bands in habit progress classification or detailed progress presentation.
+   - Every detailed progress band must be presented with **two distinct copy items together**: an encouragement quote and a motivation quote, both selected to fit the actual-to-target percentage/band. The two roles must remain distinct. Copy must be supportive and nonjudgmental, with no guilt or pressure to beat previous performance; the `Huge` band may be more enthusiastic without creating pressure to keep exceeding past results.
+   - No-record and explicitly saved `0` remain distinct states and are not reclassified as positive D-040 bands.
+   - This resolves the owner-confirmation dependency for progress-band labels and presentation (`AUD-008`, `AUD-029`). Implementation and boundary/copy-selection tests remain Phase 1 work.
+5. **Options not selected:** Options B and C above are retained only as historical alternatives; they are not active requirements or approved mappings.
 ---
 
 ## 7. Reconciled `D-214` Settings Implementation & Commit History (`ebeca3ebff1155c220f8e09f1e00e07fdb28209b`)
@@ -231,14 +232,13 @@ In accordance with `AGENTS.md` Rule 6, the following checks have **NOT** been pe
 
 ## 10. Phase 0 Exit Decision & Phase 1 Readiness Recommendation
 
-- **Phase 0 Exit Decision:** **PARTIAL**
+- **Phase 0 Exit Decision:** **PASSED**
   - **What Passed:** Remote `main` (`ebeca3ebff1155c220f8e09f1e00e07fdb28209b`) and the AI Studio workspace are verified identical; the build configuration (`AGP 9.1.1`, `Kotlin 2.2.10`, `Compose BOM 2024.09.00`, `compileSdk 36`, `targetSdk 36`, `minSdk 26`, `applicationId = "com.aistudio.dayseed.wkqmfl"`), 12-table v2 SQLite schema, fail-closed v1-to-v2 migration, `D-214` commit history, and secret/signing boundaries are accurately documented; and both baseline commands (`gradle :app:testDebugUnitTest --rerun-tasks` → **30/30 PASSED** and `compile_applet` → **PASSED**) were freshly executed and verified.
-  - **Why Partial:** The semantic discrepancy between **`D-040`** (seven progress bands: `Tiny`, `Small`, `Halfway`, `Nearly there`, `Goal met`, `Extra`, `Huge`) and the five band labels parenthetically written into **`D-216`** (`Minimal`, `Partial`, `Target met`, `Extra`, `Huge`) was not settled by the owner's original answer and requires explicit owner confirmation before changing `ProgressBand` / `ProgressBandClassifier` labels.
-- **Phase 1 Readiness Recommendation:**
+  - **Owner resolution:** The owner has now selected Option A (2026-11-01), preserving the seven D-040 bands and requiring a paired encouragement quote plus a separate motivation quote for each detailed band. The former five-label wording is not approved.
+- **Phase 1 Readiness Recommendation (owner decisions reconciled):**
   - **Ready to begin immediately in Phase 1 (unaffected by `D-040`/`D-216` label choice):**
     1. `D-194` effective-dating fix (`AUD-001`) blocking `Apply today` when qualifying activity exists today and enforcing `Apply tomorrow`.
     2. Flexible weekly target (`FLEXIBLE_WEEKLY_TARGET`) persistence, `target_value` preservation for weekly `COMPLETION_ONLY`/`EFFORT_AWARE` habits, and weekly derived day-status fixes (`AUD-002`–`AUD-005`).
     3. Schema `v2` → `v3` migration (`DATABASE_VERSION = 3`) adding `habit_pauses`, `habit_date_exceptions` (`D-218` `REST_DAY`), `habit_streak_runs` (`D-217` individual streaks & Grove), and habit category/color/lifetime-goal columns (`D-216`, `D-217`).
     4. Individual per-habit streak & permanent Grove calculation engine (`D-217`, `AUD-007`), `REST_DAY` streak-holding logic (`D-218`), explicit `0` neutral streak handling (`AUD-015`), and `Long` arithmetic overflow prevention in `ProgressBandClassifier` (`AUD-009`).
-  - **Must wait for owner confirmation of the `D-040` / `D-216` decision item (§6.2):**
-    - Renaming or regrouping the user-visible `ProgressBand` enum labels in `Models.kt` (`AUD-008`) and the progress-band distribution labels in `Insights` (`AUD-029`).
+  - **Progress-band work is now owner-unblocked:** implement the seven canonical D-040 labels and thresholds; keep compact Calendar/History rollups separate; present each detailed band with both its matching encouragement quote and its distinct motivation quote. Add exact-boundary and quote-selection tests (`AUD-008`, `AUD-029`).
