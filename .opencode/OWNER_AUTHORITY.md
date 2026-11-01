@@ -21,13 +21,13 @@ An agent must not:
 
 ## 2. Dayseed's current gate
 
-The Dayseed Stage A planning gate is **APPROVED / OPEN as of 2026-10-30 (D-208)**, based on the owner's explicit written instruction. The approved scope is the documented initial-v1 planning baseline on GitHub `main`, including recorded owner decisions through D-208 and explicit deferrals.
+The Dayseed Stage A planning gate is **APPROVED / OPEN under D-208 (2026-10-30)**. On 2026-11-01 the owner explicitly authorised **Stage B full initial-v1 implementation under D-213**, using the complete root `implementation_plan.md` on `planning/system-wide-audit-implementation-plan-2026-11-01` (Phase 0 plus Phases 1–5).
 
-This does **not** authorise Stage B implementation, Stage C validation, or Stage D release acceptance:
+Current gate status:
 
-- **Stage B — full initial-v1 implementation in Google AI Studio: NOT YET AUTHORISED.** It requires a separate explicit written owner instruction. The implementation preflight must compare the imported workspace with the latest GitHub main and preserve newer remote work.
-- **Stage C — independent technical validation: NOT AUTHORISED.** It follows completed/committed Stage B work and requires its own authorised validation scope. Stage B self-checks do not count as independent Stage C evidence.
-- **Stage D — final owner acceptance/release readiness: NOT OPEN.** It requires the verified release candidate and explicit owner acceptance.
+- **Stage B — full initial-v1 implementation in Google AI Studio: AUTHORISED under D-213.** Start with Phase 0 preflight against latest GitHub main; preserve newer remote work; implement only the authorised v1 scope and follow D-196 and owner-decision boundaries.
+- **Stage C — independent technical validation: NOT AUTHORISED.** It follows completed/committed Stage B work and requires its own explicit owner approval. Stage B self-checks do not count as independent Stage C evidence.
+- **Stage D — final owner acceptance/release readiness: NOT OPEN.** It requires a Stage C-verified release candidate and explicit owner acceptance.
 - Rendered-screen, task-comprehension, accessibility, runtime privacy/data-flow, backup/restore/delete, migration and device checks remain unverified until performed with evidence.
 
 An agent may record/enact an approval only when the owner gives a clear, explicit written instruction. Record the exact approved scope and date in the canonical decision log and approval record. Never infer approval from “continue”, review, silence, documentation completion, or an assistant recommendation.
@@ -74,7 +74,7 @@ Never resolve an owner-authority conflict by choosing the interpretation that pe
 This section supersedes older stage labels and sequencing in this document and historical handover text:
 
 - **Stage A — Planning:** complete and approved/open under D-208.
-- **Stage B — Full initial-v1 implementation:** implementation in Google AI Studio, beginning with a dated implementation preflight against the latest GitHub main. Preserve useful existing code, reconcile gaps, implement approved scope and commit the work. Stage B is **NOT YET AUTHORISED**; it requires a separate explicit written owner instruction.
+- **Stage B — Full initial-v1 implementation:** **AUTHORISED under D-213 (2026-11-01)** for the complete root `implementation_plan.md` scope on `planning/system-wide-audit-implementation-plan-2026-11-01`, including Phase 0 and Phases 1–5. Begin with a dated preflight against latest main, reconcile workspace SHA, preserve useful existing code and commit reviewable phase work. Do not silently approve unresolved material owner decisions.
 - **Stage C — Independent technical validation:** after Stage B is implemented and committed, independently inspect and validate the resulting project from the current GitHub commit; run agreed builds/tests and runtime/device/accessibility/privacy/data-integrity checks, report defects, fix under the authorised workflow, and revalidate. Stage B self-checks are not independent Stage C evidence.
 - **Stage D — Final owner acceptance/release readiness:** present the verified release candidate and evidence to the owner for explicit acceptance. No release claim/action without that acceptance.
 
