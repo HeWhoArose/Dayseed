@@ -1,7 +1,7 @@
 # Progress and Handover
 
-**Last updated:** 2026-10-31
-**Status:** Stage A planning complete and closed; Stage B initial-v1 implementation now in progress. Existing source files/preview are evidence for the Stage B implementation audit, not proof of a verified build or approval to add features (Stage A documentation only).
+**Last updated:** 2026-11-01
+**Status:** Stage A planning complete/approved under D-208. Stage B full initial-v1 implementation explicitly authorised by owner under D-213; Phase 0 preflight is next. Stage C independent validation remains separately unauthorised; Stage D final owner acceptance remains closed. Existing source and historical self-test reports do not prove the complete newly audited v1 scope is implemented.
 
 
 > **Start here for any new AI/session:** [Continuation Handover and Decision Protocol](32-CONTINUATION-HANDOVER.md). It defines source-of-truth order, D-196 decision rules, owner authority, current Stage A approval, corrected Stage B/C/D sequence, GitHub verification discipline and evidence requirements. Root [AGENTS.md](../AGENTS.md) points contributors to the same canonical handover. Do not use historical next-action lists below when they conflict with the current readiness snapshot or handover.
@@ -585,3 +585,12 @@ The owner asked for an audit of the Settings screen ("shows everything bare", as
 - **Verification evidence (executed):** targeted `DayseedSettingsValidationTest` run first **FAILED** 1/7 (NPE — the test asserted "0:5" parses while the strict two-digit-minute contract correctly rejects it; the test was tightened); then `:app:testDebugUnitTest --rerun` **PASSED 26/26** total (`DayseedAcceptanceTest` 12 + `DayseedVisualResolutionTest` 7 + `DayseedSettingsValidationTest` 7), 0 failures/errors/skipped, Gradle 9.3.1, JDK 21.0.13, Windows 11.
 - **Not claimed / open:** rendered-device review, TalkBack traversal and ordering, 200% text scaling, sheet focus behaviour and contrast remain unverified Stage C obligations; the native time-picker was deferred in favour of validated text fields (conservative D-196 default); the full reminders settings surface required by docs/26 remains unimplemented pending a separate owner decision; the drafted delete-all/privacy wording awaits owner copy review. Stage C and Stage D are not claimed.
 
+
+
+## Owner authorisation of complete Stage B initial-v1 implementation — 2026-11-01 (D-213)
+
+The owner explicitly authorised the full initial-v1 Stage B implementation using consolidated root `implementation_plan.md` on `planning/system-wide-audit-implementation-plan-2026-11-01` (Phase 0 plus Phases 1–5). This approval covers application source, approved data/migration work, phase builds/tests and Git commits within v1 scope. It does not approve deferred features or unresolved material semantics that require a separate owner decision.
+
+**Immediate next step:** Phase 0 preflight in Google AI Studio. Compare the imported workspace with current GitHub `main`, record exact SHAs, perform a reproducible baseline build/test assessment, reconcile contradictory historical status notes (including earlier claims of a completed Stage B/C pass) against current source and this plan, and deliver the Phase 0 evidence report. Do not begin feature implementation until Phase 0 exit conditions are satisfied.
+
+**Separate gates:** Stage C independent technical validation remains NOT AUTHORISED. Stage D owner acceptance/release readiness remains NOT OPEN. Stage B self-checks must not be reported as independent Stage C evidence.
