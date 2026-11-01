@@ -45,7 +45,7 @@ The current screen and component structure reviewed includes:
 - `AddEditHabitDialog.kt`, `HistoryScreen.kt`, `JournalEditorDialog.kt`, `InsightsScreen.kt`
 - `SettingsScreen.kt` and the settings panels/support components
 - `MainActivity.kt`, `DayseedViewModel.kt`, `DayseedRepository.kt`
-- `DayseedDatabaseHelper.kt`, `ReminderEngine.kt), the application manifest and Gradle configuration
+- `DayseedDatabaseHelper.kt`, `ReminderEngine.kt`, the application manifest and Gradle configuration
 - Existing unit/acceptance tests.
 
 The findings below describe source-level behaviour at the inspected baseline. The next completion audit must refresh the repository head and verify each item again before implementation decisions are made. A method being present or a repository test passing is not, by itself, evidence that a complete Android user journey works.
