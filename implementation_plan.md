@@ -5,7 +5,7 @@
 **Branch base inspected:** main  
 **Exact source commit inspected:** 334679775643ffb43f384646cf7cced75d401f96  
 **Technology:** Native Android, Kotlin, Jetpack Compose, SQLiteOpenHelper  
-**Status:** Consolidated audit and implementation roadmap. This file is the canonical root implementation plan.  
+**Status:** Consolidated audit and implementation roadmap; full Stage B initial-v1 implementation explicitly authorised by owner under D-213 on 2026-11-01. Phase 0 preflight is next; Stage C/D remain separately gated.  
 **Scope of this document update:** Read-only source/document audit and plan authoring only. No application code, database schema, migration, build, test, APK or device change was performed by preparing this document.
 
 > This plan replaces the older root implementation plan. AI Studio agents must use this file as the implementation-plan entry point and must not treat historical AI Studio brain artifacts or older planning branches as the fresher source of truth. The owner decision log, product specification, privacy/architecture contracts and owner-authority rules remain higher authority where this plan identifies an unresolved decision.
@@ -802,6 +802,6 @@ The current repository authority chain says:
 - AGENTS.md, .opencode/OWNER_AUTHORITY.md and docs/19-AI-STUDIO-GITHUB-WORKFLOW.md retain the rule that broad Stage B implementation needs explicit owner authorisation.
 - docs/35 has a conflicting top summary saying Stage B is authorised while its later gate sections say otherwise. The canonical decision log and owner-authority documents take precedence over that inconsistent top summary.
 
-The current owner request authorises this consolidated audit/plan to be created in Git. Before Argon edits application source, record explicit Stage B approval with the intended initial-v1 scope and this plan's SHA in the canonical approval/decision record. This is separate from Stage C independent validation and Stage D release acceptance.
+The owner explicitly authorised the complete Stage B initial-v1 scope on 2026-11-01 under D-213, tied to this plan on `planning/system-wide-audit-implementation-plan-2026-11-01`. Record D-213 in the canonical decision/authority documents before feature work. Stage B includes Phase 0 and Phases 1–5. Stage C independent validation remains NOT AUTHORISED until separate written owner approval after Stage B is committed; Stage D release acceptance remains NOT OPEN until the owner accepts the Stage C-verified candidate.
 
 **Recommended next action:** after Stage B is explicitly opened, start Phase 0 preflight; then implement Phases 1–5 as the large workstreams above, preserving existing working code and committing each phase to a reviewable Git branch. Do not merge stale PR #1 or begin from an outdated AI Studio import.
