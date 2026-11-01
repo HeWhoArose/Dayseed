@@ -5,7 +5,7 @@
 **Repository:** `https://github.com/HeWhoArose/Dayseed`  
 **Canonical Branch:** `main`  
 **Inspected Remote `main` Commit SHA:** `ebeca3ebff1155c220f8e09f1e00e07fdb28209b` (`docs: authorize stage b implementation`, committed `2026-11-01T20:43:01+01:00`)  
-**Phase 0 Exit Status:** **PARTIAL (Technical Baseline PASSED; One Material Product Discrepancy Between `D-040` and `D-216` Open for Owner Confirmation)**
+**Phase 0 Exit Status:** **PASSED (Technical Baseline PASSED; Owner Decision D-040/D-216 Resolved by Option A on 2026-11-01)**
 
 ---
 
@@ -147,7 +147,7 @@ The actual committed `DayseedDatabaseHelper.kt` (`DATABASE_NAME = "dayseed.db"`,
 
 ---
 
-## 6. Reconciled Status of `D-213` Through `D-218` & the Open `D-040` / `D-216` Discrepancy
+## 6. Reconciled Status of `D-213` Through `D-218` & Owner-Confirmed `D-040` / `D-216` Progress Rule
 
 ### 6.1 Summary of `D-213` Through `D-218` (Decision IDs Preserved Unchanged)
 
@@ -156,7 +156,7 @@ The actual committed `DayseedDatabaseHelper.kt` (`DATABASE_NAME = "dayseed.db"`,
 | **`D-213`** | Full Stage B initial-v1 implementation authorisation (`2026-11-01`) | **Approved & Closed.** Authorises Stage B across Phase 0 and Phases 1–5 of root `implementation_plan.md` on the native Android stack (`Kotlin`, `Jetpack Compose`, `SQLiteOpenHelper`). Stage C independent validation and Stage D final owner acceptance remain separately gated. |
 | **`D-214`** | Four-section Settings arrangement refinement (`2026-10-31`) | **Approved & Implemented (`ebeca3ebff1155c220f8e09f1e00e07fdb28209b`).** Separately authorised 2026-10-31 Settings refinement (`SettingsScreen.kt`, `SettingsPanels.kt`, `SettingsSupport.kt`, `SettingsGroup.kt`, `DayseedSettingsValidationTest.kt`); Stage C/D validation remains open. |
 | **`D-215`** | Primary navigation reconciliation: 5-tab navigation (`Today`, `Habits`, `Journal`, `Insights`, `Settings`) | **Approved & Closed (`2026-11-01`).** Supersedes 4-tab `N1` (`D-042` / `O-2`); moves historical habit calendar into `Insights` and makes `Day Detail` and `Habit Detail` secondary routes. |
-| **`D-216`** | New-habit measurement modes (`Quantity`, `Duration`, `Simple check-off`) & legacy `EFFORT_AWARE` preservation | **Approved for measurement modes & legacy preservation; PARTIAL / OPEN on `D-040` progress-band label mapping (see §6.2 below).** |
+| **`D-216`** | New-habit measurement modes (`Quantity`, `Duration`, `Simple check-off`) & legacy `EFFORT_AWARE` preservation | **Approved & Closed (`2026-11-01`; Option A).** Preserve all seven D-040 bands and thresholds; each detailed band is paired with an encouragement quote and a distinct motivation quote. |
 | **`D-217`** | Individual habit streaks, elapsed-span longest-streak display (`days`/`weeks`), neutral explicit `0`, and permanent Grove | **Approved & Closed (`2026-11-01`).** |
 | **`D-218`** | One-off `Take a rest day` (`REST_DAY`) date exception holding streaks neutrally | **Approved & Closed (`2026-11-01`).** Extends `D-193`. |
 
@@ -236,7 +236,7 @@ In accordance with `AGENTS.md` Rule 6, the following checks have **NOT** been pe
   - **What Passed:** Remote `main` (`ebeca3ebff1155c220f8e09f1e00e07fdb28209b`) and the AI Studio workspace are verified identical; the build configuration (`AGP 9.1.1`, `Kotlin 2.2.10`, `Compose BOM 2024.09.00`, `compileSdk 36`, `targetSdk 36`, `minSdk 26`, `applicationId = "com.aistudio.dayseed.wkqmfl"`), 12-table v2 SQLite schema, fail-closed v1-to-v2 migration, `D-214` commit history, and secret/signing boundaries are accurately documented; and both baseline commands (`gradle :app:testDebugUnitTest --rerun-tasks` → **30/30 PASSED** and `compile_applet` → **PASSED**) were freshly executed and verified.
   - **Owner resolution:** The owner has now selected Option A (2026-11-01), preserving the seven D-040 bands and requiring a paired encouragement quote plus a separate motivation quote for each detailed band. The former five-label wording is not approved.
 - **Phase 1 Readiness Recommendation (owner decisions reconciled):**
-  - **Ready to begin immediately in Phase 1 (unaffected by `D-040`/`D-216` label choice):**
+  - **Ready to begin Phase 1 under the reconciled owner decisions:**
     1. `D-194` effective-dating fix (`AUD-001`) blocking `Apply today` when qualifying activity exists today and enforcing `Apply tomorrow`.
     2. Flexible weekly target (`FLEXIBLE_WEEKLY_TARGET`) persistence, `target_value` preservation for weekly `COMPLETION_ONLY`/`EFFORT_AWARE` habits, and weekly derived day-status fixes (`AUD-002`–`AUD-005`).
     3. Schema `v2` → `v3` migration (`DATABASE_VERSION = 3`) adding `habit_pauses`, `habit_date_exceptions` (`D-218` `REST_DAY`), `habit_streak_runs` (`D-217` individual streaks & Grove), and habit category/color/lifetime-goal columns (`D-216`, `D-217`).
