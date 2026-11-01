@@ -1,7 +1,7 @@
 # Progress and Handover
 
 **Last updated:** 2026-11-01
-**Status:** Stage A planning complete and closed (`D-208`). Full Stage B initial-v1 implementation is **AUTHORISED** (`D-213`, 2026-11-01) across Phase 0 and Phases 1–5 of root `implementation_plan.md`. Phase 0 (Implementation Preflight, Repository Reconciliation and Baseline Verification) is complete and all four Section 5 product decisions are recorded (`D-215`–`D-218`). Stage C independent technical validation is **NOT YET AUTHORISED**; Stage D final owner acceptance is **NOT OPEN**.
+**Status:** Stage A planning complete and closed (`D-208`). Full Stage B initial-v1 implementation is **AUTHORISED** (`D-213`, 2026-11-01) across Phase 0 and Phases 1–5 of root `implementation_plan.md` on `main` (`ebeca3ebff1155c220f8e09f1e00e07fdb28209b`; PR #3 closed as superseded). **Phase 0 preflight is PARTIAL / SUBSTANTIALLY COMPLETE** (technical baseline `30/30` tests + build verified, build/schema/signing inventories corrected in `docs/37-PHASE-0-PREFLIGHT-RECONCILIATION.md`, and `D-213`–`D-218` recorded; the `D-040` 7-band vs. `D-216` 5-label mapping remains open for owner confirmation before Phase 1 progress-band label changes). Stage C independent technical validation is **NOT YET AUTHORISED**; Stage D final owner acceptance is **NOT OPEN**.
 
 
 > **Start here for any new AI/session:** [Continuation Handover and Decision Protocol](32-CONTINUATION-HANDOVER.md). It defines source-of-truth order, D-196 decision rules, owner authority, current Stage A approval, corrected Stage B/C/D sequence, GitHub verification discipline and evidence requirements. Root [AGENTS.md](../AGENTS.md) points contributors to the same canonical handover. Do not use historical next-action lists below when they conflict with the current readiness snapshot or handover.
@@ -619,7 +619,22 @@ Following the owner's second Settings audit request ("Audit the settings and cre
 - **Phase 0 baseline verification evidence (executed 2026-11-01, Stage B self-check):**
   - `compile_applet`: **PASSED**.
   - `gradle :app:testDebugUnitTest --rerun-tasks`: **PASSED 30/30** tests (`DayseedAcceptanceTest` 12 [XML `2026-11-01T19:26:16.603Z`] + `DayseedVisualResolutionTest` 8 [XML `2026-11-01T19:27:30.634Z`] + `DayseedSettingsValidationTest` 10 [XML `2026-11-01T19:27:30.616Z`]), 0 failures/errors/skipped, `BUILD SUCCESSFUL in 2m 19s`, Gradle `9.3.1`, Temurin JDK `21.0.13+9-LTS`, Linux `6.9.12 amd64`.
-- **Stage gates:** Stage B is **AUTHORISED** (`D-213`); Phase 1 is ready to start. Stage C (independent technical validation) remains **NOT AUTHORISED** and Stage D (final owner acceptance) remains **NOT OPEN**.
+- **Stage gates:** Stage B is **AUTHORISED** (`D-213`); Stage C (independent technical validation) remains **NOT AUTHORISED** and Stage D (final owner acceptance) remains **NOT OPEN**.
+
+## Phase 0 Reconciliation & Verified Exit Report against `main` `ebeca3eb` — 2026-11-01 (`docs/37-PHASE-0-PREFLIGHT-RECONCILIATION.md`)
+
+Following the owner's commit of the workspace changes to GitHub `main` at **`ebeca3ebff1155c220f8e09f1e00e07fdb28209b`** (`docs: authorize stage b implementation`) and closure of PR #3 (`planning/system-wide-audit-implementation-plan-2026-11-01`) as superseded, a full reconciliation pass was executed and recorded in **[docs/37-PHASE-0-PREFLIGHT-RECONCILIATION.md](37-PHASE-0-PREFLIGHT-RECONCILIATION.md)**:
+
+- **Workspace vs. Remote `main` (`ebeca3ebff1155c220f8e09f1e00e07fdb28209b`):** Verified 0 file differences between `/app/applet` and `origin/main` at `2026-11-01T19:56:47Z` (while noting `/app/applet` has no local `.git` metadata directory).
+- **Corrected Build & Schema Inventories:**
+  - Corrected declared build configuration from `gradle/libs.versions.toml` and `app/build.gradle.kts`: `AGP = 9.1.1`, `Kotlin = 2.2.10`, `Compose BOM = 2024.09.00`, `Robolectric = 4.14.1`, `compileSdk = 36`, `targetSdk = 36`, `minSdk = 26`, `namespace = "com.example.dayseed"`, `applicationId = "com.aistudio.dayseed.wkqmfl"`, `Java = 21` (distinguished from container-installed `Gradle 9.3.1` and `Temurin JDK 21.0.13+9-LTS`; no checked-in Gradle wrapper in GitHub).
+  - Corrected the 12-table v2 schema inventory in `DayseedDatabaseHelper.kt` (`habits`, `habit_versions`, `habit_entries`, `habit_day_outcomes`, `habit_date_notes`, `journal_entries`, `journal_drafts`, `app_settings`, `reminder_deliveries`, `restore_sessions`, `restore_conflicts`, `notification_cancel_outbox`), removing erroneous references to draft names (`app_metadata`, `user_settings`, `habit_pauses`, `journal_entry_habits`).
+- **`D-214` Commit-History Qualification:** Qualified commit `ebeca3ebff1155c220f8e09f1e00e07fdb28209b` as containing both the 5 previously authorised `D-214` Settings code/test files (authored `2026-10-31`) and the 14 Phase 0 documentation/planning files (`2026-11-01`).
+- **Freshly Executed Baseline Verification (`2026-11-01T19:57:26Z` – `2026-11-01T19:57:50Z`):**
+  - `gradle :app:testDebugUnitTest --rerun-tasks`: **PASSED 30/30** (`DayseedAcceptanceTest` 12 [XML `2026-11-01T19:57:44.002Z`] + `DayseedSettingsValidationTest` 10 [XML `2026-11-01T19:57:50.753Z`] + `DayseedVisualResolutionTest` 8 [XML `2026-11-01T19:57:50.776Z`]), 0 failures/errors/skipped (`BUILD SUCCESSFUL in 24s`).
+  - `compile_applet`: **PASSED**.
+- **Remaining Open Owner Decision (`D-040` vs. `D-216` Progress-Band Labels):** Phase 0 exit status is recorded as **`PARTIAL`** solely because `D-040` defines 7 positive progress bands (`Tiny`, `Small`, `Halfway`, `Nearly there`, `Goal met`, `Extra`, `Huge`) whereas the initial `D-216` summary parenthetically listed 5 labels (`Minimal`, `Partial`, `Target met`, `Extra`, `Huge`). All Phase 1 data-integrity, effective-dating (`D-194`), flexible weekly target, `REST_DAY` (`D-218`), individual streak/Grove (`D-217`), neutral zero, and schema v2-to-v3 migration work is ready to start immediately; changing user-visible `ProgressBand` enum labels (`AUD-008`, `AUD-029`) awaits the owner's confirmation on the `D-040` / `D-216` item.
+
 
 
 

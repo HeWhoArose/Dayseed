@@ -1,6 +1,6 @@
 # AI Studio–GitHub Workflow and Project Gate
 
-**Status (2026-11-01):** Stage A planning complete/approved under D-208. Stage B full initial-v1 implementation explicitly authorised by owner under D-213 using root `implementation_plan.md` (Phase 0 plus Phases 1–5; Section 5 decisions confirmed under D-215–D-218). Stage C independent validation and Stage D final owner acceptance remain separately gated.  
+**Status (2026-11-01):** Stage A planning complete/approved under D-208. Stage B full initial-v1 implementation explicitly authorised by owner under D-213 using root `implementation_plan.md` on `main` (`ebeca3ebff1155c220f8e09f1e00e07fdb28209b`; PR #3 closed as superseded). Phase 0 preflight is PARTIAL / SUBSTANTIALLY COMPLETE (`docs/37-PHASE-0-PREFLIGHT-RECONCILIATION.md`, with `D-215`–`D-218` recorded and the `D-040` vs. `D-216` progress-band label mapping open for owner confirmation). Stage C independent validation and Stage D final owner acceptance remain separately gated.  
 **Repository:** https://github.com/HeWhoArose/Dayseed  
 **Source of truth:** GitHub repository, default branch `main`.
 
@@ -24,7 +24,7 @@ Required before coding:
 
 ### Stage B — Full initial-v1 implementation in Google AI Studio
 
-D-009 is resolved: continue the existing native Kotlin + Jetpack Compose Android project. Do not scaffold a second app or rewrite to React Native/Expo. **The owner authorised full Stage B initial-v1 implementation on 2026-11-01 under D-213.** Use root `implementation_plan.md` on `planning/system-wide-audit-implementation-plan-2026-11-01` as the consolidated plan (Phase 0 plus Phases 1–5). Start with a dated preflight against latest GitHub main; compare the imported AI Studio workspace/base SHA with remote SHA, preserve existing work and reconcile newer remote changes. Implement only the recorded v1 scope. Material unresolved owner-reserved decisions in the plan must be reconciled before affected code is written (Section 5 owner decisions are recorded as D-215–D-218). Stage C independent validation remains unauthorised; Stage D remains closed pending explicit owner acceptance.
+D-009 is resolved: continue the existing native Kotlin + Jetpack Compose Android project. Do not scaffold a second app or rewrite to React Native/Expo. **The owner authorised full Stage B initial-v1 implementation on 2026-11-01 under D-213.** Use root `implementation_plan.md` on `main` (`ebeca3ebff1155c220f8e09f1e00e07fdb28209b`; PR #3 `planning/system-wide-audit-implementation-plan-2026-11-01` was closed as superseded) as the consolidated plan (Phase 0 plus Phases 1–5). Start with a dated preflight against latest GitHub main; compare the imported AI Studio workspace/base SHA with remote SHA, preserve existing work and reconcile newer remote changes. Implement only the recorded v1 scope. Material unresolved owner-reserved decisions in the plan must be reconciled before affected code is written (Section 5 owner decisions are recorded as D-215–D-218; the `D-040` 7-band vs. `D-216` 5-label mapping remains open for owner confirmation in `docs/37-PHASE-0-PREFLIGHT-RECONCILIATION.md`). Stage C independent validation remains unauthorised; Stage D remains closed pending explicit owner acceptance.
 
 Acceptance:
 1. Confirm the project type, platform build path, and installable Android artifact for the owner-approved stack; do not substitute a website or preview for the Android app.
@@ -101,8 +101,8 @@ For every issue: reproduce → identify root cause → implement the smallest sa
 - Approved scope/version: **Dayseed initial-v1 planning baseline on GitHub `main` (D-208) and full Stage B initial-v1 implementation roadmap in root `implementation_plan.md` (D-213, D-215–D-218).**
 - Stack decision D-009: **Approved — continue the existing native Kotlin + Jetpack Compose Android project** (2026-10-26).
 - UX/design decision D-008: **Approved synthesis direction under D-205; Soft Botanical direction under D-207; daypart theme/artwork under D-210/D-211; 5-tab navigation under D-215.**
-- Accepted blockers/deferred questions: **Exact design tokens/fonts deferred (D-207); ads deferred to pre-launch review (D-200); Stage C and Stage D remain separately gated.**
-- Reviewer notes: **Phase 0 preflight completed 2026-11-01.**
+- Accepted blockers/deferred questions: **Exact design tokens/fonts deferred (D-207); ads deferred to pre-launch review (D-200); `D-040` vs. `D-216` progress-band label mapping open for owner confirmation before Phase 1 progress-band label changes (`docs/37-PHASE-0-PREFLIGHT-RECONCILIATION.md`); Stage C and Stage D remain separately gated.**
+- Reviewer notes: **Phase 0 preflight reconciled against `main` `ebeca3ebff1155c220f8e09f1e00e07fdb28209b` on 2026-11-01 (`docs/37-PHASE-0-PREFLIGHT-RECONCILIATION.md`).**
 
 An agent may record/enact an approval only when the owner gives a clear, explicit written instruction; never infer it from “continue”, review, silence, documentation completion or an assistant recommendation. Stage B implementation is authorised under D-213. Stage C is independent technical validation after committed Stage B implementation. Stage D requires explicit owner acceptance of the verified release candidate.
 
