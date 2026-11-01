@@ -1,6 +1,6 @@
 # AI Studio–GitHub Workflow and Project Gate
 
-**Status:** Stage A planning complete; planning gate APPROVED / OPEN (owner instruction, 2026-10-30, D-208). Stage B implementation, Stage C independent validation, and Stage D final acceptance remain separately gated.  
+**Status (2026-11-01):** Stage A planning complete/approved under D-208. Stage B full initial-v1 implementation explicitly authorised by owner under D-213 using root `implementation_plan.md` (Phase 0 plus Phases 1–5; Section 5 decisions confirmed under D-215–D-218). Stage C independent validation and Stage D final owner acceptance remain separately gated.  
 **Repository:** https://github.com/HeWhoArose/Dayseed  
 **Source of truth:** GitHub repository, default branch `main`.
 
@@ -24,7 +24,7 @@ Required before coding:
 
 ### Stage B — Full initial-v1 implementation in Google AI Studio
 
-D-009 is resolved: continue the existing native Kotlin + Jetpack Compose Android project. Do not scaffold a second app or rewrite to React Native/Expo. Stage B starts with a dated implementation preflight against the latest GitHub main; compare the imported AI Studio workspace/base SHA with the remote SHA, preserve useful existing work, reconcile newer remote changes, and then implement the approved initial-v1 scope in the sequenced phases of implementation_plan.md. Stage B is NOT YET AUTHORISED; it requires a separate explicit written owner instruction. D-208 approved Stage A planning only.
+D-009 is resolved: continue the existing native Kotlin + Jetpack Compose Android project. Do not scaffold a second app or rewrite to React Native/Expo. **The owner authorised full Stage B initial-v1 implementation on 2026-11-01 under D-213.** Use root `implementation_plan.md` on `planning/system-wide-audit-implementation-plan-2026-11-01` as the consolidated plan (Phase 0 plus Phases 1–5). Start with a dated preflight against latest GitHub main; compare the imported AI Studio workspace/base SHA with remote SHA, preserve existing work and reconcile newer remote changes. Implement only the recorded v1 scope. Material unresolved owner-reserved decisions in the plan must be reconciled before affected code is written (Section 5 owner decisions are recorded as D-215–D-218). Stage C independent validation remains unauthorised; Stage D remains closed pending explicit owner acceptance.
 
 Acceptance:
 1. Confirm the project type, platform build path, and installable Android artifact for the owner-approved stack; do not substitute a website or preview for the Android app.
@@ -94,16 +94,17 @@ For every issue: reproduce → identify root cause → implement the smallest sa
 ## 6. Approval record
 
 - Planning gate decision: **APPROVED / OPEN — 2026-10-30 (D-208), owner explicit written instruction.**
-- Owner planning responses O-1–O-11 recorded: **2026-10-28**; subsequent decisions D-204–D-208 are in the canonical decision log.
-- D-200 defers ads for initial v1 and retains `docs/33-MONETISATION-AND-ADS-EVALUATION.md` as pre-launch material. D-201's duration-unit, formatting, aggregation, and period-control defaults are recorded in the decision log, screen/data contracts, and traceability matrix; they are not pending planning choices. The bounded semantic/traceability closeout is recorded in docs 27/28/32/35. The remaining owner planning choices and explicit deferrals are listed in docs 27/31/35. Rendered interaction/accessibility and runtime validation are reserved for separately authorised later stages. No implementation or technical validation is authorised.
-- Owner approval date: **2026-10-30**
-- Approved scope/version: **Dayseed initial-v1 planning baseline on GitHub `main`, including owner decisions and documented acceptance criteria/deferrals through D-208.**
-- Stack decision D-009: **Approved — continue the existing native Kotlin + Jetpack Compose Android project** (2026-10-26). This is not planning-gate approval or authorisation to implement features.
-- UX/design decision D-008:
-- Accepted blockers/deferred questions:
-- Reviewer notes:
+- Stage B implementation gate decision: **AUTHORISED — 2026-11-01 (D-213), owner explicit written instruction** for root `implementation_plan.md` (Phase 0 plus Phases 1–5); Section 5 product decisions confirmed under **D-215–D-218**.
+- Owner planning responses O-1–O-11 recorded: **2026-10-28**; subsequent decisions D-204–D-218 are in the canonical decision log.
+- D-200 defers ads for initial v1 and retains `docs/33-MONETISATION-AND-ADS-EVALUATION.md` as pre-launch material. D-201's duration-unit, formatting, aggregation, and period-control defaults are recorded in the decision log, screen/data contracts, and traceability matrix; they are not pending planning choices. The bounded semantic/traceability closeout is recorded in docs 27/28/32/35. Rendered interaction/accessibility and runtime validation are reserved for separately authorised later stages. Stage C independent technical validation and Stage D final acceptance remain separately gated.
+- Owner approval date: **2026-10-30 (Stage A, D-208); 2026-11-01 (Stage B, D-213)**
+- Approved scope/version: **Dayseed initial-v1 planning baseline on GitHub `main` (D-208) and full Stage B initial-v1 implementation roadmap in root `implementation_plan.md` (D-213, D-215–D-218).**
+- Stack decision D-009: **Approved — continue the existing native Kotlin + Jetpack Compose Android project** (2026-10-26).
+- UX/design decision D-008: **Approved synthesis direction under D-205; Soft Botanical direction under D-207; daypart theme/artwork under D-210/D-211; 5-tab navigation under D-215.**
+- Accepted blockers/deferred questions: **Exact design tokens/fonts deferred (D-207); ads deferred to pre-launch review (D-200); Stage C and Stage D remain separately gated.**
+- Reviewer notes: **Phase 0 preflight completed 2026-11-01.**
 
-An agent may record/enact an approval only when the owner gives a clear, explicit written instruction; never infer it from “continue”, review, silence, documentation completion or an assistant recommendation. Stage B implementation remains unauthorised until separately approved. Stage C is independent technical validation after committed Stage B implementation. Stage D requires explicit owner acceptance of the verified release candidate.
+An agent may record/enact an approval only when the owner gives a clear, explicit written instruction; never infer it from “continue”, review, silence, documentation completion or an assistant recommendation. Stage B implementation is authorised under D-213. Stage C is independent technical validation after committed Stage B implementation. Stage D requires explicit owner acceptance of the verified release candidate.
 
 
 ## Current environment note (2026-10-18)
@@ -111,12 +112,12 @@ An agent may record/enact an approval only when the owner gives a clear, explici
 AI Studio is the active development environment. Remove and avoid reintroducing instructions, quota-recovery procedures, filenames, or assumptions from previous coding environments in current project documentation. GitHub remains the canonical shared source of truth. This note updates environment guidance only; it does not by itself change implementation authorization or product decisions.
 
 
-## Current stage sequence — authoritative correction (2026-10-30)
+## Current stage sequence — authoritative correction (2026-11-01; D-213)
 
 This section supersedes older stage labels and sequencing in this document and historical handover text:
 
 - **Stage A — Planning:** complete and approved/open under D-208.
-- **Stage B — Full initial-v1 implementation:** implementation in Google AI Studio, beginning with a dated implementation preflight against the latest GitHub main. Preserve useful existing code, reconcile gaps, implement approved scope and commit the work. Stage B is **NOT YET AUTHORISED**; it requires a separate explicit written owner instruction.
+- **Stage B — Full initial-v1 implementation:** **AUTHORISED under D-213 (2026-11-01)** for the full root `implementation_plan.md` scope (Phase 0 plus Phases 1–5; Section 5 decisions confirmed under D-215–D-218). Begin with a dated preflight against latest main; preserve useful code, reconcile workspace changes, implement v1 scope and commit reviewable phase work.
 - **Stage C — Independent technical validation:** after Stage B is implemented and committed, independently inspect and validate the resulting project from the current GitHub commit; run agreed builds/tests and runtime/device/accessibility/privacy/data-integrity checks, report defects, fix under the authorised workflow, and revalidate. Stage B self-checks are not independent Stage C evidence.
 - **Stage D — Final owner acceptance/release readiness:** present the verified release candidate and evidence to the owner for explicit acceptance. No release claim/action without that acceptance.
 

@@ -139,3 +139,18 @@ Following explicit owner authorisation in Google AI Studio to execute the Correc
 - Real OS `BackupManager` / device-to-device cable/cloud transfer execution (`AC-015`) remains **`NOT RUN`** at the OS level (manifest and XML exclusion rules are configured and statically verified in `AndroidManifest.xml`, `backup_rules.xml`, and `data_extraction_rules.xml`).
 - Real OS `AlarmManager` / `WorkManager` background wakeups across physical device reboot (`AC-011`, `AC-012`) remain **`NOT RUN`** on physical hardware.
 
+### Phase 0 Preflight & D-211–D-218 Traceability Update (2026-11-01)
+
+- **Added Stage B Self-Check Suites (`D-211`, `D-212`, `D-214`, Phase 0 Preflight):**
+  - `DayseedAcceptanceTest` (12 Robolectric/SQLite acceptance tests) — **PASSED** (`12/12`, `74.007s`, XML timestamp `2026-11-01T19:26:16.603Z`).
+  - `DayseedVisualResolutionTest` (8 unit tests covering `D-210` / `D-211` daypart visual resolution, clock boundaries `05/11/17/21`, fixed theme overrides, and greeting selection) — **PASSED** (`8/8`, `0.031s`, XML timestamp `2026-11-01T19:27:30.634Z`).
+  - `DayseedSettingsValidationTest` (10 unit tests covering `D-212` / `D-214` strict `HH:mm` quiet-hours validation, `±30m` midnight-wrapping steppers, on-device data summary formatting, backup password confirmation checks, and pre-restore payload inspection) — **PASSED** (`10/10`, `0.015s`, XML timestamp `2026-11-01T19:27:30.616Z`).
+  - Combined Phase 0 baseline suite (`gradle :app:testDebugUnitTest --rerun-tasks`): **30/30 PASSED** (`DayseedAcceptanceTest` 12 + `DayseedVisualResolutionTest` 8 + `DayseedSettingsValidationTest` 10), 0 failures, 0 errors, 0 skipped (`BUILD SUCCESSFUL in 2m 19s`). These remain **Stage B implementation self-checks**, not independent Stage C validation.
+- **Traceability Alignment for Owner-Approved Phase 0 Decisions (`D-215`–`D-218`):**
+  - `D-215` (`§5.1`): Updates navigation traceability (`AC-007`, `AC-013`, `AC-018`) to the approved 5-tab bar (`Today`, `Habits`, `Journal`, `Insights`, `Settings`) with historical habit calendar in `Insights` and `Day Detail` / `Habit Detail` as secondary routes.
+  - `D-216` (`§5.2`): Aligns `AC-002`, `AC-005` with new-habit modes (`Quantity`, `Duration`, `Simple check-off`), `Extra` (`>100%..150%`) and `Huge` (`>150%`) progress bands, and lossless legacy `EFFORT_AWARE` support.
+  - `D-217` (`§5.3`): Aligns `AC-003`, `AC-004` with per-habit streaks, elapsed active-run span display (`days`/`weeks`), neutral explicit `0`, and permanent Grove lifecycle (`MISSED`, `PAUSED`, `ARCHIVED`, `COMPLETED`).
+  - `D-218` (`§5.4`): Extends `AC-004`, `AC-005` (`D-193`) with single-date `Take a rest day` (`REST_DAY`) exceptions holding streaks neutrally without inflating check-ins or reducing weekly targets.
+
+
+

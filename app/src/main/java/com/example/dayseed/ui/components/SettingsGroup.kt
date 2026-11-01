@@ -1,5 +1,7 @@
 package com.example.dayseed.ui.components
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +12,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.HorizontalDivider
@@ -20,49 +24,67 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 /**
- * Shared Settings building blocks (restructure, 2026-10-31). One card shape and one list-row
- * shape for the whole hub, so spacing, border radius and divider treatment stay consistent and
- * keep tracking DESIGN.md tokens instead of being hand-copied per card.
+ * Shared Soft Botanical Settings building blocks (D-212 / D-213).
  *
- * Rows follow the Material settings pattern: label + current-state summary + chevron, one
- * TalkBack stop per row ("Appearance, Evening · label, button"). The chevron is decoration
- * and is removed from semantics so it is never announced separately.
+ * Uses a subtle 1.dp botanical border (`outline`) and soft tonal container (`surface`)
+ * matching the Field Journal / Sage Modern / Earth & Clay / Night Garden card treatment.
  */
 @Composable
 fun SettingsGroupCard(
+    modifier: Modifier = Modifier,
+    borderColor: Color = MaterialTheme.colorScheme.outline.copy(alpha = 0.55f),
+    containerColor: Color = MaterialTheme.colorScheme.surface,
     content: @Composable () -> Unit
 ) {
     Surface(
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(16.dp),
+        color = containerColor,
         contentColor = MaterialTheme.colorScheme.onSurface,
+        border = BorderStroke(1.dp, borderColor),
         tonalElevation = 1.dp,
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(vertical = 2.dp)) { content() }
+        Column(modifier = Modifier.padding(vertical = 4.dp)) {
+            content()
+        }
     }
 }
 
-/** Small section header above a group of rows (the only label allowed above content here). */
+/** Editorial section header above each of the four Settings hub groups. */
 @Composable
-fun SettingsSectionLabel(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 8.dp, top = 8.dp)
-    )
+fun SettingsSectionLabel(
+    text: String,
+    supporting: String? = null
+) {
+    Column(modifier = Modifier.padding(start = 4.dp, top = 10.dp, bottom = 2.dp)) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        if (supporting != null) {
+            Text(
+                text = supporting,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
 }
 
 /**
- * One tappable settings row: icon (optional), label, current-state summary, chevron trailing.
- * The whole row is the button; minimum height 56dp for comfortable touch targets.
+ * One tappable settings row: soft circular icon badge, label, current-state summary,
+ * optional trailing pill or custom control, and decorative chevron.
  */
 @Composable
 fun SettingsRow(
@@ -71,52 +93,75 @@ fun SettingsRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
+    badgeText: String? = null,
+    showChevron: Boolean = true,
     testTag: String
 ) {
-    val summaryText = summary
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 56.dp)
+            .heightIn(min = 60.dp)
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
             .testTag(testTag),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (icon != null) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                // The icon is decorative: the row already has a text name for TalkBack.
-                tint = MaterialTheme.colorScheme.primary,
+            Box(
                 modifier = Modifier
-                    .size(24.dp)
-                    .clearAndSetSemantics {}
-            )
-            Spacer(modifier = Modifier.width(16.dp))
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.75f))
+                    .clearAndSetSemantics {},
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(14.dp))
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            if (summaryText != null) {
+            if (summary != null) {
                 Text(
-                    text = summaryText,
+                    text = summary,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
-        Spacer(modifier = Modifier.width(8.dp))
-        // Decoration only: never a separate TalkBack stop.
-        Box(modifier = Modifier.clearAndSetSemantics {}) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        if (badgeText != null) {
+            Spacer(modifier = Modifier.width(8.dp))
+            Surface(
+                shape = RoundedCornerShape(999.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            ) {
+                Text(
+                    text = badgeText,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                )
+            }
+        }
+        if (showChevron) {
+            Spacer(modifier = Modifier.width(8.dp))
+            Box(modifier = Modifier.clearAndSetSemantics {}) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -125,7 +170,7 @@ fun SettingsRow(
 @Composable
 fun SettingsRowDivider() {
     HorizontalDivider(
-        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-        modifier = Modifier.padding(start = 16.dp)
+        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+        modifier = Modifier.padding(horizontal = 16.dp)
     )
 }

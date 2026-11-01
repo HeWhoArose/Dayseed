@@ -5,7 +5,7 @@
 ## Non-negotiable working rules
 
 1. GitHub `main` is canonical. Fetch latest content/SHA before edits; verify every write by fetching again.
-2. Stage A planning is complete and approved/open under D-208. The authoritative sequence is Stage B full initial-v1 implementation in Google AI Studio, Stage C independent technical validation after implementation, and Stage D final owner acceptance/release readiness. Stage B is **NOT YET AUTHORISED** until the owner separately authorises it in writing. Stage C and Stage D are later gates; this documentation correction does not open them.
+2. Stage A planning is complete and approved/open under D-208. **The owner explicitly authorised Stage B full initial-v1 implementation on 2026-11-01 under D-213**, using the complete scope in root `implementation_plan.md` on `planning/system-wide-audit-implementation-plan-2026-11-01` (with Phase 0 Section 5 decisions confirmed under D-215–D-218). Begin with Phase 0 preflight. Stage C independent technical validation remains NOT AUTHORISED and requires separate approval after Stage B is complete and committed. Stage D final owner acceptance/release readiness remains NOT OPEN.
 3. Treat `docs/09-DECISION-LOG.md` as authoritative for owner decisions. Do not turn recommendations, silence, existing source code, or delegated defaults into owner approval.
 4. Follow D-196: decide routine, reversible, low-risk details using conservative documented defaults. Escalate scope/philosophy, privacy/security, data integrity/recovery, accessibility, monetisation, irreversible actions, major identity/design decisions, and conflicts. Batch material owner choices using Accept / Modify / Defer; do not pepper the owner with micro-questions.
 5. Reconcile every approved decision across affected documents, then update `docs/25-DECISION-REGISTER-AND-RECONCILIATION.md`, `docs/27-PLANNING-COMPLETENESS-REVIEW.md`, `docs/28-REQUIREMENT-TRACEABILITY.md`, and `docs/12-PROGRESS-AND-HANDOVER.md` as relevant. Keep historical proposals labelled historical.
@@ -13,7 +13,7 @@
 7. Protect secrets and private data. The repository tree includes `.env`; do not display, quote, copy, or log its contents. Do not commit credentials, signing material, or private journal data.
 8. Preserve and consult [the owner-provided UI reference](docs/prototypes/dayseed-owner-reference-layout.webp) during UX planning. It is directional, not final UI/token approval. DESIGN.md remains the sole design-token/component authority.
 
-Stage B implementation is the next product stage after Stage A planning, followed by independent Stage C technical validation and Stage D owner acceptance. Stage B still requires separate explicit owner authorisation. A documentation commit, schema review, or approval of the stack alone does not authorise it.
+Stage B full initial-v1 implementation is now explicitly authorised by D-213 (2026-11-01), using root `implementation_plan.md` and beginning with Phase 0 preflight. Stage C independent validation and Stage D final acceptance remain separate owner-controlled gates. A documentation commit or model recommendation does not authorise either later gate.
 
 
 ## Shared OpenCode governance policies
@@ -31,12 +31,12 @@ Read these policies at the start of every significant task. If a policy conflict
 These shared policies apply to the existing agent system without changing any agent's model assignment, permissions, or frontmatter. The project-lead and project-lead-fallback definitions are intentionally unchanged in this configuration update; their direct instruction upgrade is deferred.
 
 
-## Current stage sequence — authoritative correction (2026-10-30)
+## Current stage sequence — authoritative correction (2026-11-01; D-213)
 
 This section supersedes older stage labels and sequencing in this document and historical handover text:
 
 - **Stage A — Planning:** complete and approved/open under D-208.
-- **Stage B — Full initial-v1 implementation:** implementation in Google AI Studio, beginning with a dated implementation preflight against the latest GitHub main. Preserve useful existing code, reconcile gaps, implement approved scope and commit the work. Stage B is **NOT YET AUTHORISED**; it requires a separate explicit written owner instruction.
+- **Stage B — Full initial-v1 implementation:** **AUTHORISED by owner decision D-213 (2026-11-01)** for the complete scope in root `implementation_plan.md` on `planning/system-wide-audit-implementation-plan-2026-11-01`, including Phase 0 and Phases 1–5. Begin with dated preflight against latest GitHub main; preserve useful existing work, reconcile stale/contradictory documentation, implement the authorised scope and commit the work. Material unresolved owner-reserved semantics must be surfaced, not silently decided.
 - **Stage C — Independent technical validation:** after Stage B is implemented and committed, independently inspect and validate the resulting project from the current GitHub commit; run agreed builds/tests and runtime/device/accessibility/privacy/data-integrity checks, report defects, fix under the authorised workflow, and revalidate. Stage B self-checks are not independent Stage C evidence.
 - **Stage D — Final owner acceptance/release readiness:** present the verified release candidate and evidence to the owner for explicit acceptance. No release claim/action without that acceptance.
 

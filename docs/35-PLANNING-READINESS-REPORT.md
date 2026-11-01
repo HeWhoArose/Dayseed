@@ -1,9 +1,9 @@
 # Dayseed Planning Readiness Report
 
-**Snapshot date:** 2026-10-31
-**Status:** Stage A planning complete and closed; Stage B initial-v1 implementation now authorized and in progress. Stage C independent technical validation pending Stage B completion. Stage D final owner acceptance/release readiness pending Stage C completion. Post-build acceptance evidence pending.
+**Snapshot date:** 2026-11-01 (status addendum)
+**Status:** Stage A planning complete/approved under D-208. Stage B full initial-v1 implementation is explicitly authorised by owner under D-213 (with Section 5 product decisions confirmed under D-215–D-218); Phase 0 preflight is completed and Phase 1 is next. Stage C independent validation is not authorised until Stage B is complete and committed. Stage D final owner acceptance remains closed pending Stage C evidence.
 **Repository:** `HeWhoArose/Dayseed`
-**Scope:** Documentation and decision consistency for Stage A planning baseline. This report does not authorise source inspection, technical validation, database changes, builds, tests, or implementation for Stage B.
+**Scope:** The original body below is a historical Stage A planning-readiness snapshot. Its dated gate statements are superseded by the 2026-11-01 D-213 addendum at the end of this report. This status update is not independent Stage C validation evidence.
 **Repository:** `HeWhoArose/Dayseed`  
 **Scope:** Documentation and decision consistency only. This report does not authorise source inspection, technical validation, database changes, builds, tests, or implementation.
 
@@ -99,7 +99,7 @@ The task/accessibility protocol in `docs/34-UX-TASK-AND-ACCESSIBILITY-REVIEW-PRO
 
 ## 8. Gate statement
 
-**Stage A planning gate: APPROVED / OPEN under D-208 (2026-10-30).** Stage B full initial-v1 implementation in Google AI Studio is the next stage but remains NOT YET AUTHORISED pending a separate explicit owner instruction. Stage C independent technical validation follows committed implementation; Stage D requires explicit owner acceptance. No code, schema, migration, build, test, device validation, or implementation was performed by preparing this report.
+**Stage A planning gate: APPROVED / OPEN under D-208 (2026-10-30).** Stage B full initial-v1 implementation in Google AI Studio is the next stage (subsequently authorised on 2026-11-01 under D-213; see Section 12 below). Stage C independent technical validation follows committed implementation; Stage D requires explicit owner acceptance. No code, schema, migration, build, test, device validation, or implementation was performed by preparing the original Stage A report.
 
 
 ## 9. 2026-10-30 Growth Mark and UX traceability follow-up
@@ -116,7 +116,7 @@ The six illustrative G3 date values total 220 minutes (3 hr 40 min), matching G2
 
 The traceability follow-up in docs/28 explicitly connects Growth Mark, Journal lifecycle/retrieval, visual/accessibility, comeback copy and privacy/settings discovery to their planning sources, screen contracts and acceptance/task coverage. Remaining bounded gaps include: Settings destination content is not shown in the navigation board; Journal body-only/draft/no-results/multiple-entry/edit/delete edge states are not drawn; Growth Mark zero-only/no-session/empty/error/source-edit states are not drawn; and cross-file heading/external-link checks were not exhaustive. These are documented coverage gaps, not proven implementation defects.
 
-**Current status:** owner choices D-205–D-208 recorded; Stage A planning gate APPROVED / OPEN; detailed design and accessibility evidence remain post-build obligations; acceptance cases are planned/not executed. Stage B technical validation is NOT YET AUTHORISED; Stage C implementation is NOT AUTHORISED. No code, schema, migration, build, test, APK or device validation was performed.
+**Current status (historical 2026-10-30 snapshot):** owner choices D-205–D-208 recorded; Stage A planning gate APPROVED / OPEN; detailed design and accessibility evidence remain post-build obligations; acceptance cases are planned/not executed.
 
 
 ## 10. Decision-count and D-091–D-105 reconciliation correction — 2026-10-30
@@ -137,4 +137,19 @@ Rendered-screen review, task comprehension, Journal discoverability, Growth Mark
 
 ## Current authoritative workflow correction — 2026-10-30
 
-This addendum supersedes earlier stage labels in this readiness report. Stage A planning is complete and approved/open under D-208. The corrected sequence is **Stage B full initial-v1 implementation in Google AI Studio** (not yet authorised) → **Stage C independent technical validation after implementation** → **Stage D final owner acceptance/release readiness**. This documentation correction does not authorise Stage B. The proposed relational schema remains proposed, not canonical/finally approved; candidate palette values, typography, contrast pairings and automatic daypart boundaries remain unapproved and centrally configurable. No application code, schema, migration, build, test, APK or device validation was performed by this update.
+This addendum supersedes earlier stage labels in this readiness report. Stage A planning is complete and approved/open under D-208. The corrected sequence is **Stage B full initial-v1 implementation in Google AI Studio** (not yet authorised at the 2026-10-30 snapshot) → **Stage C independent technical validation after implementation** → **Stage D final owner acceptance/release readiness**.
+
+
+## 12. Owner authorisation of full Stage B implementation & Phase 0 Preflight — 2026-11-01 (D-213–D-218)
+
+The owner explicitly authorised the complete initial-v1 Stage B implementation in response to a direct, scope-specific question (**D-213**). The approved roadmap is the consolidated root `implementation_plan.md` on branch `planning/system-wide-audit-implementation-plan-2026-11-01`, including Phase 0 preflight and Phases 1–5. Implementation continues the existing native Kotlin + Jetpack Compose app.
+
+During Phase 0 preflight on 2026-11-01, the owner also explicitly confirmed the four Section 5 product decisions:
+- **D-215:** 5-tab navigation (`Today`, `Habits`, `Journal`, `Insights`, `Settings`), superseding 4-tab N1.
+- **D-216:** `Quantity`, `Duration`, and `Simple check-off` modes for new habits with derived D-040 progress bands (`Extra`/`Huge` included) and lossless preservation of legacy `EFFORT_AWARE` records.
+- **D-217:** Individual habit streaks, elapsed-span longest-streak display (`days`/`weeks`), neutral explicit zero, and the permanent Grove.
+- **D-218:** One-off `Take a rest day` (`REST_DAY`) exception extending D-193 to hold a streak neutrally for one habit/date without creating activity or reducing a flexible weekly target.
+
+**Current gate status:** Stage A planning is complete/approved (D-208). Stage B full initial-v1 implementation is **AUTHORISED** (D-213) and Phase 0 preflight is complete. Stage C independent technical validation remains **NOT AUTHORISED** and requires separate owner approval after Stage B is complete and committed. Stage D final owner acceptance/release readiness remains **NOT OPEN**.
+
+This addendum supersedes earlier “Stage B not authorised” statements in this historical readiness snapshot. Stage B self-checks do not count as independent Stage C validation. Older progress entries must not be treated as evidence that the newly audited initial-v1 scope is complete.

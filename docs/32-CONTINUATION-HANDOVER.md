@@ -1,8 +1,8 @@
 # Dayseed Continuation Handover and Decision Protocol
 
-**Last reconciled:** 2026-10-30  
+**Last reconciled:** 2026-11-01  
 **Repository / canonical source:** `HeWhoArose/Dayseed`, branch `main`  
-**Current stage:** Stage A planning complete; planning gate **APPROVED / OPEN under D-208 (2026-10-30)**. Correct sequence: Stage B full initial-v1 implementation in Google AI Studio (**NOT YET AUTHORISED**); Stage C independent technical validation after implementation; Stage D final owner acceptance/release readiness.  
+**Current stage:** Stage A planning complete/approved under D-208. **Stage B full initial-v1 implementation is AUTHORISED under D-213 (2026-11-01)** using root `implementation_plan.md` on `planning/system-wide-audit-implementation-plan-2026-11-01` (Phase 0 plus Phases 1–5; Section 5 owner decisions confirmed under D-215–D-218). Stage C independent validation remains unauthorised pending separate approval; Stage D final owner acceptance remains closed.  
 **Purpose:** Let the next AI assistant or coding agent continue from the current agreed state without asking the owner to re-explain the product, decision rules, or working constraints.
 
 > **First rule:** Read this file before proposing work. Then refresh the current GitHub `main` state and read the canonical documents listed below. This is a handover, not permission to start implementation.
@@ -27,7 +27,7 @@ Refresh them from the latest `main` branch before relying on this handover; if t
 6. **[Owner Planning Decision Batch](31-OWNER-PLANNING-DECISION-BATCH.md)** — single grouped sheet for decisions that genuinely require the owner's input.
 7. **[UX/Design Approval Pack](29-UX-DESIGN-APPROVAL-PACK.md)**, the [owner-provided multi-screen UI reference](prototypes/dayseed-owner-reference-layout.webp), and the three rendered SVG boards linked there — durable visual direction plus comparison options; none is final UI approval or evidence of usability/accessibility testing.
 8. **[Progress and Handover](12-PROGRESS-AND-HANDOVER.md)** — chronological handover notes. Use its latest status and this file; don't treat old dated notes as current where they conflict with the decision log/readiness snapshot.
-9. **[AI Studio–GitHub Workflow](19-AI-STUDIO-GITHUB-WORKFLOW.md)** — stage gates, environment discipline, and current approval record. The Stage A planning gate is **APPROVED / OPEN under D-208**; Stage B and Stage C remain separately gated.
+9. **[AI Studio–GitHub Workflow](19-AI-STUDIO-GITHUB-WORKFLOW.md)** — stage gates, environment discipline and current approval record. Stage A is approved under D-208; Stage B implementation is authorised under D-213; Stage C remains separately gated.
 10. **[Data and Privacy](04-DATA-AND-PRIVACY.md)**, **[Testing and Quality](07-TESTING-AND-QUALITY.md)**, **[Risks and Open Questions](11-RISKS-AND-OPEN-QUESTIONS.md)**, and root **[DESIGN.md](../DESIGN.md)** as needed. `DESIGN.md` is the sole token/component authority; recommendations elsewhere do not silently create design tokens.
 
 The Today concepts document (`docs/21-TODAY-DASHBOARD-CONCEPTS.md`) is a cumulative research notebook with dated proposals. Its historical “next step” and “questions still needed” sections are not automatically the current backlog. Follow the current decision log, product/data contracts, decision batch, and latest readiness snapshot.
@@ -174,12 +174,12 @@ A handover is successful when a new agent can start with this file, refresh GitH
 - **Planning gate: APPROVED / OPEN (D-208, 2026-10-30).** Next: prepare the Stage B technical-validation plan and obtain separate explicit owner authorisation before starting it. Stage C remains gated by the Stage B exit review and separate implementation-plan approval. An agent may record an approval only when the owner gives a clear, explicit written instruction; never infer approval from “continue”, review, silence or documentation completion.
 
 
-## Current stage sequence — authoritative correction (2026-10-30)
+## Current stage sequence — latest correction (2026-11-01; D-213 supersedes the 2026-10-30 Stage B status)
 
 This section supersedes older stage labels and sequencing in this document and historical handover text:
 
 - **Stage A — Planning:** complete and approved/open under D-208.
-- **Stage B — Full initial-v1 implementation:** implementation in Google AI Studio, beginning with a dated implementation preflight against the latest GitHub main. Preserve useful existing code, reconcile gaps, implement approved scope and commit the work. Stage B is **NOT YET AUTHORISED**; it requires a separate explicit written owner instruction.
+- **Stage B — Full initial-v1 implementation:** **AUTHORISED by owner D-213 (2026-11-01)** for root `implementation_plan.md` on `planning/system-wide-audit-implementation-plan-2026-11-01`, including Phase 0 and Phases 1–5 (with Section 5 owner decisions confirmed under D-215–D-218). Begin with a dated preflight against latest GitHub main; preserve useful existing code, reconcile gaps, implement approved v1 scope and commit reviewable phase work. Material unresolved owner decisions are not silently approved.
 - **Stage C — Independent technical validation:** after Stage B is implemented and committed, independently inspect and validate the resulting project from the current GitHub commit; run agreed builds/tests and runtime/device/accessibility/privacy/data-integrity checks, report defects, fix under the authorised workflow, and revalidate. Stage B self-checks are not independent Stage C evidence.
 - **Stage D — Final owner acceptance/release readiness:** present the verified release candidate and evidence to the owner for explicit acceptance. No release claim/action without that acceptance.
 
@@ -190,3 +190,16 @@ This section supersedes older stage labels and sequencing in this document and h
 **Test-result integrity:** report NOT RUN, BLOCKED, FAILED, or PASSED accurately. PASSED requires actual execution and inspected evidence: exact command/task, date/time, commit SHA, environment/toolchain (and device where relevant), exit result, and retained log/artifact. Planned, inferred, generated, preview-only, or unexecuted checks must never be reported as passed. Never fabricate results.
 
 This correction supersedes earlier sections in this handover that label Stage B as technical validation and Stage C as implementation. Stage B requires separate explicit owner authorisation; this documentation update does not grant it.
+
+
+## Latest continuation — Stage B full initial-v1 authorisation & Phase 0 Preflight (2026-11-01, D-213–D-218)
+
+The owner explicitly authorised the complete initial-v1 implementation in this conversation (**D-213**). The exact approved roadmap is root `implementation_plan.md` on `planning/system-wide-audit-implementation-plan-2026-11-01`, including Phase 0 and Phases 1–5. This permits source changes, schema/migration work, builds, tests and commits required by this Stage B scope. It does **not** authorise Stage C independent technical validation or Stage D release acceptance.
+
+During Phase 0 preflight (2026-11-01), the AI Studio workspace (imported from `main` `334679775643ffb43f384646cf7cced75d401f96`) was reconciled with PR #3 (`d4c1be93ef953ea56f704a07304a0018fd7d1cdd`), preserving the uncommitted 4-section Settings refinement as **D-214**, and the owner explicitly confirmed all four Section 5 product decisions:
+- **D-215:** 5-tab primary navigation (`Today`, `Habits`, `Journal`, `Insights`, `Settings`), superseding 4-tab N1.
+- **D-216:** New habits offer `Quantity`, `Duration`, and `Simple check-off` only (with derived D-040 progress bands including `Extra` and `Huge`), while preserving legacy `EFFORT_AWARE` records losslessly.
+- **D-217:** Individual habit streaks, elapsed-span longest-streak display (`days`/`weeks`), neutral explicit zero, and the permanent Grove.
+- **D-218:** One-off `Take a rest day` (`REST_DAY`) exception extending D-193 to hold a streak neutrally for one habit/date without creating activity or reducing a flexible weekly target.
+
+Historical entries in this handover that state Stage B was unauthorised or report an earlier Stage B/C implementation completion remain dated historical records. The current source audit and D-213–D-218 are the controlling status. Earlier reported completion is not proof that the complete newly audited v1 scope is implemented.

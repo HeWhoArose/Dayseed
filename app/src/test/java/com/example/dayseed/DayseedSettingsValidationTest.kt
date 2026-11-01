@@ -2,19 +2,22 @@ package com.example.dayseed
 
 import com.example.dayseed.ui.screens.SettingsSupport
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.DayOfWeek
 import java.time.LocalTime
 
 /**
- * Settings restructure acceptance coverage (hub + bottom-sheet panels; owner instruction "A",
- * 2026-10-31). Covers the pure settings-display logic the hub rows and the quiet-hours editor
- * rely on: format validation, normalisation before saving, and state summaries shown on rows.
+ * Settings restructure and audit acceptance coverage (D-212 / D-213).
+ * Covers:
+ * - Quiet hours format validation, normalisation, preset windows, and ±30m time stepping
+ * - Hub row summaries (quiet hours, removed habits, week start)
+ * - Unified Data & Backup sub-screen summaries, masked password confirmation check, and pre-restore payload inspection
  */
 class DayseedSettingsValidationTest {
-
-    // --- Quiet hours parsing (validated text entry replaces the previous bare free-text fields) ---
 
     @Test
     fun quietHoursAcceptsWellFormedTimes() {
@@ -49,13 +52,24 @@ class DayseedSettingsValidationTest {
 
     @Test
     fun quietHoursNormalisesToTwoDigitHhMmBeforeSaving() {
-        // The stored setting must stay in strict HH:mm so reminder scheduling parsers agree.
         assertEquals("09:30", SettingsSupport.formatQuietHours(SettingsSupport.parseQuietHours("9:30")!!))
         assertEquals("21:00", SettingsSupport.formatQuietHours(SettingsSupport.parseQuietHours("21:00")!!))
         assertEquals("00:05", SettingsSupport.formatQuietHours(SettingsSupport.parseQuietHours("0:05")!!))
     }
 
-    // --- Hub row summaries (current state visible without opening any panel) ---
+    @Test
+    fun quietHoursPresetsAndTimeStepperWorkAndWrapMidnight() {
+        assertTrue(SettingsSupport.quietHoursPresets.isNotEmpty())
+        for (preset in SettingsSupport.quietHoursPresets) {
+            assertNotNull(SettingsSupport.parseQuietHours(preset.start))
+            assertNotNull(SettingsSupport.parseQuietHours(preset.end))
+        }
+
+        assertEquals("21:30", SettingsSupport.stepQuietHours("21:00", 30))
+        assertEquals("20:30", SettingsSupport.stepQuietHours("21:00", -30))
+        assertEquals("00:15", SettingsSupport.stepQuietHours("23:45", 30))
+        assertEquals("23:45", SettingsSupport.stepQuietHours("00:15", -30))
+    }
 
     @Test
     fun quietHoursSummaryAlwaysShowsEffectiveWindow() {
@@ -75,5 +89,43 @@ class DayseedSettingsValidationTest {
     fun weekStartSummaryIsPlainLanguage() {
         assertEquals("Monday", SettingsSupport.weekStartSummary(DayOfWeek.MONDAY))
         assertEquals("Sunday", SettingsSupport.weekStartSummary(DayOfWeek.SUNDAY))
+    }
+
+    @Test
+    fun unifiedDataSummaryAndPasswordConfirmationBehaveCleanly() {
+        assertEquals(
+            "3 active habits · 12 check-ins · 4 saved reflections",
+            SettingsSupport.dataSummaryLine(3, 0, 12, 4)
+        )
+        assertEquals(
+            "1 active · 2 paused/archived · 1 check-in · 1 saved reflection",
+            SettingsSupport.dataSummaryLine(1, 2, 1, 1)
+        )
+
+        // Blank password or single-field entry without confirmation is ready
+        assertTrue(SettingsSupport.isBackupPasswordReady("", ""))
+        assertTrue(SettingsSupport.isBackupPasswordReady("secret123", ""))
+        assertTrue(SettingsSupport.isBackupPasswordReady("secret123", "secret123"))
+
+        // Mismatched confirmation blocks export with a clear message
+        assertFalse(SettingsSupport.isBackupPasswordReady("secret123", "secret124"))
+        assertNotNull(SettingsSupport.backupPasswordMismatchError("secret123", "secret124"))
+    }
+
+    @Test
+    fun inspectBackupPayloadSummaryDistinguishesEncryptedPlainAndMalformedPayloads() {
+        assertNull(SettingsSupport.inspectBackupPayloadSummary("   "))
+        assertTrue(
+            SettingsSupport.inspectBackupPayloadSummary("not json")!!
+                .contains("Doesn't look like a Dayseed backup")
+        )
+        assertTrue(
+            SettingsSupport.inspectBackupPayloadSummary("""{"format":"dayseed_encrypted_backup_v1","ciphertext":"abc"}""")!!
+                .contains("Password-protected Dayseed backup detected")
+        )
+        assertTrue(
+            SettingsSupport.inspectBackupPayloadSummary("""{"schema_version":1,"habits":[]}""")!!
+                .contains("ready to restore")
+        )
     }
 }

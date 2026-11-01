@@ -106,3 +106,13 @@ Stage A planning is complete and the gate is approved/open under D-208. The next
 - No acceptance case was marked passed. No source/runtime audit, schema inspection, migration, build, test, APK, device validation or user study was performed.
 
 **Current gate status (2026-10-30): Stage A APPROVED / OPEN under D-208. Stage B technical validation NOT YET AUTHORISED. Stage C feature implementation NOT AUTHORISED.** D-208 records the owner's explicit written instruction; it does not mark any technical or post-build acceptance check passed or waived.
+
+
+## Stage B authorisation and Phase 0 preflight reconciliation — 2026-11-01 (D-213–D-218)
+
+- On **2026-11-01**, under **D-213**, the owner explicitly authorised the complete **Stage B initial-v1 implementation** across Phase 0 and Phases 1–5 of root `implementation_plan.md` (following the D-209 sequence correction: Stage A planning -> Stage B full initial-v1 implementation -> Stage C independent technical validation -> Stage D final owner acceptance).
+- **Phase 0 reconciliation completed (2026-11-01):**
+  - Decision log (`docs/09-DECISION-LOG.md`) and decision register (`docs/25-DECISION-REGISTER-AND-RECONCILIATION.md`) now contain **212 unique decision IDs through D-218** (gaps preserved), recording `D-213` (Stage B full initial-v1 authorisation), `D-214` (4-section Settings arrangement refinement, renumbered from workspace `D-213`), `D-215` (5-tab primary navigation superseding 4-tab `N1`), `D-216` (`Quantity`, `Duration`, `Simple check-off` modes for new habits with legacy `EFFORT_AWARE` preservation), `D-217` (individual habit streaks, elapsed-span longest-streak display, neutral explicit `0`, and permanent Grove), and `D-218` (one-off `Take a rest day` `REST_DAY` exception extending `D-193`).
+  - Stale v1-only schema statements in `README.md` and the contradictory top status line in `docs/35-PLANNING-READINESS-REPORT.md` have been corrected.
+- **Current gate status (2026-11-01): Stage A COMPLETE (`D-208`). Stage B initial-v1 implementation AUTHORISED (`D-213`) — Phase 0 complete, Phase 1 ready to begin. Stage C independent technical validation NOT YET AUTHORISED. Stage D final owner acceptance NOT OPEN.**
+

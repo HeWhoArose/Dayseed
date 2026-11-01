@@ -4,12 +4,15 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Backup
@@ -33,6 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -47,18 +51,16 @@ import com.example.dayseed.ui.theme.ThemeModeOption
 import java.time.DayOfWeek
 
 /**
- * Settings hub (restructure, owner instruction "A", 2026-10-31).
+ * Four-section Soft Botanical Settings Hub (D-212 / D-213).
  *
- * A short list of buttons in the Material settings pattern: every row is the button, its
- * secondary text shows the current state, and pressing it makes the corresponding settings
- * appear — as a bottom sheet for short groups, or the backup/restore sub-screen for the
- * heavy group. Internal vocabulary (decision IDs, schema/table counts) is kept out of the
- * UI; destructive deletion stays isolated at the bottom of the hub.
+ * Organized into four intuitive groups:
+ * 1. Appearance & rhythm — inline visual theme cards + inline Monday/Sunday week-start toggle.
+ * 2. Habits & gentle prompts — Quiet hours & reminder presets/steppers + Removed (paused/archived) habits.
+ * 3. Data, backup & journal copy — unified Data sub-screen with on-device summary, masked password
+ *    backup, restore payload inspection, and readable journal export.
+ * 4. Trust & about — local-first privacy guarantees, app info, and a clearly framed Reset card.
  *
- * All pre-existing test tags are preserved: settings_screen, theme_chip_*, week_start_*,
- * export_journal_*_btn, backup_password_input, export_data_btn, open_restore_dialog_btn,
- * restore_json_input, confirm_restore_btn, delete_all_data_btn, perm_delete_habit_*,
- * conflict_card_*, resolve_*.
+ * All pre-existing test tags are preserved.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,11 +69,29 @@ fun SettingsScreen(
     modifier: Modifier = Modifier
 ) {
     val habits by viewModel.habits.collectAsState()
+    val habitEntries by viewModel.habitEntries.collectAsState()
+    val habitDayOutcomes by viewModel.habitDayOutcomes.collectAsState()
+    val journalEntries by viewModel.journalEntries.collectAsState()
     val appSettings by viewModel.appSettings.collectAsState()
 
+    val activeHabitsCount = remember(habits) {
+        habits.count { it.lifecycleState == HabitLifecycleState.ACTIVE }
+    }
     val inactiveHabits = remember(habits) {
         habits.filter { it.lifecycleState != HabitLifecycleState.ACTIVE }
     }
+    val totalCheckIns = remember(habitEntries, habitDayOutcomes) {
+        habitEntries.size + habitDayOutcomes.size
+    }
+    val dataOverviewText = remember(activeHabitsCount, inactiveHabits.size, totalCheckIns, journalEntries.size) {
+        SettingsSupport.dataSummaryLine(
+            activeHabits = activeHabitsCount,
+            pausedHabits = inactiveHabits.size,
+            checkInCount = totalCheckIns,
+            journalEntryCount = journalEntries.size
+        )
+    }
+
     val currentThemeMode = remember(appSettings) {
         ThemeModeOption.fromSetting(appSettings["theme_mode"]?.valueText)
     }
@@ -84,16 +104,18 @@ fun SettingsScreen(
     }
 
     var activeSheet by remember { mutableStateOf<SettingsSheet?>(null) }
-    var backupOpen by remember { mutableStateOf(false) }
+    var dataSubScreenFocus by remember { mutableStateOf<DataSubScreenSection?>(null) }
     var backupPassword by remember { mutableStateOf("") }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var exportedTextPreview by remember { mutableStateOf<String?>(null) }
     var exportedTitle by remember { mutableStateOf("") }
 
-    // The backup sub-screen is a state inside Settings, so system back returns to the hub.
-    BackHandler(enabled = backupOpen) { backupOpen = false }
+    // System back returns from the unified Data & Backup sub-screen to the main Settings hub.
+    BackHandler(enabled = dataSubScreenFocus != null) {
+        dataSubScreenFocus = null
+    }
 
-    if (backupOpen) {
+    if (dataSubScreenFocus != null) {
         BackupRestorePanel(
             viewModel = viewModel,
             backupPassword = backupPassword,
@@ -102,106 +124,167 @@ fun SettingsScreen(
                 exportedTitle = title
                 exportedTextPreview = text
             },
-            onBack = { backupOpen = false }
+            onBack = { dataSubScreenFocus = null },
+            initialFocus = dataSubScreenFocus ?: DataSubScreenSection.ALL
         )
     } else {
         LazyColumn(
             modifier = modifier
                 .fillMaxSize()
                 .testTag("settings_screen"),
-            contentPadding = PaddingValues(18.dp),
+            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             item {
-                Column {
+                Column(modifier = Modifier.padding(bottom = 4.dp)) {
                     Text(
                         text = "Settings",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
                     )
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "You own your data. It stays on this device.",
+                        text = "Calm preferences and local data controls. Everything stays on this device.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
-            item { SettingsSectionLabel("Everyday") }
+            // SECTION 1: Appearance & rhythm (Inline theme cards + inline week toggle)
+            item {
+                SettingsSectionLabel(
+                    text = "Appearance & rhythm",
+                    supporting = "Botanical theme atmosphere and weekly Insights calendar start."
+                )
+            }
             item {
                 SettingsGroupCard {
                     SettingsRow(
                         label = "Appearance",
                         summary = currentThemeMode.label,
                         icon = Icons.Default.Palette,
+                        showChevron = false,
                         onClick = { activeSheet = SettingsSheet.APPEARANCE },
                         testTag = "settings_row_appearance"
                     )
+                    Column(
+                        modifier = Modifier.padding(
+                            start = 16.dp,
+                            end = 16.dp,
+                            bottom = 14.dp
+                        )
+                    ) {
+                        InlineAppearanceSelector(
+                            viewModel = viewModel,
+                            currentThemeMode = currentThemeMode
+                        )
+                    }
+
                     SettingsRowDivider()
+
                     SettingsRow(
                         label = "Week starts",
-                        summary = SettingsSupport.weekStartSummary(currentWeekStart),
+                        summary = "Insights & weekly goals begin on ${SettingsSupport.weekStartSummary(currentWeekStart)}",
                         icon = Icons.Default.Today,
+                        showChevron = false,
                         onClick = { activeSheet = SettingsSheet.WEEK_START },
                         testTag = "settings_row_week_start"
                     )
-                    SettingsRowDivider()
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 66.dp, end = 16.dp, bottom = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        InlineWeekStartSelector(
+                            viewModel = viewModel,
+                            currentWeekStart = currentWeekStart
+                        )
+                    }
+                }
+            }
+
+            // SECTION 2: Habits & gentle prompts (Quiet hours + Removed habits)
+            item {
+                SettingsSectionLabel(
+                    text = "Habits & gentle prompts",
+                    supporting = "Notification quiet hours and paused or archived habits."
+                )
+            }
+            item {
+                SettingsGroupCard {
                     SettingsRow(
-                        label = "Quiet hours",
+                        label = "Quiet hours & reminders",
                         summary = SettingsSupport.quietHoursSummary(
                             appSettings["quiet_hours_start"]?.valueText,
                             appSettings["quiet_hours_end"]?.valueText
                         ),
                         icon = Icons.Default.Bedtime,
+                        badgeText = "Max 3/day",
                         onClick = { activeSheet = SettingsSheet.QUIET_HOURS },
                         testTag = "settings_row_quiet_hours"
-                    )
-                }
-            }
-
-            item { SettingsSectionLabel("Your data") }
-            item {
-                SettingsGroupCard {
-                    SettingsRow(
-                        label = "Read a copy of your journal",
-                        summary = "Markdown, CSV or JSON · saved entries only",
-                        icon = Icons.Default.Description,
-                        onClick = { activeSheet = SettingsSheet.JOURNAL_EXPORT },
-                        testTag = "settings_row_journal_export"
-                    )
-                    SettingsRowDivider()
-                    SettingsRow(
-                        label = "Back up or restore",
-                        summary = "Optional password · safety backup before restoring",
-                        icon = Icons.Default.Backup,
-                        onClick = { backupOpen = true },
-                        testTag = "settings_row_backup"
-                    )
-                    SettingsRowDivider()
-                    SettingsRow(
-                        label = "How Dayseed protects your privacy",
-                        summary = "Local-first · platform backup off",
-                        icon = Icons.Default.Lock,
-                        onClick = { activeSheet = SettingsSheet.PRIVACY },
-                        testTag = "settings_row_privacy"
                     )
                     SettingsRowDivider()
                     SettingsRow(
                         label = "Removed habits",
                         summary = SettingsSupport.removedHabitsSummary(inactiveHabits.size),
                         icon = Icons.Default.Archive,
+                        badgeText = if (inactiveHabits.isNotEmpty()) "${inactiveHabits.size}" else null,
                         onClick = { activeSheet = SettingsSheet.REMOVED_HABITS },
                         testTag = "settings_row_removed"
                     )
                 }
             }
 
-            item { SettingsSectionLabel("About") }
+            // SECTION 3: Data, backup & journal copy (Unified Data sub-screen)
+            item {
+                SettingsSectionLabel(
+                    text = "Data, backup & journal copy",
+                    supporting = dataOverviewText
+                )
+            }
             item {
                 SettingsGroupCard {
                     SettingsRow(
+                        label = "Back up or restore",
+                        summary = "Portable backup with optional password · safety backup before restore",
+                        icon = Icons.Default.Backup,
+                        onClick = { dataSubScreenFocus = DataSubScreenSection.BACKUP_FOCUS },
+                        testTag = "settings_row_backup"
+                    )
+                    SettingsRowDivider()
+                    SettingsRow(
+                        label = "Read a copy of your journal",
+                        summary = "Export or share saved entries as Markdown, CSV or JSON",
+                        icon = Icons.Default.Description,
+                        onClick = { dataSubScreenFocus = DataSubScreenSection.JOURNAL_FOCUS },
+                        testTag = "settings_row_journal_export"
+                    )
+                }
+            }
+
+            // SECTION 4: Trust & about
+            item {
+                SettingsSectionLabel(
+                    text = "Trust & about",
+                    supporting = "How Dayseed keeps your records private and offline."
+                )
+            }
+            item {
+                SettingsGroupCard {
+                    SettingsRow(
+                        label = "How Dayseed protects your privacy",
+                        summary = "On-device SQLite only · no accounts · platform cloud backup off",
+                        icon = Icons.Default.Lock,
+                        onClick = { activeSheet = SettingsSheet.PRIVACY },
+                        testTag = "settings_row_privacy"
+                    )
+                    SettingsRowDivider()
+                    SettingsRow(
                         label = "About Dayseed",
-                        summary = "Version 1.0.0",
+                        summary = "Version 1.0.0 · Your progress is more than your streak",
                         icon = Icons.Default.Info,
                         onClick = { activeSheet = SettingsSheet.ABOUT },
                         testTag = "settings_row_about"
@@ -209,28 +292,42 @@ fun SettingsScreen(
                 }
             }
 
+            // Framed Reset Card
             item {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedButton(
-                        onClick = { showDeleteConfirmDialog = true },
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("delete_all_data_btn")
-                    ) {
-                        Text("Delete all personal data")
+                Spacer(modifier = Modifier.height(4.dp))
+                SettingsGroupCard(
+                    borderColor = MaterialTheme.colorScheme.error.copy(alpha = 0.4f),
+                    containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.14f)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Reset on-device data",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Removes all habits, check-ins, and journal reflections from this device. " +
+                                "Export a portable backup above first if you might want them later.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        OutlinedButton(
+                            onClick = { showDeleteConfirmDialog = true },
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("delete_all_data_btn")
+                        ) {
+                            Text("Delete all personal data")
+                        }
                     }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Removes everything from this device. Copies you made earlier " +
-                            "may still exist outside the app.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
                 }
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
@@ -305,18 +402,41 @@ fun SettingsScreen(
     }
 
     if (exportedTextPreview != null) {
+        val context = androidx.compose.ui.platform.LocalContext.current
         AlertDialog(
             onDismissRequest = { exportedTextPreview = null },
             title = { Text(exportedTitle, fontWeight = FontWeight.Bold) },
             text = {
-                Text(
-                    text = exportedTextPreview!!.take(600) + if (exportedTextPreview!!.length > 600) "\n..." else "",
-                    style = MaterialTheme.typography.bodySmall
-                )
+                Column(
+                    modifier = Modifier
+                        .height(260.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Text(
+                        text = exportedTextPreview!!,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             },
             confirmButton = {
-                TextButton(onClick = { exportedTextPreview = null }) {
-                    Text("Close")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(
+                        onClick = {
+                            val sendIntent = android.content.Intent().apply {
+                                action = android.content.Intent.ACTION_SEND
+                                putExtra(android.content.Intent.EXTRA_TEXT, exportedTextPreview)
+                                type = "text/plain"
+                            }
+                            context.startActivity(
+                                android.content.Intent.createChooser(sendIntent, exportedTitle)
+                            )
+                        }
+                    ) {
+                        Text("Share")
+                    }
+                    TextButton(onClick = { exportedTextPreview = null }) {
+                        Text("Close")
+                    }
                 }
             }
         )

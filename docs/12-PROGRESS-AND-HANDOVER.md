@@ -1,7 +1,7 @@
 # Progress and Handover
 
-**Last updated:** 2026-10-31
-**Status:** Stage A planning complete and closed; Stage B initial-v1 implementation now in progress. Existing source files/preview are evidence for the Stage B implementation audit, not proof of a verified build or approval to add features (Stage A documentation only).
+**Last updated:** 2026-11-01
+**Status:** Stage A planning complete and closed (`D-208`). Full Stage B initial-v1 implementation is **AUTHORISED** (`D-213`, 2026-11-01) across Phase 0 and Phases 1–5 of root `implementation_plan.md`. Phase 0 (Implementation Preflight, Repository Reconciliation and Baseline Verification) is complete and all four Section 5 product decisions are recorded (`D-215`–`D-218`). Stage C independent technical validation is **NOT YET AUTHORISED**; Stage D final owner acceptance is **NOT OPEN**.
 
 
 > **Start here for any new AI/session:** [Continuation Handover and Decision Protocol](32-CONTINUATION-HANDOVER.md). It defines source-of-truth order, D-196 decision rules, owner authority, current Stage A approval, corrected Stage B/C/D sequence, GitHub verification discipline and evidence requirements. Root [AGENTS.md](../AGENTS.md) points contributors to the same canonical handover. Do not use historical next-action lists below when they conflict with the current readiness snapshot or handover.
@@ -584,4 +584,43 @@ The owner asked for an audit of the Settings screen ("shows everything bare", as
 - **New files:** `ui/screens/SettingsPanels.kt`, `ui/screens/SettingsSupport.kt`, `ui/components/SettingsGroup.kt`, `app/src/test/java/com/example/dayseed/DayseedSettingsValidationTest.kt`. `SettingsScreen.kt` rewritten. All pre-existing test tags (`settings_screen`, `theme_chip_*`, `week_start_*`, `export_journal_*_btn`, `backup_password_input`, `export_data_btn`, `open_restore_dialog_btn`, `restore_json_input`, `confirm_restore_btn`, `delete_all_data_btn`, `perm_delete_habit_*`, `conflict_card_*`, `resolve_*`) are preserved; new tags added for hub rows and panels.
 - **Verification evidence (executed):** targeted `DayseedSettingsValidationTest` run first **FAILED** 1/7 (NPE — the test asserted "0:5" parses while the strict two-digit-minute contract correctly rejects it; the test was tightened); then `:app:testDebugUnitTest --rerun` **PASSED 26/26** total (`DayseedAcceptanceTest` 12 + `DayseedVisualResolutionTest` 7 + `DayseedSettingsValidationTest` 7), 0 failures/errors/skipped, Gradle 9.3.1, JDK 21.0.13, Windows 11.
 - **Not claimed / open:** rendered-device review, TalkBack traversal and ordering, 200% text scaling, sheet focus behaviour and contrast remain unverified Stage C obligations; the native time-picker was deferred in favour of validated text fields (conservative D-196 default); the full reminders settings surface required by docs/26 remains unimplemented pending a separate owner decision; the drafted delete-all/privacy wording awaits owner copy review. Stage C and Stage D are not claimed.
+
+## Four-section Settings arrangement refinement implemented — 2026-10-31 (D-214; renumbered from workspace D-213)
+
+Following the owner's second Settings audit request ("Audit the settings and create a better way and arrangement of how the settings should be") and explicit Planning Mode choices:
+
+- **Four-Section Soft Botanical Hub (`SettingsScreen.kt`, `SettingsGroup.kt`):**
+  1. **Appearance & rhythm:** Inline visual theme swatch cards (`InlineAppearanceSelector` with per-palette canvas/accent dots + active check) and live `DaypartArtwork` atmosphere preview, plus an inline Monday/Sunday segmented toggle (`InlineWeekStartSelector`) directly on the hub card.
+  2. **Habits & gentle prompts:** Moves `Removed habits` (paused/archived habits with a live count pill) out of Data and pairs it with `Quiet hours & reminders`.
+  3. **Data, backup & journal copy:** Displays a live on-device data summary subtitle on the hub and routes both `Back up or restore` and `Read a copy of your journal` into the unified Data sub-screen with section focus.
+  4. **Trust & about:** Pairs `How Dayseed protects your privacy` with `About Dayseed`, followed by a clearly framed `Reset on-device data` card.
+- **Quiet Hours Presets, Steppers & Reminder Guidance (`SettingsPanels.kt`, `SettingsSupport.kt`):**
+  - Added 4 one-tap preset chips (`21:00 – 08:00`, `22:00 – 07:00`, `23:00 – 07:30`, `20:00 – 06:30`), `-30m` / `+30m` time-stepper buttons (`stepQuietHours` wrapping cleanly across midnight), and a reminder status card explaining default `09:00` habit reminder times, the 3/day cap, and Android notification deferral.
+- **Unified Data, Backup & Journal Sub-Screen (`SettingsPanels.kt`, `SettingsSupport.kt`):**
+  - Added an **On-device data summary banner** (`dataSummaryLine`), masked password input with visibility toggle and optional confirmation check (`backupPasswordMismatchError`), a **Paste from clipboard** button and live pre-restore payload inspection (`inspectBackupPayloadSummary`) in the Restore dialog, and direct Android Share actions for both portable backups and Markdown journal exports.
+- **Verification Evidence (executed):**
+  - `compile_applet`: **PASSED**.
+  - `gradle :app:testDebugUnitTest --rerun-tasks`: **PASSED 29/29** tests (`DayseedAcceptanceTest` 12 + `DayseedVisualResolutionTest` 7 + `DayseedSettingsValidationTest` 10), 0 failures/errors/skipped (XML report at `app/build/test-results/testDebugUnitTest/TEST-com.example.dayseed.DayseedSettingsValidationTest.xml`, timestamp `2026-10-31T21:57:40.108Z`, Gradle 9.3.1, Temurin JDK 21, Android SDK 36).
+- **Not claimed:** rendered-device visual review, TalkBack traversal/focus order, 200% font scaling, and Stage C / Stage D validation remain open.
+
+## Full Stage B initial-v1 implementation authorised & Phase 0 Preflight completed — 2026-11-01 (D-213, D-215–D-218)
+
+- **Owner authorisation (`D-213`):** On 2026-11-01, after reviewing the system-wide native Android application audit and consolidated Stage B implementation plan (`implementation_plan.md`, PR #3 on branch `planning/system-wide-audit-implementation-plan-2026-11-01`, commit `d4c1be93ef953ea56f704a07304a0018fd7d1cdd`), the owner explicitly authorised the complete Stage B implementation for initial-v1 across Phase 0 and Phases 1–5.
+- **Repository & workspace reconciliation:**
+  - Inspected `origin/main` (`334679775643ffb43f384646cf7cced75d401f96`) and PR #3 (`d4c1be93ef953ea56f704a07304a0018fd7d1cdd`).
+  - Synced the canonical 807-line `implementation_plan.md` from PR #3 into the workspace root and appended Section 11 (`Phase 0 Preflight & Section 5 Reconciliation Addendum`).
+  - Preserved all uncommitted 2026-10-31 Settings refinement changes and renumbered that workspace decision from `D-213` to `D-214` to prevent any ID collision with `D-213` (Full Stage B authorisation).
+  - Reconciled `AGENTS.md`, `.opencode/OWNER_AUTHORITY.md`, `README.md` (correcting stale v1-only schema claims to reflect `DATABASE_VERSION = 2` and `migrateV1ToV2FailClosed`), `docs/09`, `docs/12`, `docs/19`, `docs/25`, `docs/27`, `docs/28`, `docs/32`, and `docs/35` (fixing the contradictory top status line).
+- **Section 5 product decisions resolved with owner (`D-215`–`D-218`):**
+  - **`D-215` (`§5.1` Navigation):** Approved 5-tab bottom navigation (`Today`, `Habits`, `Journal`, `Insights`, `Settings`), superseding 4-tab `N1`, with historical habit calendar inside `Insights` and `Day Detail` / `Habit Detail` as secondary routes.
+  - **`D-216` (`§5.2` Measurement modes):** Approved `Quantity`, `Duration`, and `Simple check-off` (`COMPLETION_ONLY`) for new habits with automatic `D-040` progress-band derivation (`Minimal`, `Partial`, `Target met`, `Extra` `>100%..150%`, `Huge` `>150%`) and lossless legacy `EFFORT_AWARE` / `EFFORT_LEVELS` preservation.
+  - **`D-217` (`§5.3` Streaks, explicit zero & Grove):** Approved individual per-habit streaks/branches/colours, `Today` longest-active-streak display using elapsed active-run span with explicit `days`/`weeks` unit, streak-holding on positive partial progress or rest, neutral explicit `0`, and the permanent Grove (`MISSED`, `PAUSED`, `ARCHIVED`, `COMPLETED`).
+  - **`D-218` (`§5.4` One-off rest day):** Approved one-off `Take a rest day` (`REST_DAY`) date exception holding a habit's streak neutrally without fake check-ins or weekly-target reduction.
+- **Phase 0 baseline verification evidence (executed 2026-11-01, Stage B self-check):**
+  - `compile_applet`: **PASSED**.
+  - `gradle :app:testDebugUnitTest --rerun-tasks`: **PASSED 30/30** tests (`DayseedAcceptanceTest` 12 [XML `2026-11-01T19:26:16.603Z`] + `DayseedVisualResolutionTest` 8 [XML `2026-11-01T19:27:30.634Z`] + `DayseedSettingsValidationTest` 10 [XML `2026-11-01T19:27:30.616Z`]), 0 failures/errors/skipped, `BUILD SUCCESSFUL in 2m 19s`, Gradle `9.3.1`, Temurin JDK `21.0.13+9-LTS`, Linux `6.9.12 amd64`.
+- **Stage gates:** Stage B is **AUTHORISED** (`D-213`); Phase 1 is ready to start. Stage C (independent technical validation) remains **NOT AUTHORISED** and Stage D (final owner acceptance) remains **NOT OPEN**.
+
+
+
 

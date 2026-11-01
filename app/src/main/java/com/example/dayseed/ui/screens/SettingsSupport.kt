@@ -4,16 +4,24 @@ import java.time.DayOfWeek
 import java.time.LocalTime
 
 /**
- * Pure settings-display support for the restructured Settings hub (owner instruction "A",
- * 2026-10-31; companion to D-210/D-211 theme work). No Compose types here: every function is
- * unit-testable JVM logic.
- *
- * Quiet hours are entered as free text but are always validated and normalised to strict
- * "HH:mm" before being saved, because reminder scheduling reads the stored setting back.
- * Row summaries follow the Material settings pattern: the secondary text shows the setting's
- * current state, and internal vocabulary (decision IDs, schema/table counts) never appears.
+ * Pure settings-display and validation support for the four-section Settings hub (D-212 / D-213).
+ * No Compose types here: every function is deterministic, unit-testable JVM logic.
  */
 object SettingsSupport {
+
+    data class QuietHoursPreset(
+        val id: String,
+        val label: String,
+        val start: String,
+        val end: String
+    )
+
+    val quietHoursPresets: List<QuietHoursPreset> = listOf(
+        QuietHoursPreset("default_21_08", "21:00 – 08:00", "21:00", "08:00"),
+        QuietHoursPreset("late_22_07", "22:00 – 07:00", "22:00", "07:00"),
+        QuietHoursPreset("night_23_0730", "23:00 – 07:30", "23:00", "07:30"),
+        QuietHoursPreset("early_20_0630", "20:00 – 06:30", "20:00", "06:30")
+    )
 
     private val hhMm = Regex("^(\\d{1,2}):(\\d{2})$")
 
@@ -43,6 +51,15 @@ object SettingsSupport {
         "%02d:%02d".format(time.hour, time.minute)
 
     /**
+     * Steps a quiet-hours time string by [deltaMinutes] (e.g., -30 or +30), wrapping cleanly
+     * across midnight. Falls back to [fallback] if [raw] is currently invalid.
+     */
+    fun stepQuietHours(raw: String, deltaMinutes: Long, fallback: LocalTime = LocalTime.of(21, 0)): String {
+        val base = parseQuietHours(raw) ?: fallback
+        return formatQuietHours(base.plusMinutes(deltaMinutes))
+    }
+
+    /**
      * Effective quiet-hours window shown on the hub row. Defaults mirror the delegated
      * planning default (21:00–08:00) so the row always communicates what is actually in force.
      */
@@ -63,5 +80,63 @@ object SettingsSupport {
         DayOfWeek.MONDAY -> "Monday"
         DayOfWeek.SUNDAY -> "Sunday"
         else -> day.name.lowercase().replaceFirstChar { it.uppercase() }
+    }
+
+    /**
+     * Plain-language pre-backup / on-device data summary line shown at the top of the
+     * unified Data & Backup sub-screen (satisfies docs/26-SCREEN-AND-DATA-CONTRACTS.md).
+     */
+    fun dataSummaryLine(
+        activeHabits: Int,
+        pausedHabits: Int,
+        checkInCount: Int,
+        journalEntryCount: Int
+    ): String {
+        val habitPart = when {
+            activeHabits == 0 && pausedHabits == 0 -> "0 habits"
+            pausedHabits == 0 -> "$activeHabits active ${if (activeHabits == 1) "habit" else "habits"}"
+            else -> "$activeHabits active · $pausedHabits paused/archived"
+        }
+        val checkInPart = "$checkInCount ${if (checkInCount == 1) "check-in" else "check-ins"}"
+        val journalPart = "$journalEntryCount saved ${if (journalEntryCount == 1) "reflection" else "reflections"}"
+        return "$habitPart · $checkInPart · $journalPart"
+    }
+
+    /**
+     * Validates optional backup password and confirmation.
+     * - Empty password is valid (unencrypted portable backup).
+     * - If confirmPassword is left blank (e.g. single-field quick entry or existing test), it is allowed.
+     * - If confirmPassword is provided and differs from password, returns an error message.
+     */
+    fun backupPasswordMismatchError(password: String, confirmPassword: String): String? {
+        if (password.isBlank() || confirmPassword.isBlank()) return null
+        return if (password != confirmPassword) {
+            "Passwords do not match yet"
+        } else {
+            null
+        }
+    }
+
+    fun isBackupPasswordReady(password: String, confirmPassword: String): Boolean =
+        backupPasswordMismatchError(password, confirmPassword) == null
+
+    /**
+     * Inspects a pasted backup payload before restoring so the user gets immediate feedback
+     * on whether it is a password-protected backup, a plain Dayseed backup, or unrecognised text.
+     */
+    fun inspectBackupPayloadSummary(rawPayload: String): String? {
+        val trimmed = rawPayload.trim()
+        if (trimmed.isEmpty()) return null
+        if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) {
+            return "Doesn't look like a Dayseed backup file yet (expected JSON starting with '{')."
+        }
+        return when {
+            trimmed.contains("\"dayseed_encrypted_backup_v1\"") ->
+                "Password-protected Dayseed backup detected. Enter its password on the previous screen before restoring."
+            trimmed.contains("\"habits\"") || trimmed.contains("\"journal_entries\"") || trimmed.contains("\"schema_version\"") ->
+                "Dayseed portable backup detected and ready to restore."
+            else ->
+                "JSON detected, but Dayseed backup fields were not found."
+        }
     }
 }
