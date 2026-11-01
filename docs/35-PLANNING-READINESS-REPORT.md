@@ -1,9 +1,9 @@
 # Dayseed Planning Readiness Report
 
-**Snapshot date:** 2026-10-31
-**Status:** Stage A planning complete and closed; Stage B initial-v1 implementation now authorized and in progress. Stage C independent technical validation pending Stage B completion. Stage D final owner acceptance/release readiness pending Stage C completion. Post-build acceptance evidence pending.
+**Snapshot date:** 2026-11-01 (status addendum)
+**Status:** Stage A planning complete/approved under D-208. Stage B full initial-v1 implementation is explicitly authorised by owner under D-213; Phase 0 preflight is the next action. Stage C independent validation is not authorised until Stage B is complete and committed. Stage D final owner acceptance remains closed pending Stage C evidence.
 **Repository:** `HeWhoArose/Dayseed`
-**Scope:** Documentation and decision consistency for Stage A planning baseline. This report does not authorise source inspection, technical validation, database changes, builds, tests, or implementation for Stage B.
+**Scope:** The original body below is a historical Stage A planning-readiness snapshot. Its dated gate statements are superseded by the 2026-11-01 D-213 addendum at the end of this report. This status update is not build/test/runtime evidence.
 **Repository:** `HeWhoArose/Dayseed`  
 **Scope:** Documentation and decision consistency only. This report does not authorise source inspection, technical validation, database changes, builds, tests, or implementation.
 
@@ -138,3 +138,12 @@ Rendered-screen review, task comprehension, Journal discoverability, Growth Mark
 ## Current authoritative workflow correction — 2026-10-30
 
 This addendum supersedes earlier stage labels in this readiness report. Stage A planning is complete and approved/open under D-208. The corrected sequence is **Stage B full initial-v1 implementation in Google AI Studio** (not yet authorised) → **Stage C independent technical validation after implementation** → **Stage D final owner acceptance/release readiness**. This documentation correction does not authorise Stage B. The proposed relational schema remains proposed, not canonical/finally approved; candidate palette values, typography, contrast pairings and automatic daypart boundaries remain unapproved and centrally configurable. No application code, schema, migration, build, test, APK or device validation was performed by this update.
+
+
+## 12. Owner authorisation of full Stage B implementation — 2026-11-01 (D-213)
+
+The owner explicitly authorised the complete initial-v1 Stage B implementation in response to a direct, scope-specific question. The approved roadmap is the consolidated root `implementation_plan.md` on branch `planning/system-wide-audit-implementation-plan-2026-11-01`, including Phase 0 preflight and Phases 1–5. Implementation continues the existing native Kotlin + Jetpack Compose app.
+
+**Current gate status:** Stage A planning is complete/approved (D-208). Stage B full initial-v1 implementation is **AUTHORISED** (D-213). Begin with Phase 0. Stage C independent technical validation remains **NOT AUTHORISED** and requires separate owner approval after Stage B is complete and committed. Stage D final owner acceptance/release readiness remains **NOT OPEN**.
+
+This addendum supersedes earlier “Stage B not authorised” statements in this historical readiness snapshot. It does not claim Phase 0, builds, tests, features, migrations or device checks have passed. Older progress entries must not be treated as evidence that the newly audited initial-v1 scope is complete.
