@@ -1,6 +1,6 @@
 # AI Studio–GitHub Workflow and Project Gate
 
-**Status:** Stage A planning complete; planning gate APPROVED / OPEN (owner instruction, 2026-10-30, D-208). Stage B implementation, Stage C independent validation, and Stage D final acceptance remain separately gated.  
+**Status (2026-11-01):** Stage A planning complete/approved under D-208. Stage B full initial-v1 implementation explicitly authorised by owner under D-213 using root `implementation_plan.md` (Phase 0 plus Phases 1–5). Stage C independent validation and Stage D final owner acceptance remain separately gated.  
 **Repository:** https://github.com/HeWhoArose/Dayseed  
 **Source of truth:** GitHub repository, default branch `main`.
 
@@ -24,7 +24,7 @@ Required before coding:
 
 ### Stage B — Full initial-v1 implementation in Google AI Studio
 
-D-009 is resolved: continue the existing native Kotlin + Jetpack Compose Android project. Do not scaffold a second app or rewrite to React Native/Expo. Stage B starts with a dated implementation preflight against the latest GitHub main; compare the imported AI Studio workspace/base SHA with the remote SHA, preserve useful existing work, reconcile newer remote changes, and then implement the approved initial-v1 scope in the sequenced phases of implementation_plan.md. Stage B is NOT YET AUTHORISED; it requires a separate explicit written owner instruction. D-208 approved Stage A planning only.
+D-009 is resolved: continue the existing native Kotlin + Jetpack Compose Android project. Do not scaffold a second app or rewrite to React Native/Expo. **The owner authorised full Stage B initial-v1 implementation on 2026-11-01 under D-213.** Use root `implementation_plan.md` on `planning/system-wide-audit-implementation-plan-2026-11-01` as the consolidated plan (Phase 0 plus Phases 1–5). Start with a dated preflight against latest GitHub main; compare the imported AI Studio workspace/base SHA with remote SHA, preserve existing work and reconcile newer remote changes. Implement only the recorded v1 scope. Material unresolved owner-reserved decisions in the plan must be reconciled before affected code is written. Stage C independent validation remains unauthorised; Stage D remains closed pending explicit owner acceptance.
 
 Acceptance:
 1. Confirm the project type, platform build path, and installable Android artifact for the owner-approved stack; do not substitute a website or preview for the Android app.
@@ -116,7 +116,7 @@ AI Studio is the active development environment. Remove and avoid reintroducing 
 This section supersedes older stage labels and sequencing in this document and historical handover text:
 
 - **Stage A — Planning:** complete and approved/open under D-208.
-- **Stage B — Full initial-v1 implementation:** implementation in Google AI Studio, beginning with a dated implementation preflight against the latest GitHub main. Preserve useful existing code, reconcile gaps, implement approved scope and commit the work. Stage B is **NOT YET AUTHORISED**; it requires a separate explicit written owner instruction.
+- **Stage B — Full initial-v1 implementation:** **AUTHORISED under D-213 (2026-11-01)** for the full root `implementation_plan.md` scope (Phase 0 plus Phases 1–5). Begin with a dated preflight against latest main; preserve useful code, reconcile workspace changes, implement v1 scope and commit reviewable phase work.
 - **Stage C — Independent technical validation:** after Stage B is implemented and committed, independently inspect and validate the resulting project from the current GitHub commit; run agreed builds/tests and runtime/device/accessibility/privacy/data-integrity checks, report defects, fix under the authorised workflow, and revalidate. Stage B self-checks are not independent Stage C evidence.
 - **Stage D — Final owner acceptance/release readiness:** present the verified release candidate and evidence to the owner for explicit acceptance. No release claim/action without that acceptance.
 
