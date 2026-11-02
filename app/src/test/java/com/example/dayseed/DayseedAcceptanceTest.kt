@@ -92,6 +92,9 @@ class DayseedAcceptanceTest {
             "habit_entries",
             "habit_day_outcomes",
             "habit_date_notes",
+            "habit_date_exceptions",
+            "habit_streak_runs",
+            "week_start_history",
             "journal_entries",
             "journal_drafts",
             "app_settings",
@@ -111,9 +114,12 @@ class DayseedAcceptanceTest {
             assertTrue("Missing table: $table", actualTables.contains(table))
         }
 
-        // Verify canonical columns on habits (no duplicate lifecycle columns)
+        // Verify canonical v3 columns on habits
         val habitCols = getTableColumns(db, "habits")
-        assertEquals(setOf("habit_id", "created_at_utc_ms", "updated_at_utc_ms"), habitCols)
+        assertEquals(
+            setOf("habit_id", "created_at_utc_ms", "updated_at_utc_ms", "category", "lifetime_goal_days"),
+            habitCols
+        )
 
         // Verify canonical columns on journal_drafts (intended_journal_entry_id present)
         val draftCols = getTableColumns(db, "journal_drafts")
@@ -140,7 +146,7 @@ class DayseedAcceptanceTest {
             trackingMode = TrackingMode.EFFORT_AWARE
         )
         repository.saveHabitSync(qtyHabit)
-        repository.saveHabitSync(effortHabit)
+        repository.saveHabitSync(effortHabit, allowLegacyEffortModeCreation = true)
 
         // AC-017: habit_day_outcomes must reject SKIPPED or MISSED
         try {
@@ -277,22 +283,31 @@ class DayseedAcceptanceTest {
         assertEquals(ProgressBand.ALMOST_THERE, ProgressBandClassifier.classify(75, 100))
         assertEquals(ProgressBand.ALMOST_THERE, ProgressBandClassifier.classify(99, 100))
         assertEquals(ProgressBand.GOAL_MET, ProgressBandClassifier.classify(100, 100))
-        assertEquals(ProgressBand.EXCEEDED, ProgressBandClassifier.classify(101, 100))
+        assertEquals(ProgressBand.EXTRA, ProgressBandClassifier.classify(101, 100))
+        assertEquals(ProgressBand.EXTRA, ProgressBandClassifier.classify(149, 100))
+        assertEquals(ProgressBand.HUGE, ProgressBandClassifier.classify(150, 100))
 
-        // Tiny integer targets skip unreachable intermediate bands cleanly (D-040)
-        // Target = 1 -> reachable: ZERO (0), GOAL_MET (1), EXCEEDED (2)
+        // Tiny integer targets skip unreachable intermediate bands cleanly (D-040 / D-216 Option A)
+        // Target = 1 -> reachable: ZERO (0), GOAL_MET (1 -> 100%), HUGE (2 -> 200%)
         assertEquals(
-            listOf(ProgressBand.ZERO, ProgressBand.GOAL_MET, ProgressBand.EXCEEDED),
+            listOf(ProgressBand.ZERO, ProgressBand.GOAL_MET, ProgressBand.HUGE),
             ProgressBandClassifier.reachableBandsForTarget(1)
         )
-        // Target = 2 -> reachable: ZERO (0), HALFWAY (1), GOAL_MET (2), EXCEEDED (3)
+        // Target = 2 -> reachable: ZERO (0), HALFWAY (1 -> 50%), GOAL_MET (2 -> 100%), HUGE (3 -> 150%)
         assertEquals(
-            listOf(ProgressBand.ZERO, ProgressBand.HALFWAY, ProgressBand.GOAL_MET, ProgressBand.EXCEEDED),
+            listOf(ProgressBand.ZERO, ProgressBand.HALFWAY, ProgressBand.GOAL_MET, ProgressBand.HUGE),
             ProgressBandClassifier.reachableBandsForTarget(2)
         )
-        // Target = 3 -> reachable: ZERO (0), GETTING_STARTED (1 -> 33%),HALFWAY (2 -> 66%), GOAL_MET (3 -> 100%), EXCEEDED
+        // Target = 3 -> reachable: ZERO (0), GETTING_STARTED (1 -> 33%), HALFWAY (2 -> 66%), GOAL_MET (3 -> 100%), EXTRA (4 -> 133%), HUGE (5 -> 166%)
         assertEquals(
-            listOf(ProgressBand.ZERO, ProgressBand.GETTING_STARTED, ProgressBand.HALFWAY, ProgressBand.GOAL_MET, ProgressBand.EXCEEDED),
+            listOf(
+                ProgressBand.ZERO,
+                ProgressBand.GETTING_STARTED,
+                ProgressBand.HALFWAY,
+                ProgressBand.GOAL_MET,
+                ProgressBand.EXTRA,
+                ProgressBand.HUGE
+            ),
             ProgressBandClassifier.reachableBandsForTarget(3)
         )
     }
@@ -399,7 +414,11 @@ class DayseedAcceptanceTest {
             name = "Evening Stretch",
             trackingMode = TrackingMode.EFFORT_AWARE
         )
-        repository.saveHabitSync(habit, effectiveDateOverride = today.minusDays(10))
+        repository.saveHabitSync(
+            habit,
+            effectiveDateOverride = today.minusDays(10),
+            allowLegacyEffortModeCreation = true
+        )
 
         // AC-008: Autosave draft -> intended_journal_entry_id is null while typing
         val draft = repository.saveJournalDraftSync(

@@ -1,49 +1,109 @@
 package com.example.dayseed.data
 
+import android.database.Cursor
+import java.math.BigInteger
 import java.time.DayOfWeek
 import java.time.LocalDate
-import java.time.temporal.TemporalAdjusters
-import java.util.UUID
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
+import java.time.format.ResolverStyle
+import java.util.Locale
 
-// ============================================================================
-// CORE ENUMS & CANONICAL VALUE OBJECTS
-// ============================================================================
+// =============================================================================
+// 1. SAFE SQLITE INTEGER EXTRACTION & LOCAL DATE VALIDATION (Revision 7 §3.5, §5.4)
+// =============================================================================
+
+class DayseedNumericRangeException(message: String) : RuntimeException(message)
+
+fun Cursor.getValidatedInt(colIndex: Int, columnName: String): Int {
+    val raw = getLong(colIndex)
+    if (raw < Int.MIN_VALUE.toLong() || raw > Int.MAX_VALUE.toLong()) {
+        throw DayseedNumericRangeException(
+            "Column '$columnName' value $raw exceeds 32-bit signed Int range."
+        )
+    }
+    return raw.toInt()
+}
+
+fun Cursor.getNullableValidatedInt(colIndex: Int, columnName: String): Int? {
+    if (isNull(colIndex)) return null
+    return getValidatedInt(colIndex, columnName)
+}
+
+object LocalDateValidator {
+    private val STRICT_ISO_DATE: DateTimeFormatter = DateTimeFormatter
+        .ofPattern("uuuu-MM-dd", Locale.ROOT)
+        .withResolverStyle(ResolverStyle.STRICT)
+
+    fun parseStrict(raw: String): LocalDate {
+        if (raw.length != 10) {
+            throw IllegalArgumentException("Invalid ISO local date '$raw': expected 10-character YYYY-MM-DD.")
+        }
+        return try {
+            LocalDate.parse(raw, STRICT_ISO_DATE)
+        } catch (e: DateTimeParseException) {
+            throw IllegalArgumentException("Invalid calendar date '$raw': ${e.message}", e)
+        }
+    }
+
+    fun isValidStrict(raw: String?): Boolean {
+        if (raw == null || raw.length != 10) return false
+        return try {
+            LocalDate.parse(raw, STRICT_ISO_DATE)
+            true
+        } catch (_: DateTimeParseException) {
+            false
+        }
+    }
+
+    fun requireValid(raw: String, fieldName: String = "local_date"): String {
+        parseStrict(raw)
+        return raw
+    }
+}
+
+// =============================================================================
+// 2. TRACKING MODES, SCHEDULES, TARGET PERIODS & LIFECYCLE STATES (D-216, U-11)
+// =============================================================================
 
 enum class TrackingMode(val label: String) {
-    QUANTITY("Quantity (e.g. glasses, pages)"),
-    DURATION("Duration (e.g. minutes, hours)"),
-    COMPLETION_ONLY("Simple Check-Off"),
-    EFFORT_AWARE("Effort-Aware (Tiny / Usual / Extra)"),
-    EFFORT_LEVELS("Effort-Aware (Tiny / Usual / Extra)");
+    QUANTITY("Quantity"),
+    DURATION("Duration"),
+    COMPLETION_ONLY("Simple check-off"),
+    EFFORT_AWARE("Effort-aware (Legacy)"),
+    @Deprecated("Legacy v1 alias for EFFORT_AWARE; mapped automatically during v1->v2 migration")
+    EFFORT_LEVELS("Effort-aware");
 
     fun canonical(): TrackingMode = if (this == EFFORT_LEVELS) EFFORT_AWARE else this
 
-    val isMeasurable: Boolean
-        get() = canonical() == QUANTITY || canonical() == DURATION
-
-    val isOutcomeBased: Boolean
-        get() = canonical() == COMPLETION_ONLY || canonical() == EFFORT_AWARE
+    fun isCreatableForNewHabit(): Boolean = canonical() in creatableModes
 
     companion object {
-        fun fromDb(raw: String?): TrackingMode = when (raw?.trim()?.uppercase()) {
+        val creatableModes: Set<TrackingMode> = setOf(
+            QUANTITY,
+            DURATION,
+            COMPLETION_ONLY
+        )
+
+        fun fromDb(value: String?): TrackingMode = when (value?.uppercase()) {
             "QUANTITY" -> QUANTITY
             "DURATION" -> DURATION
-            "COMPLETION_ONLY" -> COMPLETION_ONLY
+            "COMPLETION_ONLY", "BINARY" -> COMPLETION_ONLY
             "EFFORT_AWARE", "EFFORT_LEVELS" -> EFFORT_AWARE
             else -> EFFORT_AWARE
         }
     }
 }
 
-enum class TargetPeriod(val label: String) {
-    DAY("Daily"),
-    WEEK("Weekly")
-}
-
 enum class ScheduleKind(val label: String) {
     DAILY("Every day"),
     SELECTED_WEEKDAYS("Selected weekdays"),
     FLEXIBLE_WEEKLY_TARGET("Flexible weekly target")
+}
+
+enum class TargetPeriod(val label: String) {
+    DAY("Per day"),
+    WEEK("Per week")
 }
 
 enum class HabitLifecycleState(val label: String) {
@@ -53,302 +113,270 @@ enum class HabitLifecycleState(val label: String) {
     ARCHIVED("Archived")
 }
 
-enum class DailyOutcome(val label: String) {
-    COMPLETED("Completed")
-}
+enum class EffortLevel(val label: String, val badgeText: String) {
+    TINY("Tiny", "Tiny Seed"),
+    USUAL("Usual", "Steady Growth"),
+    EXTRA("Extra", "Full Bloom"),
+    STANDARD("Standard", "Completed");
 
-enum class EffortLevel(val label: String, private val sym: String) {
-    TINY("Tiny", "🌱"),
-    USUAL("Usual", "🌿"),
-    EXTRA("Extra", "🌳"),
-    STANDARD("Done", "✓");
+    fun symbol(): String = when (this) {
+        TINY -> "🌱"
+        USUAL -> "🌿"
+        EXTRA -> "🌳"
+        STANDARD -> "✓"
+    }
 
     fun displayName(): String = label
-    fun symbol(): String = sym
+}
+
+enum class DailyOutcome(val label: String) {
+    COMPLETED("Completed"),
+    PLANNED_REST("Rest Day"),
+    MISSED("Missed")
 }
 
 enum class DerivedDayStatus {
     COMPLETED,
     PARTIAL,
     LOGGED_ZERO,
+    REST_DAY,
     OPEN_TODAY,
+    DERIVED_MISSED,
     UNSCHEDULED,
-    INACTIVE_LIFECYCLE,
-    DERIVED_MISSED
+    INACTIVE_LIFECYCLE
 }
 
-enum class ProgressBand(val label: String, val encouragement: String) {
-    ZERO("Not started", "Even a tiny step counts when you are ready."),
-    TINY_STEP("Tiny step", "You started — that breaks the inertia."),
-    GETTING_STARTED("Getting started", "Building steady momentum."),
-    HALFWAY("Halfway", "Halfway through your target."),
-    ALMOST_THERE("Almost there", "Nearly at your full target."),
-    GOAL_MET("Goal met", "Target reached for this period."),
-    EXCEEDED("Exceeded", "Above and beyond your target.")
+enum class DayRecordState {
+    NO_RECORD,
+    EXPLICIT_ZERO,
+    PARTIAL_PROGRESS,
+    GOAL_MET_OR_EXCEEDED,
+    REST_DAY_EXCEPTION,
+    PAUSED_LIFECYCLE
 }
 
-/**
- * Deterministic progress-band classifier for measurable habits (D-040 / AC-002):
- * - 0 -> ZERO
- * - 1%–24% -> TINY_STEP
- * - 25%–49% -> GETTING_STARTED
- * - 50%–74% -> HALFWAY
- * - 75%–99% -> ALMOST_THERE
- * - 100% -> GOAL_MET
- * - >100% -> EXCEEDED
- * Tiny integer targets (e.g. target = 1, 2, 3) skip unreachable intermediate bands cleanly.
- */
+// =============================================================================
+// 3. PROGRESS BANDS & EXACT BIGINTEGER CLASSIFIER (D-040, D-216 Option A, §3.3)
+// =============================================================================
+
+enum class ProgressBand(
+    val label: String,
+    val shortBadge: String,
+    val encouragementQuote: String,
+    val motivationQuote: String
+) {
+    ZERO(
+        label = "Zero logged",
+        shortBadge = "0%",
+        encouragementQuote = "Checking in honestly is still showing up for yourself.",
+        motivationQuote = "Even a single small unit can shift today's momentum whenever you're ready."
+    ),
+    TINY_STEP(
+        label = "Tiny step",
+        shortBadge = "1–24%",
+        encouragementQuote = "The hardest boundary is starting—you crossed it.",
+        motivationQuote = "One small brick laid today keeps the path open for tomorrow."
+    ),
+    GETTING_STARTED(
+        label = "Getting started",
+        shortBadge = "25–49%",
+        encouragementQuote = "You've built real traction today.",
+        motivationQuote = "Steady steps compound faster than occasional bursts."
+    ),
+    HALFWAY(
+        label = "Halfway there",
+        shortBadge = "50–74%",
+        encouragementQuote = "More than halfway—your consistency is taking root.",
+        motivationQuote = "You're closer to the finish than the starting line."
+    ),
+    ALMOST_THERE(
+        label = "Almost there",
+        shortBadge = "75–99%",
+        encouragementQuote = "Strong effort—you're right on the doorstep of your goal.",
+        motivationQuote = "One last push brings today's target home."
+    ),
+    GOAL_MET(
+        label = "Goal met",
+        shortBadge = "100%",
+        encouragementQuote = "Target reached—well tended today.",
+        motivationQuote = "Reliability like this is how lasting habits grow."
+    ),
+    EXTRA(
+        label = "Extra credit",
+        shortBadge = "101–149%",
+        encouragementQuote = "You went beyond what you asked of yourself today.",
+        motivationQuote = "Surplus energy invested wisely strengthens the root."
+    ),
+    HUGE(
+        label = "Huge day",
+        shortBadge = "150%+",
+        encouragementQuote = "An extraordinary session—celebrate the abundance.",
+        motivationQuote = "Let today's high tide inspire calm confidence, not pressure, tomorrow."
+    );
+
+    companion object {
+        @Deprecated("Use EXTRA or HUGE in v3; alias retained for binary/source compatibility")
+        val EXCEEDED: ProgressBand = EXTRA
+    }
+}
+
+enum class CompactHistoryBucket {
+    NONE_RECORDED,
+    PARTIAL,
+    COMPLETED,
+    EXCEEDED
+}
+
 object ProgressBandClassifier {
-    fun classify(actualUnits: Int, targetUnits: Int): ProgressBand {
-        val safeActual = actualUnits.coerceAtLeast(0)
-        val safeTarget = targetUnits.coerceAtLeast(1)
-        if (safeActual == 0) return ProgressBand.ZERO
-        if (safeActual == safeTarget) return ProgressBand.GOAL_MET
-        if (safeActual > safeTarget) return ProgressBand.EXCEEDED
+    private val BI_100 = BigInteger.valueOf(100L)
+    private val BI_25 = BigInteger.valueOf(25L)
+    private val BI_50 = BigInteger.valueOf(50L)
+    private val BI_75 = BigInteger.valueOf(75L)
+    private val BI_150 = BigInteger.valueOf(150L)
 
-        val pct = (safeActual * 100) / safeTarget
+    fun sumUnitsExact(values: Iterable<Int>): BigInteger {
+        var total = BigInteger.ZERO
+        for (v in values) {
+            if (v > 0) {
+                total = total.add(BigInteger.valueOf(v.toLong()))
+            }
+        }
+        return total
+    }
+
+    fun percentageFloor(recordedUnits: BigInteger, targetUnits: BigInteger): Int {
+        if (targetUnits <= BigInteger.ZERO || recordedUnits <= BigInteger.ZERO) return 0
+        val pct = recordedUnits.multiply(BI_100).divide(targetUnits)
+        return pct.min(BigInteger.valueOf(Int.MAX_VALUE.toLong())).toInt()
+    }
+
+    fun displayPercentage(recordedUnits: Int, targetUnits: Int): Int =
+        percentageFloor(BigInteger.valueOf(recordedUnits.toLong()), BigInteger.valueOf(targetUnits.toLong()))
+
+    fun displayPercentage(recordedUnits: BigInteger, targetUnits: BigInteger): Int =
+        percentageFloor(recordedUnits, targetUnits)
+
+    fun classify(recordedUnits: Int, targetUnits: Int): ProgressBand =
+        classify(BigInteger.valueOf(recordedUnits.toLong()), BigInteger.valueOf(targetUnits.toLong()))
+
+    fun classify(recordedUnits: Long, targetUnits: Long): ProgressBand =
+        classify(BigInteger.valueOf(recordedUnits), BigInteger.valueOf(targetUnits))
+
+    fun classify(recordedUnits: BigInteger, targetUnits: BigInteger): ProgressBand {
+        require(targetUnits > BigInteger.ZERO) { "targetUnits must be > 0 (was $targetUnits)" }
+        if (recordedUnits <= BigInteger.ZERO) return ProgressBand.ZERO
+
+        val scaled = recordedUnits.multiply(BI_100)
+        val t25 = targetUnits.multiply(BI_25)
+        val t50 = targetUnits.multiply(BI_50)
+        val t75 = targetUnits.multiply(BI_75)
+        val t100 = targetUnits.multiply(BI_100)
+        val t150 = targetUnits.multiply(BI_150)
+
         return when {
-            pct >= 75 -> ProgressBand.ALMOST_THERE
-            pct >= 50 -> ProgressBand.HALFWAY
-            pct >= 25 -> ProgressBand.GETTING_STARTED
-            else -> ProgressBand.TINY_STEP
+            scaled < t25 -> ProgressBand.TINY_STEP
+            scaled < t50 -> ProgressBand.GETTING_STARTED
+            scaled < t75 -> ProgressBand.HALFWAY
+            scaled < t100 -> ProgressBand.ALMOST_THERE
+            scaled == t100 -> ProgressBand.GOAL_MET
+            scaled < t150 -> ProgressBand.EXTRA
+            else -> ProgressBand.HUGE
         }
     }
 
-    fun displayPercentage(actualUnits: Int, targetUnits: Int): Int {
-        val safeActual = actualUnits.coerceAtLeast(0)
-        val safeTarget = targetUnits.coerceAtLeast(1)
-        return (safeActual * 100) / safeTarget
+    fun toCompactBucket(band: ProgressBand): CompactHistoryBucket = when (band) {
+        ProgressBand.ZERO -> CompactHistoryBucket.NONE_RECORDED
+        ProgressBand.TINY_STEP,
+        ProgressBand.GETTING_STARTED,
+        ProgressBand.HALFWAY,
+        ProgressBand.ALMOST_THERE -> CompactHistoryBucket.PARTIAL
+        ProgressBand.GOAL_MET -> CompactHistoryBucket.COMPLETED
+        ProgressBand.EXTRA,
+        ProgressBand.HUGE -> CompactHistoryBucket.EXCEEDED
     }
 
     fun reachableBandsForTarget(targetUnits: Int): List<ProgressBand> {
-        val safeTarget = targetUnits.coerceAtLeast(1)
+        require(targetUnits >= 1) { "targetUnits must be >= 1" }
+        val maxSample = (targetUnits.toLong() * 2L).coerceAtMost(200L).toInt()
         val bands = linkedSetOf<ProgressBand>()
-        for (actual in 0..(safeTarget + 1)) {
-            bands.add(classify(actual, safeTarget))
+        for (u in 0..maxSample) {
+            bands.add(classify(u, targetUnits))
         }
         return bands.toList()
     }
 }
 
-/**
- * Duration normalization helper (D-198 / AC-025).
- * Only DURATION habits with supported duration unit_code contribute to Growth Mark G2.
- */
-object DurationNormalizer {
-    val supportedDurationUnits = setOf("min", "mins", "minute", "minutes", "hr", "hrs", "hour", "hours")
+// =============================================================================
+// 4. WEEKDAY BITMASK & DURATION NORMALIZER
+// =============================================================================
 
-    fun isSupportedDurationUnit(unitCode: String?): Boolean {
-        if (unitCode.isNullOrBlank()) return false
-        return unitCode.trim().lowercase() in supportedDurationUnits
-    }
-
-    fun toMinutes(valueUnits: Int, unitCode: String?): Long {
-        if (valueUnits <= 0 || unitCode.isNullOrBlank()) return 0L
-        return when (unitCode.trim().lowercase()) {
-            "min", "mins", "minute", "minutes" -> valueUnits.toLong()
-            "hr", "hrs", "hour", "hours" -> valueUnits.toLong() * 60L
-            else -> 0L
-        }
-    }
-
-    fun formatTotalMinutes(totalMinutes: Long): String {
-        val safe = totalMinutes.coerceAtLeast(0L)
-        if (safe < 60L) return "$safe min"
-        val hours = safe / 60L
-        val mins = safe % 60L
-        return if (mins == 0L) "${hours}h" else "${hours}h ${mins}m"
-    }
-}
-
-/**
- * ISO weekday bitmask helper (D-188):
- * Monday=1, Tuesday=2, Wednesday=4, Thursday=8, Friday=16, Saturday=32, Sunday=64.
- * Valid non-empty masks are integers 1..127.
- */
 object WeekdayMask {
-    const val MONDAY_BIT = 1
-    const val TUESDAY_BIT = 2
-    const val WEDNESDAY_BIT = 4
-    const val THURSDAY_BIT = 8
-    const val FRIDAY_BIT = 16
-    const val SATURDAY_BIT = 32
-    const val SUNDAY_BIT = 64
-    const val ALL_DAYS_MASK = 127
-    const val ALL_WEEKDAYS = 127
+    const val ALL_DAYS_MASK = 127 // Bits 0..6 for MONDAY..SUNDAY
 
-    fun bitFor(day: DayOfWeek): Int = when (day) {
-        DayOfWeek.MONDAY -> MONDAY_BIT
-        DayOfWeek.TUESDAY -> TUESDAY_BIT
-        DayOfWeek.WEDNESDAY -> WEDNESDAY_BIT
-        DayOfWeek.THURSDAY -> THURSDAY_BIT
-        DayOfWeek.FRIDAY -> FRIDAY_BIT
-        DayOfWeek.SATURDAY -> SATURDAY_BIT
-        DayOfWeek.SUNDAY -> SUNDAY_BIT
-    }
+    fun bitFor(dayOfWeek: DayOfWeek): Int = 1 shl (dayOfWeek.value - 1)
 
     fun toMask(days: Set<DayOfWeek>): Int {
         var mask = 0
-        for (day in days) {
-            mask = mask or bitFor(day)
+        for (d in days) {
+            mask = mask or bitFor(d)
         }
         return mask
     }
 
-    fun fromMask(mask: Int?): Set<DayOfWeek> {
-        if (mask == null || mask <= 0) return emptySet()
-        val result = linkedSetOf<DayOfWeek>()
-        for (day in DayOfWeek.values()) {
-            if ((mask and bitFor(day)) != 0) {
-                result.add(day)
+    fun fromMask(mask: Int): Set<DayOfWeek> {
+        val result = mutableSetOf<DayOfWeek>()
+        for (d in DayOfWeek.values()) {
+            if ((mask and bitFor(d)) != 0) {
+                result.add(d)
             }
         }
         return result
     }
 
-    fun contains(mask: Int?, day: DayOfWeek): Boolean {
-        if (mask == null || mask <= 0) return false
-        return (mask and bitFor(day)) != 0
-    }
-
-    fun isValidNonEmptyMask(mask: Int?): Boolean {
-        return mask != null && mask in 1..ALL_DAYS_MASK
-    }
+    fun contains(mask: Int, dayOfWeek: DayOfWeek): Boolean = (mask and bitFor(dayOfWeek)) != 0
 }
 
-/**
- * Curated mood catalog (D-057, D-058, D-180):
- * 6 starter moods + 4 additional moods = 10 total.
- */
-object MoodCatalog {
-    data class MoodItem(
-        val code: String,
-        val label: String,
-        val symbol: String,
-        val isStarter: Boolean = true
-    )
+object DurationNormalizer {
+    private val MINUTE_UNITS = setOf("min", "mins", "minute", "minutes", "m")
+    private val HOUR_UNITS = setOf("hr", "hrs", "hour", "hours", "h")
+    val supportedDurationUnits: List<String> = listOf("min", "hr")
 
-    val starterMoods: List<MoodItem> = listOf(
-        MoodItem("CALM", "Calm", "🌿", isStarter = true),
-        MoodItem("FOCUSED", "Focused", "🎯", isStarter = true),
-        MoodItem("ENERGISED", "Energised", "☀️", isStarter = true),
-        MoodItem("TIRED", "Tired", "🌙", isStarter = true),
-        MoodItem("STRESSED", "Stressed", "🌧️", isStarter = true),
-        MoodItem("GRATEFUL", "Grateful", "✨", isStarter = true)
-    )
-
-    val additionalMoods: List<MoodItem> = listOf(
-        MoodItem("CONTENT", "Content", "🍵", isStarter = false),
-        MoodItem("HOPEFUL", "Hopeful", "🌱", isStarter = false),
-        MoodItem("LOW", "Low", "🍂", isStarter = false),
-        MoodItem("ANXIOUS", "Anxious", "💨", isStarter = false)
-    )
-
-    val allMoods: List<MoodItem> = starterMoods + additionalMoods
-
-    fun findByCode(code: String?): MoodItem? {
-        if (code.isNullOrBlank()) return null
-        return allMoods.find { it.code.equals(code.trim(), ignoreCase = true) }
-    }
-}
-
-/**
- * Offline daily reflection prompt rotation (D-052).
- */
-object DailyPrompts {
-    val prompts: List<Pair<String, String>> = listOf(
-        "prompt_small_win" to "What small win from today deserves a quiet nod?",
-        "prompt_energy_shift" to "What gave you energy today, and what gently drained it?",
-        "prompt_kindest_choice" to "What was the kindest thing you did for your future self today?",
-        "prompt_tiny_step" to "Where did a tiny step feel better than doing nothing?",
-        "prompt_friction_notice" to "What made a habit feel easier or harder than usual today?",
-        "prompt_gratitude_moment" to "Which ordinary moment today felt worth remembering?",
-        "prompt_let_go" to "What expectation can you set down before tomorrow begins?"
-    )
-
-    fun promptForDate(date: LocalDate): Pair<String, String> {
-        val index = Math.floorMod(date.toEpochDay().toInt(), prompts.size)
-        return prompts[index]
+    fun isSupportedDurationUnit(unitCode: String?): Boolean {
+        if (unitCode == null) return false
+        val norm = unitCode.trim().lowercase()
+        return norm in MINUTE_UNITS || norm in HOUR_UNITS
     }
 
-    fun promptTextForId(promptId: String?): String? {
-        if (promptId.isNullOrBlank()) return null
-        return prompts.find { it.first == promptId }?.second ?: promptId
-    }
-}
-
-/**
- * Shared week-boundary helper honoring app_settings.week_start (MONDAY or SUNDAY) (D-187).
- */
-object WeekBoundaryHelper {
-    fun weekBounds(referenceDate: LocalDate, weekStart: DayOfWeek): Pair<LocalDate, LocalDate> {
-        val normalizedStart = if (weekStart == DayOfWeek.SUNDAY) DayOfWeek.SUNDAY else DayOfWeek.MONDAY
-        val start = referenceDate.with(TemporalAdjusters.previousOrSame(normalizedStart))
-        val end = start.plusDays(6)
-        return start to end
+    fun toMinutes(valueUnits: Int, unitCode: String?): Long? {
+        if (valueUnits < 0) return null
+        val norm = unitCode?.trim()?.lowercase() ?: "min"
+        return when (norm) {
+            in MINUTE_UNITS -> valueUnits.toLong()
+            in HOUR_UNITS -> valueUnits.toLong() * 60L
+            else -> null
+        }
     }
 
-    fun previousWeekBounds(referenceDate: LocalDate, weekStart: DayOfWeek): Pair<LocalDate, LocalDate> {
-        val (currentStart, _) = weekBounds(referenceDate, weekStart)
-        val prevStart = currentStart.minusDays(7)
-        val prevEnd = currentStart.minusDays(1)
-        return prevStart to prevEnd
-    }
-}
-
-// ============================================================================
-// DOMAIN & PERSISTENCE MODELS (12 CANONICAL TABLES + VIEW PROJECTIONS)
-// ============================================================================
-
-/**
- * Convenience projection combining `habits` identity + effective `habit_versions` row.
- */
-data class Habit(
-    val habitId: String = UUID.randomUUID().toString(),
-    val createdAtUtcMs: Long = System.currentTimeMillis(),
-    val updatedAtUtcMs: Long = System.currentTimeMillis(),
-    val currentVersion: HabitVersion? = null,
-    val name: String,
-    val description: String = "",
-    val trackingMode: TrackingMode = TrackingMode.EFFORT_AWARE,
-    val unitCode: String? = null,
-    val targetPeriod: TargetPeriod = TargetPeriod.DAY,
-    val targetValue: Int? = null,
-    val scheduleKind: ScheduleKind = ScheduleKind.DAILY,
-    val scheduledWeekdaysMask: Int? = null,
-    val preferredWeekdaysMask: Int? = null,
-    val lifecycleState: HabitLifecycleState = HabitLifecycleState.ACTIVE,
-    val reminderMode: String = "OFF",
-    val reminderTimeLocal: String? = "09:00",
-    val tinyDescription: String = "Deliberately small action",
-    val usualDescription: String = "The ordinary intended action",
-    val extraDescription: String = "Optional stretch action",
-    val scheduleDays: Set<DayOfWeek> = DayOfWeek.values().toSet(),
-    val colorHex: String = "#286143"
-) {
-    val id: String get() = habitId
-    val isArchived: Boolean get() = lifecycleState != HabitLifecycleState.ACTIVE
-
-    fun isScheduledFor(date: LocalDate): Boolean {
-        if (lifecycleState != HabitLifecycleState.ACTIVE) return false
-        return when (scheduleKind) {
-            ScheduleKind.DAILY -> true
-            ScheduleKind.SELECTED_WEEKDAYS -> {
-                if (scheduledWeekdaysMask != null) {
-                    WeekdayMask.contains(scheduledWeekdaysMask, date.dayOfWeek)
-                } else {
-                    date.dayOfWeek in scheduleDays
-                }
-            }
-            ScheduleKind.FLEXIBLE_WEEKLY_TARGET -> true
+    fun formatTotalMinutes(totalMinutes: Long): String {
+        if (totalMinutes <= 0L) return "0m"
+        val hours = totalMinutes / 60L
+        val mins = totalMinutes % 60L
+        return when {
+            hours > 0L && mins > 0L -> "${hours}h ${mins}m"
+            hours > 0L -> "${hours}h"
+            else -> "${mins}m"
         }
     }
 }
 
+// =============================================================================
+// 5. CORE PERSISTENT ENTITIES (v3 Schema)
+// =============================================================================
+
 data class HabitVersion(
-    val versionId: String = UUID.randomUUID().toString(),
+    val versionId: String,
     val habitId: String,
-    val effectiveFromLocalDate: String,
+    val effectiveFromLocalDate: String, // YYYY-MM-DD
     val name: String,
     val description: String? = null,
     val trackingMode: TrackingMode,
@@ -359,123 +387,337 @@ data class HabitVersion(
     val scheduledWeekdaysMask: Int? = null,
     val preferredWeekdaysMask: Int? = null,
     val lifecycleState: HabitLifecycleState = HabitLifecycleState.ACTIVE,
-    val reminderMode: String = "OFF",
-    val reminderTimeLocal: String? = null,
-    val createdAtUtcMs: Long = System.currentTimeMillis()
+    val reminderMode: String = "OFF", // "OFF" or "AT_TIME"
+    val reminderTimeLocal: String? = null, // "HH:mm"
+    val tinyDescription: String = "Deliberately small action",
+    val usualDescription: String = "The ordinary intended action",
+    val extraDescription: String = "Optional stretch action",
+    val colorHex: String = "#286143",
+    val sortOrder: Int = 0,
+    val createdAtUtcMs: Long = 0L
+)
+
+data class Habit(
+    val habitId: String,
+    val createdAtUtcMs: Long = 0L,
+    val updatedAtUtcMs: Long = 0L,
+    val category: String? = null,
+    val lifetimeGoalDays: Int? = null,
+    val currentVersion: HabitVersion? = null,
+    // Convenience properties resolved from effective HabitVersion
+    val name: String = currentVersion?.name ?: "",
+    val description: String = currentVersion?.description ?: "",
+    val trackingMode: TrackingMode = currentVersion?.trackingMode ?: TrackingMode.COMPLETION_ONLY,
+    val unitCode: String? = currentVersion?.unitCode,
+    val targetPeriod: TargetPeriod = currentVersion?.targetPeriod ?: TargetPeriod.DAY,
+    val targetValue: Int? = currentVersion?.targetValue,
+    val scheduleKind: ScheduleKind = currentVersion?.scheduleKind ?: ScheduleKind.DAILY,
+    val scheduledWeekdaysMask: Int? = currentVersion?.scheduledWeekdaysMask,
+    val preferredWeekdaysMask: Int? = currentVersion?.preferredWeekdaysMask,
+    val lifecycleState: HabitLifecycleState = currentVersion?.lifecycleState ?: HabitLifecycleState.ACTIVE,
+    val reminderMode: String = currentVersion?.reminderMode ?: "OFF",
+    val reminderTimeLocal: String? = currentVersion?.reminderTimeLocal,
+    val tinyDescription: String = currentVersion?.tinyDescription ?: "Deliberately small action",
+    val usualDescription: String = currentVersion?.usualDescription ?: "The ordinary intended action",
+    val extraDescription: String = currentVersion?.extraDescription ?: "Optional stretch action",
+    val scheduleDays: Set<DayOfWeek> = DayOfWeek.values().toSet(),
+    val colorHex: String = currentVersion?.colorHex ?: "#286143",
+    val sortOrder: Int = currentVersion?.sortOrder ?: 0
 ) {
-    fun isScheduledOn(date: LocalDate): Boolean {
-        if (lifecycleState != HabitLifecycleState.ACTIVE) return false
-        return when (scheduleKind) {
-            ScheduleKind.DAILY -> true
-            ScheduleKind.SELECTED_WEEKDAYS -> WeekdayMask.contains(scheduledWeekdaysMask, date.dayOfWeek)
-            ScheduleKind.FLEXIBLE_WEEKLY_TARGET -> true
+    val id: String get() = habitId
+    val isArchived: Boolean get() = lifecycleState == HabitLifecycleState.ARCHIVED
+
+    fun isScheduledFor(dayOfWeek: DayOfWeek): Boolean = when (scheduleKind) {
+        ScheduleKind.DAILY -> true
+        ScheduleKind.SELECTED_WEEKDAYS -> {
+            val mask = scheduledWeekdaysMask ?: WeekdayMask.toMask(scheduleDays)
+            WeekdayMask.contains(mask, dayOfWeek)
+        }
+        ScheduleKind.FLEXIBLE_WEEKLY_TARGET -> {
+            val mask = preferredWeekdaysMask
+            if (mask != null && mask > 0) WeekdayMask.contains(mask, dayOfWeek) else true
         }
     }
+
+    fun isScheduledFor(date: LocalDate): Boolean = isScheduledFor(date.dayOfWeek)
 }
 
 data class HabitEntry(
-    val entryId: String = UUID.randomUUID().toString(),
+    val entryId: String,
     val habitId: String,
-    val localDate: String,
+    val localDate: String, // YYYY-MM-DD
     val valueUnits: Int,
     val entryNote: String? = null,
-    val createdAtUtcMs: Long = System.currentTimeMillis(),
-    val updatedAtUtcMs: Long = System.currentTimeMillis(),
-    val idempotencyKey: String? = UUID.randomUUID().toString()
+    val createdAtUtcMs: Long,
+    val updatedAtUtcMs: Long,
+    val idempotencyKey: String
 )
 
 data class HabitDayOutcome(
-    val outcomeId: String = UUID.randomUUID().toString(),
+    val outcomeId: String,
     val habitId: String,
-    val localDate: String,
-    val outcomeKind: String, // COMPLETED | EFFORT_LOGGED
-    val effortLevel: String? = null, // TINY | USUAL | EXTRA | null
-    val idempotencyKey: String? = UUID.randomUUID().toString(),
-    val createdAtUtcMs: Long = System.currentTimeMillis(),
-    val updatedAtUtcMs: Long = System.currentTimeMillis()
+    val localDate: String, // YYYY-MM-DD
+    val outcomeKind: String, // "COMPLETED" or "EFFORT_LOGGED"
+    val effortLevel: String? = null, // "TINY", "USUAL", "EXTRA" when outcomeKind == "EFFORT_LOGGED"
+    val idempotencyKey: String,
+    val createdAtUtcMs: Long,
+    val updatedAtUtcMs: Long
 )
 
 data class HabitDateNote(
-    val noteId: String = UUID.randomUUID().toString(),
+    val noteId: String,
     val habitId: String,
-    val localDate: String,
+    val localDate: String, // YYYY-MM-DD
     val body: String,
-    val createdAtUtcMs: Long = System.currentTimeMillis(),
-    val updatedAtUtcMs: Long = System.currentTimeMillis()
+    val createdAtUtcMs: Long,
+    val updatedAtUtcMs: Long
 )
 
-data class JournalEntry(
-    val journalEntryId: String = UUID.randomUUID().toString(),
+// =============================================================================
+// 6. PHASE 1 SCHEDULING EXCEPTIONS, PAUSE RANGES, STREAKS & GROVE (D-217, D-218, U-1..U-13)
+// =============================================================================
+
+enum class HabitDateExceptionKind {
+    REST_DAY
+}
+
+data class HabitDateException(
+    val id: String,
+    val habitId: String,
+    val localDate: String, // YYYY-MM-DD
+    val exceptionKind: HabitDateExceptionKind = HabitDateExceptionKind.REST_DAY,
+    val note: String? = null,
+    val createdAtUtcMs: Long,
+    val updatedAtUtcMs: Long
+)
+
+/**
+ * Derived in-memory pause range from habit_versions.lifecycle_state transitions (U-9 Option A).
+ * No separate habit_pauses table exists.
+ */
+data class DerivedPauseRange(
+    val habitId: String,
+    val startLocalDate: LocalDate,
+    val endLocalDateInclusive: LocalDate? // null means open-ended pause
+) {
+    fun contains(date: LocalDate): Boolean {
+        if (date.isBefore(startLocalDate)) return false
+        val end = endLocalDateInclusive ?: return true
+        return !date.isAfter(end)
+    }
+}
+
+fun derivePauseRanges(versions: List<HabitVersion>): List<DerivedPauseRange> {
+    if (versions.isEmpty()) return emptyList()
+    val sorted = versions.sortedWith(
+        compareBy<HabitVersion> { it.effectiveFromLocalDate }.thenBy { it.createdAtUtcMs }
+    )
+    // Collapse same-date versions to the latest version for that effectiveFromLocalDate
+    val deduplicated = sorted
+        .groupBy { it.effectiveFromLocalDate }
+        .values
+        .map { it.last() }
+        .sortedBy { it.effectiveFromLocalDate }
+
+    val ranges = mutableListOf<DerivedPauseRange>()
+    var currentPauseStart: LocalDate? = null
+    val habitId = deduplicated.first().habitId
+
+    for (v in deduplicated) {
+        val effDate = try {
+            LocalDateValidator.parseStrict(v.effectiveFromLocalDate)
+        } catch (_: Exception) {
+            continue
+        }
+        if (v.lifecycleState == HabitLifecycleState.PAUSED) {
+            if (currentPauseStart == null) {
+                currentPauseStart = effDate
+            }
+        } else {
+            if (currentPauseStart != null) {
+                val endInclusive = effDate.minusDays(1)
+                if (!endInclusive.isBefore(currentPauseStart)) {
+                    ranges.add(
+                        DerivedPauseRange(
+                            habitId = habitId,
+                            startLocalDate = currentPauseStart,
+                            endLocalDateInclusive = endInclusive
+                        )
+                    )
+                }
+                currentPauseStart = null
+            }
+        }
+    }
+
+    if (currentPauseStart != null) {
+        ranges.add(
+            DerivedPauseRange(
+                habitId = habitId,
+                startLocalDate = currentPauseStart,
+                endLocalDateInclusive = null
+            )
+        )
+    }
+    return ranges
+}
+
+enum class StreakUnit {
+    DAYS,
+    WEEKS
+}
+
+enum class GroveTerminalReason {
+    MISSED,
+    PAUSED,
+    ARCHIVED,
+    COMPLETED
+}
+
+enum class GroveTreeState {
+    SAPLING_ACTIVE,
+    GROWING_TREE,
+    DORMANT_TREE,
+    UNQUALIFIED_HISTORY
+}
+
+data class HabitStreakRun(
+    val runId: String,
+    val habitId: String,
+    val startLocalDate: String, // YYYY-MM-DD
+    val endLocalDate: String, // YYYY-MM-DD
+    val completedStreakCount: Int,
+    val elapsedActiveSpanCount: Int,
+    val streakUnit: StreakUnit,
+    val terminalReason: GroveTerminalReason? = null,
+    val isActive: Boolean,
+    val qualifiedForGrove: Boolean,
+    val qualifiedAtUtcMs: Long? = null,
+    val brokenOnLocalDate: String? = null,
+    val treeState: GroveTreeState,
+    val createdAtUtcMs: Long,
+    val updatedAtUtcMs: Long
+)
+
+data class WeekStartPolicyEntry(
+    val effectiveFromLocalDate: String, // YYYY-MM-DD
+    val weekStartIsoDay: Int, // 1 (Monday) .. 7 (Sunday)
+    val isLegacyBaseline: Boolean = false,
+    val createdAtUtcMs: Long
+) {
+    val dayOfWeek: DayOfWeek get() = DayOfWeek.of(weekStartIsoDay)
+}
+
+enum class HabitConfigEffectivePolicy {
+    APPLY_TODAY,
+    APPLY_TOMORROW,
+    DEFER_TO_NEXT_WEEK_BOUNDARY
+}
+
+class HabitConfigurationLockedTodayException(
+    val habitId: String,
     val localDate: String,
+    message: String = "Today's habit configuration is locked because activity has already been recorded on $localDate (D-194). Use APPLY_TOMORROW instead."
+) : IllegalStateException(message)
+
+data class HabitSummary(
+    val habit: Habit,
+    val effectiveVersion: HabitVersion,
+    val todayState: DayRecordState,
+    val todayProgressBand: ProgressBand,
+    val todayCompactBucket: CompactHistoryBucket,
+    val todayTotalUnits: BigInteger,
+    val todayPercentage: Int,
+    val currentCompletedStreak: Int,
+    val currentElapsedActiveSpan: Int,
+    val streakUnit: StreakUnit,
+    val activeRun: HabitStreakRun?,
+    val groveRuns: List<HabitStreakRun>,
+    val allStreakRuns: List<HabitStreakRun>,
+    val lifetimeActiveDays: Int,
+    val lifetimeGoalDays: Int?,
+    val isScheduledToday: Boolean,
+    val hasRestDayToday: Boolean,
+    val canTakeRestDayToday: Boolean
+)
+
+data class HabitDeletionPayload(
+    val habit: Habit,
+    val versions: List<HabitVersion>,
+    val entries: List<HabitEntry>,
+    val outcomes: List<HabitDayOutcome>,
+    val notes: List<HabitDateNote>,
+    val exceptions: List<HabitDateException>,
+    val streakRuns: List<HabitStreakRun>,
+    val unlinkedJournalEntryIds: List<String>,
+    val unlinkedJournalDraftIds: List<String>
+)
+
+// =============================================================================
+// 7. JOURNAL, SETTINGS, RESTORE & UNDO MODELS
+// =============================================================================
+
+data class JournalEntry(
+    val journalEntryId: String,
+    val localDate: String, // YYYY-MM-DD
     val body: String,
     val title: String? = null,
     val primaryMoodCode: String? = null,
     val secondaryMoodCode: String? = null,
     val promptId: String? = null,
     val linkedHabitId: String? = null,
-    val createdAtUtcMs: Long = System.currentTimeMillis(),
-    val updatedAtUtcMs: Long = System.currentTimeMillis()
+    val createdAtUtcMs: Long = 0L,
+    val updatedAtUtcMs: Long = 0L
 ) {
     val id: String get() = journalEntryId
-    val date: LocalDate get() = LocalDate.parse(localDate)
     val content: String get() = body
-    val prompt: String get() = DailyPrompts.promptTextForId(promptId) ?: ""
+    val date: LocalDate
+        get() = try {
+            LocalDateValidator.parseStrict(localDate)
+        } catch (_: Exception) {
+            LocalDate.now()
+        }
+    val prompt: String get() = DailyPrompts.promptTextForId(promptId)
 }
 
 data class JournalDraft(
-    val draftId: String = UUID.randomUUID().toString(),
-    val localDate: String? = null,
+    val draftId: String,
+    val localDate: String, // YYYY-MM-DD
     val title: String? = null,
-    val body: String = "",
+    val body: String,
     val primaryMoodCode: String? = null,
     val secondaryMoodCode: String? = null,
     val promptId: String? = null,
     val linkedHabitId: String? = null,
     val intendedJournalEntryId: String? = null,
-    val sourceContext: String? = "MANUAL",
-    val createdAtUtcMs: Long = System.currentTimeMillis(),
-    val updatedAtUtcMs: Long = System.currentTimeMillis()
+    val sourceContext: String = "JOURNAL_COMPOSER", // JOURNAL_COMPOSER, HABIT_REFLECTION, COMEBACK_30D
+    val createdAtUtcMs: Long = 0L,
+    val updatedAtUtcMs: Long = 0L
 )
 
 data class AppSetting(
     val settingKey: String,
-    val valueType: String,
+    val valueType: String, // STRING, INT, BOOL, JSON
     val valueText: String,
     val schemaVersion: Int = 1,
-    val updatedAtUtcMs: Long = System.currentTimeMillis()
+    val updatedAtUtcMs: Long = 0L
 )
 
-data class ReminderDelivery(
-    val deliveryKey: String,
-    val reminderType: String,
-    val habitId: String? = null,
-    val targetPeriodKey: String,
-    val deliveryStatus: String,
-    val scheduledAtUtcMs: Long,
-    val attemptedAtUtcMs: Long? = null,
-    val deliveredAtUtcMs: Long? = null,
-    val platformNotificationTag: String? = null,
-    val platformNotificationId: Int? = null,
-    val suppressionReason: String? = null
+data class NotificationCancelOutboxItem(
+    val cancelId: String,
+    val platformNotificationTag: String,
+    val platformNotificationId: Int,
+    val createdAtUtcMs: Long,
+    val lastAttemptAtUtcMs: Long? = null,
+    val attemptCount: Int = 0,
+    val status: String = "PENDING", // PENDING, COMPLETED, FAILED
+    val errorCategory: String? = null
 )
 
-data class RestoreSession(
-    val restoreSessionId: String,
-    val restoreMode: String,
-    val formatVersion: Int,
-    val sourceSchemaVersion: Int,
-    val sessionState: String,
-    val startedAtUtcMs: Long,
-    val updatedAtUtcMs: Long,
-    val manifestJson: String,
-    val safetyBackupRef: String,
-    val safetyBackupVerified: Int
-)
-
-enum class ConflictResolution(val label: String) {
-    KEEP_CURRENT("Keep current device record"),
-    USE_BACKUP("Use backup record"),
-    KEEP_BOTH("Keep both records")
+enum class ConflictResolution {
+    KEEP_CURRENT,
+    USE_BACKUP,
+    KEEP_BOTH
 }
 
 data class RestoreConflict(
@@ -487,56 +729,53 @@ data class RestoreConflict(
     val backupPayloadJson: String,
     val createdAtUtcMs: Long
 ) {
-    /**
-     * D-191 / AC-022:
-     * Single-cardinality records (habit_version, habit_day_outcome, habit_date_note, app_setting)
-     * ONLY allow KEEP_CURRENT or USE_BACKUP.
-     * Multi-record entities (journal_entry, habit_entry) allow KEEP_CURRENT, USE_BACKUP, or KEEP_BOTH.
-     */
-    fun allowedResolutions(): List<ConflictResolution> {
-        return when (recordType.lowercase()) {
-            "journal_entry", "habit_entry" -> listOf(
-                ConflictResolution.KEEP_CURRENT,
-                ConflictResolution.USE_BACKUP,
-                ConflictResolution.KEEP_BOTH
-            )
-            else -> listOf(
-                ConflictResolution.KEEP_CURRENT,
-                ConflictResolution.USE_BACKUP
-            )
-        }
+    fun allowedResolutions(): Set<ConflictResolution> = when (recordType) {
+        "journal_entry" -> setOf(
+            ConflictResolution.KEEP_CURRENT,
+            ConflictResolution.USE_BACKUP,
+            ConflictResolution.KEEP_BOTH
+        )
+        else -> setOf(
+            ConflictResolution.KEEP_CURRENT,
+            ConflictResolution.USE_BACKUP
+        )
     }
 }
 
-data class NotificationCancelOutboxItem(
-    val cancelId: String,
-    val platformNotificationTag: String,
-    val platformNotificationId: Int,
-    val createdAtUtcMs: Long,
-    val lastAttemptAtUtcMs: Long? = null,
-    val attemptCount: Int = 0,
-    val status: String = "PENDING",
-    val errorCategory: String? = null
+data class RestoreSession(
+    val restoreSessionId: String,
+    val restoreMode: String, // REPLACE, MERGE
+    val formatVersion: Int,
+    val sourceSchemaVersion: Int,
+    val sessionState: String,
+    val startedAtUtcMs: Long,
+    val updatedAtUtcMs: Long,
+    val manifestJson: String,
+    val safetyBackupRef: String? = null,
+    val safetyBackupVerified: Int = 0
 )
 
 enum class UndoEntityType {
     HABIT_ENTRY,
     HABIT_DAY_OUTCOME,
-    HABIT_DATE_NOTE
+    HABIT_DATE_NOTE,
+    REST_DAY_EXCEPTION,
+    HABIT_DELETION
 }
 
-/**
- * 8-second guarded undo token (D-209 / AC-023).
- */
 data class UndoToken(
-    val tokenId: String = UUID.randomUUID().toString(),
+    val tokenId: String,
     val entityType: UndoEntityType,
     val entityId: String,
     val expectedUpdatedAtUtcMs: Long,
     val previousPayloadJson: String? = null,
     val createdAtUtcMs: Long,
-    val expiresAtUtcMs: Long = createdAtUtcMs + 8_000L
+    val expiresAtUtcMs: Long = createdAtUtcMs + 8_000L // 8-second undo window (D-209)
 )
+
+// =============================================================================
+// 8. COMEBACK, GROWTH METRICS, MOODS & PROMPTS
+// =============================================================================
 
 enum class ComebackTier {
     DAYS_14,
@@ -545,20 +784,14 @@ enum class ComebackTier {
 
 data class ComebackInfo(
     val daysAway: Int,
-    val tier: ComebackTier,
-    val episodeKey: String,
+    val tier: ComebackTier = if (daysAway >= 30) ComebackTier.DAYS_30 else ComebackTier.DAYS_14,
+    val episodeKey: String = "",
     val title: String,
     val message: String,
-    val primaryActionLabel: String,
-    val secondaryActionLabel: String
+    val primaryActionLabel: String = "Resume & Adjust Habits",
+    val secondaryActionLabel: String = "Keep Current Setup"
 )
 
-/**
- * Growth Mark 3-metric state (D-198 / D-034 / AC-025):
- * - G1: All-time active days across habit_entries + habit_day_outcomes
- * - G2: Current calendar-month normalized duration minutes across DURATION habits
- * - G3: Current calendar-month 12-dot rhythmic ring + session intensity map
- */
 data class GrowthMetrics(
     val totalActiveDates: Int = 0,
     val totalHabitsCompleted: Int = 0,
@@ -570,9 +803,47 @@ data class GrowthMetrics(
     val currentPeriodCompletions: Int = 0,
     val currentPeriodOpportunities: Int = 0,
     val currentMonthDurationMinutes: Long = 0L,
-    val currentMonthDateSessionCounts: Map<LocalDate, Int> = emptyMap()
-) {
-    val allTimeActiveDays: Int get() = totalActiveDates
+    val currentMonthDateSessionCounts: Map<LocalDate, Int> = emptyMap(),
+    val activeSaplingsCount: Int = 0,
+    val growingTreesCount: Int = 0,
+    val dormantTreesCount: Int = 0
+)
+
+data class MoodOption(
+    val code: String,
+    val label: String,
+    val symbol: String
+)
+
+object MoodCatalog {
+    val starterMoods: List<MoodOption> = listOf(
+        MoodOption("CALM", "Calm", "🌿"),
+        MoodOption("GRATEFUL", "Grateful", "🌼"),
+        MoodOption("HOPEFUL", "Hopeful", "🌱"),
+        MoodOption("FOCUSED", "Focused", "🎯"),
+        MoodOption("ENERGISED", "Energised", "☀️"),
+        MoodOption("CONTENT", "Content", "🍵"),
+        MoodOption("TIRED", "Tired", "🌙"),
+        MoodOption("STRESSED", "Stressed", "🌧️"),
+        MoodOption("ANXIOUS", "Anxious", "🍃"),
+        MoodOption("LOW", "Low", "🪨")
+    )
+
+    val allMoods: List<MoodOption> = starterMoods + listOf(
+        MoodOption("GROUNDED", "Grounded", "🌳"),
+        MoodOption("ENERGIZED", "Energized", "☀️"),
+        MoodOption("OVERWHELMED", "Overwhelmed", "🌊"),
+        MoodOption("RESTLESS", "Restless", "🌬️"),
+        MoodOption("PEACEFUL", "Peaceful", "🕊️"),
+        MoodOption("PROUD", "Proud", "✨")
+    )
+
+    val options: List<MoodOption> = allMoods
+
+    fun findByCode(code: String?): MoodOption? {
+        if (code.isNullOrBlank()) return null
+        return allMoods.find { it.code.equals(code, ignoreCase = true) }
+    }
 }
 
 data class MoodDistributionItem(
@@ -581,7 +852,7 @@ data class MoodDistributionItem(
     val symbol: String,
     val count: Int,
     val percentage: Int,
-    val previousPeriodCount: Int = 0
+    val previousPeriodCount: Int
 )
 
 data class MoodInsightsResult(
@@ -591,5 +862,120 @@ data class MoodInsightsResult(
     val totalEntriesWithPrimaryMood: Int,
     val previousPeriodTotalEntries: Int,
     val distribution: List<MoodDistributionItem>,
-    val matchingEntries: List<JournalEntry> = emptyList()
+    val matchingEntries: List<JournalEntry>
 )
+
+object DailyPrompts {
+    val prompts: List<Pair<String, String>> = listOf(
+        "prompt_small_action" to "What small action felt surprisingly manageable today?",
+        "prompt_resistance" to "Where did you notice resistance today, and how can you make tomorrow's step smaller?",
+        "prompt_energy" to "What helped your energy today, even a little?",
+        "prompt_tiny_version" to "If tomorrow gets busy, what is the 'Tiny' version of your most important habit?",
+        "prompt_future_self" to "What is one thing you did today that your future self will thank you for?",
+        "prompt_natural_habit" to "Which habit feels most natural right now, and why?",
+        "prompt_enough_today" to "Take a breath: what does 'enough for today' look like right now?",
+        "prompt_retrospective" to "What got in the way this week, and what would make this habit gentler next time?",
+        "prompt_comeback" to "Welcome back — what feels like a kind, sustainable starting point today?"
+    )
+
+    fun promptForDate(date: LocalDate): Pair<String, String> {
+        val dailyPool = prompts.take(7)
+        val index = Math.floorMod(date.toEpochDay().toInt(), dailyPool.size)
+        return dailyPool[index]
+    }
+
+    fun promptTextForId(promptId: String?): String {
+        if (promptId.isNullOrBlank()) return ""
+        return prompts.find { it.first == promptId }?.second ?: promptId
+    }
+}
+
+object WeekBoundaryHelper {
+    fun weekBounds(date: LocalDate, weekStart: DayOfWeek): Pair<LocalDate, LocalDate> {
+        val diff = Math.floorMod(date.dayOfWeek.value - weekStart.value, 7)
+        val start = date.minusDays(diff.toLong())
+        val end = start.plusDays(6)
+        return start to end
+    }
+
+    fun previousWeekBounds(date: LocalDate, weekStart: DayOfWeek): Pair<LocalDate, LocalDate> {
+        val (currentStart, _) = weekBounds(date, weekStart)
+        val prevStart = currentStart.minusDays(7)
+        val prevEnd = currentStart.minusDays(1)
+        return prevStart to prevEnd
+    }
+
+    /**
+     * Resolves the effective week-start DayOfWeek for targetDate using week_start_history (U-10 Option A).
+     * Also returns whether targetDate falls inside a transition gap between an ending 7-day period
+     * under the previous week-start policy and the next effective_from_local_date.
+     */
+    fun resolveWeekStartPolicyForDate(
+        date: LocalDate,
+        history: List<WeekStartPolicyEntry>,
+        fallbackDay: DayOfWeek = DayOfWeek.MONDAY
+    ): DayOfWeek {
+        if (history.isEmpty()) return fallbackDay
+        val dateStr = date.toString()
+        val sorted = history.sortedBy { it.effectiveFromLocalDate }
+        val active = sorted.lastOrNull { it.effectiveFromLocalDate <= dateStr } ?: sorted.first()
+        return active.dayOfWeek
+    }
+
+    /**
+     * Computes the effective date for a new week-start preference change (U-10 Option A):
+     * 1. Finishes the current 7-day period under the currently effective week-start day.
+     * 2. Finds the first date strictly after currentWeekEnd whose ISO day matches newWeekStart.
+     */
+    fun computeNextWeekStartEffectiveDate(
+        today: LocalDate,
+        currentWeekStart: DayOfWeek,
+        newWeekStart: DayOfWeek
+    ): Pair<LocalDate, LocalDateRange> {
+        val (_, currentWeekEnd) = weekBounds(today, currentWeekStart)
+        var candidate = currentWeekEnd.plusDays(1)
+        val transitionStart = candidate
+        while (candidate.dayOfWeek != newWeekStart) {
+            candidate = candidate.plusDays(1)
+        }
+        val transitionEnd = candidate.minusDays(1)
+        return candidate to LocalDateRange(transitionStart, transitionEnd)
+    }
+
+    /**
+     * Returns true if `date` lies inside a neutral transition gap immediately preceding a
+     * non-baseline `WeekStartPolicyEntry` (U-10 Option A).
+     */
+    fun isNeutralTransitionDate(
+        date: LocalDate,
+        history: List<WeekStartPolicyEntry>
+    ): Boolean {
+        if (history.size <= 1) return false
+        val sorted = history.sortedBy { it.effectiveFromLocalDate }
+        for (i in 1 until sorted.size) {
+            val prev = sorted[i - 1]
+            val curr = sorted[i]
+            if (curr.isLegacyBaseline) continue
+            val currEff = try { LocalDateValidator.parseStrict(curr.effectiveFromLocalDate) } catch (_: Exception) { continue }
+            // Under U-10, any transition gap before currEff is at most 6 days and starts after the last full 7-day period of prev.
+            val prevEff = try { LocalDateValidator.parseStrict(prev.effectiveFromLocalDate) } catch (_: Exception) { continue }
+            if (!date.isBefore(currEff) || date.isBefore(prevEff)) continue
+            val daysFromPrevStart = java.time.temporal.ChronoUnit.DAYS.between(prevEff, currEff)
+            val remainder = Math.floorMod(daysFromPrevStart, 7)
+            if (remainder > 0) {
+                val gapStart = currEff.minusDays(remainder.toLong())
+                if (!date.isBefore(gapStart) && date.isBefore(currEff)) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+}
+
+data class LocalDateRange(
+    val startInclusive: LocalDate,
+    val endInclusive: LocalDate
+) {
+    val isEmpty: Boolean get() = endInclusive.isBefore(startInclusive)
+}

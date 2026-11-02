@@ -284,6 +284,7 @@ private fun DailyLogView(
                     DerivedDayStatus.COMPLETED -> "Goal met / Completed"
                     DerivedDayStatus.PARTIAL -> "Partial progress recorded"
                     DerivedDayStatus.LOGGED_ZERO -> "Checked in (0 recorded)"
+                    DerivedDayStatus.REST_DAY -> "Rest day taken (streak held)"
                     DerivedDayStatus.OPEN_TODAY -> "Open for today"
                     DerivedDayStatus.DERIVED_MISSED -> "Quiet day (unlogged past scheduled day)"
                     DerivedDayStatus.UNSCHEDULED -> "Rest / Unscheduled day"

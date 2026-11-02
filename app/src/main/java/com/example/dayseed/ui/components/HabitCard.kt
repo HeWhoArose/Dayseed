@@ -55,17 +55,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dayseed.data.DailyOutcome
 import com.example.dayseed.data.EffortLevel
+import com.example.dayseed.data.GroveTreeState
 import com.example.dayseed.data.Habit
+import com.example.dayseed.data.HabitDateException
 import com.example.dayseed.data.HabitDateNote
 import com.example.dayseed.data.HabitDayOutcome
 import com.example.dayseed.data.HabitEntry
 import com.example.dayseed.data.HabitLifecycleState
+import com.example.dayseed.data.HabitSummary
 import com.example.dayseed.data.ProgressBand
 import com.example.dayseed.data.ProgressBandClassifier
+import com.example.dayseed.data.StreakUnit
 import com.example.dayseed.data.TrackingMode
 import com.example.dayseed.ui.theme.ExtraBranchColor
 import com.example.dayseed.ui.theme.TinySproutColor
 import com.example.dayseed.ui.theme.UsualLeafColor
+import java.math.BigInteger
 
 @Composable
 fun HabitCard(
@@ -73,11 +78,15 @@ fun HabitCard(
     outcome: HabitDayOutcome? = null,
     entries: List<HabitEntry> = emptyList(),
     dateNote: HabitDateNote? = null,
+    restDayException: HabitDateException? = null,
+    summary: HabitSummary? = null,
     retrospectivePromptEligible: Boolean = false,
     onLogOutcome: (outcome: DailyOutcome, effort: EffortLevel) -> Unit,
     onLogQuantityOrDuration: ((valueUnits: Int, entryNote: String?) -> Unit)? = null,
     onDeleteEntry: ((entryId: String) -> Unit)? = null,
     onSaveDateNote: ((body: String) -> Unit)? = null,
+    onTakeRestDayToday: (() -> Unit)? = null,
+    onClearRestDayToday: (() -> Unit)? = null,
     onOpenRetrospectiveJournal: (() -> Unit)? = null,
     onDismissRetrospectivePrompt: (() -> Unit)? = null,
     onResetRecord: () -> Unit,
@@ -90,7 +99,7 @@ fun HabitCard(
     var showNoteEditor by remember { mutableStateOf(false) }
     var noteDraft by remember(dateNote) { mutableStateOf(dateNote?.body ?: "") }
     val mode = habit.trackingMode.canonical()
-    val isRecorded = outcome != null || entries.isNotEmpty()
+    val isRecorded = outcome != null || entries.isNotEmpty() || restDayException != null
 
     Card(
         modifier = modifier
@@ -184,6 +193,16 @@ fun HabitCard(
                                 onEditHabit()
                             }
                         )
+                        if (summary?.canTakeRestDayToday == true && onTakeRestDayToday != null) {
+                            DropdownMenuItem(
+                                text = { Text("Take a Rest Day (Hold Streak)") },
+                                onClick = {
+                                    showMenu = false
+                                    onTakeRestDayToday()
+                                },
+                                modifier = Modifier.testTag("take_rest_day_menu_${habit.id}")
+                            )
+                        }
                         if (onPauseResumeHabit != null) {
                             val isPaused = habit.lifecycleState == HabitLifecycleState.PAUSED
                             DropdownMenuItem(
@@ -214,38 +233,115 @@ fun HabitCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Mode-specific Logging / Progress Section
-            when (mode) {
-                TrackingMode.QUANTITY, TrackingMode.DURATION -> {
-                    QuantityOrDurationSection(
-                        habit = habit,
-                        entries = entries,
-                        onAddEntry = { units, note ->
-                            onLogQuantityOrDuration?.invoke(units, note)
-                        },
-                        onDeleteEntry = { entryId ->
-                            onDeleteEntry?.invoke(entryId)
+            // Optional Streak & Grove / Lifetime Goal Row (D-217, U-6)
+            if (summary != null && (summary.currentCompletedStreak > 0 || summary.currentElapsedActiveSpan > 0 || summary.lifetimeGoalDays != null)) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (summary.currentCompletedStreak > 0 || summary.currentElapsedActiveSpan > 0) {
+                        val unitWord = if (summary.streakUnit == StreakUnit.WEEKS) {
+                            if (summary.currentCompletedStreak == 1) "wk" else "wks"
+                        } else {
+                            if (summary.currentCompletedStreak == 1) "day" else "days"
                         }
-                    )
-                }
-
-                TrackingMode.COMPLETION_ONLY, TrackingMode.EFFORT_AWARE -> {
-                    if (outcome != null) {
-                        RecordedOutcomeRow(
-                            outcome = outcome,
-                            onReset = onResetRecord
+                        val treeIcon = when (summary.activeRun?.treeState) {
+                            GroveTreeState.GROWING_TREE -> "🌳"
+                            GroveTreeState.SAPLING_ACTIVE -> "🌱"
+                            else -> "🌿"
+                        }
+                        val streakText = if (summary.currentElapsedActiveSpan > summary.currentCompletedStreak) {
+                            "$treeIcon ${summary.currentCompletedStreak} $unitWord (${summary.currentElapsedActiveSpan}d span)"
+                        } else {
+                            "$treeIcon ${summary.currentCompletedStreak} $unitWord streak"
+                        }
+                        Text(
+                            text = streakText,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.testTag("habit_streak_badge_${habit.id}")
                         )
-                    } else {
-                        UnrecordedOutcomeActionRow(
-                            habit = habit,
-                            onLog = onLogOutcome
+                    }
+                    if (summary.lifetimeGoalDays != null) {
+                        Text(
+                            text = "• ${summary.lifetimeActiveDays} / ${summary.lifetimeGoalDays} active days",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag("habit_lifetime_goal_${habit.id}")
                         )
                     }
                 }
+            }
 
-                else -> {}
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Mode-specific Logging / Progress Section or Rest Day Exception Banner (D-218)
+            if (restDayException != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f))
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .testTag("habit_rest_day_banner_${habit.id}"),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "🍃 Rest day taken for today",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Text(
+                            text = "Your streak is held safely today.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f)
+                        )
+                    }
+                    if (onClearRestDayToday != null) {
+                        TextButton(
+                            onClick = onClearRestDayToday,
+                            modifier = Modifier.testTag("clear_rest_day_btn_${habit.id}")
+                        ) {
+                            Text("Resume Today")
+                        }
+                    }
+                }
+            } else {
+                when (mode) {
+                    TrackingMode.QUANTITY, TrackingMode.DURATION -> {
+                        QuantityOrDurationSection(
+                            habit = habit,
+                            entries = entries,
+                            onAddEntry = { units, note ->
+                                onLogQuantityOrDuration?.invoke(units, note)
+                            },
+                            onDeleteEntry = { entryId ->
+                                onDeleteEntry?.invoke(entryId)
+                            }
+                        )
+                    }
+
+                    TrackingMode.COMPLETION_ONLY, TrackingMode.EFFORT_AWARE -> {
+                        if (outcome != null) {
+                            RecordedOutcomeRow(
+                                outcome = outcome,
+                                onReset = onResetRecord
+                            )
+                        } else {
+                            UnrecordedOutcomeActionRow(
+                                habit = habit,
+                                onLog = onLogOutcome
+                            )
+                        }
+                    }
+
+                    else -> {}
+                }
             }
 
             // Optional per-habit-per-date note display or editor
@@ -337,10 +433,11 @@ private fun QuantityOrDurationSection(
     onDeleteEntry: (String) -> Unit
 ) {
     val target = (habit.targetValue ?: 1).coerceAtLeast(1)
+    val targetBig = BigInteger.valueOf(target.toLong())
     val unitLabel = habit.unitCode ?: if (habit.trackingMode == TrackingMode.DURATION) "min" else "units"
-    val totalUnits = entries.sumOf { it.valueUnits }
-    val band = ProgressBandClassifier.classify(totalUnits, target)
-    val pct = ProgressBandClassifier.displayPercentage(totalUnits, target)
+    val totalUnitsBig = ProgressBandClassifier.sumUnitsExact(entries.map { it.valueUnits })
+    val band = ProgressBandClassifier.classify(totalUnitsBig, targetBig)
+    val pct = ProgressBandClassifier.displayPercentage(totalUnitsBig, targetBig)
 
     var customAmountText by remember { mutableStateOf("") }
     var showCustomInput by remember { mutableStateOf(false) }
@@ -353,7 +450,7 @@ private fun QuantityOrDurationSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "$totalUnits / $target $unitLabel ($pct%)",
+                text = "$totalUnitsBig / $target $unitLabel ($pct%)",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -375,7 +472,7 @@ private fun QuantityOrDurationSection(
         }
 
         LinearProgressIndicator(
-            progress = { (totalUnits.toFloat() / target.toFloat()).coerceIn(0f, 1f) },
+            progress = { (pct.toFloat() / 100f).coerceIn(0f, 1f) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(8.dp)
@@ -384,12 +481,19 @@ private fun QuantityOrDurationSection(
             trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
         )
 
-        if (band in listOf(ProgressBand.TINY_STEP, ProgressBand.GETTING_STARTED, ProgressBand.HALFWAY, ProgressBand.ALMOST_THERE)) {
-            Text(
-                text = "Every partial step counts — no all-or-nothing reset.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary
-            )
+        if (entries.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = band.encouragementQuote,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = band.motivationQuote,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
 
         // Quick-add buttons
@@ -422,7 +526,8 @@ private fun QuantityOrDurationSection(
             }
             Button(
                 onClick = {
-                    val remaining = (target - totalUnits).coerceAtLeast(1)
+                    val remainingBig = targetBig.subtract(totalUnitsBig)
+                    val remaining = if (remainingBig <= BigInteger.ONE) 1 else remainingBig.min(BigInteger.valueOf(Int.MAX_VALUE.toLong())).toInt()
                     onAddEntry(remaining, null)
                 },
                 modifier = Modifier

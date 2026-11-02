@@ -201,10 +201,10 @@ object ReminderEngine {
                     NotificationCancelOutboxItem(
                         cancelId = c.getString(0),
                         platformNotificationTag = c.getString(1),
-                        platformNotificationId = c.getInt(2),
+                        platformNotificationId = c.getValidatedInt(2, "platform_notification_id"),
                         createdAtUtcMs = c.getLong(3),
                         lastAttemptAtUtcMs = if (c.isNull(4)) null else c.getLong(4),
-                        attemptCount = c.getInt(5),
+                        attemptCount = c.getValidatedInt(5, "attempt_count"),
                         status = c.getString(6),
                         errorCategory = if (c.isNull(7)) null else c.getString(7)
                     )
@@ -239,6 +239,25 @@ object ReminderEngine {
             if (succeeded) completedCount++
         }
         return completedCount
+    }
+
+    fun enqueueNotificationCancel(
+        db: SQLiteDatabase,
+        platformNotificationTag: String,
+        platformNotificationId: Int,
+        nowUtcMs: Long
+    ) {
+        val cv = ContentValues().apply {
+            put("cancel_id", UUID.randomUUID().toString())
+            put("platform_notification_tag", platformNotificationTag)
+            put("platform_notification_id", platformNotificationId)
+            put("created_at_utc_ms", nowUtcMs)
+            putNull("last_attempt_at_utc_ms")
+            put("attempt_count", 0)
+            put("status", "PENDING")
+            putNull("error_category")
+        }
+        db.insertOrThrow(DayseedDatabaseHelper.TABLE_NOTIFICATION_CANCEL_OUTBOX, null, cv)
     }
 
     private fun parseLocalTimeOrNull(text: String): LocalTime? {

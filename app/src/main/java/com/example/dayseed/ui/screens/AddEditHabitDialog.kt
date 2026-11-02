@@ -74,14 +74,14 @@ fun AddEditHabitDialog(
     var name by remember { mutableStateOf(initialHabit?.name ?: "") }
     var description by remember { mutableStateOf(initialHabit?.description ?: "") }
     var trackingMode by remember {
-        mutableStateOf((initialHabit?.trackingMode ?: TrackingMode.EFFORT_AWARE).canonical())
+        mutableStateOf((initialHabit?.trackingMode ?: TrackingMode.COMPLETION_ONLY).canonical())
     }
     var targetValueText by remember {
         mutableStateOf((initialHabit?.targetValue ?: 15).toString())
     }
     var unitCode by remember {
         mutableStateOf(
-            initialHabit?.unitCode ?: when ((initialHabit?.trackingMode ?: TrackingMode.EFFORT_AWARE).canonical()) {
+            initialHabit?.unitCode ?: when ((initialHabit?.trackingMode ?: TrackingMode.COMPLETION_ONLY).canonical()) {
                 TrackingMode.DURATION -> "min"
                 TrackingMode.QUANTITY -> "pages"
                 else -> ""
@@ -102,7 +102,7 @@ fun AddEditHabitDialog(
     var reminderTimeLocal by remember {
         mutableStateOf(initialHabit?.reminderTimeLocal ?: suggestedReminderTime ?: "09:00")
     }
-    var applyTodayWhenLogged by remember { mutableStateOf(true) }
+    var applyTodayWhenLogged by remember { mutableStateOf(!alreadyLoggedToday) }
     var nameError by remember { mutableStateOf(false) }
 
     val colorOptions = listOf("#286143", "#3B6955", "#4A7C59", "#708D81", "#8D6B94", "#C08552")
@@ -189,12 +189,18 @@ fun AddEditHabitDialog(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
 
-                val modes = listOf(
-                    Triple(TrackingMode.EFFORT_AWARE, "Effort-Aware (Recommended)", "Tiny, Usual, and Extra actions count"),
-                    Triple(TrackingMode.COMPLETION_ONLY, "Completion Only", "Simple done check-in"),
+                val creatableOptions = listOf(
+                    Triple(TrackingMode.COMPLETION_ONLY, "Simple Check-Off", "Simple done check-in"),
                     Triple(TrackingMode.DURATION, "Duration", "Track minutes or hours toward a goal"),
                     Triple(TrackingMode.QUANTITY, "Quantity", "Track counts (pages, glasses, steps) toward a goal")
                 )
+                val modes = if (isEditing && initialHabit?.trackingMode?.canonical() == TrackingMode.EFFORT_AWARE) {
+                    listOf(
+                        Triple(TrackingMode.EFFORT_AWARE, "Effort-Aware (Legacy)", "Tiny, Usual, and Extra actions count")
+                    ) + creatableOptions
+                } else {
+                    creatableOptions
+                }
 
                 for ((m, title, sub) in modes) {
                     Row(

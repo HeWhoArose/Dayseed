@@ -9,11 +9,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.math.BigInteger
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -26,7 +26,11 @@ class DayseedRepository(
     databaseName: String? = DayseedDatabaseHelper.DATABASE_NAME
 ) {
     private val appContext = context.applicationContext
-    val dbHelper = DayseedDatabaseHelper(appContext, databaseName)
+    val dbHelper = DayseedDatabaseHelper(
+        context = appContext,
+        databaseName = databaseName,
+        migrationEvaluationDateProvider = { clock.todayLocal() }
+    )
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
     private val _habits = MutableStateFlow<List<Habit>>(emptyList())
@@ -43,6 +47,18 @@ class DayseedRepository(
 
     private val _habitDateNotes = MutableStateFlow<List<HabitDateNote>>(emptyList())
     val habitDateNotes: StateFlow<List<HabitDateNote>> = _habitDateNotes.asStateFlow()
+
+    private val _habitDateExceptions = MutableStateFlow<List<HabitDateException>>(emptyList())
+    val habitDateExceptions: StateFlow<List<HabitDateException>> = _habitDateExceptions.asStateFlow()
+
+    private val _habitStreakRuns = MutableStateFlow<List<HabitStreakRun>>(emptyList())
+    val habitStreakRuns: StateFlow<List<HabitStreakRun>> = _habitStreakRuns.asStateFlow()
+
+    private val _weekStartHistory = MutableStateFlow<List<WeekStartPolicyEntry>>(emptyList())
+    val weekStartHistory: StateFlow<List<WeekStartPolicyEntry>> = _weekStartHistory.asStateFlow()
+
+    private val _habitSummaries = MutableStateFlow<Map<String, HabitSummary>>(emptyMap())
+    val habitSummaries: StateFlow<Map<String, HabitSummary>> = _habitSummaries.asStateFlow()
 
     private val _journalEntries = MutableStateFlow<List<JournalEntry>>(emptyList())
     val journalEntries: StateFlow<List<JournalEntry>> = _journalEntries.asStateFlow()
@@ -78,16 +94,21 @@ class DayseedRepository(
     fun refreshAllSync() {
         val db = dbHelper.writableDatabase
         loadAppSettingsSync(db)
+        loadWeekStartHistorySync(db)
         loadHabitVersionsSync(db)
         loadHabitsSync(db)
         loadHabitEntriesSync(db)
         loadHabitDayOutcomesSync(db)
         loadHabitDateNotesSync(db)
+        loadHabitDateExceptionsSync(db)
         loadJournalEntriesSync(db)
         loadJournalDraftsSync(db)
         loadRestoreConflictsSync(db)
+        recomputeAllStreakRunsAndSummariesSync(db)
         computeGrowthMetricsSync()
     }
+
+    fun reloadAllSync() = refreshAllSync()
 
     fun processCancelOutboxSync(): Int {
         val db = dbHelper.writableDatabase
@@ -103,7 +124,7 @@ class DayseedRepository(
     }
 
     // =========================================================================
-    // APP SETTINGS & CLOCK UNCERTAINTY
+    // APP SETTINGS, WEEK-START POLICY HISTORY (U-10) & CLOCK UNCERTAINTY
     // =========================================================================
 
     private fun loadAppSettingsSync(db: SQLiteDatabase) {
@@ -119,13 +140,39 @@ class DayseedRepository(
                     settingKey = c.getString(kIdx),
                     valueType = c.getString(tIdx),
                     valueText = c.getString(vIdx),
-                    schemaVersion = c.getInt(sIdx),
+                    schemaVersion = c.getValidatedInt(sIdx, "schema_version"),
                     updatedAtUtcMs = c.getLong(uIdx)
                 )
                 map[setting.settingKey] = setting
             }
         }
         _appSettings.value = map
+    }
+
+    private fun loadWeekStartHistorySync(db: SQLiteDatabase) {
+        val list = mutableListOf<WeekStartPolicyEntry>()
+        db.query(
+            DayseedDatabaseHelper.TABLE_WEEK_START_HISTORY,
+            null, null, null, null, null,
+            "effective_from_local_date ASC"
+        ).use { c ->
+            val effIdx = c.getColumnIndexOrThrow("effective_from_local_date")
+            val dayIdx = c.getColumnIndexOrThrow("week_start_iso_day")
+            val baseIdx = c.getColumnIndexOrThrow("is_legacy_baseline")
+            val crIdx = c.getColumnIndexOrThrow("created_at_utc_ms")
+            while (c.moveToNext()) {
+                val eff = LocalDateValidator.requireValid(c.getString(effIdx), "effective_from_local_date")
+                list.add(
+                    WeekStartPolicyEntry(
+                        effectiveFromLocalDate = eff,
+                        weekStartIsoDay = c.getValidatedInt(dayIdx, "week_start_iso_day"),
+                        isLegacyBaseline = c.getValidatedInt(baseIdx, "is_legacy_baseline") == 1,
+                        createdAtUtcMs = c.getLong(crIdx)
+                    )
+                )
+            }
+        }
+        _weekStartHistory.value = list
     }
 
     fun getSettingString(key: String, default: String): String {
@@ -141,14 +188,144 @@ class DayseedRepository(
         return _appSettings.value[key]?.valueText?.toIntOrNull() ?: default
     }
 
-    fun getWeekStartDay(): DayOfWeek {
-        return when (getSettingString("week_start", "MONDAY").uppercase()) {
-            "SUNDAY" -> DayOfWeek.SUNDAY
+    fun getWeekStartDay(forDate: LocalDate = clock.todayLocal()): DayOfWeek {
+        val fallback = when (getSettingString("week_start", "MONDAY").uppercase()) {
+            "SUNDAY", "7" -> DayOfWeek.SUNDAY
+            "SATURDAY", "6" -> DayOfWeek.SATURDAY
             else -> DayOfWeek.MONDAY
         }
+        return WeekBoundaryHelper.resolveWeekStartPolicyForDate(
+            date = forDate,
+            history = _weekStartHistory.value,
+            fallbackDay = fallback
+        )
+    }
+
+    /**
+     * Records a week-start preference change under U-10 Option A:
+     * Finishes the current 7-day period under the active policy, schedules the new week-start
+     * on the first matching ISO weekday strictly after the current week ends, and preserves
+     * all historical week boundaries.
+     */
+    fun setWeekStartSync(newWeekStart: DayOfWeek): WeekStartPolicyEntry {
+        val db = dbHelper.writableDatabase
+        val nowMs = clock.nowUtcMs()
+        val today = clock.todayLocal()
+        val currentWeekStart = getWeekStartDay(today)
+        var effectiveDateStr = today.toString()
+
+        db.beginTransaction()
+        try {
+            val cv = ContentValues().apply {
+                put("setting_key", "week_start")
+                put("value_type", "STRING")
+                put("value_text", newWeekStart.name)
+                put("schema_version", 1)
+                put("updated_at_utc_ms", nowMs)
+            }
+            db.insertWithOnConflict(
+                DayseedDatabaseHelper.TABLE_APP_SETTINGS,
+                null,
+                cv,
+                SQLiteDatabase.CONFLICT_REPLACE
+            )
+
+            if (newWeekStart != currentWeekStart) {
+                val (nextEffDate, _) = WeekBoundaryHelper.computeNextWeekStartEffectiveDate(
+                    today = today,
+                    currentWeekStart = currentWeekStart,
+                    newWeekStart = newWeekStart
+                )
+                effectiveDateStr = nextEffDate.toString()
+                // Remove any future unreached week_start_history entries after today before inserting the new schedule
+                db.delete(
+                    DayseedDatabaseHelper.TABLE_WEEK_START_HISTORY,
+                    "effective_from_local_date > ? AND is_legacy_baseline = 0",
+                    arrayOf(today.toString())
+                )
+                val wCv = ContentValues().apply {
+                    put("effective_from_local_date", effectiveDateStr)
+                    put("week_start_iso_day", newWeekStart.value)
+                    put("is_legacy_baseline", 0)
+                    put("created_at_utc_ms", nowMs)
+                }
+                db.insertWithOnConflict(
+                    DayseedDatabaseHelper.TABLE_WEEK_START_HISTORY,
+                    null,
+                    wCv,
+                    SQLiteDatabase.CONFLICT_REPLACE
+                )
+            } else {
+                effectiveDateStr = _weekStartHistory.value.lastOrNull()?.effectiveFromLocalDate ?: today.toString()
+            }
+
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+
+        refreshAllSync()
+        return _weekStartHistory.value.find { it.effectiveFromLocalDate == effectiveDateStr }
+            ?: WeekStartPolicyEntry(
+                effectiveFromLocalDate = effectiveDateStr,
+                weekStartIsoDay = newWeekStart.value,
+                isLegacyBaseline = false,
+                createdAtUtcMs = nowMs
+            )
+    }
+
+    suspend fun setWeekStart(newWeekStart: DayOfWeek): WeekStartPolicyEntry = withContext(Dispatchers.IO) {
+        setWeekStartSync(newWeekStart)
     }
 
     fun setSettingSync(key: String, valueType: String, valueText: String) {
+        if (key == "week_start") {
+            val parsedDay = when (valueText.trim().uppercase()) {
+                "SUNDAY", "7" -> DayOfWeek.SUNDAY
+                "SATURDAY", "6" -> DayOfWeek.SATURDAY
+                "TUESDAY", "2" -> DayOfWeek.TUESDAY
+                "WEDNESDAY", "3" -> DayOfWeek.WEDNESDAY
+                "THURSDAY", "4" -> DayOfWeek.THURSDAY
+                "FRIDAY", "5" -> DayOfWeek.FRIDAY
+                else -> DayOfWeek.MONDAY
+            }
+            if (_weekStartHistory.value.all { it.isLegacyBaseline }) {
+                val db = dbHelper.writableDatabase
+                val nowMs = clock.nowUtcMs()
+                db.beginTransaction()
+                try {
+                    val cv = ContentValues().apply {
+                        put("setting_key", "week_start")
+                        put("value_type", "ENUM")
+                        put("value_text", parsedDay.name)
+                        put("schema_version", 1)
+                        put("updated_at_utc_ms", nowMs)
+                    }
+                    db.insertWithOnConflict(
+                        DayseedDatabaseHelper.TABLE_APP_SETTINGS,
+                        null,
+                        cv,
+                        SQLiteDatabase.CONFLICT_REPLACE
+                    )
+                    val baselineCv = ContentValues().apply {
+                        put("week_start_iso_day", parsedDay.value)
+                    }
+                    db.update(
+                        DayseedDatabaseHelper.TABLE_WEEK_START_HISTORY,
+                        baselineCv,
+                        "is_legacy_baseline = 1",
+                        null
+                    )
+                    db.setTransactionSuccessful()
+                } finally {
+                    db.endTransaction()
+                }
+                refreshAllSync()
+            } else {
+                setWeekStartSync(parsedDay)
+            }
+            return
+        }
         val db = dbHelper.writableDatabase
         val cv = ContentValues().apply {
             put("setting_key", key)
@@ -185,7 +362,7 @@ class DayseedRepository(
     }
 
     // =========================================================================
-    // HABITS & EFFECTIVE-DATED HABIT VERSIONS (D-194 / D-195)
+    // HABITS & EFFECTIVE-DATED HABIT VERSIONS (D-194, D-195, D-216, U-9, U-12)
     // =========================================================================
 
     private fun loadHabitVersionsSync(db: SQLiteDatabase) {
@@ -210,26 +387,46 @@ class DayseedRepository(
             val lifeIdx = c.getColumnIndexOrThrow("lifecycle_state")
             val remMIdx = c.getColumnIndexOrThrow("reminder_mode")
             val remTIdx = c.getColumnIndexOrThrow("reminder_time_local")
+            val tinyIdx = c.getColumnIndex("tiny_description")
+            val usualIdx = c.getColumnIndex("usual_description")
+            val extraIdx = c.getColumnIndex("extra_description")
+            val colorIdx = c.getColumnIndex("color_hex")
+            val sortIdx = c.getColumnIndex("sort_order")
             val crIdx = c.getColumnIndexOrThrow("created_at_utc_ms")
 
             while (c.moveToNext()) {
+                val effDate = LocalDateValidator.requireValid(c.getString(effIdx), "effective_from_local_date")
+                val rawDesc = if (c.isNull(descIdx)) null else c.getString(descIdx)
+                val parsedLegacy = parseHabitMetadataDescription(rawDesc)
+
+                val tiny = if (tinyIdx >= 0 && !c.isNull(tinyIdx)) c.getString(tinyIdx) else parsedLegacy.tiny
+                val usual = if (usualIdx >= 0 && !c.isNull(usualIdx)) c.getString(usualIdx) else parsedLegacy.usual
+                val extra = if (extraIdx >= 0 && !c.isNull(extraIdx)) c.getString(extraIdx) else parsedLegacy.extra
+                val color = if (colorIdx >= 0 && !c.isNull(colorIdx)) c.getString(colorIdx) else parsedLegacy.colorHex
+                val sortOrder = if (sortIdx >= 0 && !c.isNull(sortIdx)) c.getValidatedInt(sortIdx, "sort_order") else 0
+
                 list.add(
                     HabitVersion(
                         versionId = c.getString(vIdIdx),
                         habitId = c.getString(hIdIdx),
-                        effectiveFromLocalDate = c.getString(effIdx),
+                        effectiveFromLocalDate = effDate,
                         name = c.getString(nameIdx),
-                        description = if (c.isNull(descIdx)) null else c.getString(descIdx),
+                        description = parsedLegacy.cleanDescription.ifEmpty { null },
                         trackingMode = TrackingMode.fromDb(c.getString(modeIdx)),
                         unitCode = if (c.isNull(unitIdx)) null else c.getString(unitIdx),
                         targetPeriod = TargetPeriod.valueOf(c.getString(perIdx)),
-                        targetValue = if (c.isNull(valIdx)) null else c.getInt(valIdx),
+                        targetValue = c.getNullableValidatedInt(valIdx, "target_value"),
                         scheduleKind = ScheduleKind.valueOf(c.getString(schIdx)),
-                        scheduledWeekdaysMask = if (c.isNull(sMaskIdx)) null else c.getInt(sMaskIdx),
-                        preferredWeekdaysMask = if (c.isNull(pMaskIdx)) null else c.getInt(pMaskIdx),
+                        scheduledWeekdaysMask = c.getNullableValidatedInt(sMaskIdx, "scheduled_weekdays_mask"),
+                        preferredWeekdaysMask = c.getNullableValidatedInt(pMaskIdx, "preferred_weekdays_mask"),
                         lifecycleState = HabitLifecycleState.valueOf(c.getString(lifeIdx)),
                         reminderMode = c.getString(remMIdx),
                         reminderTimeLocal = if (c.isNull(remTIdx)) null else c.getString(remTIdx),
+                        tinyDescription = tiny,
+                        usualDescription = usual,
+                        extraDescription = extra,
+                        colorHex = color,
+                        sortOrder = sortOrder,
                         createdAtUtcMs = c.getLong(crIdx)
                     )
                 )
@@ -251,11 +448,16 @@ class DayseedRepository(
             val idIdx = c.getColumnIndexOrThrow("habit_id")
             val crIdx = c.getColumnIndexOrThrow("created_at_utc_ms")
             val upIdx = c.getColumnIndexOrThrow("updated_at_utc_ms")
+            val catIdx = c.getColumnIndex("category")
+            val goalIdx = c.getColumnIndex("lifetime_goal_days")
 
             while (c.moveToNext()) {
                 val habitId = c.getString(idIdx)
                 val createdAt = c.getLong(crIdx)
                 val updatedAt = c.getLong(upIdx)
+                val category = if (catIdx >= 0 && !c.isNull(catIdx)) c.getString(catIdx) else null
+                val lifetimeGoal = if (goalIdx >= 0) c.getNullableValidatedInt(goalIdx, "lifetime_goal_days") else null
+
                 val versions = versionsByHabit[habitId].orEmpty()
                 val effective = versions
                     .filter { it.effectiveFromLocalDate <= todayStr }
@@ -263,7 +465,6 @@ class DayseedRepository(
                     ?: versions.lastOrNull()
 
                 if (effective != null) {
-                    val parsedDesc = parseHabitMetadataDescription(effective.description)
                     val schedDays = when (effective.scheduleKind) {
                         ScheduleKind.DAILY -> DayOfWeek.values().toSet()
                         ScheduleKind.SELECTED_WEEKDAYS -> WeekdayMask.fromMask(effective.scheduledWeekdaysMask ?: WeekdayMask.ALL_DAYS_MASK)
@@ -274,9 +475,11 @@ class DayseedRepository(
                             habitId = habitId,
                             createdAtUtcMs = createdAt,
                             updatedAtUtcMs = updatedAt,
+                            category = category,
+                            lifetimeGoalDays = lifetimeGoal,
                             currentVersion = effective,
                             name = effective.name,
-                            description = parsedDesc.cleanDescription,
+                            description = effective.description ?: "",
                             trackingMode = effective.trackingMode,
                             unitCode = effective.unitCode,
                             targetPeriod = effective.targetPeriod,
@@ -287,11 +490,12 @@ class DayseedRepository(
                             lifecycleState = effective.lifecycleState,
                             reminderMode = effective.reminderMode,
                             reminderTimeLocal = effective.reminderTimeLocal,
-                            tinyDescription = parsedDesc.tiny,
-                            usualDescription = parsedDesc.usual,
-                            extraDescription = parsedDesc.extra,
+                            tinyDescription = effective.tinyDescription,
+                            usualDescription = effective.usualDescription,
+                            extraDescription = effective.extraDescription,
                             scheduleDays = schedDays,
-                            colorHex = parsedDesc.colorHex
+                            colorHex = effective.colorHex,
+                            sortOrder = effective.sortOrder
                         )
                     )
                 }
@@ -307,31 +511,6 @@ class DayseedRepository(
         val extra: String,
         val colorHex: String
     )
-
-    private fun encodeHabitMetadataDescription(
-        description: String,
-        tiny: String,
-        usual: String,
-        extra: String,
-        colorHex: String
-    ): String? {
-        val trimmed = description.trim()
-        val hasCustomMeta = tiny != "Deliberately small action" ||
-            usual != "The ordinary intended action" ||
-            extra != "Optional stretch action" ||
-            colorHex != "#286143"
-        if (!hasCustomMeta) {
-            return trimmed.ifEmpty { null }
-        }
-        val metaObj = JSONObject().apply {
-            put("desc", trimmed)
-            put("tiny", tiny)
-            put("usual", usual)
-            put("extra", extra)
-            put("color", colorHex)
-        }
-        return "DAYSEED_META:" + metaObj.toString()
-    }
 
     private fun parseHabitMetadataDescription(raw: String?): ParsedHabitMeta {
         if (raw.isNullOrBlank()) {
@@ -379,7 +558,7 @@ class DayseedRepository(
     }
 
     /**
-     * Returns true if the habit already has qualifying activity recorded on targetDate (D-194).
+     * Returns true if the habit has positive qualifying activity on targetDate.
      */
     fun hasQualifyingActivityOnDate(habitId: String, targetDate: LocalDate): Boolean {
         val dStr = targetDate.toString()
@@ -389,36 +568,71 @@ class DayseedRepository(
     }
 
     /**
-     * Saves a new habit or creates/updates an effective-dated HabitVersion (D-194).
-     * When editing an existing habit that already has activity today:
-     * - applyToday = true updates or replaces the version effective today.
-     * - applyToday = false creates a version effective tomorrow (today.plusDays(1)).
+     * Returns true if the habit has any recorded activity on targetDate for D-194 version lock protection,
+     * including explicit zero (`value_units == 0`) or any outcome row.
+     * Note: `REST_DAY` exceptions are NOT recorded activity.
+     */
+    fun hasRecordedActivityForVersionLockOnDate(habitId: String, targetDate: LocalDate): Boolean {
+        val dStr = targetDate.toString()
+        val hasAnyEntry = _habitEntries.value.any { it.habitId == habitId && it.localDate == dStr }
+        val hasOutcome = _habitDayOutcomes.value.any { it.habitId == habitId && it.localDate == dStr }
+        return hasAnyEntry || hasOutcome
+    }
+
+    /**
+     * Returns derived pause ranges for [habitId] from `habit_versions.lifecycle_state` (U-9 Option A).
+     */
+    fun getDerivedPauseRangesForHabit(habitId: String): List<DerivedPauseRange> {
+        val versions = _habitVersions.value.filter { it.habitId == habitId }
+        return derivePauseRanges(versions)
+    }
+
+    /**
+     * Saves a new habit or creates/updates an effective-dated HabitVersion (D-194, D-195, D-216, U-12).
+     *
+     * Rules enforced inside the SQLite write transaction:
+     * 1. New habits must use `TrackingMode.creatableModes` (`QUANTITY`, `DURATION`, `COMPLETION_ONLY`) unless
+     *    `allowLegacyEffortModeCreation == true` (for legacy migration/test fixtures).
+     * 2. Once recorded activity (including explicit zero `value_units = 0`) exists on `today`,
+     *    today's effective evaluation configuration (`trackingMode`, `unitCode`, `targetPeriod`, `targetValue`,
+     *    `scheduleKind`, `scheduledWeekdaysMask`, `preferredWeekdaysMask`) is locked:
+     *    - If `policy == HabitConfigEffectivePolicy.APPLY_TODAY` or `effectiveDateOverride == today`,
+     *      throws [HabitConfigurationLockedTodayException].
+     *    - If `applyTodayWhenLogged == false` or `policy == HabitConfigEffectivePolicy.APPLY_TOMORROW`,
+     *      creates/updates the version effective `today.plusDays(1)` (or next weekly boundary under U-12).
+     * 3. Historical effective-date protection: editing an existing habit cannot backdate an effective version
+     *    earlier than existing effective versions or earlier than `today` once versions exist.
+     * 4. U-12 Option B: For weekly habits (`targetPeriod == WEEK`), a `unitCode` or `trackingMode` change is
+     *    automatically deferred to the next weekly boundary (`currentWeekEnd.plusDays(1)`).
      */
     fun saveHabitSync(
         habit: Habit,
         effectiveDateOverride: LocalDate? = null,
-        applyTodayWhenLogged: Boolean = true
+        applyTodayWhenLogged: Boolean = true,
+        policy: HabitConfigEffectivePolicy? = null,
+        allowLegacyEffortModeCreation: Boolean = false
     ): HabitVersion {
+        require(habit.name.trim().length in 1..80) { "Habit name must be between 1 and 80 characters." }
+        if (habit.lifetimeGoalDays != null) {
+            require(habit.lifetimeGoalDays in 1..36500) { "lifetimeGoalDays must be between 1 and 36500." }
+        }
+
         val db = dbHelper.writableDatabase
         val nowMs = clock.nowUtcMs()
         val today = clock.todayLocal()
-        val existingHabit = _habits.value.find { it.habitId == habit.habitId }
-
-        val effectiveDate = when {
-            effectiveDateOverride != null -> effectiveDateOverride
-            existingHabit == null -> today
-            hasQualifyingActivityOnDate(habit.habitId, today) && !applyTodayWhenLogged -> today.plusDays(1)
-            else -> today
-        }
-        val effectiveDateStr = effectiveDate.toString()
+        val todayStr = today.toString()
 
         val normalizedMode = habit.trackingMode.canonical()
         val normalizedTargetPeriod = when (habit.scheduleKind) {
             ScheduleKind.FLEXIBLE_WEEKLY_TARGET -> TargetPeriod.WEEK
-            else -> habit.targetPeriod
+            ScheduleKind.DAILY, ScheduleKind.SELECTED_WEEKDAYS -> TargetPeriod.DAY
         }
         val normalizedTargetValue: Int? = when (normalizedMode) {
-            TrackingMode.QUANTITY, TrackingMode.DURATION -> (habit.targetValue ?: 1).coerceAtLeast(1)
+            TrackingMode.QUANTITY, TrackingMode.DURATION -> {
+                val rawTarget = habit.targetValue ?: 1
+                require(rawTarget >= 1) { "Target value must be >= 1." }
+                rawTarget
+            }
             TrackingMode.COMPLETION_ONLY, TrackingMode.EFFORT_AWARE -> null
             else -> null
         }
@@ -443,33 +657,217 @@ class DayseedRepository(
         }
         val remMode = if (habit.reminderMode in listOf("OFF", "AT_TIME")) habit.reminderMode else "OFF"
         val remTime = if (remMode == "AT_TIME") (habit.reminderTimeLocal ?: "09:00") else null
-
-        val encodedDesc = encodeHabitMetadataDescription(
-            description = habit.description,
-            tiny = habit.tinyDescription,
-            usual = habit.usualDescription,
-            extra = habit.extraDescription,
-            colorHex = habit.colorHex
-        )
+        val cleanDesc = habit.description.trim().ifEmpty { null }
+        val tinyDesc = habit.tinyDescription.trim().ifEmpty { "Deliberately small action" }
+        val usualDesc = habit.usualDescription.trim().ifEmpty { "The ordinary intended action" }
+        val extraDesc = habit.extraDescription.trim().ifEmpty { "Optional stretch action" }
+        val colorHex = habit.colorHex.trim().ifEmpty { "#286143" }
 
         var savedVersion: HabitVersion? = null
         db.beginTransaction()
         try {
-            if (existingHabit == null) {
+            var existingHabitInDb = false
+            var existingCreatedAtMs = nowMs
+            db.rawQuery(
+                "SELECT created_at_utc_ms FROM ${DayseedDatabaseHelper.TABLE_HABITS} WHERE habit_id = ? LIMIT 1",
+                arrayOf(habit.habitId)
+            ).use { c ->
+                if (c.moveToFirst()) {
+                    existingHabitInDb = true
+                    existingCreatedAtMs = c.getLong(0)
+                }
+            }
+
+            if (!existingHabitInDb) {
+                if (!allowLegacyEffortModeCreation && !normalizedMode.isCreatableForNewHabit()) {
+                    throw IllegalArgumentException(
+                        "New habits must use QUANTITY, DURATION, or COMPLETION_ONLY tracking mode (EFFORT_AWARE is legacy-only under D-216)."
+                    )
+                }
+            }
+
+            // Query current effective version on today and earliest/latest effective dates inside transaction
+            var currentEffectiveToday: HabitVersion? = null
+            var earliestEffectiveDateStr: String? = null
+            db.rawQuery(
+                """
+                SELECT version_id, habit_id, effective_from_local_date, name, description,
+                       tracking_mode, unit_code, target_period, target_value, schedule_kind,
+                       scheduled_weekdays_mask, preferred_weekdays_mask, lifecycle_state,
+                       reminder_mode, reminder_time_local, tiny_description, usual_description,
+                       extra_description, color_hex, sort_order, created_at_utc_ms
+                FROM ${DayseedDatabaseHelper.TABLE_HABIT_VERSIONS}
+                WHERE habit_id = ?
+                ORDER BY effective_from_local_date ASC, created_at_utc_ms ASC
+                """.trimIndent(),
+                arrayOf(habit.habitId)
+            ).use { c ->
+                while (c.moveToNext()) {
+                    val v = HabitVersion(
+                        versionId = c.getString(0),
+                        habitId = c.getString(1),
+                        effectiveFromLocalDate = c.getString(2),
+                        name = c.getString(3),
+                        description = if (c.isNull(4)) null else c.getString(4),
+                        trackingMode = TrackingMode.fromDb(c.getString(5)),
+                        unitCode = if (c.isNull(6)) null else c.getString(6),
+                        targetPeriod = TargetPeriod.valueOf(c.getString(7)),
+                        targetValue = c.getNullableValidatedInt(8, "target_value"),
+                        scheduleKind = ScheduleKind.valueOf(c.getString(9)),
+                        scheduledWeekdaysMask = c.getNullableValidatedInt(10, "scheduled_weekdays_mask"),
+                        preferredWeekdaysMask = c.getNullableValidatedInt(11, "preferred_weekdays_mask"),
+                        lifecycleState = HabitLifecycleState.valueOf(c.getString(12)),
+                        reminderMode = c.getString(13),
+                        reminderTimeLocal = if (c.isNull(14)) null else c.getString(14),
+                        tinyDescription = c.getString(15),
+                        usualDescription = c.getString(16),
+                        extraDescription = c.getString(17),
+                        colorHex = c.getString(18),
+                        sortOrder = c.getValidatedInt(19, "sort_order"),
+                        createdAtUtcMs = c.getLong(20)
+                    )
+                    if (earliestEffectiveDateStr == null || v.effectiveFromLocalDate < earliestEffectiveDateStr!!) {
+                        earliestEffectiveDateStr = v.effectiveFromLocalDate
+                    }
+                    if (v.effectiveFromLocalDate <= todayStr) {
+                        currentEffectiveToday = v
+                    }
+                }
+            }
+
+            // Check inside transaction whether recorded activity (including explicit zero) exists on today
+            var hasRecordedActivityTodayInDb = false
+            db.rawQuery(
+                """
+                SELECT 1 FROM ${DayseedDatabaseHelper.TABLE_HABIT_ENTRIES}
+                WHERE habit_id = ? AND local_date = ?
+                UNION ALL
+                SELECT 1 FROM ${DayseedDatabaseHelper.TABLE_HABIT_DAY_OUTCOMES}
+                WHERE habit_id = ? AND local_date = ?
+                LIMIT 1
+                """.trimIndent(),
+                arrayOf(habit.habitId, todayStr, habit.habitId, todayStr)
+            ).use { c ->
+                hasRecordedActivityTodayInDb = c.moveToFirst()
+            }
+
+            // Determine whether any evaluation-affecting configuration changed relative to currentEffectiveToday
+            val evalConfigChanged = currentEffectiveToday != null && (
+                currentEffectiveToday!!.trackingMode.canonical() != normalizedMode ||
+                    currentEffectiveToday!!.unitCode != normalizedUnitCode ||
+                    currentEffectiveToday!!.targetPeriod != normalizedTargetPeriod ||
+                    currentEffectiveToday!!.targetValue != normalizedTargetValue ||
+                    currentEffectiveToday!!.scheduleKind != habit.scheduleKind ||
+                    currentEffectiveToday!!.scheduledWeekdaysMask != scheduledMask ||
+                    currentEffectiveToday!!.preferredWeekdaysMask != preferredMask
+                )
+
+            // Historical effective-date protection (D-194 / T1-08):
+            if (existingHabitInDb && effectiveDateOverride != null && effectiveDateOverride.isBefore(today)) {
+                throw IllegalArgumentException(
+                    "Cannot backdate habit configuration to $effectiveDateOverride on an existing habit (D-194)."
+                )
+            }
+
+            // U-12 Option B: Check if weekly habit is changing unitCode or trackingMode mid-week,
+            // or changing same-unit target mid-week (which takes effect tomorrow while current week freezes its start-of-week target)
+            val isWeeklyUnitOrModeChange = existingHabitInDb &&
+                currentEffectiveToday != null &&
+                currentEffectiveToday!!.targetPeriod == TargetPeriod.WEEK &&
+                normalizedTargetPeriod == TargetPeriod.WEEK &&
+                (currentEffectiveToday!!.unitCode != normalizedUnitCode ||
+                    currentEffectiveToday!!.trackingMode.canonical() != normalizedMode)
+
+            val (currentWeekStart, currentWeekEnd) = WeekBoundaryHelper.weekBounds(today, getWeekStartDay(today))
+            val isWeeklySameUnitMidWeekEvalChange = existingHabitInDb &&
+                currentEffectiveToday != null &&
+                currentEffectiveToday!!.targetPeriod == TargetPeriod.WEEK &&
+                normalizedTargetPeriod == TargetPeriod.WEEK &&
+                !isWeeklyUnitOrModeChange &&
+                evalConfigChanged &&
+                today.isAfter(currentWeekStart) &&
+                policy == null &&
+                effectiveDateOverride == null
+
+            val resolvedEffectiveDate: LocalDate = when {
+                !existingHabitInDb -> effectiveDateOverride ?: today
+                isWeeklyUnitOrModeChange || policy == HabitConfigEffectivePolicy.DEFER_TO_NEXT_WEEK_BOUNDARY -> {
+                    currentWeekEnd.plusDays(1)
+                }
+                hasRecordedActivityTodayInDb && evalConfigChanged -> {
+                    if (policy == HabitConfigEffectivePolicy.APPLY_TODAY ||
+                        effectiveDateOverride == today ||
+                        (policy == null && applyTodayWhenLogged && effectiveDateOverride == null)
+                    ) {
+                        throw HabitConfigurationLockedTodayException(habit.habitId, todayStr)
+                    }
+                    effectiveDateOverride?.takeIf { it.isAfter(today) } ?: today.plusDays(1)
+                }
+                isWeeklySameUnitMidWeekEvalChange || policy == HabitConfigEffectivePolicy.APPLY_TOMORROW || (!applyTodayWhenLogged && effectiveDateOverride == null) -> {
+                    today.plusDays(1)
+                }
+                effectiveDateOverride != null -> effectiveDateOverride
+                else -> today
+            }
+            val effectiveDateStr = LocalDateValidator.requireValid(resolvedEffectiveDate.toString(), "effective_from_local_date")
+
+            if (!existingHabitInDb) {
+                val createdMs = if (habit.createdAtUtcMs in 1..nowMs) habit.createdAtUtcMs else nowMs
+                val updatedMs = maxOf(createdMs, nowMs)
                 val hCv = ContentValues().apply {
                     put("habit_id", habit.habitId)
-                    put("created_at_utc_ms", habit.createdAtUtcMs.takeIf { it > 0 } ?: nowMs)
-                    put("updated_at_utc_ms", nowMs)
+                    put("created_at_utc_ms", createdMs)
+                    put("updated_at_utc_ms", updatedMs)
+                    if (!habit.category.isNullOrBlank()) put("category", habit.category.trim()) else putNull("category")
+                    if (habit.lifetimeGoalDays != null) put("lifetime_goal_days", habit.lifetimeGoalDays) else putNull("lifetime_goal_days")
                 }
                 db.insertOrThrow(DayseedDatabaseHelper.TABLE_HABITS, null, hCv)
             } else {
+                val updatedMs = maxOf(existingCreatedAtMs, nowMs)
                 val hCv = ContentValues().apply {
-                    put("updated_at_utc_ms", nowMs)
+                    put("updated_at_utc_ms", updatedMs)
+                    if (!habit.category.isNullOrBlank()) put("category", habit.category.trim()) else putNull("category")
+                    if (habit.lifetimeGoalDays != null) put("lifetime_goal_days", habit.lifetimeGoalDays) else putNull("lifetime_goal_days")
                 }
                 db.update(DayseedDatabaseHelper.TABLE_HABITS, hCv, "habit_id = ?", arrayOf(habit.habitId))
             }
 
-            // Check if a version already exists for (habit_id, effective_from_local_date)
+            // If applying today and a REST_DAY exception exists on today, clear it if today is no longer an active scheduled day
+            if (effectiveDateStr == todayStr) {
+                val candidateVersion = HabitVersion(
+                    versionId = "temp",
+                    habitId = habit.habitId,
+                    effectiveFromLocalDate = effectiveDateStr,
+                    name = habit.name.trim(),
+                    description = cleanDesc,
+                    trackingMode = normalizedMode,
+                    unitCode = normalizedUnitCode,
+                    targetPeriod = normalizedTargetPeriod,
+                    targetValue = normalizedTargetValue,
+                    scheduleKind = habit.scheduleKind,
+                    scheduledWeekdaysMask = scheduledMask,
+                    preferredWeekdaysMask = preferredMask,
+                    lifecycleState = habit.lifecycleState,
+                    reminderMode = remMode,
+                    reminderTimeLocal = remTime,
+                    tinyDescription = tinyDesc,
+                    usualDescription = usualDesc,
+                    extraDescription = extraDesc,
+                    colorHex = colorHex,
+                    sortOrder = habit.sortOrder,
+                    createdAtUtcMs = nowMs
+                )
+                if (habit.lifecycleState != HabitLifecycleState.ACTIVE ||
+                    !StreakAndGroveEngine.isScheduledOpportunityOnDate(candidateVersion, today)
+                ) {
+                    db.delete(
+                        DayseedDatabaseHelper.TABLE_HABIT_DATE_EXCEPTIONS,
+                        "habit_id = ? AND local_date = ?",
+                        arrayOf(habit.habitId, todayStr)
+                    )
+                }
+            }
+
             var existingVersionId: String? = null
             db.rawQuery(
                 "SELECT version_id FROM ${DayseedDatabaseHelper.TABLE_HABIT_VERSIONS} WHERE habit_id = ? AND effective_from_local_date = ?",
@@ -486,7 +884,7 @@ class DayseedRepository(
                 put("habit_id", habit.habitId)
                 put("effective_from_local_date", effectiveDateStr)
                 put("name", habit.name.trim())
-                if (encodedDesc != null) put("description", encodedDesc) else putNull("description")
+                if (cleanDesc != null) put("description", cleanDesc) else putNull("description")
                 put("tracking_mode", normalizedMode.name)
                 if (normalizedUnitCode != null) put("unit_code", normalizedUnitCode) else putNull("unit_code")
                 put("target_period", normalizedTargetPeriod.name)
@@ -497,6 +895,11 @@ class DayseedRepository(
                 put("lifecycle_state", habit.lifecycleState.name)
                 put("reminder_mode", remMode)
                 if (remTime != null) put("reminder_time_local", remTime) else putNull("reminder_time_local")
+                put("tiny_description", tinyDesc)
+                put("usual_description", usualDesc)
+                put("extra_description", extraDesc)
+                put("color_hex", colorHex)
+                put("sort_order", habit.sortOrder)
                 put("created_at_utc_ms", nowMs)
             }
 
@@ -516,7 +919,7 @@ class DayseedRepository(
                 habitId = habit.habitId,
                 effectiveFromLocalDate = effectiveDateStr,
                 name = habit.name.trim(),
-                description = encodedDesc,
+                description = cleanDesc,
                 trackingMode = normalizedMode,
                 unitCode = normalizedUnitCode,
                 targetPeriod = normalizedTargetPeriod,
@@ -527,6 +930,11 @@ class DayseedRepository(
                 lifecycleState = habit.lifecycleState,
                 reminderMode = remMode,
                 reminderTimeLocal = remTime,
+                tinyDescription = tinyDesc,
+                usualDescription = usualDesc,
+                extraDescription = extraDesc,
+                colorHex = colorHex,
+                sortOrder = habit.sortOrder,
                 createdAtUtcMs = nowMs
             )
 
@@ -542,9 +950,10 @@ class DayseedRepository(
     suspend fun saveHabit(
         habit: Habit,
         effectiveDateOverride: LocalDate? = null,
-        applyTodayWhenLogged: Boolean = true
+        applyTodayWhenLogged: Boolean = true,
+        policy: HabitConfigEffectivePolicy? = null
     ): HabitVersion = withContext(Dispatchers.IO) {
-        saveHabitSync(habit, effectiveDateOverride, applyTodayWhenLogged)
+        saveHabitSync(habit, effectiveDateOverride, applyTodayWhenLogged, policy)
     }
 
     fun updateHabitLifecycleSync(
@@ -566,7 +975,7 @@ class DayseedRepository(
     }
 
     // =========================================================================
-    // HABIT ENTRIES, OUTCOMES, DATE NOTES & GUARDED UNDO (D-189, D-190, D-209)
+    // HABIT ENTRIES, OUTCOMES, DATE NOTES, REST_DAY EXCEPTIONS & GUARDED UNDO
     // =========================================================================
 
     private fun loadHabitEntriesSync(db: SQLiteDatabase) {
@@ -586,12 +995,13 @@ class DayseedRepository(
             val kIdx = c.getColumnIndexOrThrow("idempotency_key")
 
             while (c.moveToNext()) {
+                val dateStr = LocalDateValidator.requireValid(c.getString(dIdx), "local_date")
                 list.add(
                     HabitEntry(
                         entryId = c.getString(idIdx),
                         habitId = c.getString(hIdx),
-                        localDate = c.getString(dIdx),
-                        valueUnits = c.getInt(vIdx),
+                        localDate = dateStr,
+                        valueUnits = c.getValidatedInt(vIdx, "value_units"),
                         entryNote = if (c.isNull(nIdx)) null else c.getString(nIdx),
                         createdAtUtcMs = c.getLong(crIdx),
                         updatedAtUtcMs = c.getLong(upIdx),
@@ -620,11 +1030,12 @@ class DayseedRepository(
             val upIdx = c.getColumnIndexOrThrow("updated_at_utc_ms")
 
             while (c.moveToNext()) {
+                val dateStr = LocalDateValidator.requireValid(c.getString(dIdx), "local_date")
                 list.add(
                     HabitDayOutcome(
                         outcomeId = c.getString(idIdx),
                         habitId = c.getString(hIdx),
-                        localDate = c.getString(dIdx),
+                        localDate = dateStr,
                         outcomeKind = c.getString(oIdx),
                         effortLevel = if (c.isNull(eIdx)) null else c.getString(eIdx),
                         idempotencyKey = c.getString(kIdx),
@@ -652,11 +1063,12 @@ class DayseedRepository(
             val upIdx = c.getColumnIndexOrThrow("updated_at_utc_ms")
 
             while (c.moveToNext()) {
+                val dateStr = LocalDateValidator.requireValid(c.getString(dIdx), "local_date")
                 list.add(
                     HabitDateNote(
                         noteId = c.getString(idIdx),
                         habitId = c.getString(hIdx),
-                        localDate = c.getString(dIdx),
+                        localDate = dateStr,
                         body = c.getString(bIdx),
                         createdAtUtcMs = c.getLong(crIdx),
                         updatedAtUtcMs = c.getLong(upIdx)
@@ -667,10 +1079,154 @@ class DayseedRepository(
         _habitDateNotes.value = list
     }
 
+    private fun loadHabitDateExceptionsSync(db: SQLiteDatabase) {
+        val list = mutableListOf<HabitDateException>()
+        db.query(
+            DayseedDatabaseHelper.TABLE_HABIT_DATE_EXCEPTIONS,
+            null, null, null, null, null,
+            "local_date DESC"
+        ).use { c ->
+            val idIdx = c.getColumnIndexOrThrow("id")
+            val hIdx = c.getColumnIndexOrThrow("habit_id")
+            val dIdx = c.getColumnIndexOrThrow("local_date")
+            val kIdx = c.getColumnIndexOrThrow("exception_kind")
+            val nIdx = c.getColumnIndexOrThrow("note")
+            val crIdx = c.getColumnIndexOrThrow("created_at_utc_ms")
+            val upIdx = c.getColumnIndexOrThrow("updated_at_utc_ms")
+
+            while (c.moveToNext()) {
+                val dateStr = LocalDateValidator.requireValid(c.getString(dIdx), "local_date")
+                list.add(
+                    HabitDateException(
+                        id = c.getString(idIdx),
+                        habitId = c.getString(hIdx),
+                        localDate = dateStr,
+                        exceptionKind = HabitDateExceptionKind.valueOf(c.getString(kIdx)),
+                        note = if (c.isNull(nIdx)) null else c.getString(nIdx),
+                        createdAtUtcMs = c.getLong(crIdx),
+                        updatedAtUtcMs = c.getLong(upIdx)
+                    )
+                )
+            }
+        }
+        _habitDateExceptions.value = list
+    }
+
     /**
-     * Logs a multi-entry QUANTITY or DURATION habit entry (D-189, D-190).
-     * Idempotent retry: if idempotencyKey already exists in habit_entries with identical habitId & localDate,
-     * returns the existing entry without duplicating.
+     * Creates a one-off `REST_DAY` exception for today (D-218, U-1 Option A).
+     * Rejected for past or future dates, unscheduled dates, paused/archived/completed habits,
+     * or dates that already have recorded activity.
+     */
+    fun setRestDayExceptionSync(
+        habitId: String,
+        date: LocalDate = clock.todayLocal(),
+        note: String? = null
+    ): Pair<HabitDateException, UndoToken> {
+        val today = clock.todayLocal()
+        require(date == today) {
+            "REST_DAY exceptions are only permitted for today ($today); retroactive or future date $date is rejected (U-1)."
+        }
+
+        val eff = getEffectiveHabitVersion(habitId, date)
+            ?: throw IllegalArgumentException("Habit '$habitId' has no effective version on $date.")
+        require(eff.lifecycleState == HabitLifecycleState.ACTIVE) {
+            "Cannot take a rest day when habit lifecycle state is ${eff.lifecycleState} (U-1 / U-9)."
+        }
+        require(StreakAndGroveEngine.isScheduledOpportunityOnDate(eff, date)) {
+            "Cannot take a rest day on an unscheduled date ($date)."
+        }
+        check(!hasRecordedActivityForVersionLockOnDate(habitId, date)) {
+            "Cannot take a rest day on $date because activity is already recorded."
+        }
+
+        val dateStr = date.toString()
+        val existing = _habitDateExceptions.value.find { it.habitId == habitId && it.localDate == dateStr }
+        val prevJson = existing?.let {
+            JSONObject().apply {
+                put("id", it.id)
+                put("exception_kind", it.exceptionKind.name)
+                put("note", it.note ?: JSONObject.NULL)
+                put("created_at_utc_ms", it.createdAtUtcMs)
+                put("updated_at_utc_ms", it.updatedAtUtcMs)
+            }.toString()
+        }
+
+        val nowMs = clock.nowUtcMs()
+        val id = existing?.id ?: UUID.randomUUID().toString()
+        val createdAt = existing?.createdAtUtcMs ?: nowMs
+        val cleanNote = note?.trim()?.takeIf { it.isNotEmpty() }
+
+        val db = dbHelper.writableDatabase
+        val cv = ContentValues().apply {
+            put("id", id)
+            put("habit_id", habitId)
+            put("local_date", dateStr)
+            put("exception_kind", HabitDateExceptionKind.REST_DAY.name)
+            if (cleanNote != null) put("note", cleanNote) else putNull("note")
+            put("created_at_utc_ms", createdAt)
+            put("updated_at_utc_ms", nowMs)
+        }
+        if (existing != null) {
+            db.update(DayseedDatabaseHelper.TABLE_HABIT_DATE_EXCEPTIONS, cv, "id = ?", arrayOf(id))
+        } else {
+            db.insertOrThrow(DayseedDatabaseHelper.TABLE_HABIT_DATE_EXCEPTIONS, null, cv)
+        }
+
+        recordObservedClockSync()
+        refreshAllSync()
+
+        val saved = HabitDateException(
+            id = id,
+            habitId = habitId,
+            localDate = dateStr,
+            exceptionKind = HabitDateExceptionKind.REST_DAY,
+            note = cleanNote,
+            createdAtUtcMs = createdAt,
+            updatedAtUtcMs = nowMs
+        )
+        val token = UndoToken(
+            tokenId = UUID.randomUUID().toString(),
+            entityType = UndoEntityType.REST_DAY_EXCEPTION,
+            entityId = id,
+            expectedUpdatedAtUtcMs = nowMs,
+            previousPayloadJson = prevJson,
+            createdAtUtcMs = nowMs
+        )
+        _activeUndoToken.value = token
+        return saved to token
+    }
+
+    suspend fun setRestDayException(
+        habitId: String,
+        date: LocalDate = clock.todayLocal(),
+        note: String? = null
+    ): Pair<HabitDateException, UndoToken> = withContext(Dispatchers.IO) {
+        setRestDayExceptionSync(habitId, date, note)
+    }
+
+    fun clearRestDayExceptionSync(habitId: String, date: LocalDate = clock.todayLocal()) {
+        val db = dbHelper.writableDatabase
+        db.delete(
+            DayseedDatabaseHelper.TABLE_HABIT_DATE_EXCEPTIONS,
+            "habit_id = ? AND local_date = ?",
+            arrayOf(habitId, date.toString())
+        )
+        refreshAllSync()
+    }
+
+    suspend fun clearRestDayException(habitId: String, date: LocalDate = clock.todayLocal()) =
+        withContext(Dispatchers.IO) {
+            clearRestDayExceptionSync(habitId, date)
+        }
+
+    fun getExceptionForHabitOnDate(habitId: String, date: LocalDate): HabitDateException? {
+        val dStr = date.toString()
+        return _habitDateExceptions.value.find { it.habitId == habitId && it.localDate == dStr }
+    }
+
+    /**
+     * Logs a multi-entry QUANTITY or DURATION habit entry (D-189, D-190, D-218).
+     * When `valueUnits > 0`, automatically clears any same-date `REST_DAY` exception inside the transaction.
      */
     fun logHabitEntrySync(
         habitId: String,
@@ -680,8 +1236,8 @@ class DayseedRepository(
         idempotencyKey: String = UUID.randomUUID().toString()
     ): Pair<HabitEntry, UndoToken> {
         require(valueUnits >= 0) { "value_units must be >= 0" }
+        val dateStr = LocalDateValidator.requireValid(date.toString(), "local_date")
         val db = dbHelper.writableDatabase
-        val dateStr = date.toString()
 
         // Check idempotent retry in habit_entries
         val existingByKey = _habitEntries.value.find { it.idempotencyKey == idempotencyKey }
@@ -698,19 +1254,48 @@ class DayseedRepository(
             return existingByKey to token
         }
 
+        val eff = getEffectiveHabitVersion(habitId, date)
+        if (eff != null && eff.lifecycleState != HabitLifecycleState.ACTIVE) {
+            throw IllegalStateException("Cannot log habit entry on $dateStr while habit is ${eff.lifecycleState}.")
+        }
+
+        val existingRestDay = _habitDateExceptions.value.find { it.habitId == habitId && it.localDate == dateStr }
+        val prevPayloadJson = existingRestDay?.let {
+            JSONObject().apply {
+                put("restored_rest_day_id", it.id)
+                put("restored_rest_day_note", it.note ?: JSONObject.NULL)
+                put("restored_rest_day_created_at", it.createdAtUtcMs)
+                put("restored_rest_day_updated_at", it.updatedAtUtcMs)
+            }.toString()
+        }
+
         val nowMs = clock.nowUtcMs()
         val entryId = UUID.randomUUID().toString()
-        val cv = ContentValues().apply {
-            put("entry_id", entryId)
-            put("habit_id", habitId)
-            put("local_date", dateStr)
-            put("value_units", valueUnits)
-            if (!entryNote.isNullOrBlank()) put("entry_note", entryNote.trim()) else putNull("entry_note")
-            put("created_at_utc_ms", nowMs)
-            put("updated_at_utc_ms", nowMs)
-            put("idempotency_key", idempotencyKey)
+        db.beginTransaction()
+        try {
+            if (existingRestDay != null) {
+                db.delete(
+                    DayseedDatabaseHelper.TABLE_HABIT_DATE_EXCEPTIONS,
+                    "habit_id = ? AND local_date = ?",
+                    arrayOf(habitId, dateStr)
+                )
+            }
+            val cv = ContentValues().apply {
+                put("entry_id", entryId)
+                put("habit_id", habitId)
+                put("local_date", dateStr)
+                put("value_units", valueUnits)
+                if (!entryNote.isNullOrBlank()) put("entry_note", entryNote.trim()) else putNull("entry_note")
+                put("created_at_utc_ms", nowMs)
+                put("updated_at_utc_ms", nowMs)
+                put("idempotency_key", idempotencyKey)
+            }
+            db.insertOrThrow(DayseedDatabaseHelper.TABLE_HABIT_ENTRIES, null, cv)
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
         }
-        db.insertOrThrow(DayseedDatabaseHelper.TABLE_HABIT_ENTRIES, null, cv)
+
         recordObservedClockSync()
         refreshAllSync()
 
@@ -729,7 +1314,7 @@ class DayseedRepository(
             entityType = UndoEntityType.HABIT_ENTRY,
             entityId = entryId,
             expectedUpdatedAtUtcMs = nowMs,
-            previousPayloadJson = null,
+            previousPayloadJson = prevPayloadJson,
             createdAtUtcMs = nowMs
         )
         _activeUndoToken.value = token
@@ -797,8 +1382,8 @@ class DayseedRepository(
     }
 
     /**
-     * Logs a COMPLETION_ONLY or EFFORT_AWARE outcome in habit_day_outcomes (D-188, D-189, D-190).
-     * Never stores SKIPPED or MISSED in habit_day_outcomes.
+     * Logs a COMPLETION_ONLY or EFFORT_AWARE outcome in habit_day_outcomes (D-188, D-189, D-190, D-218).
+     * Automatically clears any same-date `REST_DAY` exception inside the transaction.
      */
     fun logHabitDayOutcomeSync(
         habitId: String,
@@ -808,7 +1393,7 @@ class DayseedRepository(
         note: String? = null,
         idempotencyKey: String = UUID.randomUUID().toString()
     ): Pair<HabitDayOutcome, UndoToken> {
-        val dateStr = date.toString()
+        val dateStr = LocalDateValidator.requireValid(date.toString(), "local_date")
         val db = dbHelper.writableDatabase
 
         // Idempotent retry check
@@ -826,16 +1411,30 @@ class DayseedRepository(
             return existingByKey to token
         }
 
+        val eff = getEffectiveHabitVersion(habitId, date)
+        if (eff != null && eff.lifecycleState != HabitLifecycleState.ACTIVE) {
+            throw IllegalStateException("Cannot log habit outcome on $dateStr while habit is ${eff.lifecycleState}.")
+        }
+
         val existingForDate = _habitDayOutcomes.value.find { it.habitId == habitId && it.localDate == dateStr }
-        val prevJson = existingForDate?.let {
-            JSONObject().apply {
-                put("outcome_id", it.outcomeId)
-                put("outcome_kind", it.outcomeKind)
-                put("effort_level", it.effortLevel ?: JSONObject.NULL)
-                put("idempotency_key", it.idempotencyKey)
-                put("created_at_utc_ms", it.createdAtUtcMs)
-                put("updated_at_utc_ms", it.updatedAtUtcMs)
+        val existingRestDay = _habitDateExceptions.value.find { it.habitId == habitId && it.localDate == dateStr }
+
+        val prevJson = when {
+            existingForDate != null -> JSONObject().apply {
+                put("outcome_id", existingForDate.outcomeId)
+                put("outcome_kind", existingForDate.outcomeKind)
+                put("effort_level", existingForDate.effortLevel ?: JSONObject.NULL)
+                put("idempotency_key", existingForDate.idempotencyKey)
+                put("created_at_utc_ms", existingForDate.createdAtUtcMs)
+                put("updated_at_utc_ms", existingForDate.updatedAtUtcMs)
             }.toString()
+            existingRestDay != null -> JSONObject().apply {
+                put("restored_rest_day_id", existingRestDay.id)
+                put("restored_rest_day_note", existingRestDay.note ?: JSONObject.NULL)
+                put("restored_rest_day_created_at", existingRestDay.createdAtUtcMs)
+                put("restored_rest_day_updated_at", existingRestDay.updatedAtUtcMs)
+            }.toString()
+            else -> null
         }
 
         val nowMs = clock.nowUtcMs()
@@ -844,6 +1443,13 @@ class DayseedRepository(
 
         db.beginTransaction()
         try {
+            if (existingRestDay != null) {
+                db.delete(
+                    DayseedDatabaseHelper.TABLE_HABIT_DATE_EXCEPTIONS,
+                    "habit_id = ? AND local_date = ?",
+                    arrayOf(habitId, dateStr)
+                )
+            }
             val cv = ContentValues().apply {
                 put("outcome_id", outcomeId)
                 put("habit_id", habitId)
@@ -919,12 +1525,17 @@ class DayseedRepository(
         refreshAllSync()
     }
 
-    suspend fun removeRecord(habitId: String, date: LocalDate) = withContext(Dispatchers.IO) {
+    fun removeRecordSync(habitId: String, date: LocalDate) {
         val dStr = date.toString()
         val db = dbHelper.writableDatabase
         db.delete(DayseedDatabaseHelper.TABLE_HABIT_DAY_OUTCOMES, "habit_id = ? AND local_date = ?", arrayOf(habitId, dStr))
         db.delete(DayseedDatabaseHelper.TABLE_HABIT_ENTRIES, "habit_id = ? AND local_date = ?", arrayOf(habitId, dStr))
+        db.delete(DayseedDatabaseHelper.TABLE_HABIT_DATE_EXCEPTIONS, "habit_id = ? AND local_date = ?", arrayOf(habitId, dStr))
         refreshAllSync()
+    }
+
+    suspend fun removeRecord(habitId: String, date: LocalDate) = withContext(Dispatchers.IO) {
+        removeRecordSync(habitId, date)
     }
 
     private fun saveHabitDateNoteInternal(
@@ -982,7 +1593,8 @@ class DayseedRepository(
     fun saveHabitDateNoteSync(habitId: String, date: LocalDate, body: String): Pair<HabitDateNote, UndoToken> {
         val db = dbHelper.writableDatabase
         val nowMs = clock.nowUtcMs()
-        val result = saveHabitDateNoteInternal(db, habitId, date.toString(), body.trim(), nowMs)
+        val dateStr = LocalDateValidator.requireValid(date.toString(), "local_date")
+        val result = saveHabitDateNoteInternal(db, habitId, dateStr, body.trim(), nowMs)
         refreshAllSync()
         _activeUndoToken.value = result.second
         return result
@@ -994,9 +1606,8 @@ class DayseedRepository(
         }
 
     /**
-     * Guarded 8-second Undo execution (D-209 / AC-023):
-     * Verifies token has not expired (nowUtcMs <= expiresAtUtcMs) AND the target row still exists
-     * with the exact expectedUpdatedAtUtcMs before reversing the mutation.
+     * Guarded 8-second Undo execution (D-209, AC-023, Revision 7 §9.1):
+     * Supports HABIT_ENTRY, HABIT_DAY_OUTCOME, HABIT_DATE_NOTE, REST_DAY_EXCEPTION, and HABIT_DELETION.
      */
     fun executeUndoSync(token: UndoToken): Boolean {
         val nowMs = clock.nowUtcMs()
@@ -1015,19 +1626,35 @@ class DayseedRepository(
                 UndoEntityType.HABIT_ENTRY -> {
                     val current = _habitEntries.value.find { it.entryId == token.entityId }
                     if (current != null && current.updatedAtUtcMs == token.expectedUpdatedAtUtcMs) {
-                        if (token.previousPayloadJson == null) {
+                        val prevObj = token.previousPayloadJson?.let { JSONObject(it) }
+                        if (prevObj == null || prevObj.has("restored_rest_day_id")) {
                             val deleted = db.delete(
                                 DayseedDatabaseHelper.TABLE_HABIT_ENTRIES,
                                 "entry_id = ? AND updated_at_utc_ms = ?",
                                 arrayOf(token.entityId, token.expectedUpdatedAtUtcMs.toString())
                             )
+                            if (deleted == 1 && prevObj != null && prevObj.has("restored_rest_day_id")) {
+                                val rCv = ContentValues().apply {
+                                    put("id", prevObj.getString("restored_rest_day_id"))
+                                    put("habit_id", current.habitId)
+                                    put("local_date", current.localDate)
+                                    put("exception_kind", HabitDateExceptionKind.REST_DAY.name)
+                                    if (prevObj.isNull("restored_rest_day_note")) {
+                                        putNull("note")
+                                    } else {
+                                        put("note", prevObj.getString("restored_rest_day_note"))
+                                    }
+                                    put("created_at_utc_ms", prevObj.getLong("restored_rest_day_created_at"))
+                                    put("updated_at_utc_ms", prevObj.getLong("restored_rest_day_updated_at"))
+                                }
+                                db.insertOrThrow(DayseedDatabaseHelper.TABLE_HABIT_DATE_EXCEPTIONS, null, rCv)
+                            }
                             undone = deleted == 1
                         } else {
-                            val prev = JSONObject(token.previousPayloadJson)
                             val cv = ContentValues().apply {
-                                put("value_units", prev.getInt("value_units"))
-                                if (prev.isNull("entry_note")) putNull("entry_note") else put("entry_note", prev.getString("entry_note"))
-                                put("updated_at_utc_ms", prev.getLong("updated_at_utc_ms"))
+                                put("value_units", prevObj.getInt("value_units"))
+                                if (prevObj.isNull("entry_note")) putNull("entry_note") else put("entry_note", prevObj.getString("entry_note"))
+                                put("updated_at_utc_ms", prevObj.getLong("updated_at_utc_ms"))
                             }
                             val updated = db.update(
                                 DayseedDatabaseHelper.TABLE_HABIT_ENTRIES,
@@ -1043,21 +1670,37 @@ class DayseedRepository(
                 UndoEntityType.HABIT_DAY_OUTCOME -> {
                     val current = _habitDayOutcomes.value.find { it.outcomeId == token.entityId }
                     if (current != null && current.updatedAtUtcMs == token.expectedUpdatedAtUtcMs) {
-                        if (token.previousPayloadJson == null) {
+                        val prevObj = token.previousPayloadJson?.let { JSONObject(it) }
+                        if (prevObj == null || prevObj.has("restored_rest_day_id")) {
                             val deleted = db.delete(
                                 DayseedDatabaseHelper.TABLE_HABIT_DAY_OUTCOMES,
                                 "outcome_id = ? AND updated_at_utc_ms = ?",
                                 arrayOf(token.entityId, token.expectedUpdatedAtUtcMs.toString())
                             )
+                            if (deleted == 1 && prevObj != null && prevObj.has("restored_rest_day_id")) {
+                                val rCv = ContentValues().apply {
+                                    put("id", prevObj.getString("restored_rest_day_id"))
+                                    put("habit_id", current.habitId)
+                                    put("local_date", current.localDate)
+                                    put("exception_kind", HabitDateExceptionKind.REST_DAY.name)
+                                    if (prevObj.isNull("restored_rest_day_note")) {
+                                        putNull("note")
+                                    } else {
+                                        put("note", prevObj.getString("restored_rest_day_note"))
+                                    }
+                                    put("created_at_utc_ms", prevObj.getLong("restored_rest_day_created_at"))
+                                    put("updated_at_utc_ms", prevObj.getLong("restored_rest_day_updated_at"))
+                                }
+                                db.insertOrThrow(DayseedDatabaseHelper.TABLE_HABIT_DATE_EXCEPTIONS, null, rCv)
+                            }
                             undone = deleted == 1
                         } else {
-                            val prev = JSONObject(token.previousPayloadJson)
                             val cv = ContentValues().apply {
-                                put("outcome_kind", prev.getString("outcome_kind"))
-                                if (prev.isNull("effort_level")) putNull("effort_level") else put("effort_level", prev.getString("effort_level"))
-                                put("idempotency_key", prev.getString("idempotency_key"))
-                                put("created_at_utc_ms", prev.getLong("created_at_utc_ms"))
-                                put("updated_at_utc_ms", prev.getLong("updated_at_utc_ms"))
+                                put("outcome_kind", prevObj.getString("outcome_kind"))
+                                if (prevObj.isNull("effort_level")) putNull("effort_level") else put("effort_level", prevObj.getString("effort_level"))
+                                put("idempotency_key", prevObj.getString("idempotency_key"))
+                                put("created_at_utc_ms", prevObj.getLong("created_at_utc_ms"))
+                                put("updated_at_utc_ms", prevObj.getLong("updated_at_utc_ms"))
                             }
                             val updated = db.update(
                                 DayseedDatabaseHelper.TABLE_HABIT_DAY_OUTCOMES,
@@ -1096,6 +1739,41 @@ class DayseedRepository(
                         }
                     }
                 }
+
+                UndoEntityType.REST_DAY_EXCEPTION -> {
+                    val current = _habitDateExceptions.value.find { it.id == token.entityId }
+                    if (current != null && current.updatedAtUtcMs == token.expectedUpdatedAtUtcMs) {
+                        if (token.previousPayloadJson == null) {
+                            val deleted = db.delete(
+                                DayseedDatabaseHelper.TABLE_HABIT_DATE_EXCEPTIONS,
+                                "id = ? AND updated_at_utc_ms = ?",
+                                arrayOf(token.entityId, token.expectedUpdatedAtUtcMs.toString())
+                            )
+                            undone = deleted == 1
+                        } else {
+                            val prev = JSONObject(token.previousPayloadJson)
+                            val cv = ContentValues().apply {
+                                put("exception_kind", prev.getString("exception_kind"))
+                                if (prev.isNull("note")) putNull("note") else put("note", prev.getString("note"))
+                                put("updated_at_utc_ms", prev.getLong("updated_at_utc_ms"))
+                            }
+                            val updated = db.update(
+                                DayseedDatabaseHelper.TABLE_HABIT_DATE_EXCEPTIONS,
+                                cv,
+                                "id = ? AND updated_at_utc_ms = ?",
+                                arrayOf(token.entityId, token.expectedUpdatedAtUtcMs.toString())
+                            )
+                            undone = updated == 1
+                        }
+                    }
+                }
+
+                UndoEntityType.HABIT_DELETION -> {
+                    val payloadStr = token.previousPayloadJson
+                    if (payloadStr != null) {
+                        undone = restoreDeletedHabitFromSnapshotInTx(db, JSONObject(payloadStr))
+                    }
+                }
             }
             if (undone) {
                 db.setTransactionSuccessful()
@@ -1118,6 +1796,161 @@ class DayseedRepository(
     }
 
     // =========================================================================
+    // STREAK & GROVE RECOMPUTATION + HABIT SUMMARIES (Revision 7 §8)
+    // =========================================================================
+
+    private fun recomputeAllStreakRunsAndSummariesSync(db: SQLiteDatabase) {
+        val today = clock.todayLocal()
+        val nowMs = clock.nowUtcMs()
+        val versionsByHabit = _habitVersions.value.groupBy { it.habitId }
+        val entriesByHabit = _habitEntries.value.groupBy { it.habitId }
+        val outcomesByHabit = _habitDayOutcomes.value.groupBy { it.habitId }
+        val exceptionsByHabit = _habitDateExceptions.value.groupBy { it.habitId }
+
+        // Read existing runs so run_id and qualified_at_utc_ms are preserved across recomputations
+        val existingRunsByHabit = mutableMapOf<String, MutableList<HabitStreakRun>>()
+        db.query(DayseedDatabaseHelper.TABLE_HABIT_STREAK_RUNS, null, null, null, null, null, "start_local_date ASC").use { c ->
+            val rIdx = c.getColumnIndexOrThrow("run_id")
+            val hIdx = c.getColumnIndexOrThrow("habit_id")
+            val sIdx = c.getColumnIndexOrThrow("start_local_date")
+            val eIdx = c.getColumnIndexOrThrow("end_local_date")
+            val cIdx = c.getColumnIndexOrThrow("completed_streak_count")
+            val elIdx = c.getColumnIndexOrThrow("elapsed_active_span_count")
+            val uIdx = c.getColumnIndexOrThrow("streak_unit")
+            val trIdx = c.getColumnIndexOrThrow("terminal_reason")
+            val actIdx = c.getColumnIndexOrThrow("is_active")
+            val qIdx = c.getColumnIndexOrThrow("qualified_for_grove")
+            val qaIdx = c.getColumnIndexOrThrow("qualified_at_utc_ms")
+            val brIdx = c.getColumnIndexOrThrow("broken_on_local_date")
+            val tsIdx = c.getColumnIndexOrThrow("tree_state")
+            val crIdx = c.getColumnIndexOrThrow("created_at_utc_ms")
+            val upIdx = c.getColumnIndexOrThrow("updated_at_utc_ms")
+            while (c.moveToNext()) {
+                val run = HabitStreakRun(
+                    runId = c.getString(rIdx),
+                    habitId = c.getString(hIdx),
+                    startLocalDate = LocalDateValidator.requireValid(c.getString(sIdx), "start_local_date"),
+                    endLocalDate = LocalDateValidator.requireValid(c.getString(eIdx), "end_local_date"),
+                    completedStreakCount = c.getValidatedInt(cIdx, "completed_streak_count"),
+                    elapsedActiveSpanCount = c.getValidatedInt(elIdx, "elapsed_active_span_count"),
+                    streakUnit = StreakUnit.valueOf(c.getString(uIdx)),
+                    terminalReason = if (c.isNull(trIdx)) null else GroveTerminalReason.valueOf(c.getString(trIdx)),
+                    isActive = c.getValidatedInt(actIdx, "is_active") == 1,
+                    qualifiedForGrove = c.getValidatedInt(qIdx, "qualified_for_grove") == 1,
+                    qualifiedAtUtcMs = if (c.isNull(qaIdx)) null else c.getLong(qaIdx),
+                    brokenOnLocalDate = if (c.isNull(brIdx)) null else LocalDateValidator.requireValid(c.getString(brIdx), "broken_on_local_date"),
+                    treeState = GroveTreeState.valueOf(c.getString(tsIdx)),
+                    createdAtUtcMs = c.getLong(crIdx),
+                    updatedAtUtcMs = c.getLong(upIdx)
+                )
+                existingRunsByHabit.getOrPut(run.habitId) { mutableListOf() }.add(run)
+            }
+        }
+
+        val allRuns = mutableListOf<HabitStreakRun>()
+        val summaries = mutableMapOf<String, HabitSummary>()
+
+        db.beginTransaction()
+        try {
+            for (habit in _habits.value) {
+                val hId = habit.habitId
+                val versions = versionsByHabit[hId].orEmpty()
+                val entries = entriesByHabit[hId].orEmpty()
+                val outcomes = outcomesByHabit[hId].orEmpty()
+                val exceptions = exceptionsByHabit[hId].orEmpty()
+                val existingRuns = existingRunsByHabit[hId].orEmpty()
+
+                val runs = StreakAndGroveEngine.syncHabitStreakRunsInDb(
+                    db = db,
+                    habitId = hId,
+                    versions = versions,
+                    entries = entries,
+                    outcomes = outcomes,
+                    exceptions = exceptions,
+                    weekStartHistory = _weekStartHistory.value,
+                    evaluationDate = today,
+                    nowUtcMs = nowMs,
+                    existingRuns = existingRuns
+                )
+                allRuns.addAll(runs)
+
+                val effToday = getEffectiveHabitVersion(hId, today) ?: versions.lastOrNull()
+                if (effToday != null) {
+                    val todayStr = today.toString()
+                    val todayEntries = entries.filter { it.localDate == todayStr }
+                    val todayOutcome = outcomes.find { it.localDate == todayStr }
+                    val todayException = exceptions.find { it.localDate == todayStr }
+                    val (todayState, todayBand) = StreakAndGroveEngine.evaluateDayRecordState(
+                        version = effToday,
+                        date = today,
+                        dayEntries = todayEntries,
+                        dayOutcome = todayOutcome,
+                        dayException = todayException
+                    )
+                    val todayUnits = when (effToday.trackingMode.canonical()) {
+                        TrackingMode.QUANTITY, TrackingMode.DURATION ->
+                            ProgressBandClassifier.sumUnitsExact(todayEntries.map { it.valueUnits })
+                        TrackingMode.COMPLETION_ONLY ->
+                            if (todayOutcome?.outcomeKind == "COMPLETED") BigInteger.ONE else BigInteger.ZERO
+                        TrackingMode.EFFORT_AWARE, TrackingMode.EFFORT_LEVELS ->
+                            if (todayOutcome != null) BigInteger.ONE else BigInteger.ZERO
+                    }
+                    val targetBi = BigInteger.valueOf((effToday.targetValue ?: 1).coerceAtLeast(1).toLong())
+                    val todayPct = when (effToday.trackingMode.canonical()) {
+                        TrackingMode.QUANTITY, TrackingMode.DURATION ->
+                            ProgressBandClassifier.percentageFloor(todayUnits, targetBi)
+                        TrackingMode.COMPLETION_ONLY ->
+                            if (todayOutcome?.outcomeKind == "COMPLETED") 100 else 0
+                        TrackingMode.EFFORT_AWARE, TrackingMode.EFFORT_LEVELS ->
+                            when (todayOutcome?.effortLevel) {
+                                "TINY" -> 20
+                                "EXTRA" -> 125
+                                "USUAL" -> 100
+                                else -> if (todayOutcome != null) 100 else 0
+                            }
+                    }
+
+                    val activeRun = runs.find { it.isActive }
+                    val groveRuns = runs.filter { it.qualifiedForGrove }
+                    val streakUnit = if (effToday.targetPeriod == TargetPeriod.WEEK) StreakUnit.WEEKS else StreakUnit.DAYS
+                    val lifetimeActive = StreakAndGroveEngine.computeLifetimeActiveDays(versions, entries, outcomes)
+                    val isScheduledToday = effToday.lifecycleState == HabitLifecycleState.ACTIVE &&
+                        StreakAndGroveEngine.isScheduledOpportunityOnDate(effToday, today)
+                    val hasRestDayToday = todayException?.exceptionKind == HabitDateExceptionKind.REST_DAY
+                    val hasActivityToday = todayEntries.isNotEmpty() || todayOutcome != null
+
+                    summaries[hId] = HabitSummary(
+                        habit = habit,
+                        effectiveVersion = effToday,
+                        todayState = todayState,
+                        todayProgressBand = todayBand,
+                        todayCompactBucket = ProgressBandClassifier.toCompactBucket(todayBand),
+                        todayTotalUnits = todayUnits,
+                        todayPercentage = todayPct,
+                        currentCompletedStreak = activeRun?.completedStreakCount ?: 0,
+                        currentElapsedActiveSpan = activeRun?.elapsedActiveSpanCount ?: 0,
+                        streakUnit = streakUnit,
+                        activeRun = activeRun,
+                        groveRuns = groveRuns,
+                        allStreakRuns = runs,
+                        lifetimeActiveDays = lifetimeActive,
+                        lifetimeGoalDays = habit.lifetimeGoalDays,
+                        isScheduledToday = isScheduledToday,
+                        hasRestDayToday = hasRestDayToday,
+                        canTakeRestDayToday = isScheduledToday && !hasRestDayToday && !hasActivityToday
+                    )
+                }
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+
+        _habitStreakRuns.value = allRuns
+        _habitSummaries.value = summaries
+    }
+
+    // =========================================================================
     // PROGRESS BANDS, DERIVED DAY STATUS & GROWTH MARK (G2 + G3)
     // =========================================================================
 
@@ -1137,8 +1970,7 @@ class DayseedRepository(
     }
 
     /**
-     * Evaluates the DerivedDayStatus for a habit on targetDate using the effective HabitVersion (D-188, D-193).
-     * Missed status is derived ONLY after a scheduled day (or week) has passed without qualifying activity.
+     * Evaluates the DerivedDayStatus for a habit on targetDate using the effective HabitVersion (D-188, D-193, D-218).
      */
     fun evaluateDerivedDayStatus(
         habitId: String,
@@ -1153,20 +1985,30 @@ class DayseedRepository(
         val today = referenceToday
         val entriesOnDate = getEntriesForHabitOnDate(habitId, targetDate)
         val outcomeOnDate = getOutcomeForHabitOnDate(habitId, targetDate)
+        val exceptionOnDate = getExceptionForHabitOnDate(habitId, targetDate)
 
-        when (version.trackingMode) {
-            TrackingMode.COMPLETION_ONLY, TrackingMode.EFFORT_AWARE -> {
+        when (version.trackingMode.canonical()) {
+            TrackingMode.COMPLETION_ONLY -> {
                 if (outcomeOnDate != null) {
                     return DerivedDayStatus.COMPLETED
                 }
             }
+            TrackingMode.EFFORT_AWARE -> {
+                if (outcomeOnDate != null) {
+                    return if (outcomeOnDate.effortLevel == "TINY") {
+                        DerivedDayStatus.COMPLETED
+                    } else {
+                        DerivedDayStatus.COMPLETED
+                    }
+                }
+            }
             TrackingMode.QUANTITY, TrackingMode.DURATION -> {
                 if (entriesOnDate.isNotEmpty()) {
-                    val sum = entriesOnDate.sumOf { it.valueUnits }
-                    val target = version.targetValue ?: 1
+                    val sum = ProgressBandClassifier.sumUnitsExact(entriesOnDate.map { it.valueUnits })
+                    val target = BigInteger.valueOf((version.targetValue ?: 1).coerceAtLeast(1).toLong())
                     val band = ProgressBandClassifier.classify(sum, target)
                     return when (band) {
-                        ProgressBand.GOAL_MET, ProgressBand.EXCEEDED -> DerivedDayStatus.COMPLETED
+                        ProgressBand.GOAL_MET, ProgressBand.EXTRA, ProgressBand.HUGE -> DerivedDayStatus.COMPLETED
                         ProgressBand.ZERO -> DerivedDayStatus.LOGGED_ZERO
                         else -> DerivedDayStatus.PARTIAL
                     }
@@ -1175,7 +2017,11 @@ class DayseedRepository(
             else -> {}
         }
 
-        // No recorded entry or outcome on targetDate
+        if (exceptionOnDate?.exceptionKind == HabitDateExceptionKind.REST_DAY) {
+            return DerivedDayStatus.REST_DAY
+        }
+
+        // No recorded entry, outcome, or REST_DAY on targetDate
         return when (version.scheduleKind) {
             ScheduleKind.DAILY -> {
                 if (targetDate.isBefore(today)) DerivedDayStatus.DERIVED_MISSED else DerivedDayStatus.OPEN_TODAY
@@ -1191,22 +2037,27 @@ class DayseedRepository(
                 }
             }
             ScheduleKind.FLEXIBLE_WEEKLY_TARGET -> {
-                val weekStart = getWeekStartDay()
+                if (WeekBoundaryHelper.isNeutralTransitionDate(targetDate, _weekStartHistory.value)) {
+                    return DerivedDayStatus.UNSCHEDULED
+                }
+                val weekStart = getWeekStartDay(targetDate)
                 val (_, weekEnd) = WeekBoundaryHelper.weekBounds(targetDate, weekStart)
-                // Check total qualifying activity across the week
                 val weekDates = (0..6).map { weekEnd.minusDays((6 - it).toLong()) }
-                val weekSatisfied = when (version.trackingMode) {
+                val targetBi = BigInteger.valueOf((version.targetValue ?: 1).coerceAtLeast(1).toLong())
+                val weekSatisfied = when (version.trackingMode.canonical()) {
                     TrackingMode.QUANTITY, TrackingMode.DURATION -> {
-                        val weekTotal = weekDates.sumOf { d ->
-                            getEntriesForHabitOnDate(habitId, d).sumOf { it.valueUnits }
+                        var weekTotal = BigInteger.ZERO
+                        for (d in weekDates) {
+                            val dSum = ProgressBandClassifier.sumUnitsExact(getEntriesForHabitOnDate(habitId, d).map { it.valueUnits })
+                            weekTotal = weekTotal.add(dSum)
                         }
-                        weekTotal >= (version.targetValue ?: 1)
+                        weekTotal >= targetBi
                     }
                     else -> {
                         val weekCompletions = weekDates.count { d ->
                             getOutcomeForHabitOnDate(habitId, d) != null
                         }
-                        weekCompletions >= (version.targetValue ?: 1)
+                        BigInteger.valueOf(weekCompletions.toLong()) >= targetBi
                     }
                 }
                 if (weekSatisfied) {
@@ -1221,9 +2072,7 @@ class DayseedRepository(
     }
 
     /**
-     * Computes the Growth Mark (G2 + G3) summary and overall GrowthMetrics (D-032, D-201).
-     * - G2: Current-month total duration (in normalized minutes) from DURATION-tracked habits only.
-     * - G3: Per-date session counts across the current month (habit_entries with value_units > 0 + habit_day_outcomes).
+     * Computes the Growth Mark (G2 + G3) summary, Grove counts, and overall GrowthMetrics (D-032, D-201, D-217).
      */
     private fun computeGrowthMetricsSync() {
         val today = clock.todayLocal()
@@ -1237,9 +2086,8 @@ class DayseedRepository(
         var currentMonthDurationMinutes = 0L
         val currentMonthDateSessionCounts = mutableMapOf<LocalDate, Int>()
 
-        // Aggregate habit_day_outcomes
         for (outcome in _habitDayOutcomes.value) {
-            val d = try { LocalDate.parse(outcome.localDate) } catch (_: Exception) { continue }
+            val d = try { LocalDateValidator.parseStrict(outcome.localDate) } catch (_: Exception) { continue }
             activeDates.add(d)
             completedCount++
             when (outcome.effortLevel) {
@@ -1253,9 +2101,8 @@ class DayseedRepository(
             }
         }
 
-        // Aggregate habit_entries (QUANTITY & DURATION)
         for (entry in _habitEntries.value) {
-            val d = try { LocalDate.parse(entry.localDate) } catch (_: Exception) { continue }
+            val d = try { LocalDateValidator.parseStrict(entry.localDate) } catch (_: Exception) { continue }
             if (entry.valueUnits > 0) {
                 activeDates.add(d)
                 completedCount++
@@ -1265,7 +2112,7 @@ class DayseedRepository(
                 when (band) {
                     ProgressBand.TINY_STEP, ProgressBand.GETTING_STARTED -> tinyCount++
                     ProgressBand.HALFWAY, ProgressBand.ALMOST_THERE, ProgressBand.GOAL_MET -> usualCount++
-                    ProgressBand.EXCEEDED -> extraCount++
+                    ProgressBand.EXTRA, ProgressBand.HUGE -> extraCount++
                     ProgressBand.ZERO -> {}
                 }
 
@@ -1283,11 +2130,10 @@ class DayseedRepository(
         }
 
         for (j in _journalEntries.value) {
-            val d = try { LocalDate.parse(j.localDate) } catch (_: Exception) { continue }
+            val d = try { LocalDateValidator.parseStrict(j.localDate) } catch (_: Exception) { continue }
             activeDates.add(d)
         }
 
-        // Past 7 days opportunities
         var pastWeekOpportunities = 0
         var pastWeekCompletions = 0
         for (i in 0..6) {
@@ -1310,18 +2156,26 @@ class DayseedRepository(
             }
         }
 
+        val runs = _habitStreakRuns.value
+        val activeSaplings = runs.count { it.treeState == GroveTreeState.SAPLING_ACTIVE }
+        val growingTrees = runs.count { it.treeState == GroveTreeState.GROWING_TREE }
+        val dormantTrees = runs.count { it.treeState == GroveTreeState.DORMANT_TREE }
+
         _growthMetrics.value = GrowthMetrics(
             totalActiveDates = activeDates.size,
             totalHabitsCompleted = completedCount,
             tinyCount = tinyCount,
             usualCount = usualCount,
             extraCount = extraCount,
-            plannedRestCount = 0,
+            plannedRestCount = _habitDateExceptions.value.size,
             journalEntriesCount = _journalEntries.value.size,
             currentPeriodCompletions = pastWeekCompletions,
             currentPeriodOpportunities = pastWeekOpportunities,
             currentMonthDurationMinutes = currentMonthDurationMinutes,
-            currentMonthDateSessionCounts = currentMonthDateSessionCounts
+            currentMonthDateSessionCounts = currentMonthDateSessionCounts,
+            activeSaplingsCount = activeSaplings,
+            growingTreesCount = growingTrees,
+            dormantTreesCount = dormantTrees
         )
     }
 
@@ -1348,10 +2202,11 @@ class DayseedRepository(
             val upIdx = c.getColumnIndexOrThrow("updated_at_utc_ms")
 
             while (c.moveToNext()) {
+                val dateStr = LocalDateValidator.requireValid(c.getString(dIdx), "local_date")
                 list.add(
                     JournalEntry(
                         journalEntryId = c.getString(idIdx),
-                        localDate = c.getString(dIdx),
+                        localDate = dateStr,
                         body = c.getString(bIdx),
                         title = if (c.isNull(tIdx)) null else c.getString(tIdx),
                         primaryMoodCode = if (c.isNull(pmIdx)) null else c.getString(pmIdx),
@@ -1388,10 +2243,11 @@ class DayseedRepository(
             val upIdx = c.getColumnIndexOrThrow("updated_at_utc_ms")
 
             while (c.moveToNext()) {
+                val dateStr = LocalDateValidator.requireValid(c.getString(dIdx), "local_date")
                 list.add(
                     JournalDraft(
                         draftId = c.getString(idIdx),
-                        localDate = c.getString(dIdx),
+                        localDate = dateStr,
                         title = if (c.isNull(tIdx)) null else c.getString(tIdx),
                         body = c.getString(bIdx),
                         primaryMoodCode = if (c.isNull(pmIdx)) null else c.getString(pmIdx),
@@ -1409,10 +2265,6 @@ class DayseedRepository(
         _journalDrafts.value = list
     }
 
-    /**
-     * Saves or updates an autosaved draft in journal_drafts (D-191).
-     * While typing, intended_journal_entry_id remains null until prepareAndCommitDraftSync is called.
-     */
     fun saveJournalDraftSync(
         draftId: String = "active_draft_${clock.todayLocal()}",
         localDate: LocalDate = clock.todayLocal(),
@@ -1428,12 +2280,13 @@ class DayseedRepository(
         val nowMs = clock.nowUtcMs()
         val existing = _journalDrafts.value.find { it.draftId == draftId }
         val createdAt = existing?.createdAtUtcMs ?: nowMs
+        val dateStr = LocalDateValidator.requireValid(localDate.toString(), "local_date")
 
         val validSecondary = if (primaryMoodCode != null && secondaryMoodCode != primaryMoodCode) secondaryMoodCode else null
 
         val cv = ContentValues().apply {
             put("draft_id", draftId)
-            put("local_date", localDate.toString())
+            put("local_date", dateStr)
             if (!title.isNullOrBlank()) put("title", title.trim()) else putNull("title")
             put("body", body)
             if (primaryMoodCode != null) put("primary_mood_code", primaryMoodCode) else putNull("primary_mood_code")
@@ -1447,7 +2300,7 @@ class DayseedRepository(
             }
             put("source_context", sourceContext)
             put("created_at_utc_ms", createdAt)
-            put("updated_at_utc_ms", nowMs)
+            put("updated_at_utc_ms", maxOf(createdAt, nowMs))
         }
         db.insertWithOnConflict(
             DayseedDatabaseHelper.TABLE_JOURNAL_DRAFTS,
@@ -1459,12 +2312,6 @@ class DayseedRepository(
         return _journalDrafts.value.first { it.draftId == draftId }
     }
 
-    /**
-     * Atomically promotes a JournalDraft to a saved JournalEntry (D-191 / AC-008):
-     * 1. Prepares the draft by assigning intended_journal_entry_id if null.
-     * 2. In a single transaction, inserts/updates journal_entries with that exact journal_entry_id and deletes the draft.
-     * Calling this repeatedly on the same draft or retrying after interruption never creates duplicate entries.
-     */
     fun promoteDraftToJournalEntrySync(draftId: String): JournalEntry? {
         val db = dbHelper.writableDatabase
         val draft = _journalDrafts.value.find { it.draftId == draftId } ?: return null
@@ -1473,7 +2320,6 @@ class DayseedRepository(
         val nowMs = clock.nowUtcMs()
         val intendedId = draft.intendedJournalEntryId ?: UUID.randomUUID().toString()
 
-        // Step 1: Persist intended_journal_entry_id on draft before promotion
         if (draft.intendedJournalEntryId == null) {
             val prepCv = ContentValues().apply {
                 put("intended_journal_entry_id", intendedId)
@@ -1487,7 +2333,6 @@ class DayseedRepository(
             )
         }
 
-        // Step 2: Atomic insert into journal_entries + delete from journal_drafts
         db.beginTransaction()
         try {
             val jCv = ContentValues().apply {
@@ -1523,13 +2368,10 @@ class DayseedRepository(
         return _journalEntries.value.find { it.journalEntryId == intendedId }
     }
 
-    /**
-     * Saves or edits a JournalEntry directly (e.g. from editor dialog or date edit).
-     * Also clears any active composer draft for the same date.
-     */
     fun saveJournalEntrySync(entry: JournalEntry): JournalEntry {
         val db = dbHelper.writableDatabase
         val nowMs = clock.nowUtcMs()
+        val dateStr = LocalDateValidator.requireValid(entry.localDate, "local_date")
         val existing = _journalEntries.value.find { it.journalEntryId == entry.journalEntryId }
         val createdAt = existing?.createdAtUtcMs ?: entry.createdAtUtcMs.takeIf { it > 0 } ?: nowMs
         val validSecondary = if (entry.primaryMoodCode != null && entry.secondaryMoodCode != entry.primaryMoodCode) {
@@ -1542,7 +2384,7 @@ class DayseedRepository(
         try {
             val cv = ContentValues().apply {
                 put("journal_entry_id", entry.journalEntryId)
-                put("local_date", entry.localDate)
+                put("local_date", dateStr)
                 put("body", entry.body.trim())
                 if (!entry.title.isNullOrBlank()) put("title", entry.title.trim()) else putNull("title")
                 if (!entry.primaryMoodCode.isNullOrBlank()) put("primary_mood_code", entry.primaryMoodCode) else putNull("primary_mood_code")
@@ -1550,7 +2392,7 @@ class DayseedRepository(
                 if (!entry.promptId.isNullOrBlank()) put("prompt_id", entry.promptId) else putNull("prompt_id")
                 if (!entry.linkedHabitId.isNullOrBlank()) put("linked_habit_id", entry.linkedHabitId) else putNull("linked_habit_id")
                 put("created_at_utc_ms", createdAt)
-                put("updated_at_utc_ms", nowMs)
+                put("updated_at_utc_ms", maxOf(createdAt, nowMs))
             }
             db.insertWithOnConflict(
                 DayseedDatabaseHelper.TABLE_JOURNAL_ENTRIES,
@@ -1558,11 +2400,10 @@ class DayseedRepository(
                 cv,
                 SQLiteDatabase.CONFLICT_REPLACE
             )
-            // Clear matching composer draft if present
             db.delete(
                 DayseedDatabaseHelper.TABLE_JOURNAL_DRAFTS,
                 "local_date = ? AND source_context = 'JOURNAL_COMPOSER'",
-                arrayOf(entry.localDate)
+                arrayOf(dateStr)
             )
             db.setTransactionSuccessful()
         } finally {
@@ -1578,17 +2419,12 @@ class DayseedRepository(
         saveJournalEntrySync(entry)
     }
 
-    /**
-     * Evaluates whether a habit qualifies for a low-frequency retrospective journal prompt (D-042 / AC-024):
-     * Eligible when the habit has >= 2 derived missed scheduled days in the past 7 days,
-     * retrospective prompts are enabled in settings, and the prompt has not been dismissed/shown in the last 7 days.
-     */
     fun isHabitEligibleForRetrospectivePrompt(habitId: String, referenceDate: LocalDate = clock.todayLocal()): Boolean {
         if (!getSettingBoolean("retrospective_journal_prompts_enabled", true)) return false
         val dismissKey = "retrospective_prompt_dismissed_$habitId"
         val lastDismissedDateStr = _appSettings.value[dismissKey]?.valueText
         if (lastDismissedDateStr != null) {
-            val lastDismissed = try { LocalDate.parse(lastDismissedDateStr) } catch (_: Exception) { null }
+            val lastDismissed = try { LocalDateValidator.parseStrict(lastDismissedDateStr) } catch (_: Exception) { null }
             if (lastDismissed != null && ChronoUnit.DAYS.between(lastDismissed, referenceDate) < 7) {
                 return false
             }
@@ -1612,11 +2448,11 @@ class DayseedRepository(
     // =========================================================================
 
     fun computeMoodInsights(
-        periodKind: String = "WEEK", // "WEEK" or "MONTH"
+        periodKind: String = "WEEK",
         referenceDate: LocalDate = clock.todayLocal(),
         selectedMoodFilter: String? = null
     ): MoodInsightsResult {
-        val weekStart = getWeekStartDay()
+        val weekStart = getWeekStartDay(referenceDate)
         val (currentStart, currentEnd, prevStart, prevEnd) = if (periodKind.uppercase() == "MONTH") {
             val ym = YearMonth.from(referenceDate)
             val prevYm = ym.minusMonths(1)
@@ -1628,11 +2464,11 @@ class DayseedRepository(
         }
 
         val currentEntries = _journalEntries.value.filter { e ->
-            val d = try { LocalDate.parse(e.localDate) } catch (_: Exception) { null }
+            val d = try { LocalDateValidator.parseStrict(e.localDate) } catch (_: Exception) { null }
             d != null && !d.isBefore(currentStart) && !d.isAfter(currentEnd)
         }
         val prevEntries = _journalEntries.value.filter { e ->
-            val d = try { LocalDate.parse(e.localDate) } catch (_: Exception) { null }
+            val d = try { LocalDateValidator.parseStrict(e.localDate) } catch (_: Exception) { null }
             d != null && !d.isBefore(prevStart) && !d.isAfter(prevEnd)
         }
 
@@ -1701,24 +2537,17 @@ class DayseedRepository(
     fun findLastRecordedActivityDate(): LocalDate? {
         val dates = mutableListOf<LocalDate>()
         _habitEntries.value.filter { it.valueUnits > 0 }.forEach {
-            try { dates.add(LocalDate.parse(it.localDate)) } catch (_: Exception) {}
+            try { dates.add(LocalDateValidator.parseStrict(it.localDate)) } catch (_: Exception) {}
         }
         _habitDayOutcomes.value.forEach {
-            try { dates.add(LocalDate.parse(it.localDate)) } catch (_: Exception) {}
+            try { dates.add(LocalDateValidator.parseStrict(it.localDate)) } catch (_: Exception) {}
         }
         _journalEntries.value.forEach {
-            try { dates.add(LocalDate.parse(it.localDate)) } catch (_: Exception) {}
+            try { dates.add(LocalDateValidator.parseStrict(it.localDate)) } catch (_: Exception) {}
         }
         return dates.maxOrNull()
     }
 
-    /**
-     * Evaluates Comeback eligibility (D-047..D-067, D-206):
-     * - Suppressed when clock is uncertain (D-187).
-     * - 14-day flow eligible at 14..29 days since last recorded activity.
-     * - 30-day flow eligible at >= 30 days since last recorded activity, superseding 14-day flow.
-     * - Once-per-episode suppression: an inactivity episode is keyed by the last recorded activity date.
-     */
     fun evaluateComebackSync(referenceDate: LocalDate = clock.todayLocal()): ComebackInfo? {
         if (isClockUncertainSync()) {
             _comebackInfo.value = null
@@ -1727,7 +2556,7 @@ class DayseedRepository(
 
         val lastActivityDate = findLastRecordedActivityDate()
             ?: _appSettings.value["last_opened_date"]?.valueText?.let {
-                try { LocalDate.parse(it) } catch (_: Exception) { null }
+                try { LocalDateValidator.parseStrict(it) } catch (_: Exception) { null }
             }
 
         if (lastActivityDate == null) {
@@ -1785,12 +2614,6 @@ class DayseedRepository(
         _comebackInfo.value = null
     }
 
-    /**
-     * Applies adaptive habit adjustments from the 14-day or 30-day Comeback flow (D-055, D-206):
-     * - Habits in resumeHabitIds stay ACTIVE (with optional loweredTargetByHabitId).
-     * - Habits in pauseHabitIds transition to PAUSED effective today.
-     * - Optional comebackReflectionBody is saved as a COMEBACK_30D draft or promoted to journal_entries.
-     */
     fun applyComebackAdjustmentsSync(
         resumeHabitIds: Set<String>,
         pauseHabitIds: Set<String>,
@@ -1853,7 +2676,8 @@ class DayseedRepository(
         val results = mutableListOf<ReminderEvaluationResult>()
         for (h in _habits.value) {
             val eff = getEffectiveHabitVersion(h.habitId, targetDate) ?: continue
-            val logged = hasQualifyingActivityOnDate(h.habitId, targetDate)
+            val logged = hasQualifyingActivityOnDate(h.habitId, targetDate) ||
+                getExceptionForHabitOnDate(h.habitId, targetDate) != null
             results.add(
                 ReminderEngine.evaluateHabitReminder(
                     db = db,
@@ -1886,7 +2710,7 @@ class DayseedRepository(
     }
 
     // =========================================================================
-    // READABLE EXPORT, PORTABLE BACKUP & RESTORE (D-105..D-107, D-200, D-202)
+    // READABLE EXPORT, PORTABLE BACKUP & RESTORE (D-105..D-107, D-200, D-202, §9.2)
     // =========================================================================
 
     private fun loadRestoreConflictsSync(db: SQLiteDatabase) {
@@ -1930,8 +2754,7 @@ class DayseedRepository(
     }
 
     /**
-     * Generates a complete versioned portable backup (.dayseed.json) containing all persistent tables.
-     * Supports optional password-based AES-256-GCM encryption.
+     * Generates a complete versioned portable backup (.dayseed.json) containing all v3 persistent tables.
      */
     fun exportPortableBackupSync(password: String? = null): String {
         val root = JSONObject()
@@ -1942,125 +2765,67 @@ class DayseedRepository(
 
         root.put("habits", JSONArray().apply {
             for (h in _habits.value) {
-                put(JSONObject().apply {
-                    put("habit_id", h.habitId)
-                    put("created_at_utc_ms", h.createdAtUtcMs)
-                    put("updated_at_utc_ms", h.updatedAtUtcMs)
-                })
+                put(habitToJson(h))
             }
         })
 
         root.put("habit_versions", JSONArray().apply {
             for (v in _habitVersions.value) {
-                put(JSONObject().apply {
-                    put("version_id", v.versionId)
-                    put("habit_id", v.habitId)
-                    put("effective_from_local_date", v.effectiveFromLocalDate)
-                    put("name", v.name)
-                    put("description", v.description ?: JSONObject.NULL)
-                    put("tracking_mode", v.trackingMode.name)
-                    put("unit_code", v.unitCode ?: JSONObject.NULL)
-                    put("target_period", v.targetPeriod.name)
-                    put("target_value", v.targetValue ?: JSONObject.NULL)
-                    put("schedule_kind", v.scheduleKind.name)
-                    put("scheduled_weekdays_mask", v.scheduledWeekdaysMask ?: JSONObject.NULL)
-                    put("preferred_weekdays_mask", v.preferredWeekdaysMask ?: JSONObject.NULL)
-                    put("lifecycle_state", v.lifecycleState.name)
-                    put("reminder_mode", v.reminderMode)
-                    put("reminder_time_local", v.reminderTimeLocal ?: JSONObject.NULL)
-                    put("created_at_utc_ms", v.createdAtUtcMs)
-                })
+                put(habitVersionToJson(v))
             }
         })
 
         root.put("habit_entries", JSONArray().apply {
             for (e in _habitEntries.value) {
-                put(JSONObject().apply {
-                    put("entry_id", e.entryId)
-                    put("habit_id", e.habitId)
-                    put("local_date", e.localDate)
-                    put("value_units", e.valueUnits)
-                    put("entry_note", e.entryNote ?: JSONObject.NULL)
-                    put("created_at_utc_ms", e.createdAtUtcMs)
-                    put("updated_at_utc_ms", e.updatedAtUtcMs)
-                    put("idempotency_key", e.idempotencyKey)
-                })
+                put(habitEntryToJson(e))
             }
         })
 
         root.put("habit_day_outcomes", JSONArray().apply {
             for (o in _habitDayOutcomes.value) {
-                put(JSONObject().apply {
-                    put("outcome_id", o.outcomeId)
-                    put("habit_id", o.habitId)
-                    put("local_date", o.localDate)
-                    put("outcome_kind", o.outcomeKind)
-                    put("effort_level", o.effortLevel ?: JSONObject.NULL)
-                    put("idempotency_key", o.idempotencyKey)
-                    put("created_at_utc_ms", o.createdAtUtcMs)
-                    put("updated_at_utc_ms", o.updatedAtUtcMs)
-                })
+                put(habitDayOutcomeToJson(o))
             }
         })
 
         root.put("habit_date_notes", JSONArray().apply {
             for (n in _habitDateNotes.value) {
-                put(JSONObject().apply {
-                    put("note_id", n.noteId)
-                    put("habit_id", n.habitId)
-                    put("local_date", n.localDate)
-                    put("body", n.body)
-                    put("created_at_utc_ms", n.createdAtUtcMs)
-                    put("updated_at_utc_ms", n.updatedAtUtcMs)
-                })
+                put(habitDateNoteToJson(n))
+            }
+        })
+
+        root.put("habit_date_exceptions", JSONArray().apply {
+            for (ex in _habitDateExceptions.value) {
+                put(habitDateExceptionToJson(ex))
+            }
+        })
+
+        root.put("habit_streak_runs", JSONArray().apply {
+            for (run in _habitStreakRuns.value) {
+                put(habitStreakRunToJson(run))
+            }
+        })
+
+        root.put("week_start_history", JSONArray().apply {
+            for (w in _weekStartHistory.value) {
+                put(weekStartPolicyToJson(w))
             }
         })
 
         root.put("journal_entries", JSONArray().apply {
             for (j in _journalEntries.value) {
-                put(JSONObject().apply {
-                    put("journal_entry_id", j.journalEntryId)
-                    put("local_date", j.localDate)
-                    put("body", j.body)
-                    put("title", j.title ?: JSONObject.NULL)
-                    put("primary_mood_code", j.primaryMoodCode ?: JSONObject.NULL)
-                    put("secondary_mood_code", j.secondaryMoodCode ?: JSONObject.NULL)
-                    put("prompt_id", j.promptId ?: JSONObject.NULL)
-                    put("linked_habit_id", j.linkedHabitId ?: JSONObject.NULL)
-                    put("created_at_utc_ms", j.createdAtUtcMs)
-                    put("updated_at_utc_ms", j.updatedAtUtcMs)
-                })
+                put(journalEntryToJson(j))
             }
         })
 
         root.put("journal_drafts", JSONArray().apply {
             for (d in _journalDrafts.value) {
-                put(JSONObject().apply {
-                    put("draft_id", d.draftId)
-                    put("local_date", d.localDate)
-                    put("title", d.title ?: JSONObject.NULL)
-                    put("body", d.body)
-                    put("primary_mood_code", d.primaryMoodCode ?: JSONObject.NULL)
-                    put("secondary_mood_code", d.secondaryMoodCode ?: JSONObject.NULL)
-                    put("prompt_id", d.promptId ?: JSONObject.NULL)
-                    put("linked_habit_id", d.linkedHabitId ?: JSONObject.NULL)
-                    put("intended_journal_entry_id", d.intendedJournalEntryId ?: JSONObject.NULL)
-                    put("source_context", d.sourceContext)
-                    put("created_at_utc_ms", d.createdAtUtcMs)
-                    put("updated_at_utc_ms", d.updatedAtUtcMs)
-                })
+                put(journalDraftToJson(d))
             }
         })
 
         root.put("app_settings", JSONArray().apply {
             for (s in _appSettings.value.values) {
-                put(JSONObject().apply {
-                    put("setting_key", s.settingKey)
-                    put("value_type", s.valueType)
-                    put("value_text", s.valueText)
-                    put("schema_version", s.schemaVersion)
-                    put("updated_at_utc_ms", s.updatedAtUtcMs)
-                })
+                put(appSettingToJson(s))
             }
         })
 
@@ -2077,17 +2842,12 @@ class DayseedRepository(
     }
 
     /**
-     * Restores a portable backup using REPLACE or MERGE mode (D-106, D-202, AC-014, AC-022):
-     * 1. Unwraps/decrypts and validates the backup JSON before mutating live tables.
-     * 2. Writes and verifies an automatic pre-restore safety backup file (`safety_backup_verified = 1`).
-     * 3. Creates a `restore_sessions` row.
-     * 4. In REPLACE mode, replaces all user data atomically.
-     * 5. In MERGE mode, imports non-conflicting records and inserts conflicting records into `restore_conflicts`
-     *    with session_state = 'AWAITING_CONFLICT_RESOLUTION'.
+     * Restores a portable backup (v2 or v3) using REPLACE or MERGE mode (D-106, D-202, §9.2):
+     * Validates calendar dates and integer ranges before mutating live tables.
      */
     fun restorePortableBackupSync(
         rawBackupPayload: String,
-        restoreMode: String = "REPLACE", // "REPLACE" or "MERGE"
+        restoreMode: String = "REPLACE",
         password: String? = null
     ): RestoreSession {
         require(restoreMode in listOf("REPLACE", "MERGE")) { "Invalid restoreMode: $restoreMode" }
@@ -2095,11 +2855,13 @@ class DayseedRepository(
         val root = JSONObject(unwrappedJson)
         val formatVersion = root.optInt("format_version", 0)
         val sourceSchemaVersion = root.optInt("source_schema_version", 0)
-        require(formatVersion == BackupAndExportManager.BACKUP_FORMAT_VERSION && sourceSchemaVersion == 2) {
-            "Unsupported or corrupted backup format"
+        require(formatVersion == BackupAndExportManager.BACKUP_FORMAT_VERSION && sourceSchemaVersion in listOf(2, 3)) {
+            "Unsupported or corrupted backup format (format_version=$formatVersion, source_schema_version=$sourceSchemaVersion)"
         }
 
-        // Write and verify pre-restore safety backup
+        // Pre-validate dates and numeric bounds in backup payload before touching live tables
+        validateBackupJsonPayload(root)
+
         val nowMs = clock.nowUtcMs()
         val safetyBackupJson = exportPortableBackupSync(password = null)
         val safetyFile = File(appContext.filesDir, "pre_restore_safety_$nowMs.dayseed.json")
@@ -2134,17 +2896,19 @@ class DayseedRepository(
                 db.delete(DayseedDatabaseHelper.TABLE_RESTORE_CONFLICTS, null, null)
                 db.delete(DayseedDatabaseHelper.TABLE_JOURNAL_DRAFTS, null, null)
                 db.delete(DayseedDatabaseHelper.TABLE_JOURNAL_ENTRIES, null, null)
+                db.delete(DayseedDatabaseHelper.TABLE_HABIT_STREAK_RUNS, null, null)
+                db.delete(DayseedDatabaseHelper.TABLE_HABIT_DATE_EXCEPTIONS, null, null)
                 db.delete(DayseedDatabaseHelper.TABLE_HABIT_DATE_NOTES, null, null)
                 db.delete(DayseedDatabaseHelper.TABLE_HABIT_DAY_OUTCOMES, null, null)
                 db.delete(DayseedDatabaseHelper.TABLE_HABIT_ENTRIES, null, null)
                 db.delete(DayseedDatabaseHelper.TABLE_HABIT_VERSIONS, null, null)
                 db.delete(DayseedDatabaseHelper.TABLE_HABITS, null, null)
+                db.delete(DayseedDatabaseHelper.TABLE_WEEK_START_HISTORY, null, null)
                 db.delete(DayseedDatabaseHelper.TABLE_APP_SETTINGS, null, null)
 
-                importBackupArraysDirect(db, root)
+                importBackupArraysDirect(db, root, nowMs)
                 finalState = "COMPLETED"
             } else {
-                // MERGE mode with conflict detection (D-202)
                 val conflictCount = mergeBackupWithConflictDetection(db, sessionId, root, nowMs)
                 finalState = if (conflictCount > 0) "AWAITING_CONFLICT_RESOLUTION" else "COMPLETED"
             }
@@ -2180,15 +2944,42 @@ class DayseedRepository(
         )
     }
 
-    private fun importBackupArraysDirect(db: SQLiteDatabase, root: JSONObject) {
+    private fun validateBackupJsonPayload(root: JSONObject) {
+        val dateArrays = listOf(
+            "habit_versions" to "effective_from_local_date",
+            "habit_entries" to "local_date",
+            "habit_day_outcomes" to "local_date",
+            "habit_date_notes" to "local_date",
+            "habit_date_exceptions" to "local_date",
+            "journal_entries" to "local_date",
+            "journal_drafts" to "local_date",
+            "week_start_history" to "effective_from_local_date"
+        )
+        for ((arrName, fieldName) in dateArrays) {
+            val arr = root.optJSONArray(arrName) ?: continue
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                val rawDate = o.optString(fieldName, "")
+                LocalDateValidator.requireValid(rawDate, "$arrName.$fieldName")
+            }
+        }
+        val entriesArr = root.optJSONArray("habit_entries")
+        if (entriesArr != null) {
+            for (i in 0 until entriesArr.length()) {
+                val o = entriesArr.getJSONObject(i)
+                val rawVal = o.getLong("value_units")
+                if (rawVal < 0L || rawVal > Int.MAX_VALUE.toLong()) {
+                    throw DayseedNumericRangeException("Invalid value_units $rawVal in backup habit_entries.")
+                }
+            }
+        }
+    }
+
+    private fun importBackupArraysDirect(db: SQLiteDatabase, root: JSONObject, nowMs: Long) {
         val habitsArr = root.optJSONArray("habits") ?: JSONArray()
         for (i in 0 until habitsArr.length()) {
             val o = habitsArr.getJSONObject(i)
-            db.insertOrThrow(DayseedDatabaseHelper.TABLE_HABITS, null, ContentValues().apply {
-                put("habit_id", o.getString("habit_id"))
-                put("created_at_utc_ms", o.getLong("created_at_utc_ms"))
-                put("updated_at_utc_ms", o.getLong("updated_at_utc_ms"))
-            })
+            db.insertOrThrow(DayseedDatabaseHelper.TABLE_HABITS, null, jsonToHabitCv(o))
         }
 
         val versionsArr = root.optJSONArray("habit_versions") ?: JSONArray()
@@ -2215,6 +3006,12 @@ class DayseedRepository(
             db.insertOrThrow(DayseedDatabaseHelper.TABLE_HABIT_DATE_NOTES, null, jsonToHabitDateNoteCv(o))
         }
 
+        val exceptionsArr = root.optJSONArray("habit_date_exceptions") ?: JSONArray()
+        for (i in 0 until exceptionsArr.length()) {
+            val o = exceptionsArr.getJSONObject(i)
+            db.insertOrThrow(DayseedDatabaseHelper.TABLE_HABIT_DATE_EXCEPTIONS, null, jsonToHabitDateExceptionCv(o))
+        }
+
         val journalsArr = root.optJSONArray("journal_entries") ?: JSONArray()
         for (i in 0 until journalsArr.length()) {
             val o = journalsArr.getJSONObject(i)
@@ -2237,6 +3034,38 @@ class DayseedRepository(
                 SQLiteDatabase.CONFLICT_REPLACE
             )
         }
+
+        val weekHistoryArr = root.optJSONArray("week_start_history")
+        if (weekHistoryArr != null && weekHistoryArr.length() > 0) {
+            for (i in 0 until weekHistoryArr.length()) {
+                val o = weekHistoryArr.getJSONObject(i)
+                db.insertWithOnConflict(
+                    DayseedDatabaseHelper.TABLE_WEEK_START_HISTORY,
+                    null,
+                    jsonToWeekStartPolicyCv(o),
+                    SQLiteDatabase.CONFLICT_REPLACE
+                )
+            }
+        } else {
+            // Seed baseline week_start_history row for v2 backups
+            var weekStartIso = 1
+            db.rawQuery("SELECT value_text FROM ${DayseedDatabaseHelper.TABLE_APP_SETTINGS} WHERE setting_key = 'week_start' LIMIT 1", null).use { c ->
+                if (c.moveToFirst() && c.getString(0).equals("SUNDAY", ignoreCase = true)) {
+                    weekStartIso = 7
+                }
+            }
+            db.insertWithOnConflict(
+                DayseedDatabaseHelper.TABLE_WEEK_START_HISTORY,
+                null,
+                ContentValues().apply {
+                    put("effective_from_local_date", "1970-01-01")
+                    put("week_start_iso_day", weekStartIso)
+                    put("is_legacy_baseline", 1)
+                    put("created_at_utc_ms", nowMs)
+                },
+                SQLiteDatabase.CONFLICT_IGNORE
+            )
+        }
     }
 
     private fun mergeBackupWithConflictDetection(
@@ -2254,11 +3083,7 @@ class DayseedRepository(
             val hId = o.getString("habit_id")
             val existing = _habits.value.find { it.habitId == hId }
             if (existing == null) {
-                db.insertOrThrow(DayseedDatabaseHelper.TABLE_HABITS, null, ContentValues().apply {
-                    put("habit_id", hId)
-                    put("created_at_utc_ms", o.getLong("created_at_utc_ms"))
-                    put("updated_at_utc_ms", o.getLong("updated_at_utc_ms"))
-                })
+                db.insertOrThrow(DayseedDatabaseHelper.TABLE_HABITS, null, jsonToHabitCv(o))
             }
         }
 
@@ -2373,7 +3198,25 @@ class DayseedRepository(
             }
         }
 
-        // 6. Journal Entries
+        // 6. Habit Date Exceptions (v3)
+        val exceptionsArr = root.optJSONArray("habit_date_exceptions") ?: JSONArray()
+        for (i in 0 until exceptionsArr.length()) {
+            val o = exceptionsArr.getJSONObject(i)
+            val hId = o.getString("habit_id")
+            val dStr = o.getString("local_date")
+            val existing = _habitDateExceptions.value.find { it.habitId == hId && it.localDate == dStr }
+            val hasActivity = hasRecordedActivityForVersionLockOnDate(hId, LocalDateValidator.parseStrict(dStr))
+            if (existing == null && !hasActivity) {
+                db.insertWithOnConflict(
+                    DayseedDatabaseHelper.TABLE_HABIT_DATE_EXCEPTIONS,
+                    null,
+                    jsonToHabitDateExceptionCv(o),
+                    SQLiteDatabase.CONFLICT_IGNORE
+                )
+            }
+        }
+
+        // 7. Journal Entries
         val journalsArr = root.optJSONArray("journal_entries") ?: JSONArray()
         for (i in 0 until journalsArr.length()) {
             val o = journalsArr.getJSONObject(i)
@@ -2400,7 +3243,7 @@ class DayseedRepository(
             }
         }
 
-        // 7. App Settings
+        // 8. App Settings
         val settingsArr = root.optJSONArray("app_settings") ?: JSONArray()
         for (i in 0 until settingsArr.length()) {
             val o = settingsArr.getJSONObject(i)
@@ -2451,10 +3294,6 @@ class DayseedRepository(
         db.insertOrThrow(DayseedDatabaseHelper.TABLE_RESTORE_CONFLICTS, null, cv)
     }
 
-    /**
-     * Resolves a single RestoreConflict (D-202 / AC-022):
-     * Enforces RestoreConflict.allowedResolutions() so KEEP_BOTH is permitted ONLY for journal_entry.
-     */
     fun resolveRestoreConflictSync(conflictId: String, resolution: ConflictResolution) {
         val conflict = _restoreConflicts.value.find { it.conflictId == conflictId }
             ?: throw IllegalArgumentException("Conflict not found: $conflictId")
@@ -2469,9 +3308,7 @@ class DayseedRepository(
         db.beginTransaction()
         try {
             when (resolution) {
-                ConflictResolution.KEEP_CURRENT -> {
-                    // Keep current live row unchanged
-                }
+                ConflictResolution.KEEP_CURRENT -> {}
                 ConflictResolution.USE_BACKUP -> {
                     when (conflict.recordType) {
                         "habit_version" -> {
@@ -2506,6 +3343,14 @@ class DayseedRepository(
                                 SQLiteDatabase.CONFLICT_REPLACE
                             )
                         }
+                        "habit_date_exception" -> {
+                            db.insertWithOnConflict(
+                                DayseedDatabaseHelper.TABLE_HABIT_DATE_EXCEPTIONS,
+                                null,
+                                jsonToHabitDateExceptionCv(backupObj),
+                                SQLiteDatabase.CONFLICT_REPLACE
+                            )
+                        }
                         "journal_entry" -> {
                             db.insertWithOnConflict(
                                 DayseedDatabaseHelper.TABLE_JOURNAL_ENTRIES,
@@ -2533,7 +3378,6 @@ class DayseedRepository(
                     }
                 }
                 ConflictResolution.KEEP_BOTH -> {
-                    // Only allowed for journal_entry: insert backup copy under a new journal_entry_id
                     val copyObj = JSONObject(conflict.backupPayloadJson).apply {
                         put("journal_entry_id", UUID.randomUUID().toString())
                         put("updated_at_utc_ms", nowMs)
@@ -2548,7 +3392,6 @@ class DayseedRepository(
 
             db.delete(DayseedDatabaseHelper.TABLE_RESTORE_CONFLICTS, "conflict_id = ?", arrayOf(conflictId))
 
-            // If no remaining conflicts for this session, transition session_state to COMPLETED
             var remaining = 0
             db.rawQuery(
                 "SELECT COUNT(*) FROM ${DayseedDatabaseHelper.TABLE_RESTORE_CONFLICTS} WHERE restore_session_id = ?",
@@ -2578,12 +3421,9 @@ class DayseedRepository(
     }
 
     // =========================================================================
-    // THREE DELETION FLOWS (D-192, D-203, AC-015, AC-026)
+    // THREE DELETION FLOWS & SINGLE-HABIT DELETION UNDO (D-192, D-203, §9.1)
     // =========================================================================
 
-    /**
-     * Flow 1: Delete a single saved journal entry.
-     */
     fun deleteJournalEntrySync(journalEntryId: String) {
         val db = dbHelper.writableDatabase
         db.delete(
@@ -2599,20 +3439,61 @@ class DayseedRepository(
     }
 
     /**
-     * Flow 2: Permanent single-habit delete (D-192, D-203, AC-026):
-     * - Enqueues notification_cancel_outbox rows for any delivered/scheduled reminders for this habit.
-     * - Deletes the habit row in `habits`:
-     *   - Cascades to habit_versions, habit_entries, habit_day_outcomes, habit_date_notes, reminder_deliveries.
-     *   - Preserves journal_entries and journal_drafts with linked_habit_id set to NULL (ON DELETE SET NULL).
-     * - Processes the notification cancel outbox.
+     * Deletes a habit and returns an 8-second guarded [UndoToken] containing the full
+     * [HabitDeletionPayload] snapshot so the deletion can be atomically undone (Revision 7 §9.1).
      */
-    fun deleteHabitPermanentlySync(habitId: String) {
+    fun deleteHabitWithUndoSync(habitId: String): UndoToken? {
+        val habit = _habits.value.find { it.habitId == habitId } ?: return null
+        val versions = _habitVersions.value.filter { it.habitId == habitId }
+        val entries = _habitEntries.value.filter { it.habitId == habitId }
+        val outcomes = _habitDayOutcomes.value.filter { it.habitId == habitId }
+        val notes = _habitDateNotes.value.filter { it.habitId == habitId }
+        val exceptions = _habitDateExceptions.value.filter { it.habitId == habitId }
+        val streakRuns = _habitStreakRuns.value.filter { it.habitId == habitId }
+        val linkedJournals = _journalEntries.value.filter { it.linkedHabitId == habitId }
+        val linkedDrafts = _journalDrafts.value.filter { it.linkedHabitId == habitId }
+
+        val snapshotJson = JSONObject().apply {
+            put("habit", habitToJson(habit))
+            put("versions", JSONArray().apply { versions.forEach { put(habitVersionToJson(it)) } })
+            put("entries", JSONArray().apply { entries.forEach { put(habitEntryToJson(it)) } })
+            put("outcomes", JSONArray().apply { outcomes.forEach { put(habitDayOutcomeToJson(it)) } })
+            put("notes", JSONArray().apply { notes.forEach { put(habitDateNoteToJson(it)) } })
+            put("exceptions", JSONArray().apply { exceptions.forEach { put(habitDateExceptionToJson(it)) } })
+            put("streak_runs", JSONArray().apply { streakRuns.forEach { put(habitStreakRunToJson(it)) } })
+            put(
+                "unlinked_journal_entries",
+                JSONArray().apply {
+                    linkedJournals.forEach { j ->
+                        put(
+                            JSONObject().apply {
+                                put("journal_entry_id", j.journalEntryId)
+                                put("expected_updated_at_utc_ms", j.updatedAtUtcMs)
+                            }
+                        )
+                    }
+                }
+            )
+            put(
+                "unlinked_journal_drafts",
+                JSONArray().apply {
+                    linkedDrafts.forEach { d ->
+                        put(
+                            JSONObject().apply {
+                                put("draft_id", d.draftId)
+                                put("expected_updated_at_utc_ms", d.updatedAtUtcMs)
+                            }
+                        )
+                    }
+                }
+            )
+        }.toString()
+
         val db = dbHelper.writableDatabase
         val nowMs = clock.nowUtcMs()
 
         db.beginTransaction()
         try {
-            // Collect platform notification tags/ids from reminder_deliveries for this habit
             val toCancel = mutableListOf<Pair<String, Int>>()
             db.rawQuery(
                 """
@@ -2623,30 +3504,18 @@ class DayseedRepository(
                 arrayOf(habitId)
             ).use { c ->
                 while (c.moveToNext()) {
-                    toCancel.add(c.getString(0) to c.getInt(1))
+                    toCancel.add(c.getString(0) to c.getValidatedInt(1, "platform_notification_id"))
                 }
             }
+
             if (toCancel.isEmpty()) {
-                val defaultTag = "dayseed_habit_$habitId"
-                val defaultId = (habitId.hashCode() and 0x7FFFFFFF).coerceAtLeast(1)
-                toCancel.add(defaultTag to defaultId)
+                toCancel.add("dayseed_habit_$habitId" to habitId.hashCode())
             }
 
-            for ((tag, id) in toCancel) {
-                val outboxCv = ContentValues().apply {
-                    put("cancel_id", UUID.randomUUID().toString())
-                    put("platform_notification_tag", tag)
-                    put("platform_notification_id", id)
-                    put("created_at_utc_ms", nowMs)
-                    putNull("last_attempt_at_utc_ms")
-                    put("attempt_count", 0)
-                    put("status", "PENDING")
-                    putNull("error_category")
-                }
-                db.insertOrThrow(DayseedDatabaseHelper.TABLE_NOTIFICATION_CANCEL_OUTBOX, null, outboxCv)
+            for ((tag, notifId) in toCancel) {
+                ReminderEngine.enqueueNotificationCancel(db, tag, notifId, nowMs)
             }
 
-            // Delete from habits (triggers ON DELETE CASCADE on habit children and ON DELETE SET NULL on journal tables)
             db.delete(DayseedDatabaseHelper.TABLE_HABITS, "habit_id = ?", arrayOf(habitId))
             db.setTransactionSuccessful()
         } finally {
@@ -2655,19 +3524,168 @@ class DayseedRepository(
 
         processCancelOutboxSync()
         refreshAllSync()
+
+        val token = UndoToken(
+            tokenId = UUID.randomUUID().toString(),
+            entityType = UndoEntityType.HABIT_DELETION,
+            entityId = habitId,
+            expectedUpdatedAtUtcMs = habit.updatedAtUtcMs,
+            previousPayloadJson = snapshotJson,
+            createdAtUtcMs = nowMs
+        )
+        _activeUndoToken.value = token
+        return token
     }
 
-    suspend fun deleteHabit(habitId: String) = withContext(Dispatchers.IO) {
-        deleteHabitPermanentlySync(habitId)
+    fun deleteHabitPermanentlySync(habitId: String): UndoToken? {
+        return deleteHabitWithUndoSync(habitId)
+    }
+
+    suspend fun deleteHabit(id: String): UndoToken? = withContext(Dispatchers.IO) {
+        deleteHabitPermanentlySync(id)
+    }
+
+    private fun restoreDeletedHabitFromSnapshotInTx(db: SQLiteDatabase, snap: JSONObject): Boolean {
+        val habitObj = snap.getJSONObject("habit")
+        val habitId = habitObj.getString("habit_id")
+
+        // Guard 1: habitId must not already exist
+        db.rawQuery("SELECT 1 FROM ${DayseedDatabaseHelper.TABLE_HABITS} WHERE habit_id = ? LIMIT 1", arrayOf(habitId)).use { c ->
+            if (c.moveToFirst()) return false
+        }
+
+        val versionsArr = snap.optJSONArray("versions") ?: JSONArray()
+        val entriesArr = snap.optJSONArray("entries") ?: JSONArray()
+        val outcomesArr = snap.optJSONArray("outcomes") ?: JSONArray()
+        val notesArr = snap.optJSONArray("notes") ?: JSONArray()
+        val exceptionsArr = snap.optJSONArray("exceptions") ?: JSONArray()
+        val runsArr = snap.optJSONArray("streak_runs") ?: JSONArray()
+
+        // Guard 2: Verify no primary-key or idempotency_key collisions exist before inserting
+        for (i in 0 until versionsArr.length()) {
+            val vId = versionsArr.getJSONObject(i).getString("version_id")
+            db.rawQuery("SELECT 1 FROM ${DayseedDatabaseHelper.TABLE_HABIT_VERSIONS} WHERE version_id = ? LIMIT 1", arrayOf(vId)).use { c ->
+                if (c.moveToFirst()) return false
+            }
+        }
+        for (i in 0 until entriesArr.length()) {
+            val o = entriesArr.getJSONObject(i)
+            val eId = o.getString("entry_id")
+            val iKey = o.getString("idempotency_key")
+            db.rawQuery(
+                """
+                SELECT 1 FROM ${DayseedDatabaseHelper.TABLE_HABIT_ENTRIES} WHERE entry_id = ? OR idempotency_key = ?
+                UNION ALL
+                SELECT 1 FROM ${DayseedDatabaseHelper.TABLE_HABIT_DAY_OUTCOMES} WHERE idempotency_key = ?
+                LIMIT 1
+                """.trimIndent(),
+                arrayOf(eId, iKey, iKey)
+            ).use { c ->
+                if (c.moveToFirst()) return false
+            }
+        }
+        for (i in 0 until outcomesArr.length()) {
+            val o = outcomesArr.getJSONObject(i)
+            val oId = o.getString("outcome_id")
+            val iKey = o.getString("idempotency_key")
+            db.rawQuery(
+                """
+                SELECT 1 FROM ${DayseedDatabaseHelper.TABLE_HABIT_DAY_OUTCOMES} WHERE outcome_id = ? OR idempotency_key = ?
+                UNION ALL
+                SELECT 1 FROM ${DayseedDatabaseHelper.TABLE_HABIT_ENTRIES} WHERE idempotency_key = ?
+                LIMIT 1
+                """.trimIndent(),
+                arrayOf(oId, iKey, iKey)
+            ).use { c ->
+                if (c.moveToFirst()) return false
+            }
+        }
+
+        // Insert habit and all child records
+        db.insertOrThrow(DayseedDatabaseHelper.TABLE_HABITS, null, jsonToHabitCv(habitObj))
+        for (i in 0 until versionsArr.length()) {
+            db.insertOrThrow(DayseedDatabaseHelper.TABLE_HABIT_VERSIONS, null, jsonToHabitVersionCv(versionsArr.getJSONObject(i)))
+        }
+        for (i in 0 until entriesArr.length()) {
+            db.insertOrThrow(DayseedDatabaseHelper.TABLE_HABIT_ENTRIES, null, jsonToHabitEntryCv(entriesArr.getJSONObject(i)))
+        }
+        for (i in 0 until outcomesArr.length()) {
+            db.insertOrThrow(DayseedDatabaseHelper.TABLE_HABIT_DAY_OUTCOMES, null, jsonToHabitDayOutcomeCv(outcomesArr.getJSONObject(i)))
+        }
+        for (i in 0 until notesArr.length()) {
+            db.insertOrThrow(DayseedDatabaseHelper.TABLE_HABIT_DATE_NOTES, null, jsonToHabitDateNoteCv(notesArr.getJSONObject(i)))
+        }
+        for (i in 0 until exceptionsArr.length()) {
+            db.insertOrThrow(DayseedDatabaseHelper.TABLE_HABIT_DATE_EXCEPTIONS, null, jsonToHabitDateExceptionCv(exceptionsArr.getJSONObject(i)))
+        }
+        for (i in 0 until runsArr.length()) {
+            db.insertOrThrow(DayseedDatabaseHelper.TABLE_HABIT_STREAK_RUNS, null, jsonToHabitStreakRunCv(runsArr.getJSONObject(i)))
+        }
+
+        // Re-link journals & drafts whose linked_habit_id is still NULL AND updated_at_utc_ms matches pre-deletion snapshot (§9.1)
+        val journalRefs = snap.optJSONArray("unlinked_journal_entries") ?: JSONArray()
+        for (i in 0 until journalRefs.length()) {
+            val refObj = journalRefs.getJSONObject(i)
+            val jId = refObj.getString("journal_entry_id")
+            val expectedUpd = refObj.getLong("expected_updated_at_utc_ms")
+            val cv = ContentValues().apply { put("linked_habit_id", habitId) }
+            db.update(
+                DayseedDatabaseHelper.TABLE_JOURNAL_ENTRIES,
+                cv,
+                "journal_entry_id = ? AND linked_habit_id IS NULL AND updated_at_utc_ms = ?",
+                arrayOf(jId, expectedUpd.toString())
+            )
+        }
+        val draftRefs = snap.optJSONArray("unlinked_journal_drafts") ?: JSONArray()
+        for (i in 0 until draftRefs.length()) {
+            val refObj = draftRefs.getJSONObject(i)
+            val dId = refObj.getString("draft_id")
+            val expectedUpd = refObj.getLong("expected_updated_at_utc_ms")
+            val cv = ContentValues().apply { put("linked_habit_id", habitId) }
+            db.update(
+                DayseedDatabaseHelper.TABLE_JOURNAL_DRAFTS,
+                cv,
+                "draft_id = ? AND linked_habit_id IS NULL AND updated_at_utc_ms = ?",
+                arrayOf(dId, expectedUpd.toString())
+            )
+        }
+        return true
     }
 
     /**
-     * Flow 3: Delete all personal data (D-203, AC-015):
-     * Clears all 12 tables, deletes local backup/export files in filesDir, and resets onboarding.
+     * Flow 3: Full local reset / Delete All Data (D-192, D-203, AC-015)
      */
     fun deleteAllDataSync() {
         val db = dbHelper.writableDatabase
         val nowMs = clock.nowUtcMs()
+
+        db.beginTransaction()
+        try {
+            val toCancel = mutableListOf<Pair<String, Int>>()
+            db.rawQuery(
+                """
+                SELECT DISTINCT platform_notification_tag, platform_notification_id
+                FROM ${DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES}
+                WHERE platform_notification_tag IS NOT NULL AND platform_notification_id IS NOT NULL
+                """.trimIndent(),
+                null
+            ).use { c ->
+                while (c.moveToNext()) {
+                    toCancel.add(c.getString(0) to c.getValidatedInt(1, "platform_notification_id"))
+                }
+            }
+            for ((tag, notifId) in toCancel) {
+                ReminderEngine.enqueueNotificationCancel(db, tag, notifId, nowMs)
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+
+        processCancelOutboxSync()
+        val notifManager = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+        notifManager?.cancelAll()
+
         db.beginTransaction()
         try {
             db.delete(DayseedDatabaseHelper.TABLE_RESTORE_CONFLICTS, null, null)
@@ -2675,15 +3693,17 @@ class DayseedRepository(
             db.delete(DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES, null, null)
             db.delete(DayseedDatabaseHelper.TABLE_JOURNAL_DRAFTS, null, null)
             db.delete(DayseedDatabaseHelper.TABLE_JOURNAL_ENTRIES, null, null)
+            db.delete(DayseedDatabaseHelper.TABLE_HABIT_STREAK_RUNS, null, null)
+            db.delete(DayseedDatabaseHelper.TABLE_HABIT_DATE_EXCEPTIONS, null, null)
             db.delete(DayseedDatabaseHelper.TABLE_HABIT_DATE_NOTES, null, null)
             db.delete(DayseedDatabaseHelper.TABLE_HABIT_DAY_OUTCOMES, null, null)
             db.delete(DayseedDatabaseHelper.TABLE_HABIT_ENTRIES, null, null)
             db.delete(DayseedDatabaseHelper.TABLE_HABIT_VERSIONS, null, null)
             db.delete(DayseedDatabaseHelper.TABLE_HABITS, null, null)
+            db.delete(DayseedDatabaseHelper.TABLE_WEEK_START_HISTORY, null, null)
             db.delete(DayseedDatabaseHelper.TABLE_APP_SETTINGS, null, null)
             db.delete(DayseedDatabaseHelper.TABLE_NOTIFICATION_CANCEL_OUTBOX, null, null)
 
-            // Reset onboarding_completed to false
             val cv = ContentValues().apply {
                 put("setting_key", "onboarding_completed")
                 put("value_type", "BOOL")
@@ -2692,12 +3712,19 @@ class DayseedRepository(
                 put("updated_at_utc_ms", nowMs)
             }
             db.insertOrThrow(DayseedDatabaseHelper.TABLE_APP_SETTINGS, null, cv)
+
+            val wCv = ContentValues().apply {
+                put("effective_from_local_date", "1970-01-01")
+                put("week_start_iso_day", 1)
+                put("is_legacy_baseline", 1)
+                put("created_at_utc_ms", nowMs)
+            }
+            db.insertOrThrow(DayseedDatabaseHelper.TABLE_WEEK_START_HISTORY, null, wCv)
             db.setTransactionSuccessful()
         } finally {
             db.endTransaction()
         }
 
-        // Remove any local backup/safety files
         appContext.filesDir?.listFiles()?.forEach { file ->
             if (file.name.endsWith(".dayseed.json") || file.name.startsWith("pre_restore_safety_")) {
                 file.delete()
@@ -2717,29 +3744,54 @@ class DayseedRepository(
     // JSON <-> CONTENTVALUES SERIALIZATION HELPERS
     // =========================================================================
 
-    private fun jsonToHabitVersionCv(o: JSONObject) = ContentValues().apply {
-        put("version_id", o.getString("version_id"))
+    private fun jsonToHabitCv(o: JSONObject) = ContentValues().apply {
         put("habit_id", o.getString("habit_id"))
-        put("effective_from_local_date", o.getString("effective_from_local_date"))
-        put("name", o.getString("name"))
-        if (o.isNull("description")) putNull("description") else put("description", o.getString("description"))
-        put("tracking_mode", o.getString("tracking_mode"))
-        if (o.isNull("unit_code")) putNull("unit_code") else put("unit_code", o.getString("unit_code"))
-        put("target_period", o.getString("target_period"))
-        if (o.isNull("target_value")) putNull("target_value") else put("target_value", o.getInt("target_value"))
-        put("schedule_kind", o.getString("schedule_kind"))
-        if (o.isNull("scheduled_weekdays_mask")) putNull("scheduled_weekdays_mask") else put("scheduled_weekdays_mask", o.getInt("scheduled_weekdays_mask"))
-        if (o.isNull("preferred_weekdays_mask")) putNull("preferred_weekdays_mask") else put("preferred_weekdays_mask", o.getInt("preferred_weekdays_mask"))
-        put("lifecycle_state", o.getString("lifecycle_state"))
-        put("reminder_mode", o.getString("reminder_mode"))
-        if (o.isNull("reminder_time_local")) putNull("reminder_time_local") else put("reminder_time_local", o.getString("reminder_time_local"))
         put("created_at_utc_ms", o.getLong("created_at_utc_ms"))
+        put("updated_at_utc_ms", o.getLong("updated_at_utc_ms"))
+        if (o.isNull("category") || !o.has("category")) putNull("category") else put("category", o.getString("category"))
+        if (o.isNull("lifetime_goal_days") || !o.has("lifetime_goal_days")) {
+            putNull("lifetime_goal_days")
+        } else {
+            put("lifetime_goal_days", o.getInt("lifetime_goal_days"))
+        }
+    }
+
+    private fun jsonToHabitVersionCv(o: JSONObject): ContentValues {
+        val rawDesc = if (o.isNull("description")) null else o.getString("description")
+        val parsed = parseHabitMetadataDescription(rawDesc)
+        val scheduleKind = o.getString("schedule_kind")
+        val normalizedPeriod = if (scheduleKind == "FLEXIBLE_WEEKLY_TARGET") "WEEK" else "DAY"
+
+        return ContentValues().apply {
+            put("version_id", o.getString("version_id"))
+            put("habit_id", o.getString("habit_id"))
+            put("effective_from_local_date", LocalDateValidator.requireValid(o.getString("effective_from_local_date")))
+            put("name", o.getString("name"))
+            val cleanDesc = parsed.cleanDescription.ifEmpty { null }
+            if (cleanDesc == null) putNull("description") else put("description", cleanDesc)
+            put("tracking_mode", TrackingMode.fromDb(o.getString("tracking_mode")).canonical().name)
+            if (o.isNull("unit_code")) putNull("unit_code") else put("unit_code", o.getString("unit_code"))
+            put("target_period", normalizedPeriod)
+            if (o.isNull("target_value")) putNull("target_value") else put("target_value", o.getInt("target_value"))
+            put("schedule_kind", scheduleKind)
+            if (o.isNull("scheduled_weekdays_mask")) putNull("scheduled_weekdays_mask") else put("scheduled_weekdays_mask", o.getInt("scheduled_weekdays_mask"))
+            if (o.isNull("preferred_weekdays_mask")) putNull("preferred_weekdays_mask") else put("preferred_weekdays_mask", o.getInt("preferred_weekdays_mask"))
+            put("lifecycle_state", o.getString("lifecycle_state"))
+            put("reminder_mode", o.getString("reminder_mode"))
+            if (o.isNull("reminder_time_local")) putNull("reminder_time_local") else put("reminder_time_local", o.getString("reminder_time_local"))
+            put("tiny_description", if (o.has("tiny_description") && !o.isNull("tiny_description")) o.getString("tiny_description") else parsed.tiny)
+            put("usual_description", if (o.has("usual_description") && !o.isNull("usual_description")) o.getString("usual_description") else parsed.usual)
+            put("extra_description", if (o.has("extra_description") && !o.isNull("extra_description")) o.getString("extra_description") else parsed.extra)
+            put("color_hex", if (o.has("color_hex") && !o.isNull("color_hex")) o.getString("color_hex") else parsed.colorHex)
+            put("sort_order", o.optInt("sort_order", 0))
+            put("created_at_utc_ms", o.getLong("created_at_utc_ms"))
+        }
     }
 
     private fun jsonToHabitEntryCv(o: JSONObject) = ContentValues().apply {
         put("entry_id", o.getString("entry_id"))
         put("habit_id", o.getString("habit_id"))
-        put("local_date", o.getString("local_date"))
+        put("local_date", LocalDateValidator.requireValid(o.getString("local_date")))
         put("value_units", o.getInt("value_units"))
         if (o.isNull("entry_note")) putNull("entry_note") else put("entry_note", o.getString("entry_note"))
         put("created_at_utc_ms", o.getLong("created_at_utc_ms"))
@@ -2750,7 +3802,7 @@ class DayseedRepository(
     private fun jsonToHabitDayOutcomeCv(o: JSONObject) = ContentValues().apply {
         put("outcome_id", o.getString("outcome_id"))
         put("habit_id", o.getString("habit_id"))
-        put("local_date", o.getString("local_date"))
+        put("local_date", LocalDateValidator.requireValid(o.getString("local_date")))
         put("outcome_kind", o.getString("outcome_kind"))
         if (o.isNull("effort_level")) putNull("effort_level") else put("effort_level", o.getString("effort_level"))
         put("idempotency_key", o.getString("idempotency_key"))
@@ -2761,15 +3813,50 @@ class DayseedRepository(
     private fun jsonToHabitDateNoteCv(o: JSONObject) = ContentValues().apply {
         put("note_id", o.getString("note_id"))
         put("habit_id", o.getString("habit_id"))
-        put("local_date", o.getString("local_date"))
+        put("local_date", LocalDateValidator.requireValid(o.getString("local_date")))
         put("body", o.getString("body"))
         put("created_at_utc_ms", o.getLong("created_at_utc_ms"))
         put("updated_at_utc_ms", o.getLong("updated_at_utc_ms"))
     }
 
+    private fun jsonToHabitDateExceptionCv(o: JSONObject) = ContentValues().apply {
+        put("id", o.getString("id"))
+        put("habit_id", o.getString("habit_id"))
+        put("local_date", LocalDateValidator.requireValid(o.getString("local_date")))
+        put("exception_kind", o.optString("exception_kind", "REST_DAY"))
+        if (o.isNull("note") || !o.has("note")) putNull("note") else put("note", o.getString("note"))
+        put("created_at_utc_ms", o.getLong("created_at_utc_ms"))
+        put("updated_at_utc_ms", o.getLong("updated_at_utc_ms"))
+    }
+
+    private fun jsonToHabitStreakRunCv(o: JSONObject) = ContentValues().apply {
+        put("run_id", o.getString("run_id"))
+        put("habit_id", o.getString("habit_id"))
+        put("start_local_date", LocalDateValidator.requireValid(o.getString("start_local_date")))
+        put("end_local_date", LocalDateValidator.requireValid(o.getString("end_local_date")))
+        put("completed_streak_count", o.getInt("completed_streak_count"))
+        put("elapsed_active_span_count", o.getInt("elapsed_active_span_count"))
+        put("streak_unit", o.getString("streak_unit"))
+        if (o.isNull("terminal_reason")) putNull("terminal_reason") else put("terminal_reason", o.getString("terminal_reason"))
+        put("is_active", if (o.optBoolean("is_active", o.optInt("is_active", 0) == 1)) 1 else 0)
+        put("qualified_for_grove", if (o.optBoolean("qualified_for_grove", o.optInt("qualified_for_grove", 0) == 1)) 1 else 0)
+        if (o.isNull("qualified_at_utc_ms")) putNull("qualified_at_utc_ms") else put("qualified_at_utc_ms", o.getLong("qualified_at_utc_ms"))
+        if (o.isNull("broken_on_local_date")) putNull("broken_on_local_date") else put("broken_on_local_date", o.getString("broken_on_local_date"))
+        put("tree_state", o.getString("tree_state"))
+        put("created_at_utc_ms", o.getLong("created_at_utc_ms"))
+        put("updated_at_utc_ms", o.getLong("updated_at_utc_ms"))
+    }
+
+    private fun jsonToWeekStartPolicyCv(o: JSONObject) = ContentValues().apply {
+        put("effective_from_local_date", LocalDateValidator.requireValid(o.getString("effective_from_local_date")))
+        put("week_start_iso_day", o.getInt("week_start_iso_day"))
+        put("is_legacy_baseline", if (o.optBoolean("is_legacy_baseline", o.optInt("is_legacy_baseline", 0) == 1)) 1 else 0)
+        put("created_at_utc_ms", o.getLong("created_at_utc_ms"))
+    }
+
     private fun jsonToJournalEntryCv(o: JSONObject) = ContentValues().apply {
         put("journal_entry_id", o.getString("journal_entry_id"))
-        put("local_date", o.getString("local_date"))
+        put("local_date", LocalDateValidator.requireValid(o.getString("local_date")))
         put("body", o.getString("body"))
         if (o.isNull("title")) putNull("title") else put("title", o.getString("title"))
         if (o.isNull("primary_mood_code")) putNull("primary_mood_code") else put("primary_mood_code", o.getString("primary_mood_code"))
@@ -2782,7 +3869,7 @@ class DayseedRepository(
 
     private fun jsonToJournalDraftCv(o: JSONObject) = ContentValues().apply {
         put("draft_id", o.getString("draft_id"))
-        put("local_date", o.getString("local_date"))
+        put("local_date", LocalDateValidator.requireValid(o.getString("local_date")))
         if (o.isNull("title")) putNull("title") else put("title", o.getString("title"))
         put("body", o.getString("body"))
         if (o.isNull("primary_mood_code")) putNull("primary_mood_code") else put("primary_mood_code", o.getString("primary_mood_code"))
@@ -2803,6 +3890,14 @@ class DayseedRepository(
         put("updated_at_utc_ms", o.getLong("updated_at_utc_ms"))
     }
 
+    private fun habitToJson(h: Habit) = JSONObject().apply {
+        put("habit_id", h.habitId)
+        put("created_at_utc_ms", h.createdAtUtcMs)
+        put("updated_at_utc_ms", h.updatedAtUtcMs)
+        put("category", h.category ?: JSONObject.NULL)
+        put("lifetime_goal_days", h.lifetimeGoalDays ?: JSONObject.NULL)
+    }
+
     private fun habitVersionToJson(v: HabitVersion) = JSONObject().apply {
         put("version_id", v.versionId)
         put("habit_id", v.habitId)
@@ -2819,6 +3914,11 @@ class DayseedRepository(
         put("lifecycle_state", v.lifecycleState.name)
         put("reminder_mode", v.reminderMode)
         put("reminder_time_local", v.reminderTimeLocal ?: JSONObject.NULL)
+        put("tiny_description", v.tinyDescription)
+        put("usual_description", v.usualDescription)
+        put("extra_description", v.extraDescription)
+        put("color_hex", v.colorHex)
+        put("sort_order", v.sortOrder)
         put("created_at_utc_ms", v.createdAtUtcMs)
     }
 
@@ -2853,6 +3953,41 @@ class DayseedRepository(
         put("updated_at_utc_ms", n.updatedAtUtcMs)
     }
 
+    private fun habitDateExceptionToJson(ex: HabitDateException) = JSONObject().apply {
+        put("id", ex.id)
+        put("habit_id", ex.habitId)
+        put("local_date", ex.localDate)
+        put("exception_kind", ex.exceptionKind.name)
+        put("note", ex.note ?: JSONObject.NULL)
+        put("created_at_utc_ms", ex.createdAtUtcMs)
+        put("updated_at_utc_ms", ex.updatedAtUtcMs)
+    }
+
+    private fun habitStreakRunToJson(r: HabitStreakRun) = JSONObject().apply {
+        put("run_id", r.runId)
+        put("habit_id", r.habitId)
+        put("start_local_date", r.startLocalDate)
+        put("end_local_date", r.endLocalDate)
+        put("completed_streak_count", r.completedStreakCount)
+        put("elapsed_active_span_count", r.elapsedActiveSpanCount)
+        put("streak_unit", r.streakUnit.name)
+        put("terminal_reason", r.terminalReason?.name ?: JSONObject.NULL)
+        put("is_active", r.isActive)
+        put("qualified_for_grove", r.qualifiedForGrove)
+        put("qualified_at_utc_ms", r.qualifiedAtUtcMs ?: JSONObject.NULL)
+        put("broken_on_local_date", r.brokenOnLocalDate ?: JSONObject.NULL)
+        put("tree_state", r.treeState.name)
+        put("created_at_utc_ms", r.createdAtUtcMs)
+        put("updated_at_utc_ms", r.updatedAtUtcMs)
+    }
+
+    private fun weekStartPolicyToJson(w: WeekStartPolicyEntry) = JSONObject().apply {
+        put("effective_from_local_date", w.effectiveFromLocalDate)
+        put("week_start_iso_day", w.weekStartIsoDay)
+        put("is_legacy_baseline", w.isLegacyBaseline)
+        put("created_at_utc_ms", w.createdAtUtcMs)
+    }
+
     private fun journalEntryToJson(j: JournalEntry) = JSONObject().apply {
         put("journal_entry_id", j.journalEntryId)
         put("local_date", j.localDate)
@@ -2864,6 +3999,21 @@ class DayseedRepository(
         put("linked_habit_id", j.linkedHabitId ?: JSONObject.NULL)
         put("created_at_utc_ms", j.createdAtUtcMs)
         put("updated_at_utc_ms", j.updatedAtUtcMs)
+    }
+
+    private fun journalDraftToJson(d: JournalDraft) = JSONObject().apply {
+        put("draft_id", d.draftId)
+        put("local_date", d.localDate)
+        put("title", d.title ?: JSONObject.NULL)
+        put("body", d.body)
+        put("primary_mood_code", d.primaryMoodCode ?: JSONObject.NULL)
+        put("secondary_mood_code", d.secondaryMoodCode ?: JSONObject.NULL)
+        put("prompt_id", d.promptId ?: JSONObject.NULL)
+        put("linked_habit_id", d.linkedHabitId ?: JSONObject.NULL)
+        put("intended_journal_entry_id", d.intendedJournalEntryId ?: JSONObject.NULL)
+        put("source_context", d.sourceContext)
+        put("created_at_utc_ms", d.createdAtUtcMs)
+        put("updated_at_utc_ms", d.updatedAtUtcMs)
     }
 
     private fun appSettingToJson(s: AppSetting) = JSONObject().apply {

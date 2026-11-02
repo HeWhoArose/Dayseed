@@ -3,987 +3,74 @@ package com.example.dayseed.data
 import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteException
 import android.database.sqlite.SQLiteOpenHelper
-import java.time.DayOfWeek
+import org.json.JSONObject
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneOffset
+import java.time.ZoneId
 import java.util.UUID
 
-class DayseedMigrationBlockedException(message: String) : SQLiteException(message)
+class DayseedMigrationBlockedException(message: String) : IllegalStateException(message)
 
-/**
- * Canonical 12-table SQLiteOpenHelper (DATABASE_VERSION = 2) implementing
- * docs/03-TECHNICAL-ARCHITECTURE.md, docs/30-SCHEMA-CLOSURE-AND-MIGRATION-PLAN.md,
- * and fail-closed v1-to-v2 migration (D-197).
- */
 class DayseedDatabaseHelper(
     context: Context,
-    databaseName: String? = DATABASE_NAME
+    databaseName: String? = DATABASE_NAME,
+    private val migrationEvaluationDateProvider: () -> LocalDate = { LocalDate.now() }
 ) : SQLiteOpenHelper(context, databaseName, null, DATABASE_VERSION) {
 
     companion object {
         const val DATABASE_NAME = "dayseed.db"
-        const val DATABASE_VERSION = 2
+        const val DATABASE_VERSION = 3
 
-        // 1. habits
         const val TABLE_HABITS = "habits"
-        const val COL_HABIT_ID = "habit_id"
-        const val COL_CREATED_AT_UTC_MS = "created_at_utc_ms"
-        const val COL_UPDATED_AT_UTC_MS = "updated_at_utc_ms"
-
-        // 2. habit_versions
         const val TABLE_HABIT_VERSIONS = "habit_versions"
-        const val COL_VERSION_ID = "version_id"
-        const val COL_EFFECTIVE_FROM_LOCAL_DATE = "effective_from_local_date"
-        const val COL_NAME = "name"
-        const val COL_DESCRIPTION = "description"
-        const val COL_TRACKING_MODE = "tracking_mode"
-        const val COL_UNIT_CODE = "unit_code"
-        const val COL_TARGET_PERIOD = "target_period"
-        const val COL_TARGET_VALUE = "target_value"
-        const val COL_SCHEDULE_KIND = "schedule_kind"
-        const val COL_SCHEDULED_WEEKDAYS_MASK = "scheduled_weekdays_mask"
-        const val COL_PREFERRED_WEEKDAYS_MASK = "preferred_weekdays_mask"
-        const val COL_LIFECYCLE_STATE = "lifecycle_state"
-        const val COL_REMINDER_MODE = "reminder_mode"
-        const val COL_REMINDER_TIME_LOCAL = "reminder_time_local"
-
-        // 3. habit_entries
         const val TABLE_HABIT_ENTRIES = "habit_entries"
-        const val COL_ENTRY_ID = "entry_id"
-        const val COL_LOCAL_DATE = "local_date"
-        const val COL_VALUE_UNITS = "value_units"
-        const val COL_ENTRY_NOTE = "entry_note"
-        const val COL_IDEMPOTENCY_KEY = "idempotency_key"
-
-        // 4. habit_day_outcomes
         const val TABLE_HABIT_DAY_OUTCOMES = "habit_day_outcomes"
-        const val COL_OUTCOME_ID = "outcome_id"
-        const val COL_OUTCOME_KIND = "outcome_kind"
-        const val COL_EFFORT_LEVEL = "effort_level"
-
-        // 5. habit_date_notes
         const val TABLE_HABIT_DATE_NOTES = "habit_date_notes"
-        const val COL_NOTE_ID = "note_id"
-        const val COL_BODY = "body"
-
-        // 6. journal_entries
+        const val TABLE_HABIT_DATE_EXCEPTIONS = "habit_date_exceptions"
+        const val TABLE_HABIT_STREAK_RUNS = "habit_streak_runs"
+        const val TABLE_WEEK_START_HISTORY = "week_start_history"
         const val TABLE_JOURNAL_ENTRIES = "journal_entries"
-        const val COL_JOURNAL_ENTRY_ID = "journal_entry_id"
-        const val COL_TITLE = "title"
-        const val COL_PRIMARY_MOOD_CODE = "primary_mood_code"
-        const val COL_SECONDARY_MOOD_CODE = "secondary_mood_code"
-        const val COL_PROMPT_ID = "prompt_id"
-        const val COL_LINKED_HABIT_ID = "linked_habit_id"
-
-        // 7. journal_drafts
         const val TABLE_JOURNAL_DRAFTS = "journal_drafts"
-        const val COL_DRAFT_ID = "draft_id"
-        const val COL_INTENDED_JOURNAL_ENTRY_ID = "intended_journal_entry_id"
-        const val COL_SOURCE_CONTEXT = "source_context"
-
-        // 8. app_settings
         const val TABLE_APP_SETTINGS = "app_settings"
-        const val COL_SETTING_KEY = "setting_key"
-        const val COL_VALUE_TYPE = "value_type"
-        const val COL_VALUE_TEXT = "value_text"
-        const val COL_SCHEMA_VERSION = "schema_version"
-
-        // 9. reminder_deliveries
         const val TABLE_REMINDER_DELIVERIES = "reminder_deliveries"
-        const val COL_DELIVERY_KEY = "delivery_key"
-        const val COL_REMINDER_TYPE = "reminder_type"
-        const val COL_TARGET_PERIOD_KEY = "target_period_key"
-        const val COL_DELIVERY_STATUS = "delivery_status"
-        const val COL_SCHEDULED_AT_UTC_MS = "scheduled_at_utc_ms"
-        const val COL_ATTEMPTED_AT_UTC_MS = "attempted_at_utc_ms"
-        const val COL_DELIVERED_AT_UTC_MS = "delivered_at_utc_ms"
-        const val COL_PLATFORM_NOTIFICATION_TAG = "platform_notification_tag"
-        const val COL_PLATFORM_NOTIFICATION_ID = "platform_notification_id"
-        const val COL_SUPPRESSION_REASON = "suppression_reason"
-
-        // 10. restore_sessions
         const val TABLE_RESTORE_SESSIONS = "restore_sessions"
-        const val COL_RESTORE_SESSION_ID = "restore_session_id"
-        const val COL_RESTORE_MODE = "restore_mode"
-        const val COL_FORMAT_VERSION = "format_version"
-        const val COL_SOURCE_SCHEMA_VERSION = "source_schema_version"
-        const val COL_SESSION_STATE = "session_state"
-        const val COL_STARTED_AT_UTC_MS = "started_at_utc_ms"
-        const val COL_MANIFEST_JSON = "manifest_json"
-        const val COL_SAFETY_BACKUP_REF = "safety_backup_ref"
-        const val COL_SAFETY_BACKUP_VERIFIED = "safety_backup_verified"
-
-        // 11. restore_conflicts
         const val TABLE_RESTORE_CONFLICTS = "restore_conflicts"
-        const val COL_CONFLICT_ID = "conflict_id"
-        const val COL_RECORD_TYPE = "record_type"
-        const val COL_RECORD_KEY = "record_key"
-        const val COL_CURRENT_PAYLOAD_JSON = "current_payload_json"
-        const val COL_BACKUP_PAYLOAD_JSON = "backup_payload_json"
-
-        // 12. notification_cancel_outbox
         const val TABLE_NOTIFICATION_CANCEL_OUTBOX = "notification_cancel_outbox"
-        const val COL_CANCEL_ID = "cancel_id"
-        const val COL_LAST_ATTEMPT_AT_UTC_MS = "last_attempt_at_utc_ms"
-        const val COL_ATTEMPT_COUNT = "attempt_count"
-        const val COL_STATUS = "status"
-        const val COL_ERROR_CATEGORY = "error_category"
 
-        fun createV2Schema(db: SQLiteDatabase) {
-            db.execSQL("PRAGMA foreign_keys = ON")
+        val ALL_V3_TABLES = setOf(
+            TABLE_HABITS,
+            TABLE_HABIT_VERSIONS,
+            TABLE_HABIT_ENTRIES,
+            TABLE_HABIT_DAY_OUTCOMES,
+            TABLE_HABIT_DATE_NOTES,
+            TABLE_HABIT_DATE_EXCEPTIONS,
+            TABLE_HABIT_STREAK_RUNS,
+            TABLE_WEEK_START_HISTORY,
+            TABLE_JOURNAL_ENTRIES,
+            TABLE_JOURNAL_DRAFTS,
+            TABLE_APP_SETTINGS,
+            TABLE_REMINDER_DELIVERIES,
+            TABLE_RESTORE_SESSIONS,
+            TABLE_RESTORE_CONFLICTS,
+            TABLE_NOTIFICATION_CANCEL_OUTBOX
+        )
 
-            // 1. habits
-            db.execSQL(
-                """
-                CREATE TABLE $TABLE_HABITS (
-                    $COL_HABIT_ID TEXT NOT NULL PRIMARY KEY CHECK(length(trim($COL_HABIT_ID)) > 0),
-                    $COL_CREATED_AT_UTC_MS INTEGER NOT NULL,
-                    $COL_UPDATED_AT_UTC_MS INTEGER NOT NULL
-                )
-                """.trimIndent()
-            )
-
-            // 2. habit_versions
-            db.execSQL(
-                """
-                CREATE TABLE $TABLE_HABIT_VERSIONS (
-                    $COL_VERSION_ID TEXT NOT NULL PRIMARY KEY CHECK(length(trim($COL_VERSION_ID)) > 0),
-                    $COL_HABIT_ID TEXT NOT NULL REFERENCES $TABLE_HABITS($COL_HABIT_ID) ON DELETE CASCADE,
-                    $COL_EFFECTIVE_FROM_LOCAL_DATE TEXT NOT NULL CHECK(length($COL_EFFECTIVE_FROM_LOCAL_DATE) = 10),
-                    $COL_NAME TEXT NOT NULL CHECK(length(trim($COL_NAME)) > 0),
-                    $COL_DESCRIPTION TEXT,
-                    $COL_TRACKING_MODE TEXT NOT NULL CHECK($COL_TRACKING_MODE IN ('QUANTITY', 'DURATION', 'COMPLETION_ONLY', 'EFFORT_AWARE')),
-                    $COL_UNIT_CODE TEXT,
-                    $COL_TARGET_PERIOD TEXT NOT NULL CHECK($COL_TARGET_PERIOD IN ('DAY', 'WEEK')),
-                    $COL_TARGET_VALUE INTEGER,
-                    $COL_SCHEDULE_KIND TEXT NOT NULL CHECK($COL_SCHEDULE_KIND IN ('DAILY', 'SELECTED_WEEKDAYS', 'FLEXIBLE_WEEKLY_TARGET')),
-                    $COL_SCHEDULED_WEEKDAYS_MASK INTEGER,
-                    $COL_PREFERRED_WEEKDAYS_MASK INTEGER,
-                    $COL_LIFECYCLE_STATE TEXT NOT NULL CHECK($COL_LIFECYCLE_STATE IN ('ACTIVE', 'PAUSED', 'COMPLETED', 'ARCHIVED')),
-                    $COL_REMINDER_MODE TEXT NOT NULL DEFAULT 'OFF' CHECK($COL_REMINDER_MODE IN ('OFF', 'AT_TIME', 'NONE', 'SYSTEM_MANAGED', 'MANUAL')),
-                    $COL_REMINDER_TIME_LOCAL TEXT,
-                    $COL_CREATED_AT_UTC_MS INTEGER NOT NULL,
-                    UNIQUE($COL_HABIT_ID, $COL_EFFECTIVE_FROM_LOCAL_DATE),
-                    CHECK (
-                        (
-                            $COL_TRACKING_MODE IN ('QUANTITY', 'DURATION')
-                            AND $COL_TARGET_VALUE IS NOT NULL
-                            AND typeof($COL_TARGET_VALUE) = 'integer'
-                            AND $COL_TARGET_VALUE > 0
-                            AND $COL_UNIT_CODE IS NOT NULL
-                            AND length(trim($COL_UNIT_CODE)) > 0
-                        )
-                        OR
-                        (
-                            $COL_TRACKING_MODE IN ('COMPLETION_ONLY', 'EFFORT_AWARE')
-                            AND $COL_TARGET_PERIOD = 'DAY'
-                            AND $COL_TARGET_VALUE IS NULL
-                            AND $COL_UNIT_CODE IS NULL
-                        )
-                        OR
-                        (
-                            $COL_TRACKING_MODE IN ('COMPLETION_ONLY', 'EFFORT_AWARE')
-                            AND $COL_TARGET_PERIOD = 'WEEK'
-                            AND $COL_TARGET_VALUE IS NOT NULL
-                            AND typeof($COL_TARGET_VALUE) = 'integer'
-                            AND $COL_TARGET_VALUE > 0
-                            AND $COL_UNIT_CODE IS NULL
-                        )
-                    ),
-                    CHECK (
-                        (
-                            $COL_SCHEDULE_KIND = 'DAILY'
-                            AND $COL_SCHEDULED_WEEKDAYS_MASK IS NULL
-                            AND $COL_PREFERRED_WEEKDAYS_MASK IS NULL
-                        )
-                        OR
-                        (
-                            $COL_SCHEDULE_KIND = 'SELECTED_WEEKDAYS'
-                            AND $COL_SCHEDULED_WEEKDAYS_MASK IS NOT NULL
-                            AND typeof($COL_SCHEDULED_WEEKDAYS_MASK) = 'integer'
-                            AND $COL_SCHEDULED_WEEKDAYS_MASK >= 1
-                            AND $COL_SCHEDULED_WEEKDAYS_MASK <= 127
-                            AND $COL_PREFERRED_WEEKDAYS_MASK IS NULL
-                        )
-                        OR
-                        (
-                            $COL_SCHEDULE_KIND = 'FLEXIBLE_WEEKLY_TARGET'
-                            AND $COL_TARGET_PERIOD = 'WEEK'
-                            AND $COL_SCHEDULED_WEEKDAYS_MASK IS NULL
-                            AND (
-                                $COL_PREFERRED_WEEKDAYS_MASK IS NULL
-                                OR (
-                                    typeof($COL_PREFERRED_WEEKDAYS_MASK) = 'integer'
-                                    AND $COL_PREFERRED_WEEKDAYS_MASK >= 1
-                                    AND $COL_PREFERRED_WEEKDAYS_MASK <= 127
-                                )
-                            )
-                        )
-                    )
-                )
-                """.trimIndent()
-            )
-
-            // 3. habit_entries
-            db.execSQL(
-                """
-                CREATE TABLE $TABLE_HABIT_ENTRIES (
-                    $COL_ENTRY_ID TEXT NOT NULL PRIMARY KEY CHECK(length(trim($COL_ENTRY_ID)) > 0),
-                    $COL_HABIT_ID TEXT NOT NULL REFERENCES $TABLE_HABITS($COL_HABIT_ID) ON DELETE CASCADE,
-                    $COL_LOCAL_DATE TEXT NOT NULL CHECK(length($COL_LOCAL_DATE) = 10),
-                    $COL_VALUE_UNITS INTEGER NOT NULL CHECK(typeof($COL_VALUE_UNITS) = 'integer' AND $COL_VALUE_UNITS >= 0),
-                    $COL_ENTRY_NOTE TEXT,
-                    $COL_CREATED_AT_UTC_MS INTEGER NOT NULL,
-                    $COL_UPDATED_AT_UTC_MS INTEGER NOT NULL,
-                    $COL_IDEMPOTENCY_KEY TEXT CHECK($COL_IDEMPOTENCY_KEY IS NULL OR length(trim($COL_IDEMPOTENCY_KEY)) > 0)
-                )
-                """.trimIndent()
-            )
-
-            // 4. habit_day_outcomes (D-193 / AC-017: strictly completed outcomes; never SKIPPED or MISSED)
-            db.execSQL(
-                """
-                CREATE TABLE $TABLE_HABIT_DAY_OUTCOMES (
-                    $COL_OUTCOME_ID TEXT NOT NULL PRIMARY KEY CHECK(length(trim($COL_OUTCOME_ID)) > 0),
-                    $COL_HABIT_ID TEXT NOT NULL REFERENCES $TABLE_HABITS($COL_HABIT_ID) ON DELETE CASCADE,
-                    $COL_LOCAL_DATE TEXT NOT NULL CHECK(length($COL_LOCAL_DATE) = 10),
-                    $COL_OUTCOME_KIND TEXT NOT NULL CHECK($COL_OUTCOME_KIND IN ('COMPLETED', 'EFFORT_LOGGED', 'COMPLETION_ONLY', 'EFFORT_AWARE')),
-                    $COL_EFFORT_LEVEL TEXT,
-                    $COL_IDEMPOTENCY_KEY TEXT CHECK($COL_IDEMPOTENCY_KEY IS NULL OR length(trim($COL_IDEMPOTENCY_KEY)) > 0),
-                    $COL_CREATED_AT_UTC_MS INTEGER NOT NULL,
-                    $COL_UPDATED_AT_UTC_MS INTEGER NOT NULL,
-                    UNIQUE($COL_HABIT_ID, $COL_LOCAL_DATE),
-                    CHECK (
-                        (
-                            $COL_OUTCOME_KIND IN ('COMPLETED', 'COMPLETION_ONLY')
-                            AND $COL_EFFORT_LEVEL IS NULL
-                        )
-                        OR
-                        (
-                            $COL_OUTCOME_KIND IN ('EFFORT_LOGGED', 'EFFORT_AWARE')
-                            AND $COL_EFFORT_LEVEL IS NOT NULL
-                            AND $COL_EFFORT_LEVEL IN ('TINY', 'USUAL', 'EXTRA')
-                        )
-                    )
-                )
-                """.trimIndent()
-            )
-
-            // 5. habit_date_notes
-            db.execSQL(
-                """
-                CREATE TABLE $TABLE_HABIT_DATE_NOTES (
-                    $COL_NOTE_ID TEXT NOT NULL PRIMARY KEY CHECK(length(trim($COL_NOTE_ID)) > 0),
-                    $COL_HABIT_ID TEXT NOT NULL REFERENCES $TABLE_HABITS($COL_HABIT_ID) ON DELETE CASCADE,
-                    $COL_LOCAL_DATE TEXT NOT NULL CHECK(length($COL_LOCAL_DATE) = 10),
-                    $COL_BODY TEXT NOT NULL CHECK(length(trim($COL_BODY)) > 0),
-                    $COL_CREATED_AT_UTC_MS INTEGER NOT NULL,
-                    $COL_UPDATED_AT_UTC_MS INTEGER NOT NULL,
-                    UNIQUE($COL_HABIT_ID, $COL_LOCAL_DATE)
-                )
-                """.trimIndent()
-            )
-
-            // 6. journal_entries
-            db.execSQL(
-                """
-                CREATE TABLE $TABLE_JOURNAL_ENTRIES (
-                    $COL_JOURNAL_ENTRY_ID TEXT NOT NULL PRIMARY KEY CHECK(length(trim($COL_JOURNAL_ENTRY_ID)) > 0),
-                    $COL_LOCAL_DATE TEXT NOT NULL CHECK(length($COL_LOCAL_DATE) = 10),
-                    $COL_BODY TEXT NOT NULL CHECK(length(trim($COL_BODY)) > 0),
-                    $COL_TITLE TEXT,
-                    $COL_PRIMARY_MOOD_CODE TEXT,
-                    $COL_SECONDARY_MOOD_CODE TEXT,
-                    $COL_PROMPT_ID TEXT,
-                    $COL_LINKED_HABIT_ID TEXT REFERENCES $TABLE_HABITS($COL_HABIT_ID) ON DELETE SET NULL,
-                    $COL_CREATED_AT_UTC_MS INTEGER NOT NULL,
-                    $COL_UPDATED_AT_UTC_MS INTEGER NOT NULL
-                )
-                """.trimIndent()
-            )
-
-            // 7. journal_drafts
-            db.execSQL(
-                """
-                CREATE TABLE $TABLE_JOURNAL_DRAFTS (
-                    $COL_DRAFT_ID TEXT NOT NULL PRIMARY KEY CHECK(length(trim($COL_DRAFT_ID)) > 0),
-                    $COL_LOCAL_DATE TEXT CHECK($COL_LOCAL_DATE IS NULL OR length($COL_LOCAL_DATE) = 10),
-                    $COL_TITLE TEXT,
-                    $COL_BODY TEXT NOT NULL,
-                    $COL_PRIMARY_MOOD_CODE TEXT,
-                    $COL_SECONDARY_MOOD_CODE TEXT,
-                    $COL_PROMPT_ID TEXT,
-                    $COL_LINKED_HABIT_ID TEXT REFERENCES $TABLE_HABITS($COL_HABIT_ID) ON DELETE SET NULL,
-                    $COL_INTENDED_JOURNAL_ENTRY_ID TEXT CHECK($COL_INTENDED_JOURNAL_ENTRY_ID IS NULL OR length(trim($COL_INTENDED_JOURNAL_ENTRY_ID)) > 0),
-                    $COL_SOURCE_CONTEXT TEXT,
-                    $COL_CREATED_AT_UTC_MS INTEGER NOT NULL,
-                    $COL_UPDATED_AT_UTC_MS INTEGER NOT NULL
-                )
-                """.trimIndent()
-            )
-
-            // 8. app_settings
-            db.execSQL(
-                """
-                CREATE TABLE $TABLE_APP_SETTINGS (
-                    $COL_SETTING_KEY TEXT NOT NULL PRIMARY KEY CHECK(length(trim($COL_SETTING_KEY)) > 0),
-                    $COL_VALUE_TYPE TEXT NOT NULL CHECK($COL_VALUE_TYPE IN ('STRING', 'INT', 'LONG', 'BOOLEAN', 'BOOL', 'ENUM', 'TIME_LOCAL', 'JSON')),
-                    $COL_VALUE_TEXT TEXT NOT NULL,
-                    $COL_SCHEMA_VERSION INTEGER NOT NULL DEFAULT 1,
-                    $COL_UPDATED_AT_UTC_MS INTEGER NOT NULL
-                )
-                """.trimIndent()
-            )
-
-            // 9. reminder_deliveries
-            db.execSQL(
-                """
-                CREATE TABLE $TABLE_REMINDER_DELIVERIES (
-                    $COL_DELIVERY_KEY TEXT NOT NULL PRIMARY KEY CHECK(length(trim($COL_DELIVERY_KEY)) > 0),
-                    $COL_REMINDER_TYPE TEXT NOT NULL CHECK($COL_REMINDER_TYPE IN ('HABIT_DAILY', 'HABIT_EVENING', 'WEEKLY_REFLECTION', 'INACTIVITY_2D')),
-                    $COL_HABIT_ID TEXT REFERENCES $TABLE_HABITS($COL_HABIT_ID) ON DELETE CASCADE,
-                    $COL_TARGET_PERIOD_KEY TEXT NOT NULL CHECK(length(trim($COL_TARGET_PERIOD_KEY)) > 0),
-                    $COL_DELIVERY_STATUS TEXT NOT NULL CHECK($COL_DELIVERY_STATUS IN ('SCHEDULED', 'DELIVERED', 'SUPPRESSED', 'DISMISSED', 'CANCELLED')),
-                    $COL_SCHEDULED_AT_UTC_MS INTEGER NOT NULL,
-                    $COL_ATTEMPTED_AT_UTC_MS INTEGER,
-                    $COL_DELIVERED_AT_UTC_MS INTEGER,
-                    $COL_PLATFORM_NOTIFICATION_TAG TEXT,
-                    $COL_PLATFORM_NOTIFICATION_ID INTEGER,
-                    $COL_SUPPRESSION_REASON TEXT
-                )
-                """.trimIndent()
-            )
-
-            // 10. restore_sessions
-            db.execSQL(
-                """
-                CREATE TABLE $TABLE_RESTORE_SESSIONS (
-                    $COL_RESTORE_SESSION_ID TEXT NOT NULL PRIMARY KEY CHECK(length(trim($COL_RESTORE_SESSION_ID)) > 0),
-                    $COL_RESTORE_MODE TEXT NOT NULL CHECK($COL_RESTORE_MODE IN ('REPLACE', 'MERGE')),
-                    $COL_FORMAT_VERSION INTEGER NOT NULL CHECK($COL_FORMAT_VERSION > 0),
-                    $COL_SOURCE_SCHEMA_VERSION INTEGER NOT NULL CHECK($COL_SOURCE_SCHEMA_VERSION > 0),
-                    $COL_SESSION_STATE TEXT NOT NULL CHECK($COL_SESSION_STATE IN ('VALIDATED', 'IN_PROGRESS', 'AWAITING_CONFLICT_RESOLUTION', 'RECOVERY_REQUIRED', 'COMPLETED', 'COMPLETED_WITH_CONFLICTS', 'FAILED_SAFE')),
-                    $COL_STARTED_AT_UTC_MS INTEGER NOT NULL,
-                    $COL_UPDATED_AT_UTC_MS INTEGER NOT NULL,
-                    $COL_MANIFEST_JSON TEXT NOT NULL,
-                    $COL_SAFETY_BACKUP_REF TEXT NOT NULL CHECK(length(trim($COL_SAFETY_BACKUP_REF)) > 0),
-                    $COL_SAFETY_BACKUP_VERIFIED INTEGER NOT NULL CHECK($COL_SAFETY_BACKUP_VERIFIED IN (0, 1))
-                )
-                """.trimIndent()
-            )
-
-            // 11. restore_conflicts
-            db.execSQL(
-                """
-                CREATE TABLE $TABLE_RESTORE_CONFLICTS (
-                    $COL_CONFLICT_ID TEXT NOT NULL PRIMARY KEY CHECK(length(trim($COL_CONFLICT_ID)) > 0),
-                    $COL_RESTORE_SESSION_ID TEXT NOT NULL REFERENCES $TABLE_RESTORE_SESSIONS($COL_RESTORE_SESSION_ID) ON DELETE CASCADE,
-                    $COL_RECORD_TYPE TEXT NOT NULL CHECK(UPPER($COL_RECORD_TYPE) IN ('HABIT', 'HABIT_VERSION', 'HABIT_ENTRY', 'HABIT_DAY_OUTCOME', 'HABIT_DATE_NOTE', 'JOURNAL_ENTRY', 'JOURNAL_DRAFT', 'APP_SETTING', 'ACTIVITY_IDEMPOTENCY_KEY')),
-                    $COL_RECORD_KEY TEXT NOT NULL CHECK(length(trim($COL_RECORD_KEY)) > 0),
-                    $COL_CURRENT_PAYLOAD_JSON TEXT NOT NULL,
-                    $COL_BACKUP_PAYLOAD_JSON TEXT NOT NULL,
-                    $COL_CREATED_AT_UTC_MS INTEGER NOT NULL,
-                    UNIQUE($COL_RESTORE_SESSION_ID, $COL_RECORD_TYPE, $COL_RECORD_KEY)
-                )
-                """.trimIndent()
-            )
-
-            // 12. notification_cancel_outbox
-            db.execSQL(
-                """
-                CREATE TABLE $TABLE_NOTIFICATION_CANCEL_OUTBOX (
-                    $COL_CANCEL_ID TEXT NOT NULL PRIMARY KEY CHECK(length(trim($COL_CANCEL_ID)) > 0),
-                    $COL_PLATFORM_NOTIFICATION_TAG TEXT NOT NULL CHECK(length(trim($COL_PLATFORM_NOTIFICATION_TAG)) > 0),
-                    $COL_PLATFORM_NOTIFICATION_ID INTEGER NOT NULL,
-                    $COL_CREATED_AT_UTC_MS INTEGER NOT NULL,
-                    $COL_LAST_ATTEMPT_AT_UTC_MS INTEGER,
-                    $COL_ATTEMPT_COUNT INTEGER NOT NULL DEFAULT 0 CHECK($COL_ATTEMPT_COUNT >= 0),
-                    $COL_STATUS TEXT NOT NULL CHECK($COL_STATUS IN ('PENDING', 'RETRYING', 'FAILED', 'COMPLETED')),
-                    $COL_ERROR_CATEGORY TEXT,
-                    UNIQUE($COL_PLATFORM_NOTIFICATION_TAG, $COL_PLATFORM_NOTIFICATION_ID)
-                )
-                """.trimIndent()
-            )
-
-            // Required indexes & partial unique indexes
-            db.execSQL(
-                "CREATE INDEX idx_habit_entries_habit_date ON $TABLE_HABIT_ENTRIES($COL_HABIT_ID, $COL_LOCAL_DATE, $COL_CREATED_AT_UTC_MS)"
-            )
-            db.execSQL(
-                "CREATE UNIQUE INDEX idx_habit_entries_idempotency ON $TABLE_HABIT_ENTRIES($COL_IDEMPOTENCY_KEY) WHERE $COL_IDEMPOTENCY_KEY IS NOT NULL"
-            )
-            db.execSQL(
-                "CREATE UNIQUE INDEX idx_habit_day_outcomes_idempotency ON $TABLE_HABIT_DAY_OUTCOMES($COL_IDEMPOTENCY_KEY) WHERE $COL_IDEMPOTENCY_KEY IS NOT NULL"
-            )
-            db.execSQL(
-                "CREATE INDEX idx_journal_entries_date ON $TABLE_JOURNAL_ENTRIES($COL_LOCAL_DATE, $COL_CREATED_AT_UTC_MS)"
-            )
-            db.execSQL(
-                "CREATE INDEX idx_journal_drafts_updated ON $TABLE_JOURNAL_DRAFTS($COL_UPDATED_AT_UTC_MS)"
-            )
-            db.execSQL(
-                "CREATE UNIQUE INDEX idx_journal_drafts_intended_entry ON $TABLE_JOURNAL_DRAFTS($COL_INTENDED_JOURNAL_ENTRY_ID) WHERE $COL_INTENDED_JOURNAL_ENTRY_ID IS NOT NULL"
-            )
-            db.execSQL(
-                "CREATE INDEX idx_reminder_deliveries_status ON $TABLE_REMINDER_DELIVERIES($COL_DELIVERY_STATUS, $COL_SCHEDULED_AT_UTC_MS)"
-            )
-            db.execSQL(
-                "CREATE INDEX idx_restore_conflicts_session ON $TABLE_RESTORE_CONFLICTS($COL_RESTORE_SESSION_ID, $COL_CREATED_AT_UTC_MS)"
-            )
-            db.execSQL(
-                "CREATE INDEX idx_restore_sessions_state ON $TABLE_RESTORE_SESSIONS($COL_SESSION_STATE, $COL_UPDATED_AT_UTC_MS)"
-            )
-            db.execSQL(
-                "CREATE INDEX idx_notification_cancel_outbox_status ON $TABLE_NOTIFICATION_CANCEL_OUTBOX($COL_STATUS, $COL_CREATED_AT_UTC_MS)"
-            )
-
-            // Cross-table SQLite triggers for D-190 (activity idempotency) & D-189 (mode exclusivity)
-            db.execSQL(
-                """
-                CREATE TRIGGER trg_habit_entries_insert_guards
-                BEFORE INSERT ON $TABLE_HABIT_ENTRIES
-                FOR EACH ROW
-                BEGIN
-                    SELECT CASE
-                        WHEN NEW.$COL_IDEMPOTENCY_KEY IS NOT NULL
-                             AND EXISTS (
-                                 SELECT 1 FROM $TABLE_HABIT_DAY_OUTCOMES
-                                 WHERE $COL_IDEMPOTENCY_KEY = NEW.$COL_IDEMPOTENCY_KEY
-                             )
-                        THEN RAISE(ABORT, 'CROSS_TABLE_DUPLICATE_IDEMPOTENCY_KEY')
-                        WHEN EXISTS (
-                            SELECT 1 FROM $TABLE_HABIT_DAY_OUTCOMES
-                            WHERE $COL_HABIT_ID = NEW.$COL_HABIT_ID AND $COL_LOCAL_DATE = NEW.$COL_LOCAL_DATE
-                        )
-                        THEN RAISE(ABORT, 'CONTRADICTORY_DAY_OUTCOME_EXISTS')
-                        WHEN NOT EXISTS (
-                            SELECT 1 FROM $TABLE_HABIT_VERSIONS v
-                            WHERE v.$COL_HABIT_ID = NEW.$COL_HABIT_ID
-                              AND v.$COL_EFFECTIVE_FROM_LOCAL_DATE = (
-                                  SELECT MAX(v2.$COL_EFFECTIVE_FROM_LOCAL_DATE)
-                                  FROM $TABLE_HABIT_VERSIONS v2
-                                  WHERE v2.$COL_HABIT_ID = NEW.$COL_HABIT_ID
-                                    AND v2.$COL_EFFECTIVE_FROM_LOCAL_DATE <= NEW.$COL_LOCAL_DATE
-                              )
-                              AND v.$COL_TRACKING_MODE IN ('QUANTITY', 'DURATION')
-                        )
-                        THEN RAISE(ABORT, 'INCOMPATIBLE_EFFECTIVE_TRACKING_MODE_FOR_ENTRY')
-                    END;
-                END;
-                """.trimIndent()
-            )
-
-            db.execSQL(
-                """
-                CREATE TRIGGER trg_habit_entries_update_guards
-                BEFORE UPDATE ON $TABLE_HABIT_ENTRIES
-                FOR EACH ROW
-                BEGIN
-                    SELECT CASE
-                        WHEN NEW.$COL_IDEMPOTENCY_KEY IS NOT NULL
-                             AND EXISTS (
-                                 SELECT 1 FROM $TABLE_HABIT_DAY_OUTCOMES
-                                 WHERE $COL_IDEMPOTENCY_KEY = NEW.$COL_IDEMPOTENCY_KEY
-                             )
-                        THEN RAISE(ABORT, 'CROSS_TABLE_DUPLICATE_IDEMPOTENCY_KEY')
-                    END;
-                END;
-                """.trimIndent()
-            )
-
-            db.execSQL(
-                """
-                CREATE TRIGGER trg_habit_day_outcomes_insert_guards
-                BEFORE INSERT ON $TABLE_HABIT_DAY_OUTCOMES
-                FOR EACH ROW
-                BEGIN
-                    SELECT CASE
-                        WHEN NEW.$COL_IDEMPOTENCY_KEY IS NOT NULL
-                             AND EXISTS (
-                                 SELECT 1 FROM $TABLE_HABIT_ENTRIES
-                                 WHERE $COL_IDEMPOTENCY_KEY = NEW.$COL_IDEMPOTENCY_KEY
-                             )
-                        THEN RAISE(ABORT, 'CROSS_TABLE_DUPLICATE_IDEMPOTENCY_KEY')
-                        WHEN EXISTS (
-                            SELECT 1 FROM $TABLE_HABIT_ENTRIES
-                            WHERE $COL_HABIT_ID = NEW.$COL_HABIT_ID AND $COL_LOCAL_DATE = NEW.$COL_LOCAL_DATE
-                        )
-                        THEN RAISE(ABORT, 'CONTRADICTORY_HABIT_ENTRY_EXISTS')
-                        WHEN NOT EXISTS (
-                            SELECT 1 FROM $TABLE_HABIT_VERSIONS v
-                            WHERE v.$COL_HABIT_ID = NEW.$COL_HABIT_ID
-                              AND v.$COL_EFFECTIVE_FROM_LOCAL_DATE = (
-                                  SELECT MAX(v2.$COL_EFFECTIVE_FROM_LOCAL_DATE)
-                                  FROM $TABLE_HABIT_VERSIONS v2
-                                  WHERE v2.$COL_HABIT_ID = NEW.$COL_HABIT_ID
-                                    AND v2.$COL_EFFECTIVE_FROM_LOCAL_DATE <= NEW.$COL_LOCAL_DATE
-                              )
-                              AND (
-                                  (v.$COL_TRACKING_MODE = 'COMPLETION_ONLY' AND NEW.$COL_OUTCOME_KIND IN ('COMPLETED', 'COMPLETION_ONLY'))
-                                  OR
-                                  (v.$COL_TRACKING_MODE = 'EFFORT_AWARE' AND NEW.$COL_OUTCOME_KIND IN ('EFFORT_LOGGED', 'EFFORT_AWARE'))
-                              )
-                        )
-                        THEN RAISE(ABORT, 'INCOMPATIBLE_EFFECTIVE_TRACKING_MODE_FOR_OUTCOME')
-                    END;
-                END;
-                """.trimIndent()
-            )
-
-            db.execSQL(
-                """
-                CREATE TRIGGER trg_habit_day_outcomes_update_guards
-                BEFORE UPDATE ON $TABLE_HABIT_DAY_OUTCOMES
-                FOR EACH ROW
-                BEGIN
-                    SELECT CASE
-                        WHEN NEW.$COL_IDEMPOTENCY_KEY IS NOT NULL
-                             AND EXISTS (
-                                 SELECT 1 FROM $TABLE_HABIT_ENTRIES
-                                 WHERE $COL_IDEMPOTENCY_KEY = NEW.$COL_IDEMPOTENCY_KEY
-                             )
-                        THEN RAISE(ABORT, 'CROSS_TABLE_DUPLICATE_IDEMPOTENCY_KEY')
-                    END;
-                END;
-                """.trimIndent()
-            )
-        }
-
-        /**
-         * Fail-closed v1-to-v2 migration (D-197).
-         * Validates all legacy rows in v1 tables before mutating schema.
-         * If any row cannot be mapped losslessly (e.g., SKIPPED outcome, invalid date,
-         * unknown tracking mode, invalid weekday mask, orphaned record), throws
-         * DayseedMigrationBlockedException so the enclosing SQLite transaction rolls back completely.
-         */
-        fun migrateV1ToV2FailClosed(db: SQLiteDatabase) {
-            db.execSQL("PRAGMA foreign_keys = ON")
-
-            data class LegacyHabitRow(
-                val id: String,
-                val name: String,
-                val description: String?,
-                val trackingMode: TrackingMode,
-                val scheduleKind: ScheduleKind,
-                val scheduledMask: Int?,
-                val isArchived: Boolean,
-                val createdAtMs: Long,
-                val earliestEffectiveDate: LocalDate
-            )
-
-            data class LegacyRecordRow(
-                val id: String,
-                val habitId: String,
-                val localDate: LocalDate,
-                val outcomeKind: String,
-                val effortLevel: String?,
-                val note: String?,
-                val updatedAtMs: Long
-            )
-
-            data class LegacyJournalRow(
-                val id: String,
-                val localDate: LocalDate,
-                val prompt: String?,
-                val content: String,
-                val createdAtMs: Long,
-                val updatedAtMs: Long
-            )
-
-            data class LegacyPrefRow(
-                val key: String,
-                val value: String
-            )
-
-            val habitIds = mutableSetOf<String>()
-            val earliestDateByHabit = mutableMapOf<String, LocalDate>()
-
-            val legacyRecords = mutableListOf<LegacyRecordRow>()
-            val hasDailyRecords = tableExists(db, "daily_records")
-            val hasHabits = tableExists(db, "habits")
-            if (!hasHabits) {
-                throw DayseedMigrationBlockedException("Legacy v1 database is missing 'habits' table")
-            }
-
-            // Read habit modes first to validate records against their parent habit
-            val rawHabitModes = mutableMapOf<String, TrackingMode>()
-            db.rawQuery("SELECT id, name, tracking_mode FROM habits", null).use { cursor ->
-                while (cursor.moveToNext()) {
-                    val id = cursor.getString(0)?.trim().orEmpty()
-                    val name = cursor.getString(1)?.trim().orEmpty()
-                    val modeStr = cursor.getString(2)?.trim().orEmpty()
-                    if (id.isEmpty() || name.isEmpty()) {
-                        throw DayseedMigrationBlockedException("Legacy habit has empty id or name")
-                    }
-                    if (!habitIds.add(id)) {
-                        throw DayseedMigrationBlockedException("Duplicate legacy habit id: $id")
-                    }
-                    val mappedMode = when (modeStr) {
-                        "EFFORT_LEVELS", "EFFORT_AWARE" -> TrackingMode.EFFORT_AWARE
-                        "COMPLETION_ONLY" -> TrackingMode.COMPLETION_ONLY
-                        else -> throw DayseedMigrationBlockedException("Unsupported legacy tracking_mode '$modeStr' on habit $id")
-                    }
-                    rawHabitModes[id] = mappedMode
-                }
-            }
-
-            if (hasDailyRecords) {
-                val recordCols = getColumnNames(db, "daily_records")
-                val dateCol = if ("record_date" in recordCols) "record_date" else "date"
-                db.rawQuery(
-                    "SELECT id, habit_id, $dateCol, outcome, effort_level, note, updated_at FROM daily_records",
-                    null
-                ).use { cursor ->
-                    while (cursor.moveToNext()) {
-                        val recId = cursor.getString(0)?.trim().orEmpty()
-                        val habitId = cursor.getString(1)?.trim().orEmpty()
-                        val dateStr = cursor.getString(2)?.trim().orEmpty()
-                        val outcomeStr = cursor.getString(3)?.trim().orEmpty()
-                        val effortStr = cursor.getString(4)?.trim().orEmpty()
-                        val note = if (cursor.isNull(5)) null else cursor.getString(5)?.trim()
-                        val updatedAt = if (cursor.isNull(6)) 0L else cursor.getLong(6)
-
-                        if (recId.isEmpty() || habitId.isEmpty() || updatedAt <= 0L) {
-                            throw DayseedMigrationBlockedException("Invalid legacy daily_records row metadata: $recId")
-                        }
-                        val parentMode = rawHabitModes[habitId]
-                            ?: throw DayseedMigrationBlockedException("Orphaned daily_records row $recId for missing habit $habitId")
-                        val parsedDate = try {
-                            LocalDate.parse(dateStr)
-                        } catch (e: Exception) {
-                            throw DayseedMigrationBlockedException("Invalid ISO local date '$dateStr' in daily_records $recId")
-                        }
-
-                        if (outcomeStr != "COMPLETED") {
-                            throw DayseedMigrationBlockedException(
-                                "Unmappable legacy outcome '$outcomeStr' on record $recId (D-193/D-197 fail-closed rule)"
-                            )
-                        }
-
-                        val (outcomeKind, effortLevel) = when (parentMode) {
-                            TrackingMode.COMPLETION_ONLY -> {
-                                if (effortStr != "STANDARD" && effortStr.isNotEmpty()) {
-                                    throw DayseedMigrationBlockedException(
-                                        "Contradictory effort_level '$effortStr' for COMPLETION_ONLY record $recId"
-                                    )
-                                }
-                                "COMPLETED" to null
-                            }
-                            TrackingMode.EFFORT_AWARE -> {
-                                val level = when (effortStr) {
-                                    "TINY", "USUAL", "EXTRA" -> effortStr
-                                    else -> throw DayseedMigrationBlockedException(
-                                        "Invalid effort_level '$effortStr' for EFFORT_AWARE record $recId"
-                                    )
-                                }
-                                "EFFORT_LOGGED" to level
-                            }
-                            else -> throw DayseedMigrationBlockedException("Unsupported mode $parentMode in legacy daily_records")
-                        }
-
-                        val currentEarliest = earliestDateByHabit[habitId]
-                        if (currentEarliest == null || parsedDate.isBefore(currentEarliest)) {
-                            earliestDateByHabit[habitId] = parsedDate
-                        }
-
-                        legacyRecords.add(
-                            LegacyRecordRow(
-                                id = recId,
-                                habitId = habitId,
-                                localDate = parsedDate,
-                                outcomeKind = outcomeKind,
-                                effortLevel = effortLevel,
-                                note = note?.takeIf { it.isNotEmpty() },
-                                updatedAtMs = updatedAt
-                            )
-                        )
-                    }
-                }
-            }
-
-            // Step 2: Validate all legacy habits
-            val legacyHabits = mutableListOf<LegacyHabitRow>()
-            db.rawQuery(
-                "SELECT id, name, description, tracking_mode, schedule_days, is_archived, created_at FROM habits",
-                null
-            ).use { cursor ->
-                while (cursor.moveToNext()) {
-                    val id = cursor.getString(0).trim()
-                    val name = cursor.getString(1).trim()
-                    val desc = if (cursor.isNull(2)) null else cursor.getString(2)?.trim()
-                    val mode = rawHabitModes.getValue(id)
-                    val scheduleStr = cursor.getString(4)?.trim().orEmpty()
-                    val isArchived = cursor.getInt(5) != 0
-                    val createdAt = if (cursor.isNull(6)) 0L else cursor.getLong(6)
-                    if (createdAt <= 0L) {
-                        throw DayseedMigrationBlockedException("Invalid created_at on legacy habit $id")
-                    }
-
-                    val parsedDays = parseLegacyWeekdaysOrThrow(scheduleStr, id)
-                    val mask = WeekdayMask.toMask(parsedDays)
-                    if (!WeekdayMask.isValidNonEmptyMask(mask)) {
-                        throw DayseedMigrationBlockedException("Empty or invalid weekday mask for legacy habit $id")
-                    }
-                    val (scheduleKind, scheduledMask) = if (mask == WeekdayMask.ALL_DAYS_MASK) {
-                        ScheduleKind.DAILY to null
-                    } else {
-                        ScheduleKind.SELECTED_WEEKDAYS to mask
-                    }
-
-                    val createdLocalDate = Instant.ofEpochMilli(createdAt).atZone(ZoneOffset.UTC).toLocalDate()
-                    val minRecordDate = earliestDateByHabit[id]
-                    val effectiveFrom = if (minRecordDate != null && minRecordDate.isBefore(createdLocalDate)) {
-                        minRecordDate
-                    } else {
-                        createdLocalDate
-                    }
-
-                    legacyHabits.add(
-                        LegacyHabitRow(
-                            id = id,
-                            name = name,
-                            description = desc?.takeIf { it.isNotEmpty() },
-                            trackingMode = mode,
-                            scheduleKind = scheduleKind,
-                            scheduledMask = scheduledMask,
-                            isArchived = isArchived,
-                            createdAtMs = createdAt,
-                            earliestEffectiveDate = effectiveFrom
-                        )
-                    )
-                }
-            }
-
-            // Step 3: Validate legacy journal_entries
-            val legacyJournals = mutableListOf<LegacyJournalRow>()
-            if (tableExists(db, "journal_entries")) {
-                val journalCols = getColumnNames(db, "journal_entries")
-                val entryDateCol = if ("entry_date" in journalCols) "entry_date" else "date"
-                db.rawQuery(
-                    "SELECT id, $entryDateCol, prompt, content, created_at, updated_at FROM journal_entries",
-                    null
-                ).use { cursor ->
-                    while (cursor.moveToNext()) {
-                        val id = cursor.getString(0)?.trim().orEmpty()
-                        val dateStr = cursor.getString(1)?.trim().orEmpty()
-                        val prompt = if (cursor.isNull(2)) null else cursor.getString(2)?.trim()
-                        val content = cursor.getString(3)?.trim().orEmpty()
-                        val createdAt = if (cursor.isNull(4)) 0L else cursor.getLong(4)
-                        val updatedAt = if (cursor.isNull(5)) 0L else cursor.getLong(5)
-
-                        if (id.isEmpty() || content.isEmpty() || createdAt <= 0L || updatedAt <= 0L) {
-                            throw DayseedMigrationBlockedException("Invalid legacy journal_entries row $id")
-                        }
-                        val parsedDate = try {
-                            LocalDate.parse(dateStr)
-                        } catch (e: Exception) {
-                            throw DayseedMigrationBlockedException("Invalid date '$dateStr' on legacy journal $id")
-                        }
-                        legacyJournals.add(
-                            LegacyJournalRow(
-                                id = id,
-                                localDate = parsedDate,
-                                prompt = prompt?.takeIf { it.isNotEmpty() },
-                                content = content,
-                                createdAtMs = createdAt,
-                                updatedAtMs = updatedAt
-                            )
-                        )
-                    }
-                }
-            }
-
-            // Step 4: Validate legacy app_preferences
-            val legacyPrefs = mutableListOf<LegacyPrefRow>()
-            if (tableExists(db, "app_preferences")) {
-                db.rawQuery("SELECT pref_key, pref_value FROM app_preferences", null).use { cursor ->
-                    while (cursor.moveToNext()) {
-                        val key = cursor.getString(0)?.trim().orEmpty()
-                        val value = cursor.getString(1) ?: ""
-                        if (key.isEmpty()) {
-                            throw DayseedMigrationBlockedException("Empty pref_key in legacy app_preferences")
-                        }
-                        legacyPrefs.add(LegacyPrefRow(key, value))
-                    }
-                }
-            }
-
-            // Step 5: Rename legacy tables, create canonical v2 schema, and insert validated data
-            db.execSQL("ALTER TABLE habits RENAME TO habits_v1_legacy")
-            if (hasDailyRecords) {
-                db.execSQL("ALTER TABLE daily_records RENAME TO daily_records_v1_legacy")
-            }
-            if (tableExists(db, "journal_entries")) {
-                db.execSQL("ALTER TABLE journal_entries RENAME TO journal_entries_v1_legacy")
-            }
-            if (tableExists(db, "app_preferences")) {
-                db.execSQL("ALTER TABLE app_preferences RENAME TO app_preferences_v1_legacy")
-            }
-
-            createV2Schema(db)
-
-            for (h in legacyHabits) {
-                val habitCv = ContentValues().apply {
-                    put(COL_HABIT_ID, h.id)
-                    put(COL_CREATED_AT_UTC_MS, h.createdAtMs)
-                    put(COL_UPDATED_AT_UTC_MS, h.createdAtMs)
-                }
-                if (db.insertOrThrow(TABLE_HABITS, null, habitCv) == -1L) {
-                    throw DayseedMigrationBlockedException("Failed to insert migrated habit ${h.id}")
-                }
-
-                val versionCv = ContentValues().apply {
-                    put(COL_VERSION_ID, UUID.nameUUIDFromBytes("v1-version-${h.id}".toByteArray()).toString())
-                    put(COL_HABIT_ID, h.id)
-                    put(COL_EFFECTIVE_FROM_LOCAL_DATE, h.earliestEffectiveDate.toString())
-                    put(COL_NAME, h.name)
-                    if (h.description != null) put(COL_DESCRIPTION, h.description) else putNull(COL_DESCRIPTION)
-                    put(COL_TRACKING_MODE, h.trackingMode.canonical().name)
-                    putNull(COL_UNIT_CODE)
-                    put(COL_TARGET_PERIOD, TargetPeriod.DAY.name)
-                    putNull(COL_TARGET_VALUE)
-                    put(COL_SCHEDULE_KIND, h.scheduleKind.name)
-                    if (h.scheduledMask != null) {
-                        put(COL_SCHEDULED_WEEKDAYS_MASK, h.scheduledMask)
-                    } else {
-                        putNull(COL_SCHEDULED_WEEKDAYS_MASK)
-                    }
-                    putNull(COL_PREFERRED_WEEKDAYS_MASK)
-                    put(
-                        COL_LIFECYCLE_STATE,
-                        if (h.isArchived) HabitLifecycleState.ARCHIVED.name else HabitLifecycleState.ACTIVE.name
-                    )
-                    put(COL_REMINDER_MODE, "OFF")
-                    put(COL_REMINDER_TIME_LOCAL, "09:00")
-                    put(COL_CREATED_AT_UTC_MS, h.createdAtMs)
-                }
-                if (db.insertOrThrow(TABLE_HABIT_VERSIONS, null, versionCv) == -1L) {
-                    throw DayseedMigrationBlockedException("Failed to insert initial version for habit ${h.id}")
-                }
-            }
-
-            for (r in legacyRecords) {
-                val outcomeCv = ContentValues().apply {
-                    put(COL_OUTCOME_ID, r.id)
-                    put(COL_HABIT_ID, r.habitId)
-                    put(COL_LOCAL_DATE, r.localDate.toString())
-                    put(COL_OUTCOME_KIND, r.outcomeKind)
-                    if (r.effortLevel != null) {
-                        put(COL_EFFORT_LEVEL, r.effortLevel)
-                    } else {
-                        putNull(COL_EFFORT_LEVEL)
-                    }
-                    putNull(COL_IDEMPOTENCY_KEY)
-                    put(COL_CREATED_AT_UTC_MS, r.updatedAtMs)
-                    put(COL_UPDATED_AT_UTC_MS, r.updatedAtMs)
-                }
-                if (db.insertOrThrow(TABLE_HABIT_DAY_OUTCOMES, null, outcomeCv) == -1L) {
-                    throw DayseedMigrationBlockedException("Failed to insert migrated outcome ${r.id}")
-                }
-
-                if (r.note != null) {
-                    val noteCv = ContentValues().apply {
-                        put(COL_NOTE_ID, UUID.nameUUIDFromBytes("v1-note-${r.id}".toByteArray()).toString())
-                        put(COL_HABIT_ID, r.habitId)
-                        put(COL_LOCAL_DATE, r.localDate.toString())
-                        put(COL_BODY, r.note)
-                        put(COL_CREATED_AT_UTC_MS, r.updatedAtMs)
-                        put(COL_UPDATED_AT_UTC_MS, r.updatedAtMs)
-                    }
-                    if (db.insertOrThrow(TABLE_HABIT_DATE_NOTES, null, noteCv) == -1L) {
-                        throw DayseedMigrationBlockedException("Failed to insert migrated note for ${r.id}")
-                    }
-                }
-            }
-
-            for (j in legacyJournals) {
-                val journalCv = ContentValues().apply {
-                    put(COL_JOURNAL_ENTRY_ID, j.id)
-                    put(COL_LOCAL_DATE, j.localDate.toString())
-                    put(COL_BODY, j.content)
-                    putNull(COL_TITLE)
-                    putNull(COL_PRIMARY_MOOD_CODE)
-                    putNull(COL_SECONDARY_MOOD_CODE)
-                    if (j.prompt != null) put(COL_PROMPT_ID, j.prompt) else putNull(COL_PROMPT_ID)
-                    putNull(COL_LINKED_HABIT_ID)
-                    put(COL_CREATED_AT_UTC_MS, j.createdAtMs)
-                    put(COL_UPDATED_AT_UTC_MS, j.updatedAtMs)
-                }
-                if (db.insertOrThrow(TABLE_JOURNAL_ENTRIES, null, journalCv) == -1L) {
-                    throw DayseedMigrationBlockedException("Failed to insert migrated journal ${j.id}")
-                }
-            }
-
-            for (p in legacyPrefs) {
-                val prefCv = ContentValues().apply {
-                    put(COL_SETTING_KEY, p.key)
-                    put(COL_VALUE_TYPE, "STRING")
-                    put(COL_VALUE_TEXT, p.value)
-                    put(COL_SCHEMA_VERSION, 1)
-                    put(COL_UPDATED_AT_UTC_MS, System.currentTimeMillis())
-                }
-                if (db.insertOrThrow(TABLE_APP_SETTINGS, null, prefCv) == -1L) {
-                    throw DayseedMigrationBlockedException("Failed to insert migrated preference ${p.key}")
-                }
-            }
-
-            // Drop temporary renamed legacy tables after verifying counts
-            db.execSQL("DROP TABLE habits_v1_legacy")
-            if (hasDailyRecords) {
-                db.execSQL("DROP TABLE daily_records_v1_legacy")
-            }
-            if (tableExists(db, "journal_entries_v1_legacy")) {
-                db.execSQL("DROP TABLE journal_entries_v1_legacy")
-            }
-            if (tableExists(db, "app_preferences_v1_legacy")) {
-                db.execSQL("DROP TABLE app_preferences_v1_legacy")
-            }
-        }
-
-        private fun parseLegacyWeekdaysOrThrow(scheduleStr: String, habitId: String): Set<DayOfWeek> {
-            if (scheduleStr.isBlank()) {
-                throw DayseedMigrationBlockedException("Blank schedule_days on legacy habit $habitId")
-            }
-            val tokens = scheduleStr.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-            if (tokens.isEmpty()) {
-                throw DayseedMigrationBlockedException("Empty schedule_days tokens on legacy habit $habitId")
-            }
-            val days = mutableSetOf<DayOfWeek>()
-            for (token in tokens) {
-                val day = try {
-                    DayOfWeek.valueOf(token.uppercase())
-                } catch (e: Exception) {
-                    throw DayseedMigrationBlockedException("Unrecognised weekday '$token' on legacy habit $habitId")
-                }
-                days.add(day)
-            }
-            return days
-        }
-
-        private fun tableExists(db: SQLiteDatabase, tableName: String): Boolean {
-            db.rawQuery(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
-                arrayOf(tableName)
-            ).use { cursor ->
-                return cursor.moveToFirst()
-            }
-        }
-
-        private fun getColumnNames(db: SQLiteDatabase, tableName: String): Set<String> {
-            val cols = mutableSetOf<String>()
-            db.rawQuery("PRAGMA table_info($tableName)", null).use { cursor ->
-                val nameIdx = cursor.getColumnIndex("name")
-                if (nameIdx >= 0) {
-                    while (cursor.moveToNext()) {
-                        cols.add(cursor.getString(nameIdx))
-                    }
-                }
-            }
-            return cols
-        }
+        val ALL_V3_INDEXES = setOf(
+            "idx_habit_versions_lookup",
+            "idx_habit_entries_habit_date",
+            "idx_habit_entries_date",
+            "idx_habit_outcomes_date",
+            "idx_habit_notes_date",
+            "idx_habit_exceptions_habit_date",
+            "idx_streak_runs_habit_active",
+            "idx_streak_runs_grove",
+            "idx_journal_entries_date",
+            "idx_journal_entries_linked_habit",
+            "idx_journal_drafts_date",
+            "idx_reminder_deliveries_habit_period",
+            "idx_cancel_outbox_status"
+        )
     }
 
     override fun onConfigure(db: SQLiteDatabase) {
@@ -993,19 +80,1524 @@ class DayseedDatabaseHelper(
 
     override fun onOpen(db: SQLiteDatabase) {
         super.onOpen(db)
-        db.execSQL("PRAGMA foreign_keys = ON")
+        db.execSQL("PRAGMA foreign_keys = ON;")
     }
 
     override fun onCreate(db: SQLiteDatabase) {
-        createV2Schema(db)
+        db.execSQL("PRAGMA foreign_keys = ON;")
+        createV3Schema(db)
+        seedDefaultSettingsIfEmpty(db, System.currentTimeMillis())
+        seedDefaultWeekStartBaselineIfEmpty(db, System.currentTimeMillis())
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        db.execSQL("PRAGMA foreign_keys = ON;")
         if (oldVersion < 1 || newVersion > DATABASE_VERSION) {
-            throw DayseedMigrationBlockedException("Unsupported schema upgrade path $oldVersion -> $newVersion")
+            throw DayseedMigrationBlockedException("Unsupported schema upgrade path: $oldVersion -> $newVersion")
         }
-        if (oldVersion == 1 && newVersion == 2) {
+        if (oldVersion < 2) {
             migrateV1ToV2FailClosed(db)
+        }
+        if (oldVersion < 3) {
+            migrateV2ToV3FailClosed(db, migrationEvaluationDateProvider())
+        }
+    }
+
+    override fun onDowngrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        throw DayseedMigrationBlockedException("Database downgrade is prohibited ($oldVersion -> $newVersion).")
+    }
+
+    // =========================================================================
+    // V3 SCHEMA CREATION (15 TABLES + 13 NAMED INDEXES + TRIGGERS)
+    // =========================================================================
+
+    fun createV3Schema(db: SQLiteDatabase) {
+        // 1. habits
+        db.execSQL(
+            """
+            CREATE TABLE $TABLE_HABITS (
+                habit_id TEXT NOT NULL PRIMARY KEY CHECK (length(trim(habit_id)) > 0),
+                created_at_utc_ms INTEGER NOT NULL CHECK (created_at_utc_ms >= 0),
+                updated_at_utc_ms INTEGER NOT NULL CHECK (updated_at_utc_ms >= created_at_utc_ms),
+                category TEXT,
+                lifetime_goal_days INTEGER CHECK (lifetime_goal_days IS NULL OR (lifetime_goal_days >= 1 AND lifetime_goal_days <= 36500))
+            );
+            """.trimIndent()
+        )
+
+        // 2. habit_versions
+        db.execSQL(buildHabitVersionsTableSql(TABLE_HABIT_VERSIONS))
+
+        // 3. habit_entries
+        db.execSQL(buildHabitEntriesTableSql(TABLE_HABIT_ENTRIES))
+
+        // 4. habit_day_outcomes
+        db.execSQL(buildHabitDayOutcomesTableSql(TABLE_HABIT_DAY_OUTCOMES))
+
+        // 5. habit_date_notes
+        db.execSQL(buildHabitDateNotesTableSql(TABLE_HABIT_DATE_NOTES))
+
+        // 6. habit_date_exceptions
+        db.execSQL(buildHabitDateExceptionsTableSql(TABLE_HABIT_DATE_EXCEPTIONS))
+
+        // 7. habit_streak_runs
+        db.execSQL(buildHabitStreakRunsTableSql(TABLE_HABIT_STREAK_RUNS))
+
+        // 8. week_start_history
+        db.execSQL(buildWeekStartHistoryTableSql(TABLE_WEEK_START_HISTORY))
+
+        // 9. journal_entries
+        db.execSQL(buildJournalEntriesTableSql(TABLE_JOURNAL_ENTRIES))
+
+        // 10. journal_drafts
+        db.execSQL(buildJournalDraftsTableSql(TABLE_JOURNAL_DRAFTS))
+
+        // 11. app_settings
+        db.execSQL(
+            """
+            CREATE TABLE $TABLE_APP_SETTINGS (
+                setting_key TEXT NOT NULL PRIMARY KEY CHECK (length(trim(setting_key)) > 0),
+                value_type TEXT NOT NULL CHECK (value_type IN ('STRING', 'INT', 'BOOL', 'JSON', 'ENUM', 'TIME_LOCAL')),
+                value_text TEXT NOT NULL,
+                schema_version INTEGER NOT NULL DEFAULT 1 CHECK (schema_version >= 1),
+                updated_at_utc_ms INTEGER NOT NULL CHECK (updated_at_utc_ms >= 0)
+            );
+            """.trimIndent()
+        )
+
+        // 12. reminder_deliveries
+        db.execSQL(buildReminderDeliveriesTableSql(TABLE_REMINDER_DELIVERIES))
+
+        // 13. restore_sessions
+        db.execSQL(
+            """
+            CREATE TABLE $TABLE_RESTORE_SESSIONS (
+                restore_session_id TEXT NOT NULL PRIMARY KEY CHECK (length(trim(restore_session_id)) > 0),
+                restore_mode TEXT NOT NULL CHECK (restore_mode IN ('REPLACE', 'MERGE')),
+                format_version INTEGER NOT NULL CHECK (format_version >= 1),
+                source_schema_version INTEGER NOT NULL CHECK (source_schema_version >= 1),
+                session_state TEXT NOT NULL CHECK (
+                    session_state IN (
+                        'STARTED',
+                        'VALIDATED',
+                        'AWAITING_CONFLICT_RESOLUTION',
+                        'APPLYING',
+                        'COMPLETED',
+                        'FAILED',
+                        'ROLLED_BACK'
+                    )
+                ),
+                started_at_utc_ms INTEGER NOT NULL CHECK (started_at_utc_ms >= 0),
+                updated_at_utc_ms INTEGER NOT NULL CHECK (updated_at_utc_ms >= started_at_utc_ms),
+                manifest_json TEXT NOT NULL,
+                safety_backup_ref TEXT,
+                safety_backup_verified INTEGER NOT NULL DEFAULT 0 CHECK (safety_backup_verified IN (0, 1))
+            );
+            """.trimIndent()
+        )
+
+        // 14. restore_conflicts
+        db.execSQL(
+            """
+            CREATE TABLE $TABLE_RESTORE_CONFLICTS (
+                conflict_id TEXT NOT NULL PRIMARY KEY CHECK (length(trim(conflict_id)) > 0),
+                restore_session_id TEXT NOT NULL REFERENCES $TABLE_RESTORE_SESSIONS(restore_session_id) ON DELETE CASCADE,
+                record_type TEXT NOT NULL CHECK (
+                    record_type IN (
+                        'habit',
+                        'habit_version',
+                        'habit_entry',
+                        'habit_day_outcome',
+                        'habit_date_note',
+                        'habit_date_exception',
+                        'journal_entry',
+                        'journal_draft',
+                        'app_setting',
+                        'week_start_history'
+                    )
+                ),
+                record_key TEXT NOT NULL CHECK (length(trim(record_key)) > 0),
+                current_payload_json TEXT NOT NULL,
+                backup_payload_json TEXT NOT NULL,
+                created_at_utc_ms INTEGER NOT NULL CHECK (created_at_utc_ms >= 0)
+            );
+            """.trimIndent()
+        )
+
+        // 15. notification_cancel_outbox
+        db.execSQL(buildNotificationCancelOutboxTableSql(TABLE_NOTIFICATION_CANCEL_OUTBOX))
+
+        createV3Indexes(db)
+        createV3Triggers(db)
+    }
+
+    private fun buildHabitVersionsTableSql(tableName: String): String =
+        """
+        CREATE TABLE $tableName (
+            version_id TEXT NOT NULL PRIMARY KEY CHECK (length(trim(version_id)) > 0),
+            habit_id TEXT NOT NULL REFERENCES $TABLE_HABITS(habit_id) ON DELETE CASCADE,
+            effective_from_local_date TEXT NOT NULL CHECK (
+                length(effective_from_local_date) = 10
+                AND effective_from_local_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
+            ),
+            name TEXT NOT NULL CHECK (length(trim(name)) BETWEEN 1 AND 80),
+            description TEXT CHECK (description IS NULL OR length(description) <= 1000),
+            tracking_mode TEXT NOT NULL CHECK (
+                tracking_mode IN ('QUANTITY', 'DURATION', 'COMPLETION_ONLY', 'EFFORT_AWARE')
+            ),
+            unit_code TEXT,
+            target_period TEXT NOT NULL CHECK (target_period IN ('DAY', 'WEEK')),
+            target_value INTEGER CHECK (
+                (tracking_mode IN ('QUANTITY', 'DURATION') AND target_value IS NOT NULL AND target_value >= 1 AND target_value <= 2147483647)
+                OR (tracking_mode IN ('COMPLETION_ONLY', 'EFFORT_AWARE') AND target_value IS NULL)
+            ),
+            schedule_kind TEXT NOT NULL CHECK (
+                schedule_kind IN ('DAILY', 'SELECTED_WEEKDAYS', 'FLEXIBLE_WEEKLY_TARGET')
+            ),
+            scheduled_weekdays_mask INTEGER,
+            preferred_weekdays_mask INTEGER,
+            lifecycle_state TEXT NOT NULL CHECK (
+                lifecycle_state IN ('ACTIVE', 'PAUSED', 'COMPLETED', 'ARCHIVED')
+            ),
+            reminder_mode TEXT NOT NULL CHECK (reminder_mode IN ('OFF', 'AT_TIME')),
+            reminder_time_local TEXT CHECK (
+                (reminder_mode = 'OFF' AND reminder_time_local IS NULL)
+                OR (
+                    reminder_mode = 'AT_TIME'
+                    AND reminder_time_local IS NOT NULL
+                    AND length(reminder_time_local) = 5
+                    AND reminder_time_local GLOB '[0-2][0-9]:[0-5][0-9]'
+                )
+            ),
+            tiny_description TEXT NOT NULL DEFAULT 'Deliberately small action' CHECK (length(tiny_description) <= 300),
+            usual_description TEXT NOT NULL DEFAULT 'The ordinary intended action' CHECK (length(usual_description) <= 300),
+            extra_description TEXT NOT NULL DEFAULT 'Optional stretch action' CHECK (length(extra_description) <= 300),
+            color_hex TEXT NOT NULL DEFAULT '#286143' CHECK (length(color_hex) BETWEEN 4 AND 9),
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at_utc_ms INTEGER NOT NULL CHECK (created_at_utc_ms >= 0),
+            CHECK (
+                (schedule_kind = 'DAILY'
+                    AND scheduled_weekdays_mask IS NULL
+                    AND preferred_weekdays_mask IS NULL
+                    AND target_period = 'DAY')
+                OR (schedule_kind = 'SELECTED_WEEKDAYS'
+                    AND scheduled_weekdays_mask BETWEEN 1 AND 127
+                    AND preferred_weekdays_mask IS NULL
+                    AND target_period = 'DAY')
+                OR (schedule_kind = 'FLEXIBLE_WEEKLY_TARGET'
+                    AND scheduled_weekdays_mask IS NULL
+                    AND (preferred_weekdays_mask IS NULL OR preferred_weekdays_mask BETWEEN 1 AND 127)
+                    AND target_period = 'WEEK')
+            ),
+            UNIQUE (habit_id, effective_from_local_date)
+        );
+        """.trimIndent()
+
+    private fun buildHabitEntriesTableSql(tableName: String): String =
+        """
+        CREATE TABLE $tableName (
+            entry_id TEXT NOT NULL PRIMARY KEY CHECK (length(trim(entry_id)) > 0),
+            habit_id TEXT NOT NULL REFERENCES $TABLE_HABITS(habit_id) ON DELETE CASCADE,
+            local_date TEXT NOT NULL CHECK (
+                length(local_date) = 10
+                AND local_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
+            ),
+            value_units INTEGER NOT NULL CHECK (value_units >= 0 AND value_units <= 2147483647),
+            entry_note TEXT CHECK (entry_note IS NULL OR length(entry_note) <= 500),
+            created_at_utc_ms INTEGER NOT NULL CHECK (created_at_utc_ms >= 0),
+            updated_at_utc_ms INTEGER NOT NULL CHECK (updated_at_utc_ms >= created_at_utc_ms),
+            idempotency_key TEXT NOT NULL UNIQUE CHECK (length(trim(idempotency_key)) > 0)
+        );
+        """.trimIndent()
+
+    private fun buildHabitDayOutcomesTableSql(tableName: String): String =
+        """
+        CREATE TABLE $tableName (
+            outcome_id TEXT NOT NULL PRIMARY KEY CHECK (length(trim(outcome_id)) > 0),
+            habit_id TEXT NOT NULL REFERENCES $TABLE_HABITS(habit_id) ON DELETE CASCADE,
+            local_date TEXT NOT NULL CHECK (
+                length(local_date) = 10
+                AND local_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
+            ),
+            outcome_kind TEXT NOT NULL CHECK (outcome_kind IN ('COMPLETED', 'EFFORT_LOGGED')),
+            effort_level TEXT CHECK (
+                (outcome_kind = 'COMPLETED' AND effort_level IS NULL)
+                OR (outcome_kind = 'EFFORT_LOGGED' AND effort_level IN ('TINY', 'USUAL', 'EXTRA'))
+            ),
+            idempotency_key TEXT NOT NULL UNIQUE CHECK (length(trim(idempotency_key)) > 0),
+            created_at_utc_ms INTEGER NOT NULL CHECK (created_at_utc_ms >= 0),
+            updated_at_utc_ms INTEGER NOT NULL CHECK (updated_at_utc_ms >= created_at_utc_ms),
+            UNIQUE (habit_id, local_date)
+        );
+        """.trimIndent()
+
+    private fun buildHabitDateNotesTableSql(tableName: String): String =
+        """
+        CREATE TABLE $tableName (
+            note_id TEXT NOT NULL PRIMARY KEY CHECK (length(trim(note_id)) > 0),
+            habit_id TEXT NOT NULL REFERENCES $TABLE_HABITS(habit_id) ON DELETE CASCADE,
+            local_date TEXT NOT NULL CHECK (
+                length(local_date) = 10
+                AND local_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
+            ),
+            body TEXT NOT NULL CHECK (length(trim(body)) BETWEEN 1 AND 2000),
+            created_at_utc_ms INTEGER NOT NULL CHECK (created_at_utc_ms >= 0),
+            updated_at_utc_ms INTEGER NOT NULL CHECK (updated_at_utc_ms >= created_at_utc_ms),
+            UNIQUE (habit_id, local_date)
+        );
+        """.trimIndent()
+
+    private fun buildHabitDateExceptionsTableSql(tableName: String): String =
+        """
+        CREATE TABLE $tableName (
+            id TEXT NOT NULL PRIMARY KEY CHECK (length(trim(id)) > 0),
+            habit_id TEXT NOT NULL REFERENCES $TABLE_HABITS(habit_id) ON DELETE CASCADE,
+            local_date TEXT NOT NULL CHECK (
+                length(local_date) = 10
+                AND local_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
+            ),
+            exception_kind TEXT NOT NULL CHECK (exception_kind IN ('REST_DAY')),
+            note TEXT CHECK (note IS NULL OR length(note) <= 500),
+            created_at_utc_ms INTEGER NOT NULL CHECK (created_at_utc_ms >= 0),
+            updated_at_utc_ms INTEGER NOT NULL CHECK (updated_at_utc_ms >= created_at_utc_ms),
+            UNIQUE (habit_id, local_date)
+        );
+        """.trimIndent()
+
+    private fun buildHabitStreakRunsTableSql(tableName: String): String =
+        """
+        CREATE TABLE $tableName (
+            run_id TEXT NOT NULL PRIMARY KEY CHECK (length(trim(run_id)) > 0),
+            habit_id TEXT NOT NULL REFERENCES $TABLE_HABITS(habit_id) ON DELETE CASCADE,
+            start_local_date TEXT NOT NULL CHECK (
+                length(start_local_date) = 10
+                AND start_local_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
+            ),
+            end_local_date TEXT NOT NULL CHECK (
+                length(end_local_date) = 10
+                AND end_local_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
+                AND end_local_date >= start_local_date
+            ),
+            completed_streak_count INTEGER NOT NULL CHECK (completed_streak_count >= 1 AND completed_streak_count <= 2147483647),
+            elapsed_active_span_count INTEGER NOT NULL CHECK (elapsed_active_span_count >= completed_streak_count AND elapsed_active_span_count <= 2147483647),
+            streak_unit TEXT NOT NULL CHECK (streak_unit IN ('DAYS', 'WEEKS')),
+            terminal_reason TEXT CHECK (
+                (is_active = 1 AND terminal_reason IS NULL)
+                OR (is_active = 0 AND terminal_reason IN ('MISSED', 'PAUSED', 'ARCHIVED', 'COMPLETED'))
+            ),
+            is_active INTEGER NOT NULL CHECK (is_active IN (0, 1)),
+            qualified_for_grove INTEGER NOT NULL CHECK (qualified_for_grove IN (0, 1)),
+            qualified_at_utc_ms INTEGER CHECK (
+                (qualified_for_grove = 0 AND qualified_at_utc_ms IS NULL)
+                OR (qualified_for_grove = 1 AND qualified_at_utc_ms IS NOT NULL AND qualified_at_utc_ms >= 0)
+            ),
+            broken_on_local_date TEXT CHECK (
+                (terminal_reason = 'MISSED' AND broken_on_local_date IS NOT NULL
+                    AND length(broken_on_local_date) = 10
+                    AND broken_on_local_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]')
+                OR (terminal_reason IS NULL AND broken_on_local_date IS NULL)
+                OR (terminal_reason IN ('PAUSED', 'ARCHIVED', 'COMPLETED') AND broken_on_local_date IS NULL)
+            ),
+            tree_state TEXT NOT NULL CHECK (
+                (is_active = 1 AND qualified_for_grove = 0 AND tree_state = 'SAPLING_ACTIVE')
+                OR (is_active = 1 AND qualified_for_grove = 1 AND tree_state = 'GROWING_TREE')
+                OR (is_active = 0 AND qualified_for_grove = 1 AND tree_state = 'DORMANT_TREE')
+                OR (is_active = 0 AND qualified_for_grove = 0 AND tree_state = 'UNQUALIFIED_HISTORY')
+            ),
+            created_at_utc_ms INTEGER NOT NULL CHECK (created_at_utc_ms >= 0),
+            updated_at_utc_ms INTEGER NOT NULL CHECK (updated_at_utc_ms >= created_at_utc_ms)
+        );
+        """.trimIndent()
+
+    private fun buildWeekStartHistoryTableSql(tableName: String): String =
+        """
+        CREATE TABLE $tableName (
+            effective_from_local_date TEXT NOT NULL PRIMARY KEY CHECK (
+                length(effective_from_local_date) = 10
+                AND effective_from_local_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
+            ),
+            week_start_iso_day INTEGER NOT NULL CHECK (week_start_iso_day BETWEEN 1 AND 7),
+            is_legacy_baseline INTEGER NOT NULL DEFAULT 0 CHECK (is_legacy_baseline IN (0, 1)),
+            created_at_utc_ms INTEGER NOT NULL CHECK (created_at_utc_ms >= 0)
+        );
+        """.trimIndent()
+
+    private fun buildJournalEntriesTableSql(tableName: String): String =
+        """
+        CREATE TABLE $tableName (
+            journal_entry_id TEXT NOT NULL PRIMARY KEY CHECK (length(trim(journal_entry_id)) > 0),
+            local_date TEXT NOT NULL CHECK (
+                length(local_date) = 10
+                AND local_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
+            ),
+            body TEXT NOT NULL CHECK (length(trim(body)) BETWEEN 1 AND 20000),
+            title TEXT CHECK (title IS NULL OR length(title) <= 200),
+            primary_mood_code TEXT,
+            secondary_mood_code TEXT CHECK (
+                secondary_mood_code IS NULL
+                OR (primary_mood_code IS NOT NULL AND secondary_mood_code != primary_mood_code)
+            ),
+            prompt_id TEXT,
+            linked_habit_id TEXT REFERENCES $TABLE_HABITS(habit_id) ON DELETE SET NULL,
+            created_at_utc_ms INTEGER NOT NULL CHECK (created_at_utc_ms >= 0),
+            updated_at_utc_ms INTEGER NOT NULL CHECK (updated_at_utc_ms >= created_at_utc_ms)
+        );
+        """.trimIndent()
+
+    private fun buildJournalDraftsTableSql(tableName: String): String =
+        """
+        CREATE TABLE $tableName (
+            draft_id TEXT NOT NULL PRIMARY KEY CHECK (length(trim(draft_id)) > 0),
+            local_date TEXT NOT NULL CHECK (
+                length(local_date) = 10
+                AND local_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
+            ),
+            title TEXT CHECK (title IS NULL OR length(title) <= 200),
+            body TEXT NOT NULL DEFAULT '' CHECK (length(body) <= 20000),
+            primary_mood_code TEXT,
+            secondary_mood_code TEXT CHECK (
+                secondary_mood_code IS NULL
+                OR (primary_mood_code IS NOT NULL AND secondary_mood_code != primary_mood_code)
+            ),
+            prompt_id TEXT,
+            linked_habit_id TEXT REFERENCES $TABLE_HABITS(habit_id) ON DELETE SET NULL,
+            intended_journal_entry_id TEXT,
+            source_context TEXT NOT NULL CHECK (
+                source_context IN ('JOURNAL_COMPOSER', 'HABIT_REFLECTION', 'COMEBACK_30D')
+            ),
+            created_at_utc_ms INTEGER NOT NULL CHECK (created_at_utc_ms >= 0),
+            updated_at_utc_ms INTEGER NOT NULL CHECK (updated_at_utc_ms >= created_at_utc_ms)
+        );
+        """.trimIndent()
+
+    private fun buildReminderDeliveriesTableSql(tableName: String): String =
+        """
+        CREATE TABLE $tableName (
+            delivery_key TEXT NOT NULL PRIMARY KEY CHECK (length(trim(delivery_key)) > 0),
+            reminder_type TEXT NOT NULL CHECK (
+                reminder_type IN ('HABIT', 'HABIT_DAILY', 'COMEBACK_14D', 'COMEBACK_30D')
+            ),
+            habit_id TEXT REFERENCES $TABLE_HABITS(habit_id) ON DELETE CASCADE,
+            target_period_key TEXT NOT NULL CHECK (length(trim(target_period_key)) > 0),
+            delivery_status TEXT NOT NULL CHECK (
+                delivery_status IN ('SCHEDULED', 'DELIVERED', 'SUPPRESSED', 'CANCELLED', 'DISMISSED', 'ACTED')
+            ),
+            scheduled_at_utc_ms INTEGER NOT NULL CHECK (scheduled_at_utc_ms >= 0),
+            attempted_at_utc_ms INTEGER,
+            delivered_at_utc_ms INTEGER,
+            platform_notification_tag TEXT,
+            platform_notification_id INTEGER,
+            suppression_reason TEXT,
+            CHECK (
+                (reminder_type IN ('HABIT', 'HABIT_DAILY') AND habit_id IS NOT NULL)
+                OR (reminder_type IN ('COMEBACK_14D', 'COMEBACK_30D') AND habit_id IS NULL)
+            )
+        );
+        """.trimIndent()
+
+    private fun buildNotificationCancelOutboxTableSql(tableName: String): String =
+        """
+        CREATE TABLE $tableName (
+            cancel_id TEXT NOT NULL PRIMARY KEY CHECK (length(trim(cancel_id)) > 0),
+            platform_notification_tag TEXT NOT NULL CHECK (length(trim(platform_notification_tag)) > 0),
+            platform_notification_id INTEGER NOT NULL,
+            created_at_utc_ms INTEGER NOT NULL CHECK (created_at_utc_ms >= 0),
+            last_attempt_at_utc_ms INTEGER,
+            attempt_count INTEGER NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+            status TEXT NOT NULL CHECK (status IN ('PENDING', 'COMPLETED', 'FAILED')),
+            error_category TEXT
+        );
+        """.trimIndent()
+
+    private fun createV3Indexes(db: SQLiteDatabase) {
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_habit_versions_lookup ON $TABLE_HABIT_VERSIONS(habit_id, effective_from_local_date DESC);")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_habit_entries_habit_date ON $TABLE_HABIT_ENTRIES(habit_id, local_date);")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_habit_entries_date ON $TABLE_HABIT_ENTRIES(local_date);")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_habit_outcomes_date ON $TABLE_HABIT_DAY_OUTCOMES(local_date);")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_habit_notes_date ON $TABLE_HABIT_DATE_NOTES(local_date);")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_habit_exceptions_habit_date ON $TABLE_HABIT_DATE_EXCEPTIONS(habit_id, local_date);")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_streak_runs_habit_active ON $TABLE_HABIT_STREAK_RUNS(habit_id, is_active);")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_streak_runs_grove ON $TABLE_HABIT_STREAK_RUNS(qualified_for_grove, tree_state);")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_journal_entries_date ON $TABLE_JOURNAL_ENTRIES(local_date DESC);")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_journal_entries_linked_habit ON $TABLE_JOURNAL_ENTRIES(linked_habit_id);")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_journal_drafts_date ON $TABLE_JOURNAL_DRAFTS(local_date);")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_reminder_deliveries_habit_period ON $TABLE_REMINDER_DELIVERIES(habit_id, target_period_key);")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_cancel_outbox_status ON $TABLE_NOTIFICATION_CANCEL_OUTBOX(status, created_at_utc_ms);")
+
+        // Partial unique index guaranteeing at most 1 active run per habit
+        db.execSQL(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_habit_streak_runs_one_active_per_habit
+            ON $TABLE_HABIT_STREAK_RUNS(habit_id)
+            WHERE is_active = 1;
+            """.trimIndent()
+        )
+    }
+
+    private fun createV3Triggers(db: SQLiteDatabase) {
+        // 1. habit_entries mode, idempotency, pause, and rest_day enforcement
+        for ((triggerName, eventClause) in listOf(
+            "trg_habit_entries_validate_insert" to "BEFORE INSERT ON $TABLE_HABIT_ENTRIES",
+            "trg_habit_entries_validate_update" to "BEFORE UPDATE ON $TABLE_HABIT_ENTRIES"
+        )) {
+            db.execSQL("DROP TRIGGER IF EXISTS $triggerName;")
+            db.execSQL(
+                """
+                CREATE TRIGGER $triggerName
+                $eventClause
+                BEGIN
+                    SELECT CASE
+                        WHEN EXISTS (
+                            SELECT 1 FROM $TABLE_HABIT_DAY_OUTCOMES
+                            WHERE idempotency_key = NEW.idempotency_key
+                        ) THEN RAISE(ABORT, 'Cross-table duplicate idempotency_key in habit_day_outcomes')
+                        WHEN COALESCE(
+                            (
+                                SELECT tracking_mode FROM $TABLE_HABIT_VERSIONS
+                                WHERE habit_id = NEW.habit_id
+                                  AND effective_from_local_date <= NEW.local_date
+                                ORDER BY effective_from_local_date DESC, created_at_utc_ms DESC
+                                LIMIT 1
+                            ),
+                            (
+                                SELECT tracking_mode FROM $TABLE_HABIT_VERSIONS
+                                WHERE habit_id = NEW.habit_id
+                                ORDER BY effective_from_local_date ASC, created_at_utc_ms ASC
+                                LIMIT 1
+                            )
+                        ) NOT IN ('QUANTITY', 'DURATION')
+                        THEN RAISE(ABORT, 'habit_entries requires QUANTITY or DURATION tracking_mode for effective habit_version')
+                        WHEN (
+                            SELECT lifecycle_state FROM $TABLE_HABIT_VERSIONS
+                            WHERE habit_id = NEW.habit_id
+                              AND effective_from_local_date <= NEW.local_date
+                            ORDER BY effective_from_local_date DESC, created_at_utc_ms DESC
+                            LIMIT 1
+                        ) IN ('PAUSED', 'ARCHIVED', 'COMPLETED')
+                        THEN RAISE(ABORT, 'Cannot record habit_entries on a date where habit lifecycle_state is closed/paused')
+                        WHEN NEW.value_units > 0 AND EXISTS (
+                            SELECT 1 FROM $TABLE_HABIT_DATE_EXCEPTIONS
+                            WHERE habit_id = NEW.habit_id
+                              AND local_date = NEW.local_date
+                              AND exception_kind = 'REST_DAY'
+                        )
+                        THEN RAISE(ABORT, 'Cannot coexist positive habit_entries with REST_DAY on the same date')
+                    END;
+                END;
+                """.trimIndent()
+            )
+        }
+
+        // 2. habit_day_outcomes mode, idempotency, pause, and rest_day enforcement
+        for ((triggerName, eventClause) in listOf(
+            "trg_habit_outcomes_validate_insert" to "BEFORE INSERT ON $TABLE_HABIT_DAY_OUTCOMES",
+            "trg_habit_outcomes_validate_update" to "BEFORE UPDATE ON $TABLE_HABIT_DAY_OUTCOMES"
+        )) {
+            db.execSQL("DROP TRIGGER IF EXISTS $triggerName;")
+            db.execSQL(
+                """
+                CREATE TRIGGER $triggerName
+                $eventClause
+                BEGIN
+                    SELECT CASE
+                        WHEN EXISTS (
+                            SELECT 1 FROM $TABLE_HABIT_ENTRIES
+                            WHERE idempotency_key = NEW.idempotency_key
+                        ) THEN RAISE(ABORT, 'Cross-table duplicate idempotency_key in habit_entries')
+                        WHEN COALESCE(
+                            (
+                                SELECT tracking_mode FROM $TABLE_HABIT_VERSIONS
+                                WHERE habit_id = NEW.habit_id
+                                  AND effective_from_local_date <= NEW.local_date
+                                ORDER BY effective_from_local_date DESC, created_at_utc_ms DESC
+                                LIMIT 1
+                            ),
+                            (
+                                SELECT tracking_mode FROM $TABLE_HABIT_VERSIONS
+                                WHERE habit_id = NEW.habit_id
+                                ORDER BY effective_from_local_date ASC, created_at_utc_ms ASC
+                                LIMIT 1
+                            )
+                        ) NOT IN ('COMPLETION_ONLY', 'EFFORT_AWARE')
+                        THEN RAISE(ABORT, 'habit_day_outcomes requires COMPLETION_ONLY or EFFORT_AWARE tracking_mode for effective habit_version')
+                        WHEN (
+                            SELECT lifecycle_state FROM $TABLE_HABIT_VERSIONS
+                            WHERE habit_id = NEW.habit_id
+                              AND effective_from_local_date <= NEW.local_date
+                            ORDER BY effective_from_local_date DESC, created_at_utc_ms DESC
+                            LIMIT 1
+                        ) IN ('PAUSED', 'ARCHIVED', 'COMPLETED')
+                        THEN RAISE(ABORT, 'Cannot record habit_day_outcomes on a date where habit lifecycle_state is closed/paused')
+                        WHEN EXISTS (
+                            SELECT 1 FROM $TABLE_HABIT_DATE_EXCEPTIONS
+                            WHERE habit_id = NEW.habit_id
+                              AND local_date = NEW.local_date
+                              AND exception_kind = 'REST_DAY'
+                        )
+                        THEN RAISE(ABORT, 'Cannot coexist habit_day_outcomes with REST_DAY on the same date')
+                    END;
+                END;
+                """.trimIndent()
+            )
+        }
+
+        // 3. habit_date_exceptions REST_DAY mutual exclusion with real activity & paused lifecycle
+        for ((triggerName, eventClause) in listOf(
+            "trg_habit_exceptions_validate_insert" to "BEFORE INSERT ON $TABLE_HABIT_DATE_EXCEPTIONS",
+            "trg_habit_exceptions_validate_update" to "BEFORE UPDATE ON $TABLE_HABIT_DATE_EXCEPTIONS"
+        )) {
+            db.execSQL("DROP TRIGGER IF EXISTS $triggerName;")
+            db.execSQL(
+                """
+                CREATE TRIGGER $triggerName
+                $eventClause
+                BEGIN
+                    SELECT CASE
+                        WHEN EXISTS (
+                            SELECT 1 FROM $TABLE_HABIT_ENTRIES
+                            WHERE habit_id = NEW.habit_id
+                              AND local_date = NEW.local_date
+                        )
+                        THEN RAISE(ABORT, 'Cannot insert REST_DAY when habit_entries already exist on that date')
+                        WHEN EXISTS (
+                            SELECT 1 FROM $TABLE_HABIT_DAY_OUTCOMES
+                            WHERE habit_id = NEW.habit_id
+                              AND local_date = NEW.local_date
+                        )
+                        THEN RAISE(ABORT, 'Cannot insert REST_DAY when habit_day_outcomes already exist on that date')
+                        WHEN (
+                            SELECT lifecycle_state FROM $TABLE_HABIT_VERSIONS
+                            WHERE habit_id = NEW.habit_id
+                              AND effective_from_local_date <= NEW.local_date
+                            ORDER BY effective_from_local_date DESC, created_at_utc_ms DESC
+                            LIMIT 1
+                        ) IN ('PAUSED', 'ARCHIVED', 'COMPLETED')
+                        THEN RAISE(ABORT, 'Cannot insert REST_DAY on a paused, archived, or completed habit date')
+                    END;
+                END;
+                """.trimIndent()
+            )
+        }
+    }
+
+    // =========================================================================
+    // DEFAULT SETTINGS & WEEK-START BASELINE SEEDING
+    // =========================================================================
+
+    private fun seedDefaultSettingsIfEmpty(db: SQLiteDatabase, nowMs: Long) {
+        val defaults = listOf(
+            Triple("onboarding_completed", "BOOL", "false"),
+            Triple("week_start", "STRING", "MONDAY"),
+            Triple("theme_mode", "STRING", "SYSTEM"),
+            Triple("quiet_hours_start", "STRING", "22:00"),
+            Triple("quiet_hours_end", "STRING", "07:00"),
+            Triple("daily_reminder_cap", "INT", "3"),
+            Triple("retrospective_journal_prompts_enabled", "BOOL", "true")
+        )
+        for ((key, type, value) in defaults) {
+            val cv = ContentValues().apply {
+                put("setting_key", key)
+                put("value_type", type)
+                put("value_text", value)
+                put("schema_version", 1)
+                put("updated_at_utc_ms", nowMs)
+            }
+            db.insertWithOnConflict(TABLE_APP_SETTINGS, null, cv, SQLiteDatabase.CONFLICT_IGNORE)
+        }
+    }
+
+    private fun seedDefaultWeekStartBaselineIfEmpty(db: SQLiteDatabase, nowMs: Long) {
+        var count = 0
+        db.rawQuery("SELECT COUNT(*) FROM $TABLE_WEEK_START_HISTORY", null).use { c ->
+            if (c.moveToFirst()) count = c.getInt(0)
+        }
+        if (count > 0) return
+
+        var weekStartIsoDay = 1
+        db.rawQuery(
+            "SELECT value_text FROM $TABLE_APP_SETTINGS WHERE setting_key = 'week_start' LIMIT 1",
+            null
+        ).use { c ->
+            if (c.moveToFirst()) {
+                val txt = c.getString(0)?.trim()?.uppercase()
+                weekStartIsoDay = when (txt) {
+                    "SUNDAY", "7" -> 7
+                    "SATURDAY", "6" -> 6
+                    else -> 1
+                }
+            }
+        }
+
+        val earliestDate = findEarliestLocalDateInDb(db) ?: "1970-01-01"
+        val cv = ContentValues().apply {
+            put("effective_from_local_date", earliestDate)
+            put("week_start_iso_day", weekStartIsoDay)
+            put("is_legacy_baseline", 1)
+            put("created_at_utc_ms", nowMs)
+        }
+        db.insertWithOnConflict(TABLE_WEEK_START_HISTORY, null, cv, SQLiteDatabase.CONFLICT_IGNORE)
+    }
+
+    private fun findEarliestLocalDateInDb(db: SQLiteDatabase): String? {
+        val candidates = mutableListOf<String>()
+        val queries = listOf(
+            "SELECT MIN(effective_from_local_date) FROM $TABLE_HABIT_VERSIONS",
+            "SELECT MIN(local_date) FROM $TABLE_HABIT_ENTRIES",
+            "SELECT MIN(local_date) FROM $TABLE_HABIT_DAY_OUTCOMES",
+            "SELECT MIN(local_date) FROM $TABLE_JOURNAL_ENTRIES"
+        )
+        for (sql in queries) {
+            try {
+                db.rawQuery(sql, null).use { c ->
+                    if (c.moveToFirst() && !c.isNull(0)) {
+                        val d = c.getString(0)
+                        if (LocalDateValidator.isValidStrict(d)) {
+                            candidates.add(d)
+                        }
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+        return candidates.minOrNull()
+    }
+
+    // =========================================================================
+    // V1 -> V2 FAIL-CLOSED MIGRATION (Preserved for v1 upgrade paths & AC-020)
+    // =========================================================================
+
+    fun migrateV1ToV2FailClosed(db: SQLiteDatabase) {
+        // Pre-scan v1 daily_records for any unsupported SKIPPED outcome
+        val hasDailyRecords = tableExists(db, "daily_records")
+        if (hasDailyRecords) {
+            db.rawQuery("SELECT outcome FROM daily_records", null).use { c ->
+                while (c.moveToNext()) {
+                    val outcome = c.getString(0)?.uppercase() ?: ""
+                    if (outcome == "SKIPPED" || outcome !in setOf("COMPLETED", "EFFORT_LOGGED")) {
+                        throw DayseedMigrationBlockedException(
+                            "Migration blocked: unsupported v1 outcome '$outcome' found in daily_records."
+                        )
+                    }
+                }
+            }
+        }
+
+        // Read v1 tables into memory before replacing them
+        data class V1Habit(
+            val id: String,
+            val name: String,
+            val description: String?,
+            val trackingMode: String,
+            val tinyDesc: String?,
+            val usualDesc: String?,
+            val extraDesc: String?,
+            val scheduleDays: String?,
+            val isArchived: Int,
+            val colorHex: String?,
+            val createdAt: Long
+        )
+        val v1Habits = mutableListOf<V1Habit>()
+        if (tableExists(db, "habits")) {
+            db.rawQuery("SELECT id, name, description, tracking_mode, tiny_desc, usual_desc, extra_desc, schedule_days, is_archived, color_hex, created_at FROM habits", null).use { c ->
+                while (c.moveToNext()) {
+                    v1Habits.add(
+                        V1Habit(
+                            id = c.getString(0),
+                            name = c.getString(1),
+                            description = if (c.isNull(2)) null else c.getString(2),
+                            trackingMode = c.getString(3),
+                            tinyDesc = if (c.isNull(4)) null else c.getString(4),
+                            usualDesc = if (c.isNull(5)) null else c.getString(5),
+                            extraDesc = if (c.isNull(6)) null else c.getString(6),
+                            scheduleDays = if (c.isNull(7)) null else c.getString(7),
+                            isArchived = c.getInt(8),
+                            colorHex = if (c.isNull(9)) null else c.getString(9),
+                            createdAt = c.getLong(10)
+                        )
+                    )
+                }
+            }
+        }
+
+        data class V1Record(
+            val id: String,
+            val habitId: String,
+            val recordDate: String,
+            val outcome: String,
+            val effortLevel: String?,
+            val note: String?,
+            val updatedAt: Long
+        )
+        val v1Records = mutableListOf<V1Record>()
+        if (hasDailyRecords) {
+            db.rawQuery("SELECT id, habit_id, record_date, outcome, effort_level, note, updated_at FROM daily_records", null).use { c ->
+                while (c.moveToNext()) {
+                    v1Records.add(
+                        V1Record(
+                            id = c.getString(0),
+                            habitId = c.getString(1),
+                            recordDate = c.getString(2),
+                            outcome = c.getString(3),
+                            effortLevel = if (c.isNull(4)) null else c.getString(4),
+                            note = if (c.isNull(5)) null else c.getString(5),
+                            updatedAt = c.getLong(6)
+                        )
+                    )
+                }
+            }
+        }
+
+        data class V1Journal(
+            val id: String,
+            val entryDate: String,
+            val prompt: String?,
+            val content: String,
+            val createdAt: Long,
+            val updatedAt: Long
+        )
+        val v1Journals = mutableListOf<V1Journal>()
+        if (tableExists(db, "journal_entries")) {
+            db.rawQuery("SELECT id, entry_date, prompt, content, created_at, updated_at FROM journal_entries", null).use { c ->
+                while (c.moveToNext()) {
+                    v1Journals.add(
+                        V1Journal(
+                            id = c.getString(0),
+                            entryDate = c.getString(1),
+                            prompt = if (c.isNull(2)) null else c.getString(2),
+                            content = c.getString(3),
+                            createdAt = c.getLong(4),
+                            updatedAt = c.getLong(5)
+                        )
+                    )
+                }
+            }
+        }
+
+        val v1Prefs = mutableMapOf<String, String>()
+        if (tableExists(db, "app_preferences")) {
+            db.rawQuery("SELECT pref_key, pref_value FROM app_preferences", null).use { c ->
+                while (c.moveToNext()) {
+                    v1Prefs[c.getString(0)] = c.getString(1)
+                }
+            }
+        }
+
+        // Drop v1 tables and create v3 schema directly (or v2-compatible layout ready for v3)
+        db.execSQL("DROP TABLE IF EXISTS daily_records;")
+        db.execSQL("DROP TABLE IF EXISTS journal_entries;")
+        db.execSQL("DROP TABLE IF EXISTS app_preferences;")
+        db.execSQL("DROP TABLE IF EXISTS habits;")
+
+        createV3Schema(db)
+
+        val earliestRecordByHabit = v1Records.groupBy { it.habitId }
+            .mapValues { (_, list) -> list.minOf { it.recordDate } }
+
+        for (h in v1Habits) {
+            val hCv = ContentValues().apply {
+                put("habit_id", h.id)
+                put("created_at_utc_ms", h.createdAt)
+                put("updated_at_utc_ms", h.createdAt)
+            }
+            db.insertOrThrow(TABLE_HABITS, null, hCv)
+
+            val createdDate = Instant.ofEpochMilli(h.createdAt).atZone(ZoneId.systemDefault()).toLocalDate().toString()
+            val effDate = minOf(createdDate, earliestRecordByHabit[h.id] ?: createdDate)
+            val mappedMode = when (h.trackingMode.uppercase()) {
+                "BINARY", "COMPLETION_ONLY" -> "COMPLETION_ONLY"
+                "QUANTITY" -> "QUANTITY"
+                "DURATION" -> "DURATION"
+                else -> "EFFORT_AWARE"
+            }
+
+            val dayTokens = h.scheduleDays?.split(",")?.mapNotNull { raw ->
+                val token = raw.trim().uppercase()
+                token.toIntOrNull()?.takeIf { it in 1..7 }
+                    ?: try {
+                        java.time.DayOfWeek.valueOf(token).value
+                    } catch (_: Exception) {
+                        null
+                    }
+            }.orEmpty()
+            var mask = 0
+            for (d in dayTokens) {
+                mask = mask or (1 shl (d - 1))
+            }
+            if (mask == 0) mask = WeekdayMask.ALL_DAYS_MASK
+            val isDaily = mask == WeekdayMask.ALL_DAYS_MASK
+
+            val vCv = ContentValues().apply {
+                put("version_id", "v1_mig_${h.id}")
+                put("habit_id", h.id)
+                put("effective_from_local_date", effDate)
+                put("name", h.name.trim().ifEmpty { "Habit" })
+                if (!h.description.isNullOrBlank()) put("description", h.description.trim()) else putNull("description")
+                put("tracking_mode", mappedMode)
+                if (mappedMode == "QUANTITY") put("unit_code", "count")
+                else if (mappedMode == "DURATION") put("unit_code", "min")
+                else putNull("unit_code")
+                put("target_period", "DAY")
+                if (mappedMode in listOf("QUANTITY", "DURATION")) put("target_value", 1) else putNull("target_value")
+                put("schedule_kind", if (isDaily) "DAILY" else "SELECTED_WEEKDAYS")
+                if (isDaily) putNull("scheduled_weekdays_mask") else put("scheduled_weekdays_mask", mask)
+                putNull("preferred_weekdays_mask")
+                put("lifecycle_state", if (h.isArchived == 1) "ARCHIVED" else "ACTIVE")
+                put("reminder_mode", "OFF")
+                putNull("reminder_time_local")
+                put("tiny_description", h.tinyDesc?.takeIf { it.isNotBlank() } ?: "Deliberately small action")
+                put("usual_description", h.usualDesc?.takeIf { it.isNotBlank() } ?: "The ordinary intended action")
+                put("extra_description", h.extraDesc?.takeIf { it.isNotBlank() } ?: "Optional stretch action")
+                put("color_hex", h.colorHex?.takeIf { it.isNotBlank() } ?: "#286143")
+                put("sort_order", 0)
+                put("created_at_utc_ms", h.createdAt)
+            }
+            db.insertOrThrow(TABLE_HABIT_VERSIONS, null, vCv)
+        }
+
+        val modeByHabit = v1Habits.associate {
+            it.id to when (it.trackingMode.uppercase()) {
+                "BINARY", "COMPLETION_ONLY" -> "COMPLETION_ONLY"
+                "QUANTITY" -> "QUANTITY"
+                "DURATION" -> "DURATION"
+                else -> "EFFORT_AWARE"
+            }
+        }
+
+        for (r in v1Records) {
+            val mode = modeByHabit[r.habitId] ?: "EFFORT_AWARE"
+            val outcomeKind = if (mode == "EFFORT_AWARE") "EFFORT_LOGGED" else "COMPLETED"
+            val effort = if (outcomeKind == "EFFORT_LOGGED") {
+                val e = r.effortLevel?.uppercase()
+                if (e in setOf("TINY", "USUAL", "EXTRA")) e else "USUAL"
+            } else {
+                null
+            }
+
+            val oCv = ContentValues().apply {
+                put("outcome_id", r.id)
+                put("habit_id", r.habitId)
+                put("local_date", r.recordDate)
+                put("outcome_kind", outcomeKind)
+                if (effort != null) put("effort_level", effort) else putNull("effort_level")
+                put("idempotency_key", "v1_out_${r.id}")
+                put("created_at_utc_ms", r.updatedAt)
+                put("updated_at_utc_ms", r.updatedAt)
+            }
+            db.insertOrThrow(TABLE_HABIT_DAY_OUTCOMES, null, oCv)
+
+            if (!r.note.isNullOrBlank()) {
+                val nCv = ContentValues().apply {
+                    put("note_id", "v1_note_${r.id}")
+                    put("habit_id", r.habitId)
+                    put("local_date", r.recordDate)
+                    put("body", r.note.trim())
+                    put("created_at_utc_ms", r.updatedAt)
+                    put("updated_at_utc_ms", r.updatedAt)
+                }
+                db.insertOrThrow(TABLE_HABIT_DATE_NOTES, null, nCv)
+            }
+        }
+
+        for (j in v1Journals) {
+            if (j.content.isBlank()) continue
+            val jCv = ContentValues().apply {
+                put("journal_entry_id", j.id)
+                put("local_date", j.entryDate)
+                put("body", j.content.trim())
+                putNull("title")
+                putNull("primary_mood_code")
+                putNull("secondary_mood_code")
+                if (!j.prompt.isNullOrBlank()) put("prompt_id", j.prompt) else putNull("prompt_id")
+                putNull("linked_habit_id")
+                put("created_at_utc_ms", j.createdAt)
+                put("updated_at_utc_ms", maxOf(j.createdAt, j.updatedAt))
+            }
+            db.insertOrThrow(TABLE_JOURNAL_ENTRIES, null, jCv)
+        }
+
+        val nowMs = System.currentTimeMillis()
+        for ((k, v) in v1Prefs) {
+            val type = when {
+                v.equals("true", true) || v.equals("false", true) -> "BOOL"
+                v.toLongOrNull() != null -> "INT"
+                else -> "STRING"
+            }
+            val sCv = ContentValues().apply {
+                put("setting_key", k)
+                put("value_type", type)
+                put("value_text", v)
+                put("schema_version", 1)
+                put("updated_at_utc_ms", nowMs)
+            }
+            db.insertWithOnConflict(TABLE_APP_SETTINGS, null, sCv, SQLiteDatabase.CONFLICT_REPLACE)
+        }
+
+        seedDefaultSettingsIfEmpty(db, nowMs)
+        seedDefaultWeekStartBaselineIfEmpty(db, nowMs)
+    }
+
+    // =========================================================================
+    // V2 -> V3 FAIL-CLOSED MIGRATION (14-Step FK-Cascade-Safe Procedure, §7)
+    // =========================================================================
+
+    fun migrateV2ToV3FailClosed(
+        db: SQLiteDatabase,
+        evaluationDate: LocalDate = migrationEvaluationDateProvider()
+    ) {
+        db.execSQL("PRAGMA foreign_keys = ON;")
+
+        // Step 1: Pre-scan v2 tables for strict calendar dates, non-negative units, and valid modes/outcomes
+        validateV2DataBeforeMigration(db)
+
+        // Step 2: Drop any old v2 triggers before rebuilding child tables
+        dropAllUserTriggers(db)
+
+        // Step 3: Add `category` and `lifetime_goal_days` to `habits` in-place via ALTER TABLE (NEVER drop `habits`!)
+        val habitCols = getColumnNames(db, TABLE_HABITS)
+        if ("category" !in habitCols) {
+            db.execSQL("ALTER TABLE $TABLE_HABITS ADD COLUMN category TEXT;")
+        }
+        if ("lifetime_goal_days" !in habitCols) {
+            db.execSQL(
+                "ALTER TABLE $TABLE_HABITS ADD COLUMN lifetime_goal_days INTEGER CHECK (lifetime_goal_days IS NULL OR (lifetime_goal_days >= 1 AND lifetime_goal_days <= 36500));"
+            )
+        }
+
+        // Step 4: Rebuild `habit_versions` with v3 columns (extracting DAYSEED_META JSON) & v3 CHECK constraints
+        val versionCols = getColumnNames(db, TABLE_HABIT_VERSIONS)
+        db.execSQL("DROP TABLE IF EXISTS habit_versions_v3_new;")
+        db.execSQL(buildHabitVersionsTableSql("habit_versions_v3_new"))
+
+        val hasTinyCol = "tiny_description" in versionCols
+        val selectVersionsSql = if (hasTinyCol) {
+            """
+            SELECT version_id, habit_id, effective_from_local_date, name, description,
+                   tracking_mode, unit_code, target_period, target_value, schedule_kind,
+                   scheduled_weekdays_mask, preferred_weekdays_mask, lifecycle_state,
+                   reminder_mode, reminder_time_local, created_at_utc_ms,
+                   tiny_description, usual_description, extra_description, color_hex, sort_order
+            FROM $TABLE_HABIT_VERSIONS
+            ORDER BY created_at_utc_ms ASC
+            """.trimIndent()
+        } else {
+            """
+            SELECT version_id, habit_id, effective_from_local_date, name, description,
+                   tracking_mode, unit_code, target_period, target_value, schedule_kind,
+                   scheduled_weekdays_mask, preferred_weekdays_mask, lifecycle_state,
+                   reminder_mode, reminder_time_local, created_at_utc_ms
+            FROM $TABLE_HABIT_VERSIONS
+            ORDER BY created_at_utc_ms ASC
+            """.trimIndent()
+        }
+
+        db.rawQuery(selectVersionsSql, null).use { c ->
+            while (c.moveToNext()) {
+                val rawDesc = if (c.isNull(4)) null else c.getString(4)
+                val extracted = extractLegacyHabitMeta(rawDesc)
+                val scheduleKind = c.getString(9)
+                // Normalize target_period if needed to satisfy v3 schedule_kind x target_period CHECK constraint
+                val normalizedTargetPeriod = when (scheduleKind) {
+                    "FLEXIBLE_WEEKLY_TARGET" -> "WEEK"
+                    else -> "DAY"
+                }
+
+                val cv = ContentValues().apply {
+                    put("version_id", c.getString(0))
+                    put("habit_id", c.getString(1))
+                    put("effective_from_local_date", c.getString(2))
+                    put("name", c.getString(3))
+                    if (extracted.cleanDescription != null) put("description", extracted.cleanDescription) else putNull("description")
+                    put("tracking_mode", TrackingMode.fromDb(c.getString(5)).canonical().name)
+                    if (c.isNull(6)) putNull("unit_code") else put("unit_code", c.getString(6))
+                    put("target_period", normalizedTargetPeriod)
+                    if (c.isNull(8)) putNull("target_value") else put("target_value", c.getValidatedInt(8, "target_value"))
+                    put("schedule_kind", scheduleKind)
+                    if (c.isNull(10)) putNull("scheduled_weekdays_mask") else put("scheduled_weekdays_mask", c.getValidatedInt(10, "scheduled_weekdays_mask"))
+                    if (c.isNull(11)) putNull("preferred_weekdays_mask") else put("preferred_weekdays_mask", c.getValidatedInt(11, "preferred_weekdays_mask"))
+                    put("lifecycle_state", c.getString(12))
+                    put("reminder_mode", c.getString(13))
+                    if (c.isNull(14)) putNull("reminder_time_local") else put("reminder_time_local", c.getString(14))
+                    put("created_at_utc_ms", c.getLong(15))
+                    if (hasTinyCol) {
+                        put("tiny_description", c.getString(16) ?: extracted.tiny)
+                        put("usual_description", c.getString(17) ?: extracted.usual)
+                        put("extra_description", c.getString(18) ?: extracted.extra)
+                        put("color_hex", c.getString(19) ?: extracted.colorHex)
+                        put("sort_order", c.getValidatedInt(20, "sort_order"))
+                    } else {
+                        put("tiny_description", extracted.tiny)
+                        put("usual_description", extracted.usual)
+                        put("extra_description", extracted.extra)
+                        put("color_hex", extracted.colorHex)
+                        put("sort_order", 0)
+                    }
+                }
+                db.insertOrThrow("habit_versions_v3_new", null, cv)
+            }
+        }
+        db.execSQL("DROP TABLE $TABLE_HABIT_VERSIONS;")
+        db.execSQL("ALTER TABLE habit_versions_v3_new RENAME TO $TABLE_HABIT_VERSIONS;")
+
+        // Step 5: Rebuild child tables (habit_entries, habit_day_outcomes, habit_date_notes, journal_entries, journal_drafts, reminder_deliveries, notification_cancel_outbox)
+        rebuildTableCopy(
+            db = db,
+            tableName = TABLE_HABIT_ENTRIES,
+            createSql = buildHabitEntriesTableSql("habit_entries_v3_new"),
+            tempName = "habit_entries_v3_new",
+            columns = "entry_id, habit_id, local_date, value_units, entry_note, created_at_utc_ms, updated_at_utc_ms, idempotency_key"
+        )
+        rebuildTableCopy(
+            db = db,
+            tableName = TABLE_HABIT_DAY_OUTCOMES,
+            createSql = buildHabitDayOutcomesTableSql("habit_day_outcomes_v3_new"),
+            tempName = "habit_day_outcomes_v3_new",
+            columns = "outcome_id, habit_id, local_date, outcome_kind, effort_level, idempotency_key, created_at_utc_ms, updated_at_utc_ms"
+        )
+        rebuildTableCopy(
+            db = db,
+            tableName = TABLE_HABIT_DATE_NOTES,
+            createSql = buildHabitDateNotesTableSql("habit_date_notes_v3_new"),
+            tempName = "habit_date_notes_v3_new",
+            columns = "note_id, habit_id, local_date, body, created_at_utc_ms, updated_at_utc_ms"
+        )
+        rebuildTableCopy(
+            db = db,
+            tableName = TABLE_JOURNAL_ENTRIES,
+            createSql = buildJournalEntriesTableSql("journal_entries_v3_new"),
+            tempName = "journal_entries_v3_new",
+            columns = "journal_entry_id, local_date, body, title, primary_mood_code, secondary_mood_code, prompt_id, linked_habit_id, created_at_utc_ms, updated_at_utc_ms"
+        )
+        rebuildTableCopy(
+            db = db,
+            tableName = TABLE_JOURNAL_DRAFTS,
+            createSql = buildJournalDraftsTableSql("journal_drafts_v3_new"),
+            tempName = "journal_drafts_v3_new",
+            columns = "draft_id, local_date, title, body, primary_mood_code, secondary_mood_code, prompt_id, linked_habit_id, intended_journal_entry_id, source_context, created_at_utc_ms, updated_at_utc_ms"
+        )
+        rebuildTableCopy(
+            db = db,
+            tableName = TABLE_REMINDER_DELIVERIES,
+            createSql = buildReminderDeliveriesTableSql("reminder_deliveries_v3_new"),
+            tempName = "reminder_deliveries_v3_new",
+            columns = "delivery_key, reminder_type, habit_id, target_period_key, delivery_status, scheduled_at_utc_ms, attempted_at_utc_ms, delivered_at_utc_ms, platform_notification_tag, platform_notification_id, suppression_reason"
+        )
+        rebuildTableCopy(
+            db = db,
+            tableName = TABLE_NOTIFICATION_CANCEL_OUTBOX,
+            createSql = buildNotificationCancelOutboxTableSql("notification_cancel_outbox_v3_new"),
+            tempName = "notification_cancel_outbox_v3_new",
+            columns = "cancel_id, platform_notification_tag, platform_notification_id, created_at_utc_ms, last_attempt_at_utc_ms, attempt_count, status, error_category"
+        )
+
+        // Rebuild restore_conflicts to expand allowed record_type CHECK constraint for v3 without touching restore_sessions
+        rebuildTableCopy(
+            db = db,
+            tableName = TABLE_RESTORE_CONFLICTS,
+            createSql = """
+                CREATE TABLE restore_conflicts_v3_new (
+                    conflict_id TEXT NOT NULL PRIMARY KEY CHECK (length(trim(conflict_id)) > 0),
+                    restore_session_id TEXT NOT NULL REFERENCES $TABLE_RESTORE_SESSIONS(restore_session_id) ON DELETE CASCADE,
+                    record_type TEXT NOT NULL CHECK (
+                        record_type IN (
+                            'habit',
+                            'habit_version',
+                            'habit_entry',
+                            'habit_day_outcome',
+                            'habit_date_note',
+                            'habit_date_exception',
+                            'journal_entry',
+                            'journal_draft',
+                            'app_setting',
+                            'week_start_history'
+                        )
+                    ),
+                    record_key TEXT NOT NULL CHECK (length(trim(record_key)) > 0),
+                    current_payload_json TEXT NOT NULL,
+                    backup_payload_json TEXT NOT NULL,
+                    created_at_utc_ms INTEGER NOT NULL CHECK (created_at_utc_ms >= 0)
+                );
+            """.trimIndent(),
+            tempName = "restore_conflicts_v3_new",
+            columns = "conflict_id, restore_session_id, record_type, record_key, current_payload_json, backup_payload_json, created_at_utc_ms"
+        )
+
+        // Step 6: Create the 3 new v3 tables if they do not yet exist
+        if (!tableExists(db, TABLE_HABIT_DATE_EXCEPTIONS)) {
+            db.execSQL(buildHabitDateExceptionsTableSql(TABLE_HABIT_DATE_EXCEPTIONS))
+        }
+        if (!tableExists(db, TABLE_HABIT_STREAK_RUNS)) {
+            db.execSQL(buildHabitStreakRunsTableSql(TABLE_HABIT_STREAK_RUNS))
+        }
+        if (!tableExists(db, TABLE_WEEK_START_HISTORY)) {
+            db.execSQL(buildWeekStartHistoryTableSql(TABLE_WEEK_START_HISTORY))
+        }
+
+        val nowMs = System.currentTimeMillis()
+        seedDefaultSettingsIfEmpty(db, nowMs)
+        seedDefaultWeekStartBaselineIfEmpty(db, nowMs)
+
+        // Step 7: Recreate all 13 named indexes + partial unique index + triggers
+        createV3Indexes(db)
+        createV3Triggers(db)
+
+        // Step 8: Backfill habit_streak_runs for all habits using StreakAndGroveEngine
+        backfillStreakRunsDuringMigration(db, evaluationDate, nowMs)
+
+        // Step 9: Verify PRAGMA foreign_key_check and PRAGMA integrity_check
+        db.rawQuery("PRAGMA foreign_key_check;", null).use { c ->
+            if (c.moveToFirst()) {
+                val tbl = c.getString(0)
+                throw DayseedMigrationBlockedException("PRAGMA foreign_key_check failed on table '$tbl' during v2->v3 migration.")
+            }
+        }
+        db.rawQuery("PRAGMA integrity_check;", null).use { c ->
+            if (c.moveToFirst()) {
+                val res = c.getString(0)
+                if (!res.equals("ok", ignoreCase = true)) {
+                    throw DayseedMigrationBlockedException("PRAGMA integrity_check failed during v2->v3 migration: $res")
+                }
+            }
+        }
+    }
+
+    private fun validateV2DataBeforeMigration(db: SQLiteDatabase) {
+        // 1. Validate local_date columns across all date-bearing tables
+        val dateChecks = listOf(
+            TABLE_HABIT_VERSIONS to "effective_from_local_date",
+            TABLE_HABIT_ENTRIES to "local_date",
+            TABLE_HABIT_DAY_OUTCOMES to "local_date",
+            TABLE_HABIT_DATE_NOTES to "local_date",
+            TABLE_JOURNAL_ENTRIES to "local_date",
+            TABLE_JOURNAL_DRAFTS to "local_date"
+        )
+        for ((table, col) in dateChecks) {
+            if (!tableExists(db, table)) continue
+            db.rawQuery("SELECT $col FROM $table", null).use { c ->
+                while (c.moveToNext()) {
+                    val raw = if (c.isNull(0)) null else c.getString(0)
+                    if (!LocalDateValidator.isValidStrict(raw)) {
+                        throw DayseedMigrationBlockedException(
+                            "Migration blocked: invalid calendar date '$raw' in $table.$col"
+                        )
+                    }
+                }
+            }
+        }
+
+        // 2. Validate habit_entries value_units range
+        if (tableExists(db, TABLE_HABIT_ENTRIES)) {
+            db.rawQuery("SELECT value_units FROM $TABLE_HABIT_ENTRIES", null).use { c ->
+                while (c.moveToNext()) {
+                    val v = try {
+                        c.getValidatedInt(0, "value_units")
+                    } catch (e: DayseedNumericRangeException) {
+                        throw DayseedMigrationBlockedException("Migration blocked: ${e.message}")
+                    }
+                    if (v < 0) {
+                        throw DayseedMigrationBlockedException("Migration blocked: negative value_units ($v) in habit_entries.")
+                    }
+                }
+            }
+        }
+
+        // 3. Validate habit_day_outcomes outcome_kind
+        if (tableExists(db, TABLE_HABIT_DAY_OUTCOMES)) {
+            db.rawQuery("SELECT outcome_kind, effort_level FROM $TABLE_HABIT_DAY_OUTCOMES", null).use { c ->
+                while (c.moveToNext()) {
+                    val kind = c.getString(0)
+                    val eff = if (c.isNull(1)) null else c.getString(1)
+                    if (kind !in setOf("COMPLETED", "EFFORT_LOGGED")) {
+                        throw DayseedMigrationBlockedException("Migration blocked: unsupported outcome_kind '$kind' in habit_day_outcomes.")
+                    }
+                    if (kind == "EFFORT_LOGGED" && eff !in setOf("TINY", "USUAL", "EXTRA")) {
+                        throw DayseedMigrationBlockedException("Migration blocked: invalid effort_level '$eff' for EFFORT_LOGGED.")
+                    }
+                }
+            }
+        }
+    }
+
+    private data class ExtractedHabitMeta(
+        val cleanDescription: String?,
+        val tiny: String,
+        val usual: String,
+        val extra: String,
+        val colorHex: String
+    )
+
+    private fun extractLegacyHabitMeta(raw: String?): ExtractedHabitMeta {
+        if (raw.isNullOrBlank()) {
+            return ExtractedHabitMeta(
+                cleanDescription = null,
+                tiny = "Deliberately small action",
+                usual = "The ordinary intended action",
+                extra = "Optional stretch action",
+                colorHex = "#286143"
+            )
+        }
+        val htmlCommentRegex = Regex("""\s*<!--DAYSEED_META:(\{.*?\})-->\s*$""", RegexOption.DOT_MATCHES_ALL)
+        val htmlMatch = htmlCommentRegex.find(raw)
+        if (htmlMatch != null) {
+            return try {
+                val obj = JSONObject(htmlMatch.groupValues[1])
+                val strippedDesc = raw.substring(0, htmlMatch.range.first).trim()
+                val desc = strippedDesc.ifEmpty { obj.optString("desc", "").trim() }.ifEmpty { null }
+                ExtractedHabitMeta(
+                    cleanDescription = desc,
+                    tiny = obj.optString("tiny", "Deliberately small action").ifBlank { "Deliberately small action" },
+                    usual = obj.optString("usual", "The ordinary intended action").ifBlank { "The ordinary intended action" },
+                    extra = obj.optString("extra", "Optional stretch action").ifBlank { "Optional stretch action" },
+                    colorHex = obj.optString("color", "#286143").ifBlank { "#286143" }
+                )
+            } catch (_: Exception) {
+                ExtractedHabitMeta(
+                    cleanDescription = raw,
+                    tiny = "Deliberately small action",
+                    usual = "The ordinary intended action",
+                    extra = "Optional stretch action",
+                    colorHex = "#286143"
+                )
+            }
+        }
+        if (raw.startsWith("DAYSEED_META:")) {
+            return try {
+                val obj = JSONObject(raw.removePrefix("DAYSEED_META:"))
+                val desc = obj.optString("desc", "").trim().ifEmpty { null }
+                ExtractedHabitMeta(
+                    cleanDescription = desc,
+                    tiny = obj.optString("tiny", "Deliberately small action").ifBlank { "Deliberately small action" },
+                    usual = obj.optString("usual", "The ordinary intended action").ifBlank { "The ordinary intended action" },
+                    extra = obj.optString("extra", "Optional stretch action").ifBlank { "Optional stretch action" },
+                    colorHex = obj.optString("color", "#286143").ifBlank { "#286143" }
+                )
+            } catch (_: Exception) {
+                ExtractedHabitMeta(
+                    cleanDescription = raw,
+                    tiny = "Deliberately small action",
+                    usual = "The ordinary intended action",
+                    extra = "Optional stretch action",
+                    colorHex = "#286143"
+                )
+            }
+        }
+        return ExtractedHabitMeta(
+            cleanDescription = raw,
+            tiny = "Deliberately small action",
+            usual = "The ordinary intended action",
+            extra = "Optional stretch action",
+            colorHex = "#286143"
+        )
+    }
+
+    private fun rebuildTableCopy(
+        db: SQLiteDatabase,
+        tableName: String,
+        createSql: String,
+        tempName: String,
+        columns: String
+    ) {
+        if (!tableExists(db, tableName)) {
+            db.execSQL(createSql.replace(tempName, tableName))
+            return
+        }
+        db.execSQL("DROP TABLE IF EXISTS $tempName;")
+        db.execSQL(createSql)
+        db.execSQL("INSERT INTO $tempName ($columns) SELECT $columns FROM $tableName;")
+        db.execSQL("DROP TABLE $tableName;")
+        db.execSQL("ALTER TABLE $tempName RENAME TO $tableName;")
+    }
+
+    private fun backfillStreakRunsDuringMigration(
+        db: SQLiteDatabase,
+        evaluationDate: LocalDate,
+        nowMs: Long
+    ) {
+        val habitIds = mutableListOf<String>()
+        db.rawQuery("SELECT habit_id FROM $TABLE_HABITS", null).use { c ->
+            while (c.moveToNext()) habitIds.add(c.getString(0))
+        }
+        if (habitIds.isEmpty()) return
+
+        val weekStartHistory = mutableListOf<WeekStartPolicyEntry>()
+        db.rawQuery(
+            "SELECT effective_from_local_date, week_start_iso_day, is_legacy_baseline, created_at_utc_ms FROM $TABLE_WEEK_START_HISTORY ORDER BY effective_from_local_date ASC",
+            null
+        ).use { c ->
+            while (c.moveToNext()) {
+                weekStartHistory.add(
+                    WeekStartPolicyEntry(
+                        effectiveFromLocalDate = c.getString(0),
+                        weekStartIsoDay = c.getInt(1),
+                        isLegacyBaseline = c.getInt(2) == 1,
+                        createdAtUtcMs = c.getLong(3)
+                    )
+                )
+            }
+        }
+
+        for (habitId in habitIds) {
+            val versions = mutableListOf<HabitVersion>()
+            db.rawQuery(
+                """
+                SELECT version_id, habit_id, effective_from_local_date, name, description,
+                       tracking_mode, unit_code, target_period, target_value, schedule_kind,
+                       scheduled_weekdays_mask, preferred_weekdays_mask, lifecycle_state,
+                       reminder_mode, reminder_time_local, tiny_description, usual_description,
+                       extra_description, color_hex, sort_order, created_at_utc_ms
+                FROM $TABLE_HABIT_VERSIONS
+                WHERE habit_id = ?
+                ORDER BY effective_from_local_date ASC, created_at_utc_ms ASC
+                """.trimIndent(),
+                arrayOf(habitId)
+            ).use { c ->
+                while (c.moveToNext()) {
+                    versions.add(
+                        HabitVersion(
+                            versionId = c.getString(0),
+                            habitId = c.getString(1),
+                            effectiveFromLocalDate = c.getString(2),
+                            name = c.getString(3),
+                            description = if (c.isNull(4)) null else c.getString(4),
+                            trackingMode = TrackingMode.fromDb(c.getString(5)),
+                            unitCode = if (c.isNull(6)) null else c.getString(6),
+                            targetPeriod = TargetPeriod.valueOf(c.getString(7)),
+                            targetValue = c.getNullableValidatedInt(8, "target_value"),
+                            scheduleKind = ScheduleKind.valueOf(c.getString(9)),
+                            scheduledWeekdaysMask = c.getNullableValidatedInt(10, "scheduled_weekdays_mask"),
+                            preferredWeekdaysMask = c.getNullableValidatedInt(11, "preferred_weekdays_mask"),
+                            lifecycleState = HabitLifecycleState.valueOf(c.getString(12)),
+                            reminderMode = c.getString(13),
+                            reminderTimeLocal = if (c.isNull(14)) null else c.getString(14),
+                            tinyDescription = c.getString(15),
+                            usualDescription = c.getString(16),
+                            extraDescription = c.getString(17),
+                            colorHex = c.getString(18),
+                            sortOrder = c.getValidatedInt(19, "sort_order"),
+                            createdAtUtcMs = c.getLong(20)
+                        )
+                    )
+                }
+            }
+
+            val entries = mutableListOf<HabitEntry>()
+            db.rawQuery(
+                "SELECT entry_id, habit_id, local_date, value_units, entry_note, created_at_utc_ms, updated_at_utc_ms, idempotency_key FROM $TABLE_HABIT_ENTRIES WHERE habit_id = ?",
+                arrayOf(habitId)
+            ).use { c ->
+                while (c.moveToNext()) {
+                    entries.add(
+                        HabitEntry(
+                            entryId = c.getString(0),
+                            habitId = c.getString(1),
+                            localDate = c.getString(2),
+                            valueUnits = c.getValidatedInt(3, "value_units"),
+                            entryNote = if (c.isNull(4)) null else c.getString(4),
+                            createdAtUtcMs = c.getLong(5),
+                            updatedAtUtcMs = c.getLong(6),
+                            idempotencyKey = c.getString(7)
+                        )
+                    )
+                }
+            }
+
+            val outcomes = mutableListOf<HabitDayOutcome>()
+            db.rawQuery(
+                "SELECT outcome_id, habit_id, local_date, outcome_kind, effort_level, idempotency_key, created_at_utc_ms, updated_at_utc_ms FROM $TABLE_HABIT_DAY_OUTCOMES WHERE habit_id = ?",
+                arrayOf(habitId)
+            ).use { c ->
+                while (c.moveToNext()) {
+                    outcomes.add(
+                        HabitDayOutcome(
+                            outcomeId = c.getString(0),
+                            habitId = c.getString(1),
+                            localDate = c.getString(2),
+                            outcomeKind = c.getString(3),
+                            effortLevel = if (c.isNull(4)) null else c.getString(4),
+                            idempotencyKey = c.getString(5),
+                            createdAtUtcMs = c.getLong(6),
+                            updatedAtUtcMs = c.getLong(7)
+                        )
+                    )
+                }
+            }
+
+            val exceptions = mutableListOf<HabitDateException>()
+            db.rawQuery(
+                "SELECT id, habit_id, local_date, exception_kind, note, created_at_utc_ms, updated_at_utc_ms FROM $TABLE_HABIT_DATE_EXCEPTIONS WHERE habit_id = ?",
+                arrayOf(habitId)
+            ).use { c ->
+                while (c.moveToNext()) {
+                    exceptions.add(
+                        HabitDateException(
+                            id = c.getString(0),
+                            habitId = c.getString(1),
+                            localDate = c.getString(2),
+                            exceptionKind = HabitDateExceptionKind.valueOf(c.getString(3)),
+                            note = if (c.isNull(4)) null else c.getString(4),
+                            createdAtUtcMs = c.getLong(5),
+                            updatedAtUtcMs = c.getLong(6)
+                        )
+                    )
+                }
+            }
+
+            // Pick an evaluation date at least as late as the latest recorded activity for this habit
+            val maxDataDate = (
+                versions.map { it.effectiveFromLocalDate } +
+                    entries.map { it.localDate } +
+                    outcomes.map { it.localDate } +
+                    exceptions.map { it.localDate }
+                ).maxOrNull()?.let {
+                try { LocalDateValidator.parseStrict(it) } catch (_: Exception) { null }
+            }
+            val effectiveEvalDate = if (maxDataDate != null && maxDataDate.isAfter(evaluationDate)) {
+                maxDataDate
+            } else {
+                evaluationDate
+            }
+
+            StreakAndGroveEngine.syncHabitStreakRunsInDb(
+                db = db,
+                habitId = habitId,
+                versions = versions,
+                entries = entries,
+                outcomes = outcomes,
+                exceptions = exceptions,
+                weekStartHistory = weekStartHistory,
+                evaluationDate = effectiveEvalDate,
+                nowUtcMs = nowMs
+            )
+        }
+    }
+
+    private fun tableExists(db: SQLiteDatabase, tableName: String): Boolean {
+        db.rawQuery(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+            arrayOf(tableName)
+        ).use { c ->
+            return c.moveToFirst()
+        }
+    }
+
+    private fun getColumnNames(db: SQLiteDatabase, tableName: String): Set<String> {
+        val cols = mutableSetOf<String>()
+        db.rawQuery("PRAGMA table_info($tableName);", null).use { c ->
+            val nameIdx = c.getColumnIndex("name")
+            while (c.moveToNext()) {
+                if (nameIdx >= 0) cols.add(c.getString(nameIdx))
+            }
+        }
+        return cols
+    }
+
+    private fun dropAllUserTriggers(db: SQLiteDatabase) {
+        val triggers = mutableListOf<String>()
+        db.rawQuery("SELECT name FROM sqlite_master WHERE type = 'trigger'", null).use { c ->
+            while (c.moveToNext()) {
+                triggers.add(c.getString(0))
+            }
+        }
+        for (t in triggers) {
+            db.execSQL("DROP TRIGGER IF EXISTS $t;")
         }
     }
 }

@@ -35,6 +35,10 @@ class DayseedViewModel(application: Application) : AndroidViewModel(application)
     val habitEntries = repository.habitEntries
     val habitDayOutcomes = repository.habitDayOutcomes
     val habitDateNotes = repository.habitDateNotes
+    val habitDateExceptions = repository.habitDateExceptions
+    val habitStreakRuns = repository.habitStreakRuns
+    val weekStartHistory = repository.weekStartHistory
+    val habitSummaries = repository.habitSummaries
     val journalEntries = repository.journalEntries
     val journalDrafts = repository.journalDrafts
     val appSettings = repository.appSettings
@@ -199,9 +203,31 @@ class DayseedViewModel(application: Application) : AndroidViewModel(application)
         _isAddHabitOpen.value = false
     }
 
+    fun takeRestDayToday(habit: Habit, note: String? = null) {
+        viewModelScope.launch {
+            try {
+                repository.setRestDayException(habit.habitId, repository.clock.todayLocal(), note)
+                _userMessage.value = "Rest day taken for ${habit.name} (streak held)"
+            } catch (e: Exception) {
+                _userMessage.value = e.message ?: "Unable to take a rest day today"
+            }
+        }
+    }
+
+    fun clearRestDayToday(habit: Habit) {
+        viewModelScope.launch {
+            repository.clearRestDayException(habit.habitId, repository.clock.todayLocal())
+            _userMessage.value = "Rest day cleared for ${habit.name}"
+        }
+    }
+
     fun saveHabit(habit: Habit, applyTodayWhenLogged: Boolean = true) {
         viewModelScope.launch {
-            val savedVer = repository.saveHabit(habit, applyTodayWhenLogged = applyTodayWhenLogged)
+            val savedVer = try {
+                repository.saveHabit(habit, applyTodayWhenLogged = applyTodayWhenLogged)
+            } catch (_: com.example.dayseed.data.HabitConfigurationLockedTodayException) {
+                repository.saveHabit(habit, applyTodayWhenLogged = false)
+            }
             closeAddEditHabit()
             _userMessage.value = "Habit saved (effective ${savedVer.effectiveFromLocalDate})"
         }
@@ -273,8 +299,8 @@ class DayseedViewModel(application: Application) : AndroidViewModel(application)
 
     fun setWeekStart(dayOfWeek: DayOfWeek) {
         viewModelScope.launch {
-            repository.setSetting("week_start", "ENUM", dayOfWeek.name)
-            _userMessage.value = "Week start set to ${dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }}"
+            val entry = repository.setWeekStart(dayOfWeek)
+            _userMessage.value = "Week start set to ${dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }} (effective ${entry.effectiveFromLocalDate})"
         }
     }
 

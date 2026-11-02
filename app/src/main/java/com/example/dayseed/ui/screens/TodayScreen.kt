@@ -71,6 +71,8 @@ fun TodayScreen(
     val outcomes by viewModel.habitDayOutcomes.collectAsState()
     val entries by viewModel.habitEntries.collectAsState()
     val dateNotes by viewModel.habitDateNotes.collectAsState()
+    val dateExceptions by viewModel.habitDateExceptions.collectAsState()
+    val habitSummaries by viewModel.habitSummaries.collectAsState()
     val journals by viewModel.journalEntries.collectAsState()
     val drafts by viewModel.journalDrafts.collectAsState()
     val appSettings by viewModel.appSettings.collectAsState()
@@ -89,6 +91,9 @@ fun TodayScreen(
     }
     val todayDateNotes = remember(dateNotes, todayStr) {
         dateNotes.filter { it.localDate == todayStr }
+    }
+    val todayExceptions = remember(dateExceptions, todayStr) {
+        dateExceptions.filter { it.localDate == todayStr }
     }
     val todayJournal = remember(journals, todayStr) {
         journals.find { it.localDate == todayStr }
@@ -358,6 +363,8 @@ fun TodayScreen(
                     val outcome = todayOutcomes.find { it.habitId == habit.habitId }
                     val habitEntriesForToday = todayEntries.filter { it.habitId == habit.habitId }
                     val dateNote = todayDateNotes.find { it.habitId == habit.habitId }
+                    val restDayException = todayExceptions.find { it.habitId == habit.habitId }
+                    val summary = habitSummaries[habit.habitId]
                     val retrospectiveEligible = remember(habit.habitId, outcomes, entries, appSettings) {
                         viewModel.repository.isHabitEligibleForRetrospectivePrompt(habit.habitId, today)
                     }
@@ -367,6 +374,8 @@ fun TodayScreen(
                         outcome = outcome,
                         entries = habitEntriesForToday,
                         dateNote = dateNote,
+                        restDayException = restDayException,
+                        summary = summary,
                         retrospectivePromptEligible = retrospectiveEligible,
                         onLogOutcome = { outKind, effort ->
                             viewModel.logHabit(habit, today, outKind, effort)
@@ -379,6 +388,12 @@ fun TodayScreen(
                         },
                         onSaveDateNote = { body ->
                             viewModel.saveHabitDateNote(habit.habitId, today, body)
+                        },
+                        onTakeRestDayToday = {
+                            viewModel.takeRestDayToday(habit)
+                        },
+                        onClearRestDayToday = {
+                            viewModel.clearRestDayToday(habit)
                         },
                         onOpenRetrospectiveJournal = {
                             viewModel.openJournalEditor(
