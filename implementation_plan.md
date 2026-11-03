@@ -864,6 +864,6 @@ The owner requested that tests requiring human intervention be consolidated and 
 - The register includes on-device v2-to-v3 upgrade, process-death persistence, D-194 configuration protection, weekly target/week-start behaviour, REST_DAY, individual streak/Grove lifecycle, backdated correction, portable backup/restore, and habit-deletion Undo. Cases that depend on later screens or Android system workflows are labelled with their phase dependency.
 - Phase 2 is the complete habit experience, five-destination navigation, Habit Detail, record/correct/delete/Undo flows, and individual streak/Grove presentation. The copy-ready bounded implementation assignment is in [docs/39-PHASE-2-IMPLEMENTATION-PROMPT.md](docs/39-PHASE-2-IMPLEMENTATION-PROMPT.md).
 - Phase 2 must append its own human/device cases to the same register; Phase 3 and Phase 4 must do likewise. Do not execute human tests during those implementation phases.
-- The known main SHA when this addendum was prepared is \`bf19bc11c37dd9a7929594871266bdff07dfc94e\`. Every implementation session must fetch and verify the latest remote SHA before editing.
+- The known main SHA when this addendum was prepared is `bf19bc11c37dd9a7929594871266bdff07dfc94e`. Every implementation session must fetch and verify the latest remote SHA before editing.
 
 This addendum records the owner's test scheduling instruction. It does not mark Phase 1's post-remediation automated suite as passed, does not open Stage C, and does not authorise Stage D or release.
