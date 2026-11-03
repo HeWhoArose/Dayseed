@@ -1362,5 +1362,42 @@ class Phase2ImplementationTest {
         assertTrue(repository.loadHabitSummariesSync()[dailyHabit.habitId]!!.isScheduledToday)
         assertTrue(repository.loadHabitSummariesSync()[selectedWeekdaysHabit.habitId]!!.isScheduledToday)
     }
+
+    @Test
+    fun t2_c05_recordSessionOperationsReturnSuccessOnlyWhenRepositoryMutationSucceeds() {
+        // Missing records must be reported as failures so RecordSessionSheet stays open.
+        assertFalse(viewModel.updateHabitEntry("missing_entry", 5, "missing"))
+        assertFalse(viewModel.deleteHabitEntry("missing_entry"))
+
+        val quantityHabit = Habit(
+            habitId = "h_corr_e_record",
+            name = "Read Pages",
+            trackingMode = TrackingMode.QUANTITY,
+            unitCode = "pages",
+            targetPeriod = TargetPeriod.DAY,
+            targetValue = 20,
+            createdAtUtcMs = testClock.nowUtcMs()
+        )
+        repository.saveHabitSync(quantityHabit, effectiveDateOverride = testClock.todayLocal())
+        assertTrue(viewModel.logHabitQuantityOrDuration(quantityHabit, 5, testClock.todayLocal(), "First session"))
+
+        val recordedEntry = repository.loadHabitEntriesSync().single { it.habitId == quantityHabit.habitId }
+        assertTrue(viewModel.updateHabitEntry(recordedEntry.entryId, 7, "Updated session"))
+        assertEquals(7, repository.loadHabitEntriesSync().single { it.entryId == recordedEntry.entryId }.valueUnits)
+
+        assertTrue(viewModel.deleteHabitEntry(recordedEntry.entryId))
+        assertTrue(repository.loadHabitEntriesSync().none { it.entryId == recordedEntry.entryId })
+
+        val completionHabit = Habit(
+            habitId = "h_corr_e_completion",
+            name = "Morning Check-In",
+            trackingMode = TrackingMode.COMPLETION_ONLY,
+            targetPeriod = TargetPeriod.DAY,
+            createdAtUtcMs = testClock.nowUtcMs()
+        )
+        repository.saveHabitSync(completionHabit, effectiveDateOverride = testClock.todayLocal())
+        assertTrue(viewModel.logHabit(completionHabit, date = testClock.todayLocal()))
+        assertNotNull(repository.getOutcomeForHabitOnDate(completionHabit.habitId, testClock.todayLocal()))
+    }
 }
 
