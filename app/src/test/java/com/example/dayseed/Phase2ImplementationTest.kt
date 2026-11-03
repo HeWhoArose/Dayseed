@@ -1023,6 +1023,12 @@ class Phase2ImplementationTest {
         assertTrue(viewModel.secondaryRouteStack.value.isEmpty())
         assertEquals(null, viewModel.currentSecondaryRoute.value)
         assertEquals(NavTab.HABITS, viewModel.selectedTab.value)
+        assertNotNull(viewModel.activeUndoToken.value)
+
+        // The deletion Undo remains available after navigation returns to Habits.
+        viewModel.triggerUndo()
+        assertTrue(repository.loadHabitsSync().any { it.habitId == habitFromHabits.habitId })
+        assertNull(viewModel.activeUndoToken.value)
     }
 
     @Test
