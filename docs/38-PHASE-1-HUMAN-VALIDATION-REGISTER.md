@@ -4,7 +4,7 @@
 **Phase:** 1 — Domain, data-integrity and historical-record foundation  
 **Status:** Prepared for later execution; **NOT RUN**  
 **Execution window:** After the planned Stage B implementation phases are complete, as part of one consolidated human/device validation session.  
-**Authority:** Phase 1 requirements in the canonical root \`implementation_plan.md\`, Phase 1 Implementation Plan Revision 7, and owner-approved decisions D-216 through D-219 and U-1 through U-13.
+**Authority:** Phase 1 requirements in the canonical root `implementation_plan.md`, Phase 1 Implementation Plan Revision 7, and owner-approved decisions D-216 through D-219 and U-1 through U-13.
 
 ## 1. Purpose and execution rule
 
