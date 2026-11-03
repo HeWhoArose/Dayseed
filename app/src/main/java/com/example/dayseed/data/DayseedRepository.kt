@@ -3086,7 +3086,9 @@ class DayseedRepository(
         for (i in 0 until runsArr.length()) {
             val o = runsArr.getJSONObject(i)
             val hId = o.getString("habit_id")
-            if (!habitExistsInDb(db, hId)) continue
+            check(habitExistsInDb(db, hId)) {
+                "Portable backup contains habit_streak_run for missing parent habit '$hId'; REPLACE restore was rejected."
+            }
             val startDate = LocalDateValidator.requireValid(o.getString("start_local_date"), "habit_streak_runs.start_local_date")
             val isActive = o.optBoolean("is_active", o.optInt("is_active", 0) == 1)
             if (!seenHabitStartDates.add(hId to startDate)) {
