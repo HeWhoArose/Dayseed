@@ -32,9 +32,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import com.example.dayseed.ui.components.CollectedMomentsDetailSheet
+import com.example.dayseed.ui.components.GroveRunEndingEventHost
 import com.example.dayseed.ui.components.LivingGroveScreen
 import com.example.dayseed.ui.screens.AddEditHabitDialog
 import com.example.dayseed.ui.screens.CreateEditHabitScreen
@@ -90,6 +93,9 @@ fun DayseedApp(viewModel: DayseedViewModel) {
     val journalInitialLinkedHabitId by viewModel.journalInitialLinkedHabitId.collectAsState()
     val journalInitialPromptId by viewModel.journalInitialPromptId.collectAsState()
     val habits by viewModel.habits.collectAsState()
+    val habitEntries by viewModel.habitEntries.collectAsState()
+    val habitDayOutcomes by viewModel.habitDayOutcomes.collectAsState()
+    val saveError by viewModel.lastSaveError.collectAsState()
     val streakRuns by viewModel.streakRuns.collectAsState()
     val growthMetrics by viewModel.growthMetrics.collectAsState()
     val drafts by viewModel.journalDrafts.collectAsState()
@@ -267,14 +273,23 @@ fun DayseedApp(viewModel: DayseedViewModel) {
                     }
                 }
             }
+
+            GroveRunEndingEventHost(
+                viewModel = viewModel,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            )
         }
     }
 
     if (isAddHabitOpen && currentSecondaryRoute !is SecondaryRoute.CreateEditHabit) {
         val today = viewModel.repository.clock.todayLocal()
-        val alreadyLogged = editingHabit?.let {
-            viewModel.repository.hasQualifyingActivityOnDate(it.habitId, today)
-        } ?: false
+        val alreadyLogged = remember(editingHabit, today, habitEntries, habitDayOutcomes) {
+            editingHabit?.let {
+                viewModel.repository.hasRecordedActivityForVersionLockOnDate(it.habitId, today)
+            } ?: false
+        }
         val suggestedReminder = editingHabit?.let {
             viewModel.repository.getSuggestedReminderTimeForHabit(it.habitId)
         }
@@ -283,13 +298,14 @@ fun DayseedApp(viewModel: DayseedViewModel) {
             initialHabit = editingHabit,
             alreadyLoggedToday = alreadyLogged,
             suggestedReminderTime = suggestedReminder,
+            saveErrorMessage = saveError,
+            onClearSaveError = { viewModel.clearSaveError() },
             onDismiss = { viewModel.closeAddEditHabit() },
             onSave = { habit, applyTodayWhenLogged ->
-                viewModel.saveHabit(habit, applyTodayWhenLogged)
+                viewModel.saveHabit(habit, applyTodayWhenLogged) != null
             },
             onDelete = { habitId ->
                 viewModel.deleteHabit(habitId)
-                viewModel.closeAddEditHabit()
             }
         )
     }

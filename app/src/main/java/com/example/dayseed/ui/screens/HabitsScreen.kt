@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Spa
+import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -47,6 +48,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -80,6 +82,7 @@ fun HabitsScreen(
     val summaries by viewModel.habitSummaries.collectAsState()
     val filterState by viewModel.habitsFilterState.collectAsState()
     val searchQuery by viewModel.habitsSearchQuery.collectAsState()
+    val activeUndoToken by viewModel.activeUndoToken.collectAsState()
     val today = viewModel.repository.clock.todayLocal()
 
     val lifecycleFiltered = remember(habits, filterState) {
@@ -154,6 +157,44 @@ fun HabitsScreen(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text("Living Grove")
+                    }
+                }
+            }
+
+            // Guarded 8-second Undo Bar for deletions/edits that return to this destination.
+            if (activeUndoToken != null) {
+                item {
+                    Card(
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("undo_action_banner")
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Recent change recorded (8s undo window)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            TextButton(
+                                onClick = { viewModel.triggerUndo() },
+                                modifier = Modifier
+                                    .heightIn(min = 48.dp)
+                                    .testTag("undo_action_btn")
+                            ) {
+                                Icon(Icons.Default.Undo, contentDescription = null)
+                                Text("Undo", fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
                 }
             }

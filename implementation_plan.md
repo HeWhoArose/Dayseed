@@ -2,9 +2,9 @@
 
 **Prepared:** 2026-11-01  
 **Repository:** HeWhoArose/Dayseed  
-**Current repository baseline:** `main` at `41ec70b268df2a1345390292a606e28a610663c0` (2026-11-03); Stage C remediation is isolated on `stage-c-remediation`  
+**Current repository baseline:** `main` at `cbc2718bb803315de6ad03d570f960ea59fe57cd` (2026-11-03). The earlier `41ec70b268df2a1345390292a606e28a610663c0` reference is a historical Phase 1 checkpoint, not the current main head.  
 **Technology:** Native Android, Kotlin (`2.2.10`), Jetpack Compose (`BOM 2024.09.00`), AGP (`9.1.1`), `SQLiteOpenHelper` (`DATABASE_VERSION = 3`)  
-**Current status (reconciled 2026-11-03):** Stage A planning is closed and Stage B initial-v1 implementation was authorised under D-213. Phase 0 and Phase 1 implementation work is present on `main`; the Phase 1 implementation self-check recorded 57/57 tests on 2026-11-03 but is not independent Stage C evidence. The independent Stage C review found blocking MERGE streak-history deletion and additional restore/schema/test-evidence/documentation gaps. Stage C remains **NOT PASSED** pending Gradle verification; corrective source and tests were merged into `main` through PR #5 as `e3c3dc4360626315b68319570d4fb8f59444d88a`. No Phase 2 implementation, Stage D acceptance, release approval, or merge is authorised by this remediation. The merged source/test changes are included in `e3c3dc4360626315b68319570d4fb8f59444d88a`; the new tests still require execution against that commit.
+**Current status (reconciled 2026-11-03):** Stage A planning is closed and Stage B implementation was authorised under D-213. Phase 0, Phase 1, and Phase 2 implementation work is present on `main`; Phase 2 targeted Corrections A–D are included in `cbc2718bb803315de6ad03d570f960ea59fe57cd`. The Stage B handover reports an 85/85 test self-check and successful debug build, but GitHub Actions returned no workflow runs or status contexts for that commit, so those results have not been independently reproduced in this audit. The Phase 2 final audit identified and is correcting additional compatibility-path, save-error UX, and flexible-weekly date-status gaps on a dedicated follow-up branch. Phase 1 and Phase 2 human/device validation cases remain **NOT RUN**. Stage C independent validation and Stage D owner acceptance remain closed; this work does not authorise Phase 3, release approval, or a merge.
 
 **Historical note on original audit body (§1–§10):** Sections 1–10 below preserve the read-only source/document audit authored against commit `334679775643ffb43f384646cf7cced75d401f96`. See **Section 11** and **[docs/37-PHASE-0-PREFLIGHT-RECONCILIATION.md](docs/37-PHASE-0-PREFLIGHT-RECONCILIATION.md)** for the verified Phase 0 baseline at `ebeca3ebff1155c220f8e09f1e00e07fdb28209b`.
 
@@ -907,3 +907,40 @@ Before starting Phase 3, four targeted Phase 2 defects (`Correction A` through `
    - `gradle :app:testDebugUnitTest --rerun-tasks`: **PASSED 85/85** executed JUnit test methods across all 5 test classes (`Phase1ImplementationTest`: **29/29** [XML `2026-11-03T19:27:39.133Z`, `2.272s`]; `Phase2ImplementationTest`: **26/26** [XML `2026-11-03T19:27:24.515Z`, `12.841s`, including `t2_c01`..`t2_c04`]; `DayseedAcceptanceTest`: **12/12** [XML `2026-11-03T19:27:37.392Z`, `1.662s`]; `DayseedSettingsValidationTest`: **10/10** [XML `2026-11-03T19:27:39.062Z`, `0.013s`]; `DayseedVisualResolutionTest`: **8/8** [XML `2026-11-03T19:27:39.078Z`, `0.043s`]), **0 failed, 0 errors, 0 skipped** (`BUILD SUCCESSFUL in 37s`).
    - `gradle :app:assembleDebug` / `compile_applet`: **PASSED**.
    - Appended Phase 2 Targeted Remediation human/device validation cases (`P2-C01` through `P2-C05`, all marked `NOT RUN`) to `docs/38-PHASE-1-HUMAN-VALIDATION-REGISTER.md`. Stage C independent technical validation and Stage D final owner acceptance remain **NOT OPEN**.
+
+
+---
+
+## 16. Phase 2 Final Audit Addendum — Follow-up Corrections (2026-11-03)
+
+A full source-level pass over the Phase 2 feature surface and the original 26-method `Phase2ImplementationTest` suite found additional correctness gaps beyond the earlier Corrections A–D. The follow-up expanded the suite to 28 test methods (`t2_c01`–`t2_c06`). This follow-up is isolated on `fix/phase-2-final-remediation-audit`; it does not start Phase 3.
+
+1. **Correction E — Save-error lifecycle and legacy editor compatibility:**
+   - Clear `lastSaveError` when the user changes any relevant field in `CreateEditHabitFormContent` (identity, description/category, lifetime goal, color, measurement mode/unit, target/period, schedule/weekdays, reminder, and legacy effort descriptions), not only when retrying or changing the D-194 timing chips.
+   - Bring the compatibility `AddEditHabitDialog` fallback into parity with the full-screen editor: use `hasRecordedActivityForVersionLockOnDate` so positive entries, explicit zero entries, and outcomes all trigger D-194; pass the observable error message and clear callback through; propagate the actual save Boolean rather than always returning success.
+   - Remove the fallback's redundant second close after deletion; `DayseedViewModel.deleteHabit` remains the single navigation owner.
+
+2. **Correction F — Flexible weekly selected-date status consistency:**
+   - `DayseedRepository.recomputeDerivedState` already keeps a flexible weekly habit scheduled while its target is incomplete and, after target satisfaction, only on configured preferred weekdays (with null/zero preference masks treated as all days).
+   - `evaluateDerivedDayStatus` previously returned `UNSCHEDULED` after target satisfaction for every date, including preferred weekdays. It now returns `UNSCHEDULED` only for non-preferred weekdays; preferred weekdays remain eligible and report `OPEN_TODAY` while the week is in progress.
+   - Expanded `t2_c03` and `t2_c04` assertions cover the all-days default, a non-preferred Thursday, and a preferred Friday.
+
+3. **Correction G — Record Session failure handling and session-count preview:**
+   - `DayseedViewModel.logHabit`, `logHabitQuantityOrDuration`, `updateHabitEntry`, and `deleteHabitEntry` now return an explicit success Boolean. Missing records, invalid values, and repository exceptions report failure rather than being treated as successful mutations.
+   - `RecordSessionSheet` now navigates back only after a successful create, update, or delete. If a mutation fails, the editor remains open with the entered date/value/note intact while the existing snackbar message explains the failure.
+   - Weekly `Quantity / sessions` preview now counts each positive entry as one session in the selected date's preview, defaults a new session value to 1, and labels the input/preset to explain that any positive entry counts as one weekly session. The weekly aggregate remains calculated from the frozen week version.
+
+4. **Reproducible verification workflow:**
+   - Added `.github/workflows/android-validation.yml` to install JDK 21, Android API 36/build tools 36.0.0, and Gradle 9.3.1; generate an ephemeral debug keystore (not committed); run `gradle :app:testDebugUnitTest --rerun-tasks` and `gradle :app:assembleDebug`; and retain test reports plus the debug APK as a workflow artifact.
+   - The workflow result must be inspected on the pull request before this follow-up is marked build/test verified. The previously recorded 85/85 Stage B self-check remains historical evidence only; the GitHub integration returned no workflow runs or status contexts for the original `cbc2718` commit.
+
+5. **Phase 2 audit disposition:**
+   - The source/test map covers T2-01 through T2-51 across navigation, Today, Habits, create/edit, weekly targets, D-194, record/correct/Undo, lifecycle, Grove, reduced motion, and idempotent quick actions.
+   - All Phase 2 human/device cases P2-H01 through P2-H17 and targeted cases P2-C01 through P2-C05 remain `NOT RUN`; this source audit does not substitute for device validation.
+   - **Grove run-ending animation:** A global `GroveRunEndingEventHost` in `MainActivity` detects newly ended Grove-qualified runs from previous/current streak-run snapshots and displays a short animated Grove-preservation notice once for each run ID across destinations. Recomposition with the same snapshot and initial loading of an already-ended run do not replay it. Reduced-motion mode shows the notice without motion. Pure transition detection is covered by `t2_c06`; device timing/reduced-motion behaviour remains P2-C06 and is still `NOT RUN`.
+   - Phase 3, Stage C independent validation, Stage D owner acceptance, release approval, and merge remain separate gates and are not authorised by this addendum.
+
+
+6. **Correction H — Destructive deletion confirmation parity:** The shared Create/Edit form now opens a confirmation dialog before calling the existing permanent-delete/8-second-Undo ViewModel path. Cancel preserves the habit; confirm invokes the existing route cleanup. P2-C01 now explicitly checks both outcomes and remains deferred for device validation.
+
+7. **Correction I — Undo reachability after deletion navigation:** Habit deletion from Habit Detail or Create/Edit cleans up the editor/detail route and returns to the Habits destination. `HabitsScreen` now renders the active guarded 8-second Undo banner, preventing the undo action from becoming unreachable after that route transition. P2-C01 verifies restore of the habit and associated data.

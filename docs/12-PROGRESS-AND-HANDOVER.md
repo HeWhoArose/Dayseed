@@ -1,7 +1,7 @@
 # Progress and Handover
 
 **Last updated:** 2026-11-03
-**Current repository baseline:** `main` at `bf19bc11c37dd9a7929594871266bdff07dfc94e` (imported after `41ec70b268df2a1345390292a606e28a610663c0` / `e3c3dc4360626315b68319570d4fb8f59444d88a`).
+**Current repository baseline:** `main` at `cbc2718bb803315de6ad03d570f960ea59fe57cd` (2026-11-03; Phase 2 implementation and targeted Corrections A–D are included).
 **Merged remediation:** PR #5 merged into `main` on 2026-11-03 as commit `e3c3dc4360626315b68319570d4fb8f59444d88a`; Phase 1 human validation handoff committed at `bf19bc11c37dd9a7929594871266bdff07dfc94e`.
 **Status:** Stage A planning is closed (`D-208`); Stage B implementation is authorised under `D-213`. Phase 1 (`v3` SQLite schema, `D-040`/`D-216` progress bands & dual quotes, `D-194`/`U-12` effective-dated locks, `D-217` individual streaks & Grove, `D-218` `REST_DAY`, and portable v3 backup/restore remediation) and **Phase 2 (`5-Destination Navigation, Habits Directory, Habit Detail, Create/Edit Habit, Record Session, Individual Streaks & Living Grove`, plus the Phase 2 Targeted Remediation Corrections A–D)** are now implemented and verified in the Stage B container (`gradle :app:assembleDebug` / `compile_applet` **PASSED**; `gradle :app:testDebugUnitTest --rerun-tasks` **PASSED 85/85** across all 5 test suites, including `Phase1ImplementationTest` 29/29 with the merged PR #5 remediation tests and `Phase2ImplementationTest` 26/26 with `t2_c01`–`t2_c04`). Human/device validation checks (`P1-H01`–`P1-H27`, `P2-H01`–`P2-H17`, and `P2-C01`–`P2-C05` in `docs/38-PHASE-1-HUMAN-VALIDATION-REGISTER.md`) remain **`NOT RUN`** per the owner's consolidated human-testing instruction. **Stage C (independent technical validation)** and **Stage D (final owner acceptance / release readiness)** remain **NOT PASSED / NOT OPEN**.
 
@@ -715,3 +715,27 @@ Following the owner's Phase 2 Implementation Assignment (`Complete Habit Experie
     - `com.example.dayseed.DayseedVisualResolutionTest`: **8/8 PASSED** (`0.044s`, XML timestamp `2026-11-03T18:00:45.745Z`).
 - **Stage Gate Status:** Stage B Phase 2 implementation and automated self-checks are **COMPLETE**. Human/device checks (`P1-H01`–`P1-H27` and `P2-H01`–`P2-H17`) remain **`NOT RUN`**. **Stage C (independent technical validation)** and **Stage D (final owner acceptance / release readiness)** remain **NOT OPEN**.
 
+
+
+## Phase 2 Final Source Audit & Follow-up Remediation (2026-11-03)
+
+A further GitHub source audit was performed against the current `main` baseline `cbc2718bb803315de6ad03d570f960ea59fe57cd`. It found three gaps beyond Corrections A–D:
+
+1. The compatibility `AddEditHabitDialog` fallback still used the positive-only D-194 activity detector and discarded the save result, so an explicit-zero lock or failed save could lack the same inline error behaviour as the full-screen editor.
+2. The full-screen editor cleared the save-error banner on retry and the effective-date chips, but not when ordinary form fields changed. This could leave a stale error visible while the user corrected the form.
+3. `evaluateDerivedDayStatus` returned `UNSCHEDULED` for every no-record date after a flexible weekly target was met, even on a configured preferred weekday. That disagreed with the Today partition, which keeps preferred weekdays scheduled after the target is met.
+
+The dedicated follow-up branch `fix/phase-2-final-remediation-audit` addresses these points, extends the regression test for preferred/non-preferred date status, and adds a pinned Gradle/Android SDK GitHub Actions workflow so the exact PR commit can be tested. The workflow has not yet produced a result at the time this note was written. The historical 85/85 Stage B self-check remains a recorded report, not independently reproduced evidence.
+
+The legacy AI Studio correction-plan artifact under `.aistudio/artifacts/brain/` is retained as a historical task input; the canonical implementation plan and this handover remain authoritative. No human/device case is marked complete, and Phase 3 remains outside this remediation.
+
+
+A further review of the Record Session journey found that the ViewModel swallowed repository failures and the screen navigated back regardless, which could discard an unsaved session edit. The follow-up now returns success/failure from create/update/delete operations and keeps the Record Session editor open on failure. It also corrects the weekly `sessions` input/preview so the selected-date count reflects positive session records rather than summing their raw numeric values. Regression test `t2_c05` covers successful and rejected repository mutations.
+
+The Phase 2 audit also found that the shared Create/Edit form's delete icon bypassed the destructive confirmation required by the Phase 2 contract. The follow-up now presents an explicit confirmation dialog before invoking the existing guarded 8-second Undo deletion path. P2-C01 has been expanded to verify both Cancel and Confirm outcomes; it remains `NOT RUN`.
+
+A further route audit found that habit deletion returns to the Habits destination, but that screen did not display the active 8-second Undo token. The Undo banner is now also rendered in `HabitsScreen`, so deletion from Habit Detail or Create/Edit leaves the recovery action reachable after navigation cleanup. P2-C01 now verifies that Undo restores the habit, its sessions, and linked journal data.
+
+**Grove run-ending animation:** Implemented on Today as an event-driven notice triggered only by an active-to-ended streak-run transition. The same run ID cannot trigger again during the screen session, recomposition with an unchanged snapshot does not replay, and reduced-motion mode uses non-animated transitions. Automated transition detection is covered by `t2_c06`; device timing/reduced-motion validation P2-C06 remains `NOT RUN`.
+
+The Phase 2 regression class now contains 28 test methods: the original T2-01–T2-51 coverage, the A–D correction tests, and follow-up tests `t2_c05` (Record Session operation outcomes) and `t2_c06` (one-shot Grove run-ending event detection). The latest CI run is queued/in progress; no pass is claimed until the workflow completes on the current PR head.

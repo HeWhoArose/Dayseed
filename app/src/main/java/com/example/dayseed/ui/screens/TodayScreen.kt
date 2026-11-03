@@ -657,3 +657,4 @@ private fun EmptyHabitsCard(onAddHabit: () -> Unit) {
         }
     }
 }
+

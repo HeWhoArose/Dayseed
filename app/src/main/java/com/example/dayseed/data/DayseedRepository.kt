@@ -2381,7 +2381,11 @@ class DayseedRepository(
                         BigInteger.valueOf(weekCompletions.toLong()) >= targetBi
                     }
                 }
-                if (weekSatisfied) {
+                val preferredMask = evalVersion.preferredWeekdaysMask
+                val matchesPreferred = preferredMask == null ||
+                    preferredMask == 0 ||
+                    WeekdayMask.contains(preferredMask, targetDate.dayOfWeek)
+                if (weekSatisfied && !matchesPreferred) {
                     DerivedDayStatus.UNSCHEDULED
                 } else if (weekEnd.isBefore(today)) {
                     DerivedDayStatus.DERIVED_MISSED

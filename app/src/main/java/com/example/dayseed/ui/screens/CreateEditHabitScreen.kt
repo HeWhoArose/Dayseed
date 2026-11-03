@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -133,6 +134,7 @@ fun CreateEditHabitFormContent(
     modifier: Modifier = Modifier
 ) {
     val isEditing = initialHabit != null
+    var showDeleteConfirmDialog by remember(initialHabit) { mutableStateOf(false) }
 
     var name by remember(initialHabit) { mutableStateOf(initialHabit?.name ?: "") }
     var description by remember(initialHabit) { mutableStateOf(initialHabit?.description ?: "") }
@@ -296,6 +298,7 @@ fun CreateEditHabitFormContent(
                 OutlinedTextField(
                     value = name,
                     onValueChange = {
+                        onClearSaveError()
                         name = it
                         if (it.isNotBlank()) nameError = null
                     },
@@ -317,7 +320,10 @@ fun CreateEditHabitFormContent(
 
                 OutlinedTextField(
                     value = description,
-                    onValueChange = { description = it },
+                    onValueChange = {
+                        onClearSaveError()
+                        description = it
+                    },
                     label = { Text("Purpose or note (optional)") },
                     placeholder = { Text("e.g. For peace of mind and clarity") },
                     modifier = Modifier
@@ -328,7 +334,10 @@ fun CreateEditHabitFormContent(
 
                 OutlinedTextField(
                     value = category,
-                    onValueChange = { category = it },
+                    onValueChange = {
+                        onClearSaveError()
+                        category = it
+                    },
                     label = { Text("Category (optional)") },
                     placeholder = { Text("e.g. Mindfulness, Movement, Reading") },
                     modifier = Modifier
@@ -345,6 +354,7 @@ fun CreateEditHabitFormContent(
                         FilterChip(
                             selected = category.equals(cat, ignoreCase = true),
                             onClick = {
+                                onClearSaveError()
                                 category = if (category.equals(cat, ignoreCase = true)) "" else cat
                             },
                             label = { Text(cat) }
@@ -355,6 +365,7 @@ fun CreateEditHabitFormContent(
                 OutlinedTextField(
                     value = lifetimeGoalText,
                     onValueChange = {
+                        onClearSaveError()
                         lifetimeGoalText = it.filter { ch -> ch.isDigit() }
                         lifetimeGoalError = null
                     },
@@ -395,7 +406,10 @@ fun CreateEditHabitFormContent(
                                 .size(36.dp)
                                 .clip(CircleShape)
                                 .background(c)
-                                .clickable { selectedColor = hex }
+                                .clickable {
+                                    onClearSaveError()
+                                    selectedColor = hex
+                                }
                                 .then(
                                     if (isPicked) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
                                     else Modifier
@@ -442,6 +456,7 @@ fun CreateEditHabitFormContent(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
+                                onClearSaveError()
                                 trackingMode = m
                                 if (m == TrackingMode.DURATION && !DurationNormalizer.isSupportedDurationUnit(unitCode)) {
                                     unitCode = "min"
@@ -464,6 +479,7 @@ fun CreateEditHabitFormContent(
                         RadioButton(
                             selected = trackingMode == m,
                             onClick = {
+                                onClearSaveError()
                                 trackingMode = m
                                 if (m == TrackingMode.DURATION && !DurationNormalizer.isSupportedDurationUnit(unitCode)) {
                                     unitCode = "min"
@@ -493,7 +509,10 @@ fun CreateEditHabitFormContent(
                         for (u in DurationNormalizer.supportedDurationUnits) {
                             FilterChip(
                                 selected = unitCode == u,
-                                onClick = { unitCode = u },
+                                onClick = {
+                                    onClearSaveError()
+                                    unitCode = u
+                                },
                                 label = { Text(u) },
                                 modifier = Modifier.testTag("unit_preset_$u")
                             )
@@ -502,7 +521,10 @@ fun CreateEditHabitFormContent(
                 } else if (trackingMode == TrackingMode.QUANTITY) {
                     OutlinedTextField(
                         value = unitCode,
-                        onValueChange = { unitCode = it },
+                        onValueChange = {
+                            onClearSaveError()
+                            unitCode = it
+                        },
                         label = { Text("Unit") },
                         singleLine = true,
                         modifier = Modifier
@@ -516,7 +538,10 @@ fun CreateEditHabitFormContent(
                         for (preset in quantityUnitPresets) {
                             FilterChip(
                                 selected = unitCode.equals(preset, ignoreCase = true),
-                                onClick = { unitCode = preset },
+                                onClick = {
+                                    onClearSaveError()
+                                    unitCode = preset
+                                },
                                 label = { Text(preset) },
                                 modifier = Modifier.testTag("unit_preset_$preset")
                             )
@@ -530,7 +555,10 @@ fun CreateEditHabitFormContent(
                     )
                     OutlinedTextField(
                         value = tinyDesc,
-                        onValueChange = { tinyDesc = it },
+                        onValueChange = {
+                            onClearSaveError()
+                            tinyDesc = it
+                        },
                         label = { Text("🌱 Tiny effort (bare minimum that counts)") },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -539,7 +567,10 @@ fun CreateEditHabitFormContent(
                     )
                     OutlinedTextField(
                         value = usualDesc,
-                        onValueChange = { usualDesc = it },
+                        onValueChange = {
+                            onClearSaveError()
+                            usualDesc = it
+                        },
                         label = { Text("🌿 Usual effort (intended ordinary action)") },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -548,7 +579,10 @@ fun CreateEditHabitFormContent(
                     )
                     OutlinedTextField(
                         value = extraDesc,
-                        onValueChange = { extraDesc = it },
+                        onValueChange = {
+                            onClearSaveError()
+                            extraDesc = it
+                        },
                         label = { Text("🌳 Extra effort (optional stretch)") },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -581,6 +615,7 @@ fun CreateEditHabitFormContent(
                     FilterChip(
                         selected = targetPeriod == TargetPeriod.DAY,
                         onClick = {
+                            onClearSaveError()
                             targetPeriod = TargetPeriod.DAY
                             if (scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET) {
                                 scheduleKind = ScheduleKind.DAILY
@@ -595,6 +630,7 @@ fun CreateEditHabitFormContent(
                     FilterChip(
                         selected = targetPeriod == TargetPeriod.WEEK,
                         onClick = {
+                            onClearSaveError()
                             targetPeriod = TargetPeriod.WEEK
                             scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET
                             if (trackingMode == TrackingMode.COMPLETION_ONLY) {
@@ -626,6 +662,7 @@ fun CreateEditHabitFormContent(
                     OutlinedTextField(
                         value = targetValueText,
                         onValueChange = {
+                            onClearSaveError()
                             targetValueText = it.filter { ch -> ch.isDigit() }
                             targetValueError = null
                         },
@@ -674,6 +711,7 @@ fun CreateEditHabitFormContent(
                     FilterChip(
                         selected = scheduleKind == ScheduleKind.DAILY,
                         onClick = {
+                            onClearSaveError()
                             scheduleKind = ScheduleKind.DAILY
                             targetPeriod = TargetPeriod.DAY
                             selectedDays = DayOfWeek.values().toSet()
@@ -686,6 +724,7 @@ fun CreateEditHabitFormContent(
                     FilterChip(
                         selected = scheduleKind == ScheduleKind.SELECTED_WEEKDAYS,
                         onClick = {
+                            onClearSaveError()
                             scheduleKind = ScheduleKind.SELECTED_WEEKDAYS
                             targetPeriod = TargetPeriod.DAY
                         },
@@ -697,6 +736,7 @@ fun CreateEditHabitFormContent(
                     FilterChip(
                         selected = scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET,
                         onClick = {
+                            onClearSaveError()
                             scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET
                             targetPeriod = TargetPeriod.WEEK
                             if (trackingMode == TrackingMode.COMPLETION_ONLY) {
@@ -739,6 +779,7 @@ fun CreateEditHabitFormContent(
                             FilterChip(
                                 selected = isSelected,
                                 onClick = {
+                                    onClearSaveError()
                                     selectedDays = if (isSelected) {
                                         if (selectedDays.size > 1) selectedDays - d else selectedDays
                                     } else {
@@ -795,7 +836,10 @@ fun CreateEditHabitFormContent(
                     }
                     Switch(
                         checked = reminderEnabled,
-                        onCheckedChange = { reminderEnabled = it },
+                        onCheckedChange = {
+                            onClearSaveError()
+                            reminderEnabled = it
+                        },
                         modifier = Modifier.testTag("habit_reminder_switch")
                     )
                 }
@@ -803,7 +847,10 @@ fun CreateEditHabitFormContent(
                 if (reminderEnabled) {
                     OutlinedTextField(
                         value = reminderTimeLocal,
-                        onValueChange = { reminderTimeLocal = it },
+                        onValueChange = {
+                            onClearSaveError()
+                            reminderTimeLocal = it
+                        },
                         label = { Text("Reminder Time (HH:mm)") },
                         singleLine = true,
                         modifier = Modifier
@@ -906,7 +953,7 @@ fun CreateEditHabitFormContent(
         ) {
             if (initialHabit != null && onDelete != null) {
                 IconButton(
-                    onClick = { onDelete(initialHabit.id) },
+                    onClick = { showDeleteConfirmDialog = true },
                     modifier = Modifier
                         .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                         .testTag("delete_habit_btn")
@@ -1024,5 +1071,47 @@ fun CreateEditHabitFormContent(
                 Text("Save")
             }
         }
+    }
+
+    if (showDeleteConfirmDialog && initialHabit != null && onDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            title = { Text("Delete \"" + initialHabit.name + "\" permanently?") },
+            text = {
+                Text(
+                    "This removes the habit, its logged sessions, and its streak runs. " +
+                        "Any journal reflections linked to this habit will be preserved safely. " +
+                        "You will have 8 seconds to Undo after confirming."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirmDialog = false
+                        onDelete(initialHabit.id)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    ),
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .testTag("confirm_delete_habit_btn")
+                ) {
+                    Text("Delete Habit")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showDeleteConfirmDialog = false },
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .testTag("cancel_delete_habit_btn")
+                ) {
+                    Text("Cancel")
+                }
+            },
+            modifier = Modifier.testTag("delete_habit_confirm_dialog")
+        )
     }
 }

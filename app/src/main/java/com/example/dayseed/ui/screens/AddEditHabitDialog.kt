@@ -17,8 +17,10 @@ fun AddEditHabitDialog(
     initialHabit: Habit?,
     alreadyLoggedToday: Boolean = false,
     suggestedReminderTime: String? = null,
+    saveErrorMessage: String? = null,
+    onClearSaveError: () -> Unit = {},
     onDismiss: () -> Unit,
-    onSave: (habit: Habit, applyTodayWhenLogged: Boolean) -> Unit,
+    onSave: (habit: Habit, applyTodayWhenLogged: Boolean) -> Boolean,
     onDelete: ((String) -> Unit)? = null
 ) {
     Dialog(
@@ -37,11 +39,10 @@ fun AddEditHabitDialog(
                 alreadyLoggedToday = alreadyLoggedToday,
                 suggestedReminderTime = suggestedReminderTime,
                 isFullScreen = false,
+                saveErrorMessage = saveErrorMessage,
+                onClearSaveError = onClearSaveError,
                 onDismiss = onDismiss,
-                onSave = { habit, applyTodayWhenLogged ->
-                    onSave(habit, applyTodayWhenLogged)
-                    true
-                },
+                onSave = onSave,
                 onDelete = onDelete
             )
         }

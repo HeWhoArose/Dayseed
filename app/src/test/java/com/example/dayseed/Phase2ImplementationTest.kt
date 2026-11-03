@@ -18,6 +18,7 @@ import com.example.dayseed.data.TargetPeriod
 import com.example.dayseed.data.TestDayseedClock
 import com.example.dayseed.data.TrackingMode
 import com.example.dayseed.data.WeekdayMask
+import com.example.dayseed.ui.components.newlyEndedRunIds
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -1023,6 +1024,12 @@ class Phase2ImplementationTest {
         assertTrue(viewModel.secondaryRouteStack.value.isEmpty())
         assertEquals(null, viewModel.currentSecondaryRoute.value)
         assertEquals(NavTab.HABITS, viewModel.selectedTab.value)
+        assertNotNull(viewModel.activeUndoToken.value)
+
+        // The deletion Undo remains available after navigation returns to Habits.
+        viewModel.triggerUndo()
+        assertTrue(repository.loadHabitsSync().any { it.habitId == habitFromHabits.habitId })
+        assertNull(viewModel.activeUndoToken.value)
     }
 
     @Test
@@ -1209,7 +1216,7 @@ class Phase2ImplementationTest {
         assertEquals(BigInteger.valueOf(3), summaryThu.weekTargetUnits)
         assertEquals(ProgressBand.GOAL_MET, summaryThu.weekProgressBand)
         assertEquals(
-            DerivedDayStatus.UNSCHEDULED,
+            DerivedDayStatus.OPEN_TODAY,
             repository.evaluateDerivedDayStatus(sessionHabit.habitId, LocalDate.of(2026, 3, 19))
         )
 
@@ -1332,6 +1339,11 @@ class Phase2ImplementationTest {
             "Satisfied flexible weekly habit (3/3) must move to Not scheduled today on non-preferred Thursday",
             repository.loadHabitSummariesSync()[flexHabit.habitId]!!.isScheduledToday
         )
+        assertEquals(
+            "A satisfied flexible weekly habit must be UNSCHEDULED on a non-preferred weekday",
+            DerivedDayStatus.UNSCHEDULED,
+            repository.evaluateDerivedDayStatus(flexHabit.habitId, LocalDate.of(2026, 3, 19))
+        )
         assertTrue(repository.loadHabitSummariesSync()[dailyHabit.habitId]!!.isScheduledToday)
         assertFalse(repository.loadHabitSummariesSync()[selectedWeekdaysHabit.habitId]!!.isScheduledToday)
 
@@ -1349,8 +1361,73 @@ class Phase2ImplementationTest {
             "Satisfied flexible weekly habit must remain scheduled on preferred Friday",
             repository.loadHabitSummariesSync()[flexHabit.habitId]!!.isScheduledToday
         )
+        assertEquals(
+            "A satisfied flexible weekly habit must remain scheduled on a preferred weekday",
+            DerivedDayStatus.OPEN_TODAY,
+            repository.evaluateDerivedDayStatus(flexHabit.habitId, LocalDate.of(2026, 3, 20))
+        )
         assertTrue(repository.loadHabitSummariesSync()[dailyHabit.habitId]!!.isScheduledToday)
         assertTrue(repository.loadHabitSummariesSync()[selectedWeekdaysHabit.habitId]!!.isScheduledToday)
+    }
+
+    @Test
+    fun t2_c05_recordSessionOperationsReturnSuccessOnlyWhenRepositoryMutationSucceeds() {
+        // Missing records must be reported as failures so RecordSessionSheet stays open.
+        assertFalse(viewModel.updateHabitEntry("missing_entry", 5, "missing"))
+        assertFalse(viewModel.deleteHabitEntry("missing_entry"))
+
+        val quantityHabit = Habit(
+            habitId = "h_corr_e_record",
+            name = "Read Pages",
+            trackingMode = TrackingMode.QUANTITY,
+            unitCode = "pages",
+            targetPeriod = TargetPeriod.DAY,
+            targetValue = 20,
+            createdAtUtcMs = testClock.nowUtcMs()
+        )
+        repository.saveHabitSync(quantityHabit, effectiveDateOverride = testClock.todayLocal())
+        assertFalse(viewModel.logHabitQuantityOrDuration(quantityHabit, -1, testClock.todayLocal(), "Invalid session"))
+        assertTrue(viewModel.logHabitQuantityOrDuration(quantityHabit, 5, testClock.todayLocal(), "First session"))
+
+        val recordedEntry = repository.loadHabitEntriesSync().single { it.habitId == quantityHabit.habitId }
+        assertTrue(viewModel.updateHabitEntry(recordedEntry.entryId, 7, "Updated session"))
+        assertEquals(7, repository.loadHabitEntriesSync().single { it.entryId == recordedEntry.entryId }.valueUnits)
+
+        assertTrue(viewModel.deleteHabitEntry(recordedEntry.entryId))
+        assertTrue(repository.loadHabitEntriesSync().none { it.entryId == recordedEntry.entryId })
+
+        val completionHabit = Habit(
+            habitId = "h_corr_e_completion",
+            name = "Morning Check-In",
+            trackingMode = TrackingMode.COMPLETION_ONLY,
+            targetPeriod = TargetPeriod.DAY,
+            createdAtUtcMs = testClock.nowUtcMs()
+        )
+        repository.saveHabitSync(completionHabit, effectiveDateOverride = testClock.todayLocal())
+        assertTrue(viewModel.logHabit(completionHabit, date = testClock.todayLocal()))
+        assertNotNull(repository.getOutcomeForHabitOnDate(completionHabit.habitId, testClock.todayLocal()))
+    }
+
+    @Test
+    fun t2_c06_groveRunEndingAnimationTriggersOnlyForNewActiveToEndedTransitions() {
+        val previous = mapOf(
+            "active_run" to true,
+            "already_dormant" to false
+        )
+        val current = mapOf(
+            "active_run" to false,
+            "already_dormant" to false,
+            "newly_dormant_grove_run" to false,
+            "new_active_run" to true
+        )
+
+        assertEquals(
+            setOf("active_run", "newly_dormant_grove_run"),
+            newlyEndedRunIds(previous, current)
+        )
+
+        // Recomposition with the same snapshot and initial load of an already-ended run do not replay.
+        assertTrue(newlyEndedRunIds(current, current).isEmpty())
     }
 }
 

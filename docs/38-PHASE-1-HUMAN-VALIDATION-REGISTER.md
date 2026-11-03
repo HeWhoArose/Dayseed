@@ -350,8 +350,9 @@ The following five human/device validation cases cover the Phase 2 targeted reme
   2. Tap the `Edit` action to open `Create/Edit Habit`.
   3. Change the habit description or name and tap `Save`.
   4. Re-open `Edit` from `Habit Detail` and tap `Cancel` / system Back.
-  5. On a disposable synthetic habit, open `Habit Detail` from `Habits`, tap `Edit`, and delete the habit.
-- **Expected:** Saving or cancelling from `Habit Detail -> Edit` pops only `Create/Edit Habit` once and returns directly to `Habit Detail` for that same habit (showing the updated fields), rather than double-popping to `Today` or `Habits`. Deleting a habit from `Habit Detail -> Edit` removes both the editor and the deleted habit's detail route and returns cleanly to `Habits`.
+  5. On a disposable synthetic habit, open `Habit Detail` from `Habits`, tap `Edit`, and tap the delete icon.
+  6. Inspect the confirmation dialog, choose `Cancel`, and verify the habit remains. Repeat and confirm deletion.
+- **Expected:** Saving or cancelling from `Habit Detail -> Edit` pops only `Create/Edit Habit` once and returns directly to `Habit Detail` for that same habit (showing the updated fields), rather than double-popping to `Today` or `Habits`. Deleting from the editor first shows a destructive confirmation dialog; `Cancel` leaves the habit and editor intact, while confirmation deletes the habit, removes both the editor and deleted detail route, and returns cleanly to `Habits`. The `Habits` destination must display the guarded 8-second `undo_action_banner`; tapping `Undo` restores the habit, its sessions, and its journal links.
 
 ### P2-C02 — Failed save keeps editor open with inline error banner and preserves form inputs
 
@@ -360,7 +361,7 @@ The following five human/device validation cases cover the Phase 2 targeted reme
   1. Log any activity (or `0` check-in) for a habit on `Today`.
   2. Open `Edit Habit`, change the target value or unit, select `Apply today` in the `D-194` effective-timing prompt, and tap `Save`.
   3. Inspect the editor state, then select `Apply tomorrow` and tap `Save`.
-- **Expected:** The `Apply today` save is rejected without any silent fallback to `Apply tomorrow`; `Create/Edit Habit` remains open with all entered fields preserved and displays the inline error banner (`habit_save_error_banner`) explaining why today's configuration is locked. Selecting `Apply tomorrow` clears the error banner and saves cleanly.
+- **Expected:** The `Apply today` save is rejected without any silent fallback to `Apply tomorrow`; `Create/Edit Habit` remains open with all entered fields preserved and displays the inline error banner (`habit_save_error_banner`) explaining why today's configuration is locked. Editing the name, target, unit, schedule, reminder, or another relevant field clears the stale banner immediately. Selecting `Apply tomorrow` or retrying a valid save also clears the banner and saves cleanly. The compatibility dialog fallback must show the same lock and failed-save feedback if that legacy path is exercised by a test harness.
 
 ### P2-C03 — Explicit zero check-in locks today's configuration (`D-194`)
 
@@ -380,7 +381,7 @@ The following five human/device validation cases cover the Phase 2 targeted reme
   3. Inspect `Today` and `Habit Detail`.
   4. Record an explicit `0` check-in on day 3.
   5. Edit one positive session's value, delete one positive session, and tap `Undo` within 8 seconds.
-- **Expected:** Progress displays `2 / 3 sessions` (`66%`, `Halfway`), not `40 / 3`. The explicit `0` check-in remains recorded as `Checked in (0 recorded)` on day 3 while keeping weekly progress at `2 / 3 sessions`. Deleting a positive session reduces weekly progress to `1 / 3 sessions`, and tapping `Undo` restores `2 / 3 sessions`.
+- **Expected:** Progress displays `2 / 3 sessions` (`66%`, `Halfway`), not `40 / 3`. The Record Session preview shows the number of positive session records for the selected date, not the sum of their raw numeric values; a new session defaults to a value of `1` and the UI explains that any positive value counts as one session. The explicit `0` check-in remains recorded as `Checked in (0 recorded)` on day 3 while keeping weekly progress at `2 / 3 sessions`. Deleting a positive session reduces weekly progress to `1 / 3 sessions`, and tapping `Undo` restores `2 / 3 sessions`.
 
 ### P2-C05 — Flexible weekly habit partition on `Today` before and after weekly target satisfaction
 
@@ -390,6 +391,17 @@ The following five human/device validation cases cover the Phase 2 targeted reme
   2. View `Today` on a non-preferred weekday (e.g. `Tue` or `Thu`) while weekly progress is `< 3 / 3`.
   3. Complete the 3rd session so weekly progress reaches `3 / 3` (`Goal met`), then view `Today` on a non-preferred weekday (`Thu`) and on a preferred weekday (`Fri`).
   4. Expand `"Not scheduled today"` on `Thu` and log a bonus 4th session.
-- **Expected:** Before reaching `3 / 3`, the habit appears under `"Scheduled today"` on every day of the week (preferred and non-preferred). After reaching `3 / 3`, it moves to `"Not scheduled today"` on non-preferred days (`Thu`), remains under `"Scheduled today"` on preferred days (`Fri`), and still permits bonus session logging (`4 / 3 sessions`, `133%`, `Extra`).
+- **Expected:** Before reaching `3 / 3`, the habit appears under `"Scheduled today"` on every day of the week (preferred and non-preferred). After reaching `3 / 3`, it moves to `"Not scheduled today"` on non-preferred days (`Thu`), remains under `"Scheduled today"` on preferred days (`Fri`), and still permits bonus session logging (`4 / 3 sessions`, `133%`, `Extra`). The selected-date status must agree: a satisfied non-preferred Thursday is `UNSCHEDULED`, while a preferred Friday remains an eligible scheduled day (not `UNSCHEDULED`).
 
 
+
+
+### P2-C06 — Grove run-ending animation is event-driven and respects reduced motion
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Ensure system/app reduced motion is disabled and open `Today`.
+  2. Using a disposable synthetic habit with an active streak, trigger a run-ending transition while `Today` remains visible (use the controlled test clock/seeded data procedure).
+  3. Observe the Grove-preservation notice, then trigger ordinary recomposition without ending another run.
+  4. Repeat with reduced motion enabled and a different run ending.
+- **Expected:** The notice animates once for the newly ended run, does not replay on ordinary recomposition or initial loading of an already-ended run, and appears without motion when reduced motion is enabled.

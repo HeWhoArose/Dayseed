@@ -3,7 +3,8 @@
 ## 1. Execution Rules, Baseline Verification & Branch Discipline
 
 1. **Scope & Phase 3 Prohibition:**
-   - This task is strictly limited to remediating the four identified Phase 2 defects (Corrections A, B, C, and D), adding regression tests, updating the human validation register (`P2-C01`–`P2-C05`) and canonical documentation, and producing an evidence-backed Phase 2 completion report.
+   - The original targeted remediation covered Corrections A–D. The independent final source audit expanded the follow-up to Corrections E–I after finding additional gaps in save-error lifecycle, legacy editor parity, flexible-weekly selected-date status, Record Session failure handling/session-count preview, destructive delete confirmation, deletion Undo reachability, and the run-ending Grove animation.
+   - This execution record covers Corrections A–I, the expanded automated regression tests (`t2_c01`–`t2_c06)), the Android validation workflow, and canonical documentation/traceability updates. The canonical `implementation_plan.md` and handover are authoritative.
    - **Explicit Phase 3 Prohibition:** Do **not** begin Phase 3 (Journal, Calendar, History, Insights, or any new feature scope) under any circumstances. Completing these corrections does not authorise starting Phase 3.
 2. **Baseline Commit Verification & Dedicated Correction Branch:**
    - Before editing any file, run:
@@ -11,7 +12,7 @@
      - `git rev-parse HEAD`
      - `git branch --show-current`
      - `git ls-remote origin refs/heads/main`
-   - Verify that the workspace matches the expected Phase 2 baseline commit (`ea0b8d8221dc6eddb4be6ffbf0346630900725a5` or current verified head if reconciled) and that remote `main` has not advanced past the local baseline. If remote `main` has advanced, stop and reconcile first.
+   - Verify the current repository baseline is `main` at `cbc2718bb803315de6ad03d570f960ea59fe57cd`. The original A–D correction commit was present on main; this final follow-up is isolated on `fix/phase-2-final-remediation-audit` and must not be merged without explicit owner approval.
    - Create and switch to a dedicated correction branch before making code or documentation changes (do not implement directly on `main`):
      - `git checkout -b fix/phase-2-remediation-before-phase-3`
 3. **Preservation & Integrity Rules:**
@@ -329,14 +330,11 @@ Append the following five Phase 2 correction human-validation items to `docs/38-
 
 ### 8.2 Final Evidence Report Structure
 Upon completing implementation and verification, produce the final report containing:
-1. Inspected baseline commit SHA, branch name, date/time (with timezone), and remote comparison result.
-2. Root-cause summary and exact file/line changes for Correction A.
-3. Root-cause summary and exact file/line changes for Correction B.
-4. Root-cause summary and exact file/line changes for Correction C.
-5. Root-cause summary and exact file/line changes for Correction D.
-6. Summary of new automated regression tests added for Corrections A–D.
-7. Exact executed commands (`gradle :app:testDebugUnitTest --rerun-tasks` and `gradle :app:assembleDebug`), exit codes, test counts, and retained report/APK paths.
-8. Updated documentation and traceability files (`docs/38-PHASE-1-HUMAN-VALIDATION-REGISTER.md`, `docs/26-SCREEN-AND-DATA-CONTRACTS.md`, `docs/28-REQUIREMENT-TRACEABILITY.md`, `docs/12-PROGRESS-AND-HANDOVER.md`, `implementation_plan.md`).
-9. Human validation register summary (`P2-C01`–`P2-C05` all marked `NOT RUN`).
-10. Remaining limitations and confirmation that Phase 3 has not been started.
-11. Final status declaration: `AUTOMATED CORRECTIONS PASSED — HUMAN VALIDATION PENDING`.
+1. Inspected baseline commit SHA, follow-up branch, PR number, and base/head comparison.
+2. Root-cause and correction summary for A–I, with exact changed files.
+3. Summary of all regression tests added/expanded (`t2_c01`–`t2_c06`) and the exact workflow result for the PR head.
+4. Exact Gradle commands, exit codes, test counts, and retained report/APK artifact links from GitHub Actions.
+5. Updated canonical documentation, traceability, screen contracts, handover, and this execution artifact.
+6. Human validation register summary: P2-C01–P2-C06 and P2-H01–P2-H17 remain `NOT RUN` until performed on a device/emulator.
+7. Remaining limitations and confirmation that Phase 3 has not been started.
+8. Final status must distinguish automated CI results from pending human/device validation; do not declare Phase 2 fully accepted while a required check remains outstanding.

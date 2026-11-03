@@ -474,7 +474,7 @@ class DayseedViewModel @JvmOverloads constructor(
         effortLevel: EffortLevel = EffortLevel.USUAL,
         note: String = "",
         idempotencyKey: String? = null
-    ) {
+    ): Boolean {
         val mode = habit.trackingMode.canonical()
         val nowMs = repository.clock.nowUtcMs()
         val sig = "OUTCOME:${habit.habitId}:$date:${outcome.name}:${effortLevel.name}:$note"
@@ -494,7 +494,7 @@ class DayseedViewModel @JvmOverloads constructor(
             newKey
         }
 
-        try {
+        return try {
             if (mode == TrackingMode.COMPLETION_ONLY) {
                 repository.logHabitDayOutcomeSync(
                     habitId = habit.habitId,
@@ -521,8 +521,10 @@ class DayseedViewModel @JvmOverloads constructor(
                 )
                 _userMessage.value = "${effortLevel.symbol()} ${habit.name}: ${effortLevel.displayName()} recorded"
             }
+            true
         } catch (e: Exception) {
             _userMessage.value = e.message ?: "Unable to record activity"
+            false
         }
     }
 
@@ -532,7 +534,7 @@ class DayseedViewModel @JvmOverloads constructor(
         date: LocalDate = repository.clock.todayLocal(),
         entryNote: String? = null,
         idempotencyKey: String? = null
-    ) {
+    ): Boolean {
         val nowMs = repository.clock.nowUtcMs()
         val sig = "ENTRY:${habit.habitId}:$date:$valueUnits:${entryNote.orEmpty()}"
         val resolvedKey = if (idempotencyKey != null) {
@@ -550,7 +552,7 @@ class DayseedViewModel @JvmOverloads constructor(
             newKey
         }
 
-        try {
+        return try {
             repository.logHabitEntrySync(
                 habitId = habit.habitId,
                 date = date,
@@ -564,24 +566,42 @@ class DayseedViewModel @JvmOverloads constructor(
             } else {
                 "Added +$valueUnits $unitLabel for ${habit.name}"
             }
+            true
         } catch (e: Exception) {
             _userMessage.value = e.message ?: "Unable to log session"
+            false
         }
     }
 
-    fun updateHabitEntry(entryId: String, newValueUnits: Int, newEntryNote: String?) {
-        try {
-            repository.updateHabitEntrySync(entryId, newValueUnits, newEntryNote)
-            _userMessage.value = "Session updated"
+    fun updateHabitEntry(entryId: String, newValueUnits: Int, newEntryNote: String?): Boolean {
+        return try {
+            val undoToken = repository.updateHabitEntrySync(entryId, newValueUnits, newEntryNote)
+            if (undoToken == null) {
+                _userMessage.value = "Session no longer exists and could not be updated"
+                false
+            } else {
+                _userMessage.value = "Session updated"
+                true
+            }
         } catch (e: Exception) {
             _userMessage.value = e.message ?: "Unable to update session"
+            false
         }
     }
 
-    fun deleteHabitEntry(entryId: String) {
-        val token = repository.deleteHabitEntryWithUndoSync(entryId)
-        if (token != null) {
-            _userMessage.value = "Session deleted"
+    fun deleteHabitEntry(entryId: String): Boolean {
+        return try {
+            val token = repository.deleteHabitEntryWithUndoSync(entryId)
+            if (token != null) {
+                _userMessage.value = "Session deleted"
+                true
+            } else {
+                _userMessage.value = "Unable to delete session"
+                false
+            }
+        } catch (e: Exception) {
+            _userMessage.value = e.message ?: "Unable to delete session"
+            false
         }
     }
 
