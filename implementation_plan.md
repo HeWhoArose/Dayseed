@@ -938,3 +938,6 @@ A full source-level pass over the Phase 2 feature surface and the 26-method `Pha
    - The source/test map covers T2-01 through T2-51 across navigation, Today, Habits, create/edit, weekly targets, D-194, record/correct/Undo, lifecycle, Grove, reduced motion, and idempotent quick actions.
    - All Phase 2 human/device cases P2-H01 through P2-H17 and targeted cases P2-C01 through P2-C05 remain `NOT RUN`; this source audit does not substitute for device validation.
    - Phase 3, Stage C independent validation, Stage D owner acceptance, release approval, and merge remain separate gates and are not authorised by this addendum.
+
+
+6. **Correction H — Destructive deletion confirmation parity:** The shared Create/Edit form now opens a confirmation dialog before calling the existing permanent-delete/8-second-Undo ViewModel path. Cancel preserves the habit; confirm invokes the existing route cleanup. P2-C01 now explicitly checks both outcomes and remains deferred for device validation.
