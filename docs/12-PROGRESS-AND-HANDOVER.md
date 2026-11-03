@@ -728,3 +728,6 @@ A further GitHub source audit was performed against the current `main` baseline 
 The dedicated follow-up branch `fix/phase-2-final-remediation-audit` addresses these points, extends the regression test for preferred/non-preferred date status, and adds a pinned Gradle/Android SDK GitHub Actions workflow so the exact PR commit can be tested. The workflow has not yet produced a result at the time this note was written. The historical 85/85 Stage B self-check remains a recorded report, not independently reproduced evidence.
 
 The legacy AI Studio correction-plan artifact under `.aistudio/artifacts/brain/` is retained as a historical task input; the canonical implementation plan and this handover remain authoritative. No human/device case is marked complete, and Phase 3 remains outside this remediation.
+
+
+A further review of the Record Session journey found that the ViewModel swallowed repository failures and the screen navigated back regardless, which could discard an unsaved session edit. The follow-up now returns success/failure from create/update/delete operations and keeps the Record Session editor open on failure. It also corrects the weekly `sessions` input/preview so the selected-date count reflects positive session records rather than summing their raw numeric values. Regression test `t2_c05` covers successful and rejected repository mutations.
