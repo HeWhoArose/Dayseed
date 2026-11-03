@@ -913,7 +913,7 @@ Before starting Phase 3, four targeted Phase 2 defects (`Correction A` through `
 
 ## 16. Phase 2 Final Audit Addendum — Follow-up Corrections (2026-11-03)
 
-A full source-level pass over the Phase 2 feature surface and the 26-method `Phase2ImplementationTest` suite found three additional correctness gaps beyond the earlier Corrections A–D. This follow-up is isolated on `fix/phase-2-final-remediation-audit`; it does not start Phase 3.
+A full source-level pass over the Phase 2 feature surface and the original 26-method `Phase2ImplementationTest` suite found additional correctness gaps beyond the earlier Corrections A–D. The follow-up expanded the suite to 28 test methods (`t2_c01`–`t2_c06`). This follow-up is isolated on `fix/phase-2-final-remediation-audit`; it does not start Phase 3.
 
 1. **Correction E — Save-error lifecycle and legacy editor compatibility:**
    - Clear `lastSaveError` when the user changes any relevant field in `CreateEditHabitFormContent` (identity, description/category, lifetime goal, color, measurement mode/unit, target/period, schedule/weekdays, reminder, and legacy effort descriptions), not only when retrying or changing the D-194 timing chips.
