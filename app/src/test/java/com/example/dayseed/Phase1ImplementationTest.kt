@@ -1279,6 +1279,15 @@ class Phase1ImplementationTest {
                 }
                 assertTrue(sessionForeignKeyFound)
             }
+            db.rawQuery("PRAGMA table_info(restore_conflicts)", null).use { c ->
+                var conflictIdIsPrimaryKey = false
+                while (c.moveToNext()) {
+                    if (c.getString(c.getColumnIndexOrThrow("name")) == "conflict_id") {
+                        conflictIdIsPrimaryKey = c.getInt(c.getColumnIndexOrThrow("pk")) == 1
+                    }
+                }
+                assertTrue(conflictIdIsPrimaryKey)
+            }
 
             // All canonical app-managed indexes and triggers must exist after reconciliation.
             val actualIndexes = mutableSetOf<String>()
@@ -1314,6 +1323,9 @@ class Phase1ImplementationTest {
             reopenedDb.rawQuery("PRAGMA integrity_check", null).use { c ->
                 assertTrue(c.moveToFirst())
                 assertEquals("ok", c.getString(0))
+            }
+            reopenedDb.rawQuery("PRAGMA foreign_key_check", null).use { c ->
+                assertFalse(c.moveToFirst())
             }
             reopenedDb.rawQuery("SELECT COUNT(*) FROM restore_conflicts WHERE conflict_id IN ('rc_existing', 'rc_streak')", null).use { c ->
                 assertTrue(c.moveToFirst())
