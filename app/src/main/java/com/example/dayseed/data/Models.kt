@@ -440,6 +440,62 @@ data class Habit(
     }
 
     fun isScheduledFor(date: LocalDate): Boolean = isScheduledFor(date.dayOfWeek)
+
+    fun formatTargetAndPeriodSummary(): String {
+        val mode = trackingMode.canonical()
+        val periodSuffix = if (targetPeriod == TargetPeriod.WEEK) "week" else "day"
+        return when (mode) {
+            TrackingMode.QUANTITY, TrackingMode.DURATION -> {
+                val target = (targetValue ?: 1).coerceAtLeast(1)
+                val unit = unitCode?.ifBlank { if (mode == TrackingMode.DURATION) "min" else "units" }
+                    ?: if (mode == TrackingMode.DURATION) "min" else "units"
+                "$target $unit / $periodSuffix"
+            }
+            TrackingMode.COMPLETION_ONLY -> {
+                if (targetPeriod == TargetPeriod.WEEK) {
+                    val target = (targetValue ?: 1).coerceIn(1, 7)
+                    val unitWord = if (target == 1) "day" else "days"
+                    "$target $unitWord / week"
+                } else {
+                    "1 check-off / day"
+                }
+            }
+            TrackingMode.EFFORT_AWARE, TrackingMode.EFFORT_LEVELS -> {
+                if (targetPeriod == TargetPeriod.WEEK) {
+                    val target = (targetValue ?: 1).coerceAtLeast(1)
+                    "$target days / week (Effort)"
+                } else {
+                    "Tiny • Usual • Extra / day"
+                }
+            }
+        }
+    }
+
+    fun formatScheduleSummary(): String {
+        return when (scheduleKind) {
+            ScheduleKind.DAILY -> "Every day"
+            ScheduleKind.SELECTED_WEEKDAYS -> {
+                val days = WeekdayMask.fromMask(scheduledWeekdaysMask ?: WeekdayMask.toMask(scheduleDays))
+                if (days.size == 7) {
+                    "Every day"
+                } else {
+                    DayOfWeek.entries.filter { it in days }
+                        .joinToString(", ") { it.name.take(3).lowercase().replaceFirstChar { c -> c.uppercase() } }
+                }
+            }
+            ScheduleKind.FLEXIBLE_WEEKLY_TARGET -> {
+                val prefMask = preferredWeekdaysMask
+                if (prefMask != null && prefMask in 1 until WeekdayMask.ALL_DAYS_MASK) {
+                    val days = WeekdayMask.fromMask(prefMask)
+                    val label = DayOfWeek.entries.filter { it in days }
+                        .joinToString(", ") { it.name.take(3).lowercase().replaceFirstChar { c -> c.uppercase() } }
+                    "Flexible weekly (Pref: $label)"
+                } else {
+                    "Flexible weekly"
+                }
+            }
+        }
+    }
 }
 
 data class HabitEntry(
@@ -638,8 +694,114 @@ data class HabitSummary(
     val lifetimeGoalDays: Int?,
     val isScheduledToday: Boolean,
     val hasRestDayToday: Boolean,
-    val canTakeRestDayToday: Boolean
-)
+    val canTakeRestDayToday: Boolean,
+    val weekTotalUnits: BigInteger = BigInteger.ZERO,
+    val weekTargetUnits: BigInteger = BigInteger.ONE,
+    val weekProgressBand: ProgressBand = ProgressBand.ZERO,
+    val weekPercentage: Int = 0,
+    val weekStartLocalDate: String = "",
+    val weekEndLocalDate: String = ""
+) {
+    val activeProgressBand: ProgressBand
+        get() = if (effectiveVersion.targetPeriod == TargetPeriod.WEEK) weekProgressBand else todayProgressBand
+
+    val activeTotalUnits: BigInteger
+        get() = if (effectiveVersion.targetPeriod == TargetPeriod.WEEK) weekTotalUnits else todayTotalUnits
+
+    val activeTargetUnits: BigInteger
+        get() = if (effectiveVersion.targetPeriod == TargetPeriod.WEEK) {
+            weekTargetUnits
+        } else {
+            BigInteger.valueOf((effectiveVersion.targetValue ?: 1).coerceAtLeast(1).toLong())
+        }
+
+    val activePercentage: Int
+        get() = if (effectiveVersion.targetPeriod == TargetPeriod.WEEK) weekPercentage else todayPercentage
+
+    fun formatTargetAndPeriodSummary(): String {
+        val v = effectiveVersion
+        val mode = v.trackingMode.canonical()
+        val periodSuffix = if (v.targetPeriod == TargetPeriod.WEEK) "week" else "day"
+        return when (mode) {
+            TrackingMode.QUANTITY, TrackingMode.DURATION -> {
+                val target = (v.targetValue ?: 1).coerceAtLeast(1)
+                val unit = v.unitCode?.ifBlank { if (mode == TrackingMode.DURATION) "min" else "units" }
+                    ?: if (mode == TrackingMode.DURATION) "min" else "units"
+                "$target $unit / $periodSuffix"
+            }
+            TrackingMode.COMPLETION_ONLY -> {
+                if (v.targetPeriod == TargetPeriod.WEEK) {
+                    val target = (v.targetValue ?: 1).coerceIn(1, 7)
+                    val unitWord = if (target == 1) "day" else "days"
+                    "$target $unitWord / week"
+                } else {
+                    "1 check-off / day"
+                }
+            }
+            TrackingMode.EFFORT_AWARE, TrackingMode.EFFORT_LEVELS -> {
+                if (v.targetPeriod == TargetPeriod.WEEK) {
+                    val target = (v.targetValue ?: 1).coerceAtLeast(1)
+                    "$target days / week (Effort)"
+                } else {
+                    "Tiny • Usual • Extra / day"
+                }
+            }
+        }
+    }
+
+    fun formatScheduleSummary(): String {
+        val v = effectiveVersion
+        return when (v.scheduleKind) {
+            ScheduleKind.DAILY -> "Every day"
+            ScheduleKind.SELECTED_WEEKDAYS -> {
+                val days = WeekdayMask.fromMask(v.scheduledWeekdaysMask ?: WeekdayMask.ALL_DAYS_MASK)
+                if (days.size == 7) {
+                    "Every day"
+                } else {
+                    DayOfWeek.entries.filter { it in days }
+                        .joinToString(", ") { it.name.take(3).lowercase().replaceFirstChar { c -> c.uppercase() } }
+                }
+            }
+            ScheduleKind.FLEXIBLE_WEEKLY_TARGET -> {
+                val prefMask = v.preferredWeekdaysMask
+                if (prefMask != null && prefMask in 1 until WeekdayMask.ALL_DAYS_MASK) {
+                    val days = WeekdayMask.fromMask(prefMask)
+                    val label = DayOfWeek.entries.filter { it in days }
+                        .joinToString(", ") { it.name.take(3).lowercase().replaceFirstChar { c -> c.uppercase() } }
+                    "Flexible weekly (Pref: $label)"
+                } else {
+                    "Flexible weekly"
+                }
+            }
+        }
+    }
+}
+
+data class LongestActiveStreakSelection(
+    val habit: Habit,
+    val run: HabitStreakRun,
+    val elapsedActiveSpanCount: Int,
+    val completedStreakCount: Int,
+    val streakUnit: StreakUnit
+) {
+    val activeRun: HabitStreakRun get() = run
+    val habitId: String get() = habit.habitId
+
+    val explicitUnitLabel: String
+        get() = if (streakUnit == StreakUnit.WEEKS) "weeks" else "days"
+
+    fun formatIndicatorText(): String {
+        return if (streakUnit == StreakUnit.WEEKS) {
+            "${habit.name} • $completedStreakCount weeks ($elapsedActiveSpanCount days active span)"
+        } else {
+            if (completedStreakCount == elapsedActiveSpanCount) {
+                "${habit.name} • $elapsedActiveSpanCount days"
+            } else {
+                "${habit.name} • $elapsedActiveSpanCount days ($completedStreakCount completed)"
+            }
+        }
+    }
+}
 
 data class HabitDeletionPayload(
     val habit: Habit,

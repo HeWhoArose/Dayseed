@@ -264,3 +264,23 @@ All affected screens must implement the following state distinctions:
 - Reconciliation and open gates: `25-DECISION-REGISTER-AND-RECONCILIATION.md`
 - Requirement-to-test mapping: `28-REQUIREMENT-TRACEABILITY.md`
 - Design tokens/components: `DESIGN.md`
+
+## 6. Phase 2 Implemented Screen, Navigation, Streak/Grove & Session-Undo Contracts (2026-11-03, Stage B)
+
+1. **Five-Destination Bottom Navigation & Secondary Route Stack (`D-215`):**
+   - Primary bottom navigation destinations: `Today`, `Habits`, `Journal`, `Insights`, and `Settings`.
+   - Secondary routes (`SecondaryRoute`): `HabitDetail(habitId, selectedDate)`, `CreateEditHabit(habitId)`, `RecordSession(habitId, selectedDate, entryId)`, `LivingGrove(filterHabitId)`, and `CollectedMomentsDetail(initialYearMonth)`.
+   - Both system Back (`BackHandler`) and top-bar Back pop one level of the secondary route stack and restore the exact parent tab, selected date, `Habits` filter/search/scroll state, and `Today` scroll position without resetting to `Today`.
+2. **`Today` Screen & `HabitCard` (`W1`, `D-040`, `D-210`, `D-211`, `D-216` Option A, `D-217`):**
+   - Preserves `DaypartHeaderBanner` artwork and greeting; displays a single longest active streak indicator pill (`selectLongestActiveRun`) with explicit `"days"` or `"weeks"` unit labels, opening `LivingGrove` on tap.
+   - Separates scheduled habits from a collapsible `"Not scheduled today"` section supporting extra/unscheduled logging (`U-2`, `U-7`).
+   - Displays derived `D-040` progress band labels (`Zero logged`, `Tiny`, `Small`, `Halfway`, `Nearly there`, `Goal met`, `Extra`, `Huge`), fractional-safe badges, and both `encouragementQuote` and `motivationQuote` (`D-216` Option A).
+   - Guards rapid duplicate quick-action taps within `350 ms` by reusing the first tap's `idempotencyKey`.
+   - Tapping the `Collected moments` (`G2`) card opens `CollectedMomentsDetailSheet` (`G3` month selector, recorded duration total, active days, session count, and per-session drill-down).
+3. **`Habits` Directory & Full-Screen `CreateEditHabitScreen` (`D-194`, `D-195`, `D-216`, `U-12`):**
+   - `HabitsScreen` provides `All`, `Active`, `Paused`, `Completed`, and `Archived` filter chips, name/category search, and contiguous `0..N-1` `sort_order` manual reordering (`reorderHabitSync`).
+   - `CreateEditHabitScreen` restricts new habits to `Quantity`, `Duration`, and `Simple check-off` (`COMPLETION_ONLY`) while preserving legacy `EFFORT_AWARE` edits, enforces `1..7 days/week` for weekly check-off habits, surfaces `Apply today` vs `Apply tomorrow` under `D-194` when today has recorded activity, and displays the `U-12` Option B weekly freeze notice when editing an active weekly habit mid-week.
+4. **`RecordSessionSheet`, `HabitDetailScreen` & `LivingGroveScreen` (`D-188`, `D-217`, `D-218`, `U-1`, `U-13`):**
+   - `RecordSessionSheet` enforces `earliestEffectiveDate <= selectedDate <= todayLocal()` (`D-188`), supports `+1/+5/+10` and `0 (Honest check-in)` chips, per-entry notes, individual session editing, and single-entry deletion with an 8-second guarded `UndoToken` (`deleteHabitEntryWithUndoSync`, rejecting Undo if a `REST_DAY` exception was recorded on the same date before Undo).
+   - `HabitDetailScreen` presents Identity/Configuration, Current Period Progress + dual quotes, Selected-Date Sessions/Notes/One-Off `Take a rest day` (on eligible `Today` dates), Recent 14-Day Strip, Streak & Grove History separating qualified Grove trees (`>= 7` active span days) from short runs (`1–6` span days, `UNQUALIFIED_HISTORY`), and Lifecycle Controls (`Pause`, `Resume`, `Mark as Completed`, `Archive`, and confirmed `Delete Permanently` with 8-second Undo).
+   - `LivingGroveScreen` renders custom Canvas botanical illustrations for saplings (`1–6d`), growing trees (`>= 7d`), dormant trees, and completed trees, honours system reduced-motion settings, and persists one-shot dormant transition acknowledgments in `app_settings` (`acknowledged_terminal_run_ids`).

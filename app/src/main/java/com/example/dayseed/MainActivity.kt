@@ -12,7 +12,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Eco
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Spa
@@ -29,19 +30,25 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import com.example.dayseed.ui.components.CollectedMomentsDetailSheet
+import com.example.dayseed.ui.components.LivingGroveScreen
 import com.example.dayseed.ui.screens.AddEditHabitDialog
+import com.example.dayseed.ui.screens.CreateEditHabitScreen
+import com.example.dayseed.ui.screens.HabitDetailScreen
+import com.example.dayseed.ui.screens.HabitsScreen
 import com.example.dayseed.ui.screens.HistoryScreen
 import com.example.dayseed.ui.screens.InsightsScreen
 import com.example.dayseed.ui.screens.JournalEditorDialog
+import com.example.dayseed.ui.screens.RecordSessionSheet
 import com.example.dayseed.ui.screens.SettingsScreen
-import androidx.compose.runtime.produceState
-import kotlinx.coroutines.delay
 import com.example.dayseed.ui.screens.TodayScreen
 import com.example.dayseed.ui.theme.DayseedTheme
 import com.example.dayseed.ui.theme.ThemeModeOption
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     private val viewModel: DayseedViewModel by viewModels()
@@ -74,6 +81,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun DayseedApp(viewModel: DayseedViewModel) {
     val selectedTab by viewModel.selectedTab.collectAsState()
+    val currentSecondaryRoute by viewModel.currentSecondaryRoute.collectAsState()
     val isAddHabitOpen by viewModel.isAddHabitOpen.collectAsState()
     val editingHabit by viewModel.editingHabit.collectAsState()
     val isJournalOpen by viewModel.isJournalEditorOpen.collectAsState()
@@ -82,6 +90,8 @@ fun DayseedApp(viewModel: DayseedViewModel) {
     val journalInitialLinkedHabitId by viewModel.journalInitialLinkedHabitId.collectAsState()
     val journalInitialPromptId by viewModel.journalInitialPromptId.collectAsState()
     val habits by viewModel.habits.collectAsState()
+    val streakRuns by viewModel.streakRuns.collectAsState()
+    val growthMetrics by viewModel.growthMetrics.collectAsState()
     val drafts by viewModel.journalDrafts.collectAsState()
     val userMessage by viewModel.userMessage.collectAsState()
 
@@ -94,10 +104,14 @@ fun DayseedApp(viewModel: DayseedViewModel) {
         }
     }
 
-    // Handle back button to return to Today tab
-    if (selectedTab != NavTab.TODAY) {
+    // BackHandler for secondary routes, dialogs, and non-Today primary tabs
+    val shouldInterceptBack = currentSecondaryRoute != null ||
+        isJournalOpen ||
+        isAddHabitOpen ||
+        selectedTab != NavTab.TODAY
+    if (shouldInterceptBack) {
         BackHandler {
-            viewModel.selectTab(NavTab.TODAY)
+            viewModel.navigateBack()
         }
     }
 
@@ -111,7 +125,7 @@ fun DayseedApp(viewModel: DayseedViewModel) {
                 contentColor = MaterialTheme.colorScheme.onSurface
             ) {
                 NavigationBarItem(
-                    selected = selectedTab == NavTab.TODAY,
+                    selected = selectedTab == NavTab.TODAY && currentSecondaryRoute == null,
                     onClick = { viewModel.selectTab(NavTab.TODAY) },
                     icon = { Icon(Icons.Default.Spa, contentDescription = "Today") },
                     label = { Text("Today") },
@@ -124,11 +138,11 @@ fun DayseedApp(viewModel: DayseedViewModel) {
                 )
 
                 NavigationBarItem(
-                    selected = selectedTab == NavTab.HISTORY,
-                    onClick = { viewModel.selectTab(NavTab.HISTORY) },
-                    icon = { Icon(Icons.Default.CalendarMonth, contentDescription = "History") },
-                    label = { Text("History") },
-                    modifier = Modifier.testTag("nav_history"),
+                    selected = selectedTab == NavTab.HABITS && currentSecondaryRoute == null,
+                    onClick = { viewModel.selectTab(NavTab.HABITS) },
+                    icon = { Icon(Icons.Default.Checklist, contentDescription = "Habits") },
+                    label = { Text("Habits") },
+                    modifier = Modifier.testTag("nav_habits"),
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = MaterialTheme.colorScheme.primary,
                         selectedTextColor = MaterialTheme.colorScheme.primary,
@@ -137,7 +151,20 @@ fun DayseedApp(viewModel: DayseedViewModel) {
                 )
 
                 NavigationBarItem(
-                    selected = selectedTab == NavTab.INSIGHTS,
+                    selected = selectedTab == NavTab.JOURNAL && currentSecondaryRoute == null,
+                    onClick = { viewModel.selectTab(NavTab.JOURNAL) },
+                    icon = { Icon(Icons.Default.Book, contentDescription = "Journal") },
+                    label = { Text("Journal") },
+                    modifier = Modifier.testTag("nav_journal"),
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                        selectedTextColor = MaterialTheme.colorScheme.primary,
+                        indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                )
+
+                NavigationBarItem(
+                    selected = selectedTab == NavTab.INSIGHTS && currentSecondaryRoute == null,
                     onClick = { viewModel.selectTab(NavTab.INSIGHTS) },
                     icon = { Icon(Icons.Default.Eco, contentDescription = "Insights") },
                     label = { Text("Insights") },
@@ -150,7 +177,7 @@ fun DayseedApp(viewModel: DayseedViewModel) {
                 )
 
                 NavigationBarItem(
-                    selected = selectedTab == NavTab.SETTINGS,
+                    selected = selectedTab == NavTab.SETTINGS && currentSecondaryRoute == null,
                     onClick = { viewModel.selectTab(NavTab.SETTINGS) },
                     icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
                     label = { Text("Settings") },
@@ -169,16 +196,81 @@ fun DayseedApp(viewModel: DayseedViewModel) {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            when (selectedTab) {
-                NavTab.TODAY -> TodayScreen(viewModel = viewModel)
-                NavTab.HISTORY -> HistoryScreen(viewModel = viewModel)
-                NavTab.INSIGHTS -> InsightsScreen(viewModel = viewModel)
-                NavTab.SETTINGS -> SettingsScreen(viewModel = viewModel)
+            when (val route = currentSecondaryRoute) {
+                is SecondaryRoute.HabitDetail -> {
+                    HabitDetailScreen(
+                        viewModel = viewModel,
+                        habitId = route.habitId,
+                        selectedLocalDate = route.selectedDate.toString(),
+                        onSelectDate = { newDate ->
+                            viewModel.selectDetailDate(route.habitId, newDate)
+                        },
+                        onOpenRecordSession = { hId, dateStr, entryId ->
+                            viewModel.openRecordSession(hId, dateStr, entryId)
+                        },
+                        onOpenEditHabit = { hId ->
+                            val targetHabit = habits.find { it.habitId == hId }
+                            if (targetHabit != null) {
+                                viewModel.openEditHabit(targetHabit)
+                            }
+                        },
+                        onOpenLivingGrove = { hId ->
+                            viewModel.openLivingGrove(hId)
+                        },
+                        onNavigateBack = { viewModel.navigateBack() }
+                    )
+                }
+
+                is SecondaryRoute.CreateEditHabit -> {
+                    CreateEditHabitScreen(
+                        viewModel = viewModel,
+                        habitId = route.habitId,
+                        onNavigateBack = { viewModel.navigateBack() }
+                    )
+                }
+
+                is SecondaryRoute.RecordSession -> {
+                    RecordSessionSheet(
+                        viewModel = viewModel,
+                        habitId = route.habitId,
+                        initialLocalDate = route.date.toString(),
+                        entryId = route.entryId,
+                        onNavigateBack = { viewModel.navigateBack() }
+                    )
+                }
+
+                is SecondaryRoute.LivingGrove -> {
+                    LivingGroveScreen(
+                        viewModel = viewModel,
+                        initialHabitId = route.selectedHabitId,
+                        highlightedRunId = route.highlightedRunId,
+                        onBack = { viewModel.navigateBack() }
+                    )
+                }
+
+                is SecondaryRoute.CollectedMomentsDetail -> {
+                    CollectedMomentsDetailSheet(
+                        metrics = growthMetrics,
+                        yearMonth = route.yearMonth,
+                        selectedDate = route.selectedDate,
+                        onBack = { viewModel.navigateBack() }
+                    )
+                }
+
+                null -> {
+                    when (selectedTab) {
+                        NavTab.TODAY -> TodayScreen(viewModel = viewModel)
+                        NavTab.HABITS -> HabitsScreen(viewModel = viewModel)
+                        NavTab.JOURNAL -> HistoryScreen(viewModel = viewModel)
+                        NavTab.INSIGHTS -> InsightsScreen(viewModel = viewModel)
+                        NavTab.SETTINGS -> SettingsScreen(viewModel = viewModel)
+                    }
+                }
             }
         }
     }
 
-    if (isAddHabitOpen) {
+    if (isAddHabitOpen && currentSecondaryRoute !is SecondaryRoute.CreateEditHabit) {
         val today = viewModel.repository.clock.todayLocal()
         val alreadyLogged = editingHabit?.let {
             viewModel.repository.hasQualifyingActivityOnDate(it.habitId, today)

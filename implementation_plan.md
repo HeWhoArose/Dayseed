@@ -867,3 +867,20 @@ The owner requested that tests requiring human intervention be consolidated and 
 - The known main SHA when this addendum was prepared is `bf19bc11c37dd9a7929594871266bdff07dfc94e`. Every implementation session must fetch and verify the latest remote SHA before editing.
 
 This addendum records the owner's test scheduling instruction. It does not mark Phase 1's post-remediation automated suite as passed, does not open Stage C, and does not authorise Stage D or release.
+
+---
+
+## 14. Phase 2 Implementation & Verification Addendum (2026-11-03, Stage B Self-Check)
+
+On `2026-11-03`, **Phase 2 (`Complete Habit Experience, Five-Destination Navigation, Individual Streaks and Living Grove`)** was implemented on top of the `bf19bc11c37dd9a7929594871266bdff07dfc94e` baseline:
+
+1. **Five-Destination Navigation & Secondary Route Stack (`DayseedViewModel.kt`, `MainActivity.kt`, `HistoryScreen.kt`):**
+   - Implemented the 5-tab bottom navigation (`Today`, `Habits`, `Journal`, `Insights`, `Settings` under `D-215`) and deterministic `SecondaryRoute` stack (`HabitDetail`, `CreateEditHabit`, `RecordSession`, `LivingGrove`, `CollectedMomentsDetail`) with unified `BackHandler` and top-bar Back navigation restoring exact parent tab, selected date, filters, search query, and scroll position.
+2. **`Today` Screen, `HabitCard` & `CollectedMomentsDetailSheet` (`TodayScreen.kt`, `HabitCard.kt`, `GrowthMark.kt`, `Models.kt`, `DayseedRepository.kt`):**
+   - Preserved `D-210`/`D-211` daypart header artwork, added the longest active streak indicator pill (`selectLongestActiveRun`) with explicit `"days"` vs `"weeks"` units, separated scheduled habits from collapsible `"Not scheduled today"` habits (`U-2`, `U-7`), surfaced `D-040` progress bands with paired encouragement and motivation quotes (`D-216` Option A), added 350ms rapid-tap idempotency protection, and wired the clickable `Collected moments` (`G2`) card to `CollectedMomentsDetailSheet` (`G3`).
+3. **`Habits` Directory, `CreateEditHabitScreen`, `RecordSessionSheet`, `HabitDetailScreen` & `LivingGroveScreen`:**
+   - Implemented `HabitsScreen` (`All`, `Active`, `Paused`, `Completed`, `Archived` filters, search, contiguous `0..N-1` `sort_order` reordering via `reorderHabitSync`), full-screen `CreateEditHabitScreen` (`D-216` mode gating, `1..7 days/week` check-off targets, `D-194` `Apply today` vs `Apply tomorrow` prompt, `U-12` weekly freeze notice), `RecordSessionSheet` (`D-188` date bounds, `+1/+5/+10` and `0` chips, per-entry notes, session edit, and single-entry 8s guarded Undo via `deleteHabitEntryWithUndoSync`), `HabitDetailScreen` (6 sections including `Take a rest day`, Grove trees `>= 7` vs short runs `1–6`, and confirmed permanent deletion with 8s Undo), and `LivingGroveScreen` (Canvas botanical trees, reduced-motion support, and one-shot dormant transition acknowledgment in `app_settings`).
+4. **Executed Build & Test Verification Evidence (`2026-11-03T18:00:00Z` – `2026-11-03T18:00:48Z`, Stage B Self-Check):**
+   - `compile_applet` (`:app:assembleDebug`): **PASSED**.
+   - `gradle :app:testDebugUnitTest --rerun-tasks`: **PASSED 81/81** executed JUnit test methods across all 5 test classes (`Phase1ImplementationTest`: **29/29** including merged PR #5 remediation tests `t1_43` and `t1_44` [XML `2026-11-03T18:00:45.843Z`, `2.379s`]; `Phase2ImplementationTest`: **22/22** covering `T2-01`..`T2-51` [XML `2026-11-03T18:00:28.583Z`, `15.454s`]; `DayseedAcceptanceTest`: **12/12** [XML `2026-11-03T18:00:44.064Z`, `1.653s`]; `DayseedSettingsValidationTest`: **10/10** [XML `2026-11-03T18:00:45.725Z`, `0.017s`]; `DayseedVisualResolutionTest`: **8/8** [XML `2026-11-03T18:00:45.745Z`, `0.044s`]), **0 failed, 0 errors, 0 skipped** (`BUILD SUCCESSFUL in 47s`).
+   - Appended Phase 2 human/device validation cases (`P2-H01` through `P2-H17`, all marked `NOT RUN`) to `docs/38-PHASE-1-HUMAN-VALIDATION-REGISTER.md`. Stage C independent technical validation and Stage D final owner acceptance remain **NOT OPEN**.

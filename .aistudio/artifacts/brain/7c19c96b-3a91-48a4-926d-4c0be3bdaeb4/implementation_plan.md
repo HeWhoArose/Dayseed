@@ -1,324 +1,174 @@
-# Dayseed — Phase 1 Corrective Completion Plan (Revised)
+# Dayseed — Phase 2 Implementation Plan
+## Complete Habit Experience, Five-Destination Navigation, Individual Streaks and Living Grove
 
-## Resolving Remaining Phase 1 Defects, Completing v3 Backup/Restore & Merge Safety, Expanding Acceptance Tests, and Reconciling Documentation
+Phase 2 delivers the complete everyday habit experience in Dayseed (`Stage B` initial-v1 implementation) across navigation, UI screens, ViewModel state, domain/repository helpers, guarded Undo, automated JUnit/Robolectric tests, and canonical documentation reconciliation.
 
----
-
-## 1. Governance & Inspected Baseline Findings
-
-### 1.1 Verified Defects & Additional Inspection Findings
-
-1. **Correction A — `D-040` Progress Classification (`app/src/main/java/com/example/dayseed/data/Models.kt`):**
-   - **Defect A1 (150% boundary):** `ProgressBandClassifier.classify` currently evaluates `scaled < t150 -> ProgressBand.EXTRA`, misclassifying exactly 150% as `ProgressBand.HUGE`.
-   - Under `D-040`, Extra is **greater than 100% through and including 150%**. Huge is **strictly greater than 150%**.
-   - **Fix:** Use `scaled <= t150` for `EXTRA`; values strictly above the threshold belong to `HUGE`.
-   - **Defect A2 (Visible labels and fractional-safe short badges):** `ProgressBand` currently uses legacy labels and integer-only badge ranges that can misrepresent fractional ratios. For example, 24.5%, 99.5%, and 150.5% cannot be accurately represented by integer-only ranges.
-   - **Requirement A3 (Dual quote preservation):** Every `ProgressBand` must retain both `encouragementQuote` and `motivationQuote` as distinct, non-empty, supportive, non-pressuring strings. This preserves the approved D-216 Option A decision.
-
-2. **Correction B — Complete v3 Portable Backup, `REPLACE`, `MERGE`, and Conflict Resolution (`app/src/main/java/com/example/dayseed/data/DayseedRepository.kt`):**
-   - **Defect B1 (`REPLACE` in `importBackupArraysDirect`):**
-     - `habit_streak_runs` is exported in v3 backups but is not imported by `importBackupArraysDirect` before `refreshAllSync()`.
-     - Recalculation can consequently generate replacement `run_id` and `qualified_at_utc_ms` values instead of preserving valid backup identities and timestamps.
-     - Legacy v2 backups without `week_start_history` need a baseline history row derived from the earliest restored relevant local date. Use `1970-01-01` only when the restored dataset contains no relevant dates.
-     - The restored `week_start` setting must be preserved.
-   - **Defect B2 (`MERGE` in `mergeBackupWithConflictDetection` and `resolveRestoreConflictSync`):**
-     - **Habit metadata (`habit`):** Differences in `category` or `lifetime_goal_days` for an existing `habit_id` must not be silently ignored. Record a `"habit"` conflict and support its resolution.
-     - **Habit date exceptions (`habit_date_exception`):**
-       - Collisions on `(habit_id, local_date)` involving different `exception_kind` or `note` values must be recorded as conflicts.
-       - Local recorded activity in `habit_entries` or `habit_day_outcomes` on the same date must also be considered when deciding whether the backup exception can safely be applied.
-     - **Strict data-safety rule:** Resolving a `"habit_date_exception"` conflict with `USE_BACKUP` must never automatically delete local `habit_entries` or `habit_day_outcomes`.
-       - If local activity exists and explicit destructive authorization has not been provided, reject the operation before commit.
-       - The transaction must roll back, preserving the local activity, the unresolved conflict row, and the restore session's `AWAITING_CONFLICT_RESOLUTION` state.
-       - Destructive authorization must come only from an explicit user confirmation for that specific conflict. It must never be enabled by default or silently supplied by an automated restore path.
-       - A general confirmation to restore or merge a backup does not count as authorization to delete recorded activity.
-       - If authorization is absent, preserve the local activity and require the user to choose another resolution.
-       - If authorization is explicitly granted, apply the backup exception's actual `exception_kind` and `note`; do not hardcode `REST_DAY` unless the backup record itself specifies `REST_DAY`.
-     - **Grove/streak runs (`habit_streak_runs` / `habit_streak_run` conflict type):**
-       - Non-conflicting backup runs for existing habits must be imported before recalculation.
-       - Validate the habit foreign key, `(habit_id, start_local_date)` identity collisions, and the single-active-run-per-habit invariant.
-       - Do not silently discard conflicting run records. Record `"habit_streak_run"` conflicts where a backup run cannot safely be imported, and provide deterministic resolution in `resolveRestoreConflictSync`.
-       - Conflict resolution must preserve valid run identities, creation timestamps, and qualification timestamps wherever the selected resolution permits.
-       - A run conflict must not be resolved by blindly replacing unrelated or later run history. Check logical identity and active-run constraints before applying the selected resolution.
-     - **Week-start history (`week_start_history`):**
-       - Merge records by `effective_from_local_date`.
-       - Insert non-conflicting records.
-       - Record `"week_start_history"` conflicts when the same effective date has different `week_start_iso_day` values.
-       - Support conflict resolution without silently overwriting the local history.
-
-3. **Additional Defects Discovered During Source Inspection (`DayseedDatabaseHelper.kt`, `StreakAndGroveEngine.kt`, `DayseedRepository.kt`):**
-   - **Defect C1 (Legacy v2 weekly schedule migration under U-11):**
-     - The current `migrateV2ToV3FailClosed` normalization derives `target_period` solely from `schedule_kind`. This can overwrite legitimate legacy v2 `DAILY` + `WEEK` and `SELECTED_WEEKDAYS` + `WEEK` configurations.
-     - **Fix:** Preserve weekly cadence and weekday eligibility during migration.
-       - Map `(DAILY, WEEK)` to `(FLEXIBLE_WEEKLY_TARGET, WEEK)` with no weekday restriction (`preferred_weekdays_mask = NULL`).
-       - Map `(SELECTED_WEEKDAYS, mask, WEEK)` to `(FLEXIBLE_WEEKLY_TARGET, WEEK)` while preserving the original weekday eligibility in `preferred_weekdays_mask = mask` and clearing the obsolete `scheduled_weekdays_mask = NULL`.
-       - **Verified eligibility equivalence:** In `StreakAndGroveEngine.isScheduledOpportunityOnDate` (`StreakAndGroveEngine.kt:139–150`) and `evaluateWeeklyCadenceRuns` (`StreakAndGroveEngine.kt:481–537`), `FLEXIBLE_WEEKLY_TARGET` with `preferred_weekdays_mask = NULL` evaluates all seven weekdays as eligible opportunities, identical to `DAILY`. `FLEXIBLE_WEEKLY_TARGET` with `preferred_weekdays_mask = mask` evaluates `WeekdayMask.contains(mask, date.dayOfWeek)` for scheduled-date eligibility and U-4 rest-day exception holding while summing weekly progress across the week, identical to `SELECTED_WEEKDAYS` + `WEEK`.
-       - `StreakAndGroveEngine` also directly evaluates any in-memory `(DAILY, WEEK)` or `(SELECTED_WEEKDAYS, mask, WEEK)` `HabitVersion` using `StreakUnit.WEEKS`.
-       - Reject genuinely corrupt legacy rows (such as `FLEXIBLE_WEEKLY_TARGET` with `target_period = 'DAY'` or out-of-range weekday masks) rather than silently normalizing invalid data into a different valid configuration.
-   - **Defect C2 (Weekly check-off `target_value` constraint):**
-     - `buildHabitVersionsTableSql` currently requires `target_value IS NULL` for `COMPLETION_ONLY` and `EFFORT_AWARE`, even when `target_period = 'WEEK'`.
-     - `saveHabitSync` also sets `normalizedTargetValue = null` for `COMPLETION_ONLY`.
-     - **Fix:** Permit `target_value >= 1` for weekly `COMPLETION_ONLY` and `EFFORT_AWARE` configurations, while preserving the appropriate daily constraints (`target_period = 'DAY' AND target_value IS NULL`) and legacy weekly `NULL` compatibility.
-     - Preserve the weekly target value in `saveHabitSync`. Do not silently convert a configured weekly target such as "3 days per week" into a target of 1 or `NULL`.
-     - Keep the database CHECK constraints consistent with the approved D-216 rules.
-   - **Defect C3 (`qualified_at_utc_ms` CHECK safety when a previously qualified run shrinks):**
-     - If a run previously had `qualified_at_utc_ms != null` but recalculation reduces it below the qualification threshold, the engine must not retain a qualification timestamp while setting `qualified_for_grove = 0`.
-     - **Fix:** Preserve the previous qualification timestamp only when the recalculated run remains qualified. Otherwise set `qualified_at_utc_ms = null`.
-     - Preserve the original timestamp when the run remains qualified. Do not replace it with the current time merely because recalculation occurred.
-     - Ensure `updated_at_utc_ms = maxOf(created_at_utc_ms, nowUtcMs)`.
+## User Review & Confirmed Decisions
+All product and architectural decisions governing Phase 2 are already settled in `docs/09-DECISION-LOG.md`, `docs/25-DECISION-REGISTER-AND-RECONCILIATION.md`, and root `implementation_plan.md` (`Revision 7`):
+- **Five-Destination Primary Navigation (`D-215`):** Replace the legacy 4-tab bar with five top-level destinations: `Today`, `Habits`, `Journal`, `Insights`, and `Settings`.
+- **Measurement Modes & 7-Band Progress (`D-040`, `D-216`):** New habits support `Quantity`, `Duration`, and `Simple check-off` (`COMPLETION_ONLY`); legacy `EFFORT_AWARE` habits remain editable without data loss. Detailed numeric progress displays all 7 bands (`0%`, `<25%`, `25–49%`, `50–74%`, `75–99%`, `100%`, `>100–150%`, `>150%`) paired with both an `encouragementQuote` and a distinct `motivationQuote`, while compact calendar/history surfaces use the 4 compact buckets (`NONE`, `PARTIAL`, `COMPLETE`, `ABOVE_TARGET`).
+- **Weekly Target Clarity (`D-191`, `D-195`, `U-11`, `U-12`):** Explicitly distinguish daily targets, weekly numeric targets (`N units/week`, `N min/week`), weekly check-off targets (`N days/week`), and weekly session-count targets (`N sessions/week`). Today cards and Habit Detail show week-to-date progress against the frozen start-of-week target (`U-12 Option B`) alongside today's contribution, never comparing a single day's entry directly against a weekly target.
+- **Individual Streaks & Living Grove (`D-217`, `U-1`..`U-13`):** Streaks are per-habit (`DAYS` for daily-period habits, `WEEKS` for weekly-period habits). Today displays a calm main streak indicator sourced from `repository.selectLongestActiveRun()` (`elapsedActiveSpanCount` with explicit `days` or `weeks` unit) that opens the Living Grove & Individual Streaks view. Runs reaching `>= 7` active span days (`SAPLING_ACTIVE` -> `GROWING_TREE`) remain permanently in the Grove (`DORMANT_TREE` when ended with `MISSED`, `PAUSED`, `ARCHIVED`, or `COMPLETED`), while `< 7` day closed runs remain in separate unqualified streak history.
+- **Planned Rest & Effective-Dated Protection (`D-194`, `D-218`, `U-1`, `U-9`):** Unselected weekdays are neutral schedule days; one-off **Take a rest day** (`REST_DAY`) is today-only for active scheduled habits without recorded activity; multi-day pauses use `habit_versions.lifecycle_state = PAUSED`. Editing a habit when today already has recorded activity (including explicit `0`) requires choosing **Apply today** vs **Apply tomorrow** (or next-week boundary for weekly unit/mode changes).
 
 ---
 
-## 2. Implementation Checklist
+## 1. Overview & Core Concept
 
-### Step 1 — Correction A: D-040 Progress Classification & Labels (`Models.kt`)
+### 1.1 Baseline Inspection Summary & Phase 2 Gaps Identified
+Before modifying any Phase 2 code, we will first run the full Phase 1 test suite (`59` JUnit test methods in `Phase1ImplementationTest`, `DayseedAcceptanceTest`, `DayseedSettingsAndInsightsTest`, and `VisualHierarchyAndContrastTest`, including the post-PR-#5 `t1_43` and `t1_44` tests) to confirm a clean green baseline.
 
-- [ ] Change the 150% classification comparison from `scaled < t150` to `scaled <= t150`.
-- [ ] Ensure values strictly greater than 150% classify as `HUGE`.
-- [ ] Update visible labels and fractional-safe short badges:
-
-  | Band | Visible label | Short badge |
-  |---|---|---|
-  | ZERO | Zero logged | 0% |
-  | TINY_STEP | Tiny | >0–<25% |
-  | GETTING_STARTED | Small | 25–<50% |
-  | HALFWAY | Halfway | 50–<75% |
-  | ALMOST_THERE | Nearly there | 75–<100% |
-  | GOAL_MET | Goal met | 100% |
-  | EXTRA | Extra | >100–150% |
-  | HUGE | Huge | >150% |
-
-- [ ] Ensure the badge wording accurately represents fractional values. Do not replace the ranges with rounded integer ranges that imply incorrect boundaries.
-- [ ] Preserve both `encouragementQuote` and `motivationQuote` on every band.
-- [ ] Ensure the two quote fields are distinct, non-empty, supportive, and non-pressuring.
-- [ ] Do not remove either quote field or combine them into one.
-- [ ] Keep the language for HUGE supportive and non-judgmental. Avoid implying that the user must continually outperform previous progress.
-- [ ] Preserve exact BigInteger-based ratio comparisons. Do not introduce floating-point calculations that could cause boundary errors.
-
-### Step 2 — Correction B & Schema/Migration Fixes (`DayseedDatabaseHelper.kt`, `StreakAndGroveEngine.kt`, `DayseedRepository.kt`)
-
-**A. `DayseedDatabaseHelper.kt`**
-
-- [ ] Update `buildHabitVersionsTableSql` so weekly `COMPLETION_ONLY` and `EFFORT_AWARE` configurations can retain `target_value >= 1`.
-- [ ] Keep daily check-off constraints intact.
-- [ ] Preserve legacy weekly `NULL` values where backward compatibility requires them.
-- [ ] Include `'habit_streak_run'` in `restore_conflicts.record_type` CHECK constraints in both `createV3Schema` and `migrateV2ToV3FailClosed`.
-- [ ] Verify that every schema-creation and migration path produces the same accepted conflict record types. Do not update only one schema path.
-- [ ] Existing v3 database compatibility: Preserve the approved D-219 database-version decision. Do not introduce database version 4 unless the owner explicitly approves changing D-219.
-  - Inspect existing v3 databases to determine whether their actual SQLite table definitions contain the older CHECK constraints.
-  - If they do, implement an idempotent, transactional v3 schema-reconciliation operation that detects the actual existing table definitions and upgrades affected tables without changing the canonical `DATABASE_VERSION = 3`.
-  - Rebuild affected SQLite tables where necessary, including `habit_versions` and `restore_conflicts`.
-  - Preserve all existing records, primary keys, foreign keys, indexes, and applicable constraints.
-  - Run the reconciliation safely on database open, ensuring it does not repeatedly rebuild tables that already have the correct schema.
-  - If reconciliation fails, roll back the operation and leave the original database recoverable.
-  - Do not assume that changing `createV3Schema` updates existing v3 databases.
-  - Add tests for fresh v3 creation, existing-v3 schema reconciliation, repeated/idempotent reconciliation, failed-reconciliation rollback, v2-to-v3 migration, and chained v1-to-v3 migration.
-- [ ] In `migrateV2ToV3FailClosed`, preserve legacy weekly cadence:
-  - `DAILY` + `WEEK` becomes `FLEXIBLE_WEEKLY_TARGET` + `WEEK` (`preferred_weekdays_mask = NULL`).
-  - `SELECTED_WEEKDAYS` + `WEEK` becomes `FLEXIBLE_WEEKLY_TARGET` + `WEEK`, preserving weekday eligibility in `preferred_weekdays_mask` and clearing `scheduled_weekdays_mask`.
-- [ ] Validate legacy data before migration in `validateV2DataBeforeMigration`. Reject invalid masks, impossible schedule/period combinations (such as `FLEXIBLE_WEEKLY_TARGET` with `target_period = 'DAY'`), and genuinely corrupt rows.
-- [ ] Keep migration fail-closed and transactional. If validation or migration fails, the original v2 database must remain recoverable and unchanged.
-
-**B. `StreakAndGroveEngine.kt`**
-
-- [ ] Keep the prior qualification timestamp (`priorQualifiedAtUtcMs`) separately during recalculation.
-- [ ] If the recalculated run remains Grove-qualified, preserve the existing `qualified_at_utc_ms`; only assign `nowUtcMs` when the run is newly qualified and has no prior qualification timestamp.
-- [ ] If the recalculated run is no longer qualified, set `qualified_at_utc_ms = null`.
-- [ ] Preserve `run_id` and `created_at_utc_ms` for existing runs whenever the same logical run survives recalculation.
-- [ ] Ensure `updated_at_utc_ms` cannot be earlier than `created_at_utc_ms`.
-- [ ] Verify weekly cadence uses `StreakUnit.WEEKS` for the supported weekly configurations.
-- [ ] Verify recalculation does not create duplicate active runs or discard valid existing run identities.
-
-**C. `DayseedRepository.kt`**
-
-**`saveHabitSync`**
-
-- [ ] Preserve configured `targetValue` for weekly `COMPLETION_ONLY` and `EFFORT_AWARE` habits.
-- [ ] Do not silently replace a weekly target with `NULL` or a default value.
-
-**`importBackupArraysDirect` — REPLACE**
-
-- [ ] Import valid `habit_streak_runs` from `root.optJSONArray("habit_streak_runs")` before calling `refreshAllSync()`.
-- [ ] Respect foreign-key dependency order: import or establish the referenced parent habits before importing dependent streak-run records.
-- [ ] Validate foreign keys, logical run identities, and active-run uniqueness before inserting backup runs.
-- [ ] Ensure recalculation preserves valid backup `run_id`, `created_at_utc_ms`, and `qualified_at_utc_ms`.
-- [ ] When `week_start_history` is absent in a legacy v2 backup:
-  - Determine the earliest relevant restored local date from the restored data.
-  - Insert the baseline history row using that date and the restored `week_start` setting.
-  - Use `1970-01-01` only when no relevant restored dates exist.
-- [ ] Do not overwrite the restored `week_start` setting while seeding the baseline.
-- [ ] Convert legacy v2 weekly schedule representations only when the backup version and legacy schema actually require conversion.
-- [ ] Preserve weekly cadence and weekday eligibility during conversion.
-- [ ] Keep the entire REPLACE operation transactional. A failed import must not leave a partially restored database.
-
-**`mergeBackupWithConflictDetection` — MERGE**
-
-- [ ] Process parent records before dependent records so foreign-key relationships remain valid.
-- [ ] Detect differences in existing habit `category` and `lifetime_goal_days`.
-- [ ] Record a `"habit"` conflict rather than silently ignoring differences.
-- [ ] Import non-conflicting `habit_date_exceptions`.
-- [ ] For date-exception conflicts, detect:
-  - Different `exception_kind` values for the same `(habit_id, local_date)`.
-  - Different `note` values for the same identity.
-  - Existing local activity in `habit_entries` or `habit_day_outcomes` on that date.
-- [ ] Record `"habit_date_exception"` conflicts using a stable record key `"$hId:$dStr"`.
-- [ ] Import non-conflicting `habit_streak_runs` after validating:
-  - The referenced habit exists.
-  - The logical identity `(habit_id, start_local_date)` does not collide.
-  - The single-active-run-per-habit invariant is maintained.
-- [ ] Record unresolved `"habit_streak_run"` collisions instead of silently dropping backup data.
-- [ ] Ensure run-conflict records contain enough backup and local identity information for deterministic resolution. Do not rely on a record key that cannot uniquely identify the conflicting backup run.
-- [ ] Preserve valid backup Grove run IDs and timestamps through recalculation.
-- [ ] Merge `week_start_history` by `effective_from_local_date`.
-- [ ] Insert non-conflicting history rows.
-- [ ] Record `"week_start_history"` conflicts when the same effective date has different `week_start_iso_day` values.
-- [ ] Ensure conflicts remain visible and resolvable. Do not mark the restore session complete while unresolved conflicts remain.
-
-**`resolveRestoreConflictSync`**
-
-- [ ] Add resolution handling for `"habit"`, `"habit_date_exception"`, `"habit_streak_run"`, and `"week_start_history"`.
-- [ ] Disallow `KEEP_BOTH` for records whose identity or database constraints make keeping both invalid.
-- [ ] For `"habit_date_exception"`:
-  - Reject `USE_BACKUP` when local recorded activity exists and explicit destructive authorization (`allowDestructiveActivityRemoval == true && authorizedDestructiveConflictId == conflictId`) has not been supplied.
-  - Perform the rejection before commit so the transaction rolls back.
-  - Preserve the local activity, unresolved conflict row, and `AWAITING_CONFLICT_RESOLUTION` state.
-  - Require a specific, explicit user confirmation before any destructive activity removal.
-  - Never set destructive authorization automatically, by default, or merely because the user selected a general backup-restore option.
-  - Ensure authorization is tied to the exact conflict being resolved (`authorizedDestructiveConflictId == conflictId`) and cannot be reused for another conflict.
-  - If explicitly authorized, apply the actual backup exception values (`exception_kind` and `note`) rather than assuming every exception is `REST_DAY`.
-- [ ] For `"habit_streak_run"`:
-  - Implement deterministic `KEEP_LOCAL` and `USE_BACKUP` behavior based on the actual conflicting run identities.
-  - Do not delete or replace unrelated runs.
-  - Check active-run uniqueness and foreign-key validity before applying the selected resolution.
-  - Preserve valid backup `run_id`, `created_at_utc_ms`, and `qualified_at_utc_ms` when `USE_BACKUP` is selected and the database invariants permit it.
-  - If applying the backup run would violate an invariant, reject the operation without partially modifying the database.
-- [ ] For `"habit"` and `"week_start_history"`, ensure each resolution updates only the conflicting record and preserves unrelated metadata or history.
-- [ ] For all conflict types, ensure the selected resolution is applied atomically.
-- [ ] Ensure failed resolution attempts do not partially modify local data or mark conflicts resolved.
-- [ ] Ensure restore completion is impossible while unresolved conflicts remain.
-
-### Step 3 — Correction C: Expand Test Coverage (`DayseedAcceptanceTest.kt` and `Phase1ImplementationTest.kt`)
-
-**A. D-040 progress classification**
-
-- [ ] Test `150/100 = EXTRA`.
-- [ ] Test `151/100 = HUGE`.
-- [ ] Test `3/2 = EXTRA`.
-- [ ] Test `4/2 = HUGE`.
-- [ ] Test `100/100 = GOAL_MET`.
-- [ ] Test small targets and fractional ratios, including values immediately below and above every classification boundary.
-- [ ] Test BigInteger overflow safety and exact comparisons.
-- [ ] Test all eight visible labels.
-- [ ] Test all short badges against fractional values to ensure they do not misrepresent the boundaries.
-- [ ] Test that every band has two distinct, non-empty quote fields.
-
-**B. Migration tests**
-
-- [ ] Add a chained v1 → v2 → v3 migration test.
-- [ ] Verify survival of original v1 habits, records, journals, and settings.
-- [ ] Verify readable legacy tracking modes.
-- [ ] Verify all expected v3 tables and indexes against the actual schema definition.
-- [ ] Verify week-start baseline and foreign-key integrity.
-- [ ] Test existing v3 databases containing the old `habit_versions` CHECK constraint.
-- [ ] Test existing v3 databases containing the old `restore_conflicts.record_type` CHECK constraint.
-- [ ] Verify the reconciliation preserves all existing records, indexes, primary keys and foreign keys.
-- [ ] Verify running reconciliation multiple times does not damage or unnecessarily rebuild an already-correct schema.
-- [ ] Verify failed reconciliation rolls back completely.
-- [ ] Verify `DATABASE_VERSION` remains consistent with D-219.
-- [ ] Add fail-closed v2 → v3 rollback tests for:
-  - Negative `value_units`.
-  - `value_units > Int.MAX_VALUE`.
-  - Unsupported `outcome_kind`.
-  - Invalid calendar dates.
-  - Invalid schedule/period combinations and weekday masks.
-- [ ] Verify that a failed migration leaves the original v2 database intact and recoverable.
-- [ ] Verify the migration does not partially update schema version, table definitions, or migrated records when it fails.
-
-**C. Weekly-target tests (U-11)**
-
-- [ ] Test legacy/v2 `DAILY` + `WEEK` migration.
-- [ ] Test legacy/v2 `SELECTED_WEEKDAYS` + `WEEK` migration.
-- [ ] Verify the migrated records retain their intended weekly cadence and weekday eligibility.
-- [ ] Verify weekly cadence evaluation uses `StreakUnit.WEEKS`.
-- [ ] Test v3 `habit_versions` CHECK constraints against invalid schedule/period combinations.
-- [ ] Test weekly `COMPLETION_ONLY` and `EFFORT_AWARE` targets with values greater than 1.
-- [ ] Test that daily configurations still obey their original constraints.
-
-**D. Streak lifecycle and historical reconstruction**
-
-- [ ] Test `PAUSED`, `ARCHIVED`, and `COMPLETED` lifecycle transitions.
-- [ ] Verify active runs close with the corresponding `terminal_reason`.
-- [ ] Verify `broken_on_local_date == null` for lifecycle closures where required.
-- [ ] Test backdated entry recalculation under D-188.
-- [ ] Verify a previously MISSED break can be healed when the rules allow it.
-- [ ] Verify surviving logical runs retain their original `run_id` and `qualified_at_utc_ms`.
-- [ ] Verify recalculation never bridges across a PAUSED range under U-1 and U-5.
-- [ ] Test a previously qualified run shrinking below the qualification threshold. Verify its qualification flag and timestamp remain consistent with the database CHECK constraint.
-- [ ] Verify recalculation does not create duplicate active runs or alter unrelated historical runs.
-
-**E. Complete v3 backup REPLACE and MERGE tests**
-
-- [ ] Test v3 REPLACE round-trip preservation of:
-  - Habit `category`.
-  - `lifetime_goal_days`.
-  - `habit_date_exceptions`.
-  - `habit_streak_runs`, including `run_id` and `qualified_at_utc_ms`.
-  - `week_start_history`.
-- [ ] Test legacy v2 backup baseline seeding when week-start history is absent.
-- [ ] Verify the baseline uses the earliest relevant restored date and preserves the restored week-start setting.
-- [ ] Test MERGE non-conflicting imports.
-- [ ] Test Grove run identity and timestamp preservation.
-- [ ] Test conflict creation and resolution for:
-  - `habit`.
-  - `habit_date_exception`.
-  - `week_start_history`.
-  - `habit_streak_run` collisions.
-- [ ] Verify local records remain intact when a conflict is unresolved or resolution is rejected.
-- [ ] Verify destructive REST_DAY conflict resolution is rejected unless the user explicitly authorizes the specific destructive operation.
-- [ ] Verify authorization for one conflict cannot authorize deletion for another conflict.
-- [ ] Verify failed conflict resolution leaves the conflict unresolved and the restore session awaiting resolution.
-- [ ] Verify a restore session cannot complete with unresolved conflicts.
-- [ ] Verify foreign-key integrity and active-run uniqueness after both REPLACE and MERGE.
-- [ ] Verify failed REPLACE or MERGE operations roll back without leaving partially imported data.
-- [ ] Verify conflict resolution does not overwrite unrelated local records.
-
-### Step 4 — Corrections D & E: Full Verification and Documentation Reconciliation
-
-- [ ] Run `compile_applet`.
-- [ ] Run `gradle :app:testDebugUnitTest --rerun-tasks`.
-- [ ] Inspect the XML test reports under `app/build/test-results/testDebugUnitTest/`.
-- [ ] Record the exact test count and test outcomes from the generated reports.
-- [ ] Investigate every failure. Do not treat a successful build as proof that all acceptance requirements are satisfied.
-- [ ] Verify the exact commit SHA that was tested. If any code changes occur after the test run, rerun the required verification against the new final commit.
-- [ ] Reconcile root `/implementation_plan.md`, `/docs/28-REQUIREMENT-TRACEABILITY.md`, and `/docs/12-PROGRESS-AND-HANDOVER.md`.
-- [ ] Record the corrected defects, implementation changes, changed files, exact tested commit, actual test results, and outstanding issues.
-- [ ] Do not claim emulator or physical-device validation unless it was actually performed.
+Our source inspection of the current codebase identified the following concrete gaps between the Phase 1 foundation and the Phase 2 specification:
+1. **Navigation (`MainActivity.kt`, `DayseedViewModel.kt`):**
+   - `NavTab` currently defines 4 tabs (`TODAY`, `HISTORY`, `INSIGHTS`, `SETTINGS`) and `BackHandler` unconditionally resets to `NavTab.TODAY`.
+   - Secondary flows (`HabitDetail`, `CreateEditHabit`, `RecordSession`, `LivingGrove`, `CollectedMomentsDetail`) do not yet have a structured back-stack that preserves the originating tab, selected date, habit, and filter state.
+2. **Today Screen & Habit Card (`TodayScreen.kt`, `HabitCard.kt`, `GrowthMark.kt`, `DayseedRepository.kt`):**
+   - `TodayScreen` currently filters strictly by `activeHabits.filter { it.isScheduledFor(today) }`, leaving unscheduled active habits (`SELECTED_WEEKDAYS` on off-days) hidden on Today without a compact **"Not scheduled today"** section.
+   - `HabitCard` currently embeds full inline entry deletion, inline note inputs, and lifecycle dropdowns on the default Today card, and compares `todayEntries` directly against `habit.targetValue` even when `habit.targetPeriod == TargetPeriod.WEEK`.
+   - `DayseedRepository.recomputeAllStreakRunsAndSummariesSync` currently computes `HabitSummary.todayTotalUnits`, `todayProgressBand`, and `todayPercentage` against `effToday.targetValue` without computing week-to-date progress (`weekTotalUnits`, `weekTargetValue`, `weekProgressBand`, `weekPercentage`) for `TargetPeriod.WEEK` habits.
+   - `GrowthMarkBadge` on Today still renders legacy `Tiny / Usual / Extra` chips and exposes internal `G2`/`G3` code strings in user-facing copy instead of a clean **Collected moments** summary card that opens the shared Growth/date-detail route.
+3. **Dedicated Habits Destination (`HabitsScreen.kt`):**
+   - Missing dedicated top-level screen showing all habits across **Active**, **Paused**, **Completed**, and **Archived** lifecycle states with search, `sortOrder` reordering, lifecycle actions, and clear empty states.
+4. **Habit Detail Secondary Route (`HabitDetailScreen.kt`):**
+   - Missing dedicated detail route presenting habit identity, category, measurement/target/schedule explanation, current daily/weekly progress with `D-040` 7-band badge + paired encouragement/motivation quotes, lifetime goal progress (`lifetimeActiveDays / lifetimeGoalDays`), individual sessions list with per-session edit/delete, habit/date note editor, **Take a rest day** action, individual branch & Grove history vs `<7 day` runs, and distinct **Pause / Resume / Complete / Archive / Permanent Delete** controls.
+5. **Create/Edit Habit Full-Screen Flow (`CreateEditHabitScreen.kt` / `AddEditHabitDialog.kt`):**
+   - Currently a modal dialog that couples `TargetPeriod.WEEK` only to `FLEXIBLE_WEEKLY_TARGET`, lacks `category` and `lifetimeGoalDays` inputs, and does not clearly distinguish weekly check-off (`N days/week`) vs weekly session-count (`N sessions/week`) vs weekly numeric amount (`N units/week`).
+6. **Focused Record Session & Correction Flow (`RecordSessionSheet.kt`):**
+   - Currently `HabitCard` only appends or deletes entries inline on Today; there is no dedicated Record Session / Edit Session flow supporting individual session value/note correction (`updateHabitEntry`), backdated `LocalDate` selection, explicit `0` check-in, and clear confirmation of daily total vs weekly aggregate.
+7. **Individual Streaks, Branches & Living Grove (`GroveComponents.kt`):**
+   - The domain engine (`StreakAndGroveEngine` and `habit_streak_runs`) is implemented, but the UI components for the Today longest-active-streak indicator (`days`/`weeks`), per-habit botanical branch Canvas visualization, Living Grove overview (`SAPLING_ACTIVE`, `GROWING_TREE`, `DORMANT_TREE`, and separate `<7 day` runs), and event-driven one-shot run-ending animation (respecting reduced motion) are not yet wired into Compose.
 
 ---
 
-## 3. Implementation Rules and Completion Criteria
+## 2. User Experience & Visual Design
 
-1. **Continue from the current implementation.** This is a corrective completion task, not a new project-planning exercise. Do not redesign unrelated features or reopen already-approved decisions.
-2. **Preserve approved requirements.** Do not silently change D-040, D-216, U-11, streak lifecycle semantics, or existing owner-approved decisions to make implementation easier.
-3. **Inspect before changing.** Check the current implementation and database schema before editing. The line numbers in this plan are navigation references, not permission to assume the code is unchanged.
-4. **Protect user data.** Backup and restore operations must remain transactional. Never silently discard local activity, backup records, run identities, or historical settings.
-5. **Do not weaken constraints to make tests pass.** Correct the underlying migration, schema, repository, or engine behavior.
-6. **Test behavior, not merely implementation details.** Tests must verify observable outcomes, data integrity, migration recovery, conflict resolution, and identity preservation.
-7. **Do not invent completion evidence.** Report only tests that were actually executed. Inspect generated test reports and identify the exact commit they validate.
-8. **Keep the work within Phase 1.** Do not begin Phase 2 or introduce unrelated features.
-9. **Preserve the existing validation gates.** Technical implementation and test completion do not automatically constitute independent Stage C validation or final Stage D acceptance. Keep those boundaries visible in the handover.
+All Phase 2 surfaces follow `DESIGN.md` (**Warm Botanical Paper & Ink** palette: Warm Parchment `#FBF8F2` light / Deep Forest Charcoal `#131814` dark, Deep Moss `#2E5A3E` / Sage `#8FB99D` primary, Warm Terracotta `#C86D51` accent, 16dp card radius, 1dp Hairline Warm Stone borders, minimum 48dp touch targets, and WCAG AA contrast).
 
-## 4. Required Final Report
+### 2.1 Five-Destination Navigation & Secondary Route Stack (`D-215`)
+- **Bottom Navigation Bar (`MainActivity.kt`):**
+  - `Today` (`nav_today`) — Daily action deck, daypart header, longest active streak indicator, scheduled habits, compact "Not scheduled today" section, reflection card, and Collected moments summary.
+  - `Habits` (`nav_habits`) — Complete habit directory across `Active`, `Paused`, `Completed`, and `Archived` states, search, reorder, and create habit CTA.
+  - `Journal` (`nav_journal`) — Dedicated reflection composer, draft recovery, and journal entries archive.
+  - `Insights` (`nav_insights`) — Collected moments hero card, Living Grove & Individual Streaks access, Mood Insights, and historical habit calendar/daily log inspection.
+  - `Settings` (`nav_settings`) — Reminders, week-start policy (`U-10`), backup/export, conflict resolution banner, and accessibility/motion info.
+- **Secondary Route Stack (`DayseedViewModel.kt`):**
+  - Secondary routes (`HabitDetail`, `CreateEditHabit`, `RecordSession`, `LivingGrove`, `CollectedMomentsDetail`) push onto an explicit navigation stack storing the originating `NavTab` and parent secondary route.
+  - Pressing system Back or the top-bar back button pops to the exact originating screen and restores selected date, habit, filter chip, and scroll context.
 
-When implementation and verification are complete, provide:
+### 2.2 Compact Today Screen (`TodayScreen.kt` & `HabitCard.kt`)
+- **Top Header:** Date + time-aware greeting + `DaypartArtwork` (`D-210`/`D-211`) + compact **Longest Active Streak** pill (`testTag("today_main_streak_indicator")`) showing the habit name, normalized active span, and explicit unit (`days` or `weeks`) from `repository.selectLongestActiveRun()`. Tapping opens the **Living Grove & Individual Streaks** secondary route.
+- **Scheduled Habits Today:**
+  - Compact action-oriented cards showing habit identity, colour bar, schedule/cadence label, current daily or week-to-date progress bar, `D-040` progress band badge (`band.label`), paired `encouragementQuote` + `motivationQuote` when activity is logged, primary quick action (`Complete` / `+Step` / `Goal`), and a **Record / Edit Session** button (`testTag("open_record_session_${habit.id}")`).
+  - Tapping the card body opens **Habit Detail** (`testTag("open_habit_detail_${habit.id}")`).
+  - Quick actions use deterministic submission guards / idempotency keys to prevent accidental double-tap duplicates while keeping intentional multi-session logging available through **Record Session**.
+- **Compact "Not Scheduled Today" Section:**
+  - Active habits whose schedule does not include today (`SELECTED_WEEKDAYS` on unselected weekdays, or `FLEXIBLE_WEEKLY_TARGET` with preferred weekdays not matching today when already satisfied) appear in a collapsible/expandable **"Not scheduled today"** section (`testTag("not_scheduled_today_section")`) so users can inspect them or log an intentional bonus session (`U-2` / `U-7`) without cluttering the primary scheduled list.
+- **Reflection & Collected Moments Entry Points:**
+  - Concise **Daily Reflection** card (`ReflectionCard`) and a clean **Collected moments** summary card (`testTag("collected_moments_card")`, free of internal `G2`/`G3` jargon) that opens the shared Collected Moments / date-detail view (`testTag("collected_moments_detail_sheet")`).
 
-- **Defects addressed:** Each original defect and its actual correction.
-- **Files changed:** Exact paths and a brief explanation of each change.
-- **Data safety:** How REPLACE, MERGE, conflict resolution, migration rollback, and user-data preservation were verified.
-- **Tests:** Exact test count, pass/fail results, and the inspected XML report evidence.
-- **Build:** Actual `compile_applet` result.
-- **Commit:** Exact final commit SHA that was tested.
-- **Repository status:** Branch, commit, PR status, and whether changes have been merged into `main`.
-- **Outstanding issues:** Anything not implemented, not verified, or blocked.
-- **Phase 1 status:** Explicitly state `PASSED` or `NOT PASSED`, based on the actual evidence.
+### 2.3 Dedicated Habits Screen (`HabitsScreen.kt`)
+- **Lifecycle Filter Chips:** `All`, `Active`, `Paused`, `Completed`, `Archived` (`testTag("habits_filter_${state}")`), plus local search input (`testTag("habits_search_input")`).
+- **Habit Directory Cards:** Show habit name, optional category badge, measurement mode & target summary (e.g., `20 pages / day`, `150 min / week`, `4 days / week`, `3 sessions / week`), schedule summary, current streak / Grove tree badge, lifetime active days, reorder Up/Down controls (`testTag("reorder_up_${habit.id}")`, `testTag("reorder_down_${habit.id}")`) persisted to `habit_versions.sort_order`, quick lifecycle menu, and tap-through to **Habit Detail**.
+- **Clear Empty States:** Tailored guidance when no habits exist yet or when a lifecycle/search filter has zero matches, with a prominent **New Habit** CTA (`testTag("habits_add_habit_btn")`).
 
-Do not mark Phase 1 as passed if required corrections or tests remain incomplete. Do not represent Stage C independent validation or Stage D final acceptance as completed unless those separate gates have actually been performed and authorized.
+### 2.4 Habit Detail Secondary Route (`HabitDetailScreen.kt`)
+- **Header & Metadata Card:** Name, description, colour identity, optional `category`, measurement mode, unit, target & period (explicitly distinguishing daily target, weekly numeric target, weekly check-off `N days/week`, and weekly session target `N sessions/week`), schedule with neutral unselected weekdays, and reminder status.
+- **Current Progress & Quotes Card:** Daily or week-to-date progress bar, `D-040` 7-band badge (`band.label` + `band.shortBadge`), and both `band.encouragementQuote` and `band.motivationQuote`. Also shows lifetime goal progress (`lifetimeActiveDays` / `lifetimeGoalDays` when configured, per `U-6`).
+- **Selected Date & Individual Sessions Section:** Date switcher (defaulting to today or selected historical date, enabling backdated inspection/correction per `D-188`), **Record Session** CTA, **Take a rest day** CTA when `canTakeRestDayToday` is true (`D-218`), and a list of individual `HabitEntry` sessions on that date. Each session row shows its timestamp/amount/per-session note and has dedicated **Edit** (`testTag("edit_session_${entry.entryId}")`) and **Delete** (`testTag("delete_ entry_${entry.entryId}")`) actions so editing or deleting one session never overwrites or removes other sessions on the same date.
+- **Habit/Date Note Card:** Separate editor for `HabitDateNote` (`habit_date_notes`) on the selected date, explicitly distinguished from per-session notes (`habit_entries.entry_note`) and `JournalEntry`.
+- **Individual Streak Branch & Grove History Card:**
+  - Renders the habit's botanical branch (`HabitBranchCanvas`) with non-colour shape/label cues (`SAPLING_ACTIVE`, `GROWING_TREE`, `DORMANT_TREE`).
+  - Lists permanent **Grove Trees** (`qualifiedForGrove == true`, `>= 7` active span days) with start/end dates, completed streak count, active span, and terminal reason badge (`MISSED`, `PAUSED`, `ARCHIVED`, `COMPLETED`).
+  - Separately lists **Short Unqualified Runs** (`!qualifiedForGrove`, `< 7` active span days) so short runs are preserved in history without being mixed into permanent Grove trees (`U-13`).
+- **Lifecycle Management Bar:** Distinct actions for **Edit Habit**, **Pause** / **Resume**, **Mark Completed**, **Archive** / **Unarchive**, and **Permanent Delete** (guarded by a confirmation dialog explaining that permanent deletion removes the habit and its records, while still issuing the 8-second `HABIT_DELETION` Undo token).
+
+### 2.5 Structured Create/Edit Habit Flow (`CreateEditHabitScreen.kt`)
+- Full-screen secondary route (`AddEditHabitDialog` remains available or delegates to the same structured form) organized into 5 clear sections:
+  1. **Identity & Category:** Name (required), Description (optional), Category (optional tag/input), Colour picker, and optional Lifetime Goal Days (`lifetimeGoalDays`).
+  2. **Measurement Mode & Units (`D-216`):**
+     - New habits: `Quantity`, `Duration`, or `Simple check-off` (`COMPLETION_ONLY`).
+     - Legacy `EFFORT_AWARE` habits being edited preserve their mode and Tiny/Usual/Extra descriptions (`U-8`).
+     - Mode-specific unit presets (e.g., `min`, `hr` for Duration; `pages`, `reps`, `glasses`, `km`, `sessions` for Quantity; hidden for `Simple check-off`).
+  3. **Target & Period (`D-191`, `D-195`):**
+     - Period selector: `Daily` (`TargetPeriod.DAY`) vs `Weekly` (`TargetPeriod.WEEK`).
+     - When `Simple check-off` + `Weekly` is chosen, the target input represents **days per week** (`1..7 days/week`).
+     - When `Quantity` + `Weekly` is chosen with `unitCode = "sessions"`, the form clearly labels **sessions per week** (`N sessions/week`), distinct from general numeric units (`N units/week`) and duration (`N min/week`).
+  4. **Schedule (`D-191`):**
+     - `Every day` (`DAILY`), `Selected weekdays` (`SELECTED_WEEKDAYS` with 7-day selector explaining that unselected weekdays are neutral rest days that never break a streak), or `Flexible weekly target` (`FLEXIBLE_WEEKLY_TARGET` with optional preferred weekdays for guidance only).
+  5. **Reminder & Effective-Date Policy (`D-194`, `U-12`):**
+     - Optional reminder toggle + validated `HH:mm` local time.
+     - When editing an existing habit that already has recorded activity today (including explicit `0`), displays the **Apply today** vs **Apply tomorrow** policy selector (`U-12` also explains when weekly unit/mode changes defer to the next week boundary).
+
+### 2.6 Focused Record Session & Correction Sheet (`RecordSessionSheet.kt`)
+- Modal / secondary sheet opened from Today, Habits, or Habit Detail:
+  - Supports **New Session** or **Edit Existing Session** (`editingEntryId != null`).
+  - Date selector (`LocalDate`, today or past dates up to creation date per `D-188`; future dates rejected).
+  - Value input (`>= 0`, explicitly supporting `0` as an intentional explicit-zero check-in with clear explanation that `0` records a check-in without qualifying for streak completion) + quick preset chips.
+  - Optional per-session `entryNote` field (labeled as a session note, distinct from the habit's daily note and the app Journal).
+  - Live preview of the resulting **Daily Total**, **Weekly Aggregate** (for weekly habits), and **D-040 Progress Band** before saving.
+
+---
+
+## 3. Key Product Decisions & Trade-Offs
+
+1. **Weekly Progress Representation on Today & Habit Detail (`D-195`, `U-11`, `U-12`):**
+   - *Decision:* Extend `HabitSummary` in `Models.kt` and `DayseedRepository.recomputeAllStreakRunsAndSummariesSync` with current-week fields (`weekTotalUnits`, `weekTargetUnits`, `weekProgressBand`, `weekPercentage`, `weekStartLocalDate`, `weekEndLocalDate`) computed against the frozen start-of-week `HabitVersion` (`U-12 Option B`).
+   - *Rationale:* Prevents the defect where a weekly habit with a target of `150 min/week` shows `30 / 150 min (20% - Tiny Step)` on Today even when the user has already logged `120 min` earlier in the week (`150 / 150 min = 100% Goal Met` for the week).
+2. **Weekly Check-Off (`N days/week`) vs Weekly Session Count (`N sessions/week`):**
+   - *Decision:* Allow `TargetPeriod.WEEK` for both `TrackingMode.COMPLETION_ONLY` (where `targetValue` in `1..7` means distinct completed days per week) and `TrackingMode.QUANTITY` / `TrackingMode.DURATION` (where `unitCode = "sessions"` means total logged sessions or `valueUnits` per week).
+   - *Rationale:* Directly satisfies Checklist items 20, 21, 31, and 32 while remaining 100% compatible with the v3 SQLite schema (`target_period IN ('DAY','WEEK')` and `target_value IS NULL OR target_value >= 1`).
+3. **Event-Driven Run-Ending Animation & Reduced Motion (`D-217`, Checklist 44–45):**
+   - *Decision:* Track acknowledged closed run IDs in `DayseedViewModel` (and `app_settings` key `acknowledged_terminal_run_ids`) so the gentle dormant-leaf transition banner/animation triggers only once when an active run transitions to `MISSED`/`PAUSED`/`ARCHIVED`/`COMPLETED`, never replaying on normal Today recompositions, and skips motion when Android's `Settings.Global.ANIMATOR_DURATION_SCALE == 0f` or reduced-motion is active.
+
+---
+
+## 4. Technical Architecture & Data Strategy
+
+### 4.1 Navigation & Component Architecture
+```text
+MainActivity (Scaffold + 5-Tab NavigationBar + Guarded Undo Snackbar + BackHandler)
+ ├── Primary Tabs (NavTab)
+ │    ├── TODAY    -> TodayScreen (DaypartHeader + LongestActiveStreakPill + ScheduledHabits + NotScheduledTodaySection + ReflectionCard + CollectedMomentsCard)
+ │    ├── HABITS   -> HabitsScreen (Lifecycle FilterChips [All/Active/Paused/Completed/Archived] + Search + Reorder + HabitDirectoryCards)
+ │    ├── JOURNAL  -> HistoryScreen (Journal Composer + Draft Recovery + Mood Tags + Reflection Archive)
+ │    ├── INSIGHTS -> InsightsScreen (Collected Moments Hero + Living Grove CTA + Mood Insights + Historical Calendar & Daily Log)
+ │    └── SETTINGS -> SettingsScreen (Reminders + Week-Start Policy + Backup/Restore + Conflict Banner)
+ └── Secondary Route Stack (SecondaryRoute in DayseedViewModel)
+      ├── HabitDetail(habitId, selectedDate, originTab)          -> HabitDetailScreen
+      ├── CreateEditHabit(habitId?, originTab, parentRoute?)     -> CreateEditHabitScreen
+      ├── RecordSession(habitId, date, entryId?, originTab, ...) -> RecordSessionSheet / Screen
+      ├── LivingGrove(selectedHabitId?, originTab, ...)          -> LivingGroveScreen (GroveComponents)
+      └── CollectedMomentsDetail(yearMonth, selectedDate?, ...)  -> CollectedMomentsDetailSheet
+```
+
+### 4.2 Interactive Element & State Mapping
+| Screen / Route | Interactive Element | Repository / ViewModel Action | Persistence & Undo Effect |
+| :--- | :--- | :--- | :--- |
+| **MainActivity** | 5 Bottom Nav Tabs (`nav_today`, `nav_habits`, `nav_journal`, `nav_insights`, `nav_settings`) | `viewModel.selectTab(tab)` | Clears secondary route or preserves per-tab state; Back returns to origin |
+| **TodayScreen** | Longest Active Streak pill (`today_main_streak_indicator`) | `viewModel.openLivingGrove()` | Opens `LivingGroveScreen` with `selectLongestActiveRun()` highlighted |
+| **TodayScreen** | Habit Card body / Quick Action / Record Session button | `openHabitDetail()`, `logEntry()` / `logOutcome()`, `openRecordSession()` | Persists entry/outcome with idempotency guard + 8s `UndoToken` |
+| **TodayScreen** | "Not scheduled today" expandable section (`not_scheduled_today_section`) | Expand/collapse + tap to open detail or log bonus session | Allows `U-2` bonus full completion or `U-7` unscheduled partial hold |
+| **TodayScreen** | Collected moments card (`collected_moments_card`) | `viewModel.openCollectedMomentsDetail()` | Opens shared monthly/date detail view without `G2`/`G3` jargon |
+| **HabitsScreen** | Lifecycle filter chips, Search bar, Reorder Up/Down, Add Habit FAB | `setHabitsFilter()`, `setHabitsSearchQuery()`, `moveHabitOrder()`, `openCreateHabit()` | Updates `habit_versions.sort_order` and refreshes `habits` flow |
+| **HabitDetailScreen** | Session Edit / Delete, Date Note Save, Take a Rest Day, Lifecycle buttons | `openRecordSession(entryId)`, `deleteEntryWithUndo()`, `saveDateNote()`, `takeRestDay()`, `updateHabitLifecycle()`, `deleteHabit()` | Mutates only targeted row; issues guarded 8s `UndoToken` |
+| **CreateEditHabitScreen** | 5-section form + `Apply today` / `Apply tomorrow` policy chips | `viewModel.saveHabit(habit, applyToday, policy)` | Enforces `D-194` & `U-12`; creates/updates effective `HabitVersion` |
+| **RecordSessionSheet** | Value input (`>=0`), Date selector, Session Note, Save | `viewModel.saveSessionRecord(...)` | Calls `logHabitEntry` (new) or `updateHabitEntry` (existing) |
+| **LivingGroveScreen** | Habit branch cards, Grove tree filter, Unqualified `<7d` run toggle | `viewModel.openHabitDetail(habitId)` | Displays `SAPLING_ACTIVE`, `GROWING_TREE`, `DORMANT_TREE`, and `<7d` history |
+
+### 4.3 Step-by-Step Execution Plan (`AUDIT -> DESIGN -> IMPLEMENT -> TEST -> REGRESSION -> RE-AUDIT -> DOCUMENT`)
+1. **Step 1 — Baseline Verification:** Run `gradle :app:testDebugUnitTest --rerun-tasks` to verify all 59 Phase 1 JUnit tests (including `t1_43` and `t1_44`) pass before Phase 2 edits begin.
+2. **Step 2 — Domain & Repository Enhancements (`Models.kt`, `DayseedRepository.kt`):**
+   - Enrich `HabitSummary` with week-to-date progress fields (`weekTotalUnits`, `weekTargetUnits`, `weekProgressBand`, `weekPercentage`, `weekStartLocalDate`, `weekEndLocalDate`) evaluated against the frozen start-of-week `HabitVersion` (`U-12 Option B`).
+   - Support weekly check-off targets (`COMPLETION_ONLY` with `TargetPeriod.WEEK` and `targetValue in 1..7`) in `DayseedRepository.saveHabitSync` and `StreakAndGroveEngine`.
+   - Add `reorderHabitSync(habitId: String, moveUp: Boolean)` and `deleteHabitEntryWithUndoSync(entryId: String): UndoToken?` in `DayseedRepository` so deleting a single session from Habit Detail or Record Session also supports guarded 8-second Undo.
+3. **Step 3 — ViewModel & Five-Destination Navigation (`DayseedViewModel.kt`, `MainActivity.kt`):**
+   - Replace 4-tab `NavTab` with 5 destinations (`TODAY`, `HABITS`, `JOURNAL`, `INSIGHTS`, `SETTINGS`).
+   - Implement `SecondaryRoute` back-stack, origin-preserving `navigateBack()`, quick-action idempotency guard, and one-shot run-ending transition state respecting reduced motion.
+4. **Step 4 — UI Screens & Components (`TodayScreen.kt`, `HabitCard.kt`, `GrowthMark.kt`, `HabitsScreen.kt`, `HabitDetailScreen.kt`, `CreateEditHabitScreen.kt`, `RecordSessionSheet.kt`, `GroveComponents.kt`, `InsightsScreen.kt`):**
+   - Implement all Phase 2 screens and components adhering strictly to `DESIGN.md` and `D-040`/`D-215`/`D-216`/`D-217`/`D-218`.
+5. **Step 5 — Automated Verification (`Phase2ImplementationTest.kt`):**
+   - Write comprehensive Robolectric + Compose UI + Repository/ViewModel tests covering all 60 checklist items in §5 of the assignment.
+   - Run `gradle :app:testDebugUnitTest --rerun-tasks` and `compile_applet` to verify 100% pass rate across all Phase 1 and Phase 2 tests.
+6. **Step 6 — Documentation Reconciliation & Human Validation Register:**
+   - Append Phase 2 human/device validation test cases (`P2-H01`..`P2-H17`, marked `NOT RUN`) to `docs/38-PHASE-1-HUMAN-VALIDATION-REGISTER.md`.
+   - Reconcile `docs/09-DECISION-LOG.md`, `docs/25-DECISION-REGISTER-AND-RECONCILIATION.md`, `docs/26-SCREEN-AND-DATA-CONTRACTS.md`, `docs/28-REQUIREMENT-TRACEABILITY.md`, `docs/12-PROGRESS-AND-HANDOVER.md`, and root `implementation_plan.md`.

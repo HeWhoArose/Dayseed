@@ -183,3 +183,156 @@ Run P1-H01 through P1-H09 together with the human/device checks added by later p
 4. Stage C independent validation has been explicitly authorised.
 
 At that point, execute one coordinated session, record every case as PASS/FAIL/BLOCKED/NOT RUN, triage failures, and repeat affected cases against the corrected candidate. Do not describe Stage C as passed while any required case is failed, blocked, or not run without an explicitly accepted disposition.
+
+---
+
+## 6. Phase 2 human-intervention cases (Status: `NOT RUN`)
+
+All Phase 2 human/device cases below are prepared for the consolidated human/device validation session after Stage B implementation is complete. None of these cases have been executed during Stage B (`NOT RUN`).
+
+### P2-H01 — Five-destination bottom navigation and full back-stack behaviour
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Launch Dayseed on a physical Android device or interactive emulator.
+  2. Tap each bottom-bar destination in order (`Today`, `Habits`, `Journal`, `Insights`, `Settings`).
+  3. From `Habits` (with a filter and search query active), open `Habit Detail`, then open `Record Session`, then press system Back twice.
+  4. From `Insights` (with a historical date selected), open `Living Grove`, then open `Habit Detail`, then press system Back twice.
+- **Expected:** Each destination loads without layout jump. Returning from secondary routes restores the exact parent screen, selected date, filter, search query, and scroll position without resetting to `Today`.
+
+### P2-H02 — Create Quantity, Duration, and Simple check-off habits
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Open `Create Habit` from `Today` or `Habits`.
+  2. Create one `Quantity` habit (`pages`), one `Duration` habit (`min`), and one `Simple check-off` habit.
+  3. Verify that `EFFORT_AWARE` (`Tiny / Usual / Extra`) is not offered for new habits.
+- **Expected:** All three habits save cleanly with accurate target/schedule summaries, while legacy `EFFORT_AWARE` habits remain editable when opened from existing data.
+
+### P2-H03 — Edit habit before and after today's activity (`D-194` & `U-12`)
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Edit a habit's target before logging any activity today and save.
+  2. Log activity for that habit today, then reopen `Edit Habit` and change the target or schedule.
+  3. Observe the `Apply today` vs `Apply tomorrow` prompt (`D-194`).
+  4. Edit a weekly habit's unit or measurement mode mid-week and observe the `U-12` weekly freeze notice.
+- **Expected:** Editing after today's activity protects today's record and defaults safely to `Apply tomorrow`; mid-week weekly unit/mode changes defer to the next week boundary while keeping the current week's start-of-week target frozen.
+
+### P2-H04 — Record multiple sessions, explicit zero, per-entry note, and habit/date note
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Open `Record Session` for a `Quantity` or `Duration` habit on `Today`.
+  2. Tap `0 (Honest check-in)` and save; verify the `Zero logged` state.
+  3. Add two positive sessions with per-entry notes on the same date, plus a habit/date note in `Habit Detail`.
+- **Expected:** Individual sessions are listed separately, sum accurately toward the daily/weekly target, and keep per-entry notes distinct from the habit/date note and the general Journal.
+
+### P2-H05 — Edit and delete one session with 8-second Undo
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. On a date with two recorded sessions, edit one session's value and note.
+  2. Delete one session and tap `Undo` on the 8-second snackbar within 8 seconds.
+  3. Delete one session again, wait more than 8 seconds for snackbar expiry, and verify final totals.
+- **Expected:** Sibling sessions remain untouched; Undo within 8 seconds restores the exact deleted session and recomputes totals/streaks; after 8 seconds the deletion remains committed.
+
+### P2-H06 — `Today` scheduled vs `Not scheduled today` habits
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Configure one habit scheduled for today's weekday and one habit scheduled only for another weekday.
+  2. Inspect `Today` and expand the `Not scheduled today` section.
+  3. Log bonus activity on the unscheduled habit.
+- **Expected:** Scheduled habits appear in the primary list; active unscheduled habits appear inside the collapsed `Not scheduled today` section and can record bonus activity without turning unscheduled days into missed opportunities.
+
+### P2-H07 — `Take a rest day` on eligible and ineligible dates
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Open `Habit Detail` for a scheduled habit on `Today` with no activity logged yet; tap `Take a rest day`.
+  2. Select a past date in `Habit Detail` and inspect the rest-day control area.
+  3. Log real activity on `Today` after taking a rest day.
+- **Expected:** `Take a rest day` is available only on `Today` when scheduled and unlogged, holds the active streak neutrally, is not offered retroactively on past dates, and is automatically cleared if real activity is logged on `Today`.
+
+### P2-H08 — Longest active streak indicator and Living Grove inspection
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Create daily and weekly habits with active streaks.
+  2. Inspect the `Today` longest active streak indicator and verify explicit unit labels (`days` vs `weeks`).
+  3. Tap the indicator to open `Living Grove`, filter by active/growing/dormant states, and tap a tree to open `Habit Detail`.
+- **Expected:** The indicator never shows a unitless mixed-cadence number, and `Living Grove` displays active saplings (`1–6d`), permanent Grove trees (`>= 7d`), and dormant/completed trees clearly.
+
+### P2-H09 — Pause, resume, complete, archive, and permanently delete habits (with 8s Undo)
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. In `Habit Detail`, test `Pause`, `Resume`, `Mark as Completed`, and `Archive`.
+  2. Filter by each lifecycle state in the `Habits` directory.
+  3. Permanently delete a habit that has a linked Journal entry, tap `Undo` within 8 seconds, then permanently delete again and let the 8-second window expire.
+- **Expected:** Lifecycle changes preserve Grove history appropriately; permanent deletion requires confirmation, preserves the independent Journal entry text (setting `linked_habit_id = null`), and supports atomic 8-second Undo restoration.
+
+### P2-H10 — Manual habit ordering in `Habits` and `Today`
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. In `Habits`, use the `Move up` and `Move down` controls to reorder habits.
+  2. Switch to `Today`, force-stop/relaunch the app, and inspect habit order.
+- **Expected:** Reordering persists contiguous `sort_order` values (`0..N-1`) and is reflected consistently on `Today` and across app restarts.
+
+### P2-H11 — Small-screen layout (`320dp–360dp` width)
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Set emulator/device display width to `320dp–360dp`.
+  2. Inspect `Today`, `Habits`, `Habit Detail`, `Create/Edit Habit`, `Record Session`, and `Living Grove`.
+- **Expected:** No clipped controls, overlapping badges, or unreachable buttons; chip rows wrap cleanly and primary actions remain visible.
+
+### P2-H12 — `200%` font scale
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Set Android system font scale to `200%`.
+  2. Traverse all Phase 2 screens, cards, progress badges, dual quotes, and dialogs.
+- **Expected:** Text reflows cleanly without truncation or overlap; `Record Session` and `Create/Edit Habit` scroll vertically with save actions accessible.
+
+### P2-H13 — Keyboard-open layout in `Create/Edit Habit` and `Record Session`
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Open `Create/Edit Habit` and focus the name, unit, target, and description inputs with the soft keyboard visible.
+  2. Open `Record Session` and focus the numeric amount and session note inputs with the soft keyboard visible.
+- **Expected:** Focused fields and primary Save/Cancel actions remain reachable above the soft keyboard (`imePadding()`).
+
+### P2-H14 — TalkBack traversal of `Today`, `Habits`, `Habit Detail`, `Record Session`, and `Living Grove`
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Enable Android TalkBack.
+  2. Swipe through `Today` (longest streak indicator, habit cards, `Collected moments`), `Habits` (filters, search, reorder buttons), `Habit Detail` (all 6 sections, Grove trees, short runs), `Record Session`, and `Living Grove`.
+- **Expected:** Every interactive control has a clear spoken label, state, and action; decorative canvases are merged into parent semantics; progress bands and tree states are never conveyed by colour alone.
+
+### P2-H15 — Reduced-motion behaviour
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Enable Android system `Remove animations` (`ANIMATOR_DURATION_SCALE = 0f`) or Dayseed's reduced-motion setting.
+  2. Navigate across tabs, expand/collapse `Not scheduled today`, log progress, and inspect `Living Grove` / dormant tree transitions.
+- **Expected:** Decorative sway and transition animations are disabled in favour of calm, instant state updates.
+
+### P2-H16 — Light, dark, and daypart theme contrast on all Phase 2 screens
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Inspect all Phase 2 screens under `Soft Botanical` dayparts (`Morning`, `Day`, `Evening`, `Night`) and fixed `Light` / `Dark` modes.
+- **Expected:** Text, badges, buttons, and botanical illustrations maintain legible contrast and calm visual hierarchy across all modes.
+
+### P2-H17 — Process death and relaunch across Phase 2 flows
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Log sessions, take a rest day, reorder habits, and acknowledge a dormant Grove transition.
+  2. Force-stop or kill the app process and relaunch.
+- **Expected:** All committed entries, outcomes, notes, `REST_DAY` exceptions, streak runs, habit sort orders, and dormant transition acknowledgments persist without duplication or loss.
+

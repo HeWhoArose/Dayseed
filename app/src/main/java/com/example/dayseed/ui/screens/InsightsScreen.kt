@@ -12,20 +12,27 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Park
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,23 +51,28 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dayseed.DayseedViewModel
+import com.example.dayseed.data.DerivedDayStatus
 import com.example.dayseed.data.DurationNormalizer
+import com.example.dayseed.data.HabitLifecycleState
 import com.example.dayseed.ui.components.GrowthMarkCanvas
 import com.example.dayseed.ui.theme.ExtraBranchColor
-import com.example.dayseed.ui.theme.RestColor
 import com.example.dayseed.ui.theme.TinySproutColor
 import com.example.dayseed.ui.theme.UsualLeafColor
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun InsightsScreen(
     viewModel: DayseedViewModel,
     modifier: Modifier = Modifier
 ) {
+    val habits by viewModel.habits.collectAsState()
+    val streakRuns by viewModel.streakRuns.collectAsState()
     val growthMetrics by viewModel.growthMetrics.collectAsState()
     val outcomes by viewModel.habitDayOutcomes.collectAsState()
     val entries by viewModel.habitEntries.collectAsState()
     val journals by viewModel.journalEntries.collectAsState()
     val appSettings by viewModel.appSettings.collectAsState()
+    val selectedHistoryDate by viewModel.selectedHistoryDate.collectAsState()
 
     var moodPeriodKind by remember { mutableStateOf("WEEK") }
     var compareWithPrevious by remember { mutableStateOf(false) }
@@ -70,6 +82,9 @@ fun InsightsScreen(
     val past30Days = remember(today) {
         (0..29).map { today.minusDays(it.toLong()) }.reversed()
     }
+    val recentDatesDesc = remember(today) {
+        (0..29).map { today.minusDays(it.toLong()) }
+    }
 
     val moodInsights = remember(journals, appSettings, moodPeriodKind, selectedMoodFilter, today) {
         viewModel.repository.computeMoodInsights(
@@ -77,6 +92,13 @@ fun InsightsScreen(
             referenceDate = today,
             selectedMoodFilter = selectedMoodFilter
         )
+    }
+
+    val activeStreakRunsCount = remember(streakRuns) {
+        streakRuns.count { it.isActive }
+    }
+    val qualifiedGroveTreesCount = remember(streakRuns) {
+        streakRuns.count { it.qualifiedForGrove }
     }
 
     LazyColumn(
@@ -103,7 +125,7 @@ fun InsightsScreen(
             }
         }
 
-        // Big Growth Mark Hero Card (G2 + G3)
+        // 1. Collected Moments Hero Card (taps to open CollectedMomentsDetail)
         item {
             val formattedDuration = DurationNormalizer.formatTotalMinutes(growthMetrics.currentMonthDurationMinutes)
             val totalMonthSessions = growthMetrics.currentMonthDateSessionCounts.values.sum()
@@ -112,8 +134,11 @@ fun InsightsScreen(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
-                modifier = Modifier.fillMaxWidth()
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { viewModel.openCollectedMomentsDetail() }
+                    .testTag("insights_collected_moments_card")
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
@@ -138,7 +163,7 @@ fun InsightsScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "Every day you showed up, took a tiny step, or reflected.",
+                        text = "Tap to explore your monthly rhythm & daily break-down.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -146,7 +171,67 @@ fun InsightsScreen(
             }
         }
 
-        // Mood Insights Card (D-096..D-102, AC-009)
+        // 2. Living Grove & Individual Streaks Summary Card
+        item {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { viewModel.openLivingGrove(null) }
+                    .testTag("insights_open_grove_card")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Park,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Living Grove & Individual Streaks",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "$qualifiedGroveTreesCount permanent Grove trees • $activeStreakRunsCount active streaks",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Every 7+ day run stands permanently in your Grove, even after a break.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    OutlinedButton(
+                        onClick = { viewModel.openLivingGrove(null) },
+                        modifier = Modifier
+                            .heightIn(min = 48.dp)
+                            .testTag("insights_open_grove_btn")
+                    ) {
+                        Text("Open Grove")
+                    }
+                }
+            }
+        }
+
+        // 3. Mood Insights Card (D-096..D-102, AC-009)
         item {
             Card(
                 shape = RoundedCornerShape(16.dp),
@@ -292,7 +377,118 @@ fun InsightsScreen(
             }
         }
 
-        // 30-Day Activity Mosaic
+        // 4. Historical Habit Calendar & Daily Log Inspection
+        item {
+            val activeHabits = remember(habits) {
+                habits.filter { it.lifecycleState != HabitLifecycleState.ARCHIVED }
+            }
+            val selectedDateStr = selectedHistoryDate.toString()
+
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("insights_historical_log_section")
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "Historical Habit Calendar & Daily Log",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Inspect any past date or adjust individual sessions.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(recentDatesDesc, key = { it.toString() }) { d ->
+                            val dStr = d.toString()
+                            val isSelected = d == selectedHistoryDate
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { viewModel.selectHistoryDate(d) },
+                                label = {
+                                    Text(
+                                        if (d == today) "Today"
+                                        else d.format(DateTimeFormatter.ofPattern("MMM d"))
+                                    )
+                                },
+                                modifier = Modifier.testTag("insights_date_chip_$dStr")
+                            )
+                        }
+                    }
+
+                    for (habit in activeHabits) {
+                        val status = remember(habit.habitId, selectedHistoryDate, outcomes, entries) {
+                            viewModel.repository.evaluateDerivedDayStatus(habit.habitId, selectedHistoryDate)
+                        }
+                        val statusLabel = when (status) {
+                            DerivedDayStatus.COMPLETED -> "Completed"
+                            DerivedDayStatus.PARTIAL -> "Partial"
+                            DerivedDayStatus.LOGGED_ZERO -> "Checked in (0)"
+                            DerivedDayStatus.REST_DAY -> "Rest day"
+                            DerivedDayStatus.OPEN_TODAY -> "Open today"
+                            DerivedDayStatus.DERIVED_MISSED -> "Quiet day"
+                            DerivedDayStatus.UNSCHEDULED -> "Unscheduled"
+                            DerivedDayStatus.INACTIVE_LIFECYCLE -> "Paused/Inactive"
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.openHabitDetail(habit.habitId, selectedDateStr)
+                                }
+                                .testTag("insights_habit_row_${habit.habitId}")
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = habit.name,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = "$selectedDateStr • $statusLabel",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Button(
+                                    onClick = {
+                                        viewModel.openRecordSession(habit.habitId, selectedDateStr, null)
+                                    },
+                                    modifier = Modifier
+                                        .heightIn(min = 48.dp)
+                                        .testTag("insights_log_session_${habit.habitId}")
+                                ) {
+                                    Text("Log / Adjust")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 5. 30-Day Activity Mosaic
         item {
             Card(
                 shape = RoundedCornerShape(16.dp),
@@ -368,7 +564,7 @@ fun InsightsScreen(
             }
         }
 
-        // Effort Distribution
+        // 6. Effort Distribution
         item {
             Card(
                 shape = RoundedCornerShape(16.dp),
@@ -421,7 +617,7 @@ fun InsightsScreen(
             }
         }
 
-        // Principles & Transparency
+        // 7. Principles & Transparency
         item {
             Card(
                 shape = RoundedCornerShape(16.dp),

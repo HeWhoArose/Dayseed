@@ -843,6 +843,7 @@ class Phase1ImplementationTest {
 
         // Log +30 min on Fri Mar 13 -> total = 90 min. Because start-of-week target (120) is frozen for Mar 9..15,
         // 90 min is PARTIAL for this week (does not complete the 120-min week)!
+        testClock.currentLocalDate = LocalDate.of(2026, 3, 13)
         repository.logHabitEntrySync("h_u12_weekly", LocalDate.of(2026, 3, 13), 30)
         assertEquals(0, repository.habitSummaries.value["h_u12_weekly"]?.currentCompletedStreak)
 
@@ -1143,6 +1144,44 @@ class Phase1ImplementationTest {
             v3Helper.close()
         } finally {
             context.deleteDatabase(v1DbName)
+        }
+
+        // 1b. Original v1 schema with 'date' column in daily_records and journal_entries (commit 4c1187aa) + PLANNED_REST
+        val origV1DbName = "test_orig_v1_date_col_${UUID.randomUUID()}.db"
+        try {
+            val origV1Helper = object : SQLiteOpenHelper(context, origV1DbName, null, 1) {
+                override fun onCreate(db: SQLiteDatabase) {
+                    db.execSQL("CREATE TABLE habits (id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, tracking_mode TEXT NOT NULL, tiny_desc TEXT, usual_desc TEXT, extra_desc TEXT, schedule_days TEXT NOT NULL, is_archived INTEGER DEFAULT 0, color_hex TEXT, created_at INTEGER NOT NULL)")
+                    db.execSQL("CREATE TABLE daily_records (id TEXT PRIMARY KEY, habit_id TEXT NOT NULL, date TEXT NOT NULL, outcome TEXT NOT NULL, effort_level TEXT NOT NULL, note TEXT, updated_at INTEGER NOT NULL, UNIQUE(habit_id, date))")
+                    db.execSQL("CREATE TABLE journal_entries (id TEXT PRIMARY KEY, date TEXT NOT NULL, prompt TEXT, content TEXT NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)")
+                    db.execSQL("CREATE TABLE app_preferences (pref_key TEXT PRIMARY KEY, pref_value TEXT NOT NULL)")
+
+                    db.execSQL("INSERT INTO habits VALUES ('h_move', 'Gentle Movement', 'Move with kindness', 'EFFORT_LEVELS', '1 stretch', '10m walk', '25m walk', 'MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY,SATURDAY,SUNDAY', 0, '#286143', 1000)")
+                    db.execSQL("INSERT INTO daily_records VALUES ('r_move_1', 'h_move', '2026-03-10', 'COMPLETED', 'USUAL', 'Walked outside', 2000)")
+                    db.execSQL("INSERT INTO daily_records VALUES ('r_move_rest', 'h_move', '2026-03-11', 'PLANNED_REST', 'STANDARD', 'Rested knee', 2500)")
+                    db.execSQL("INSERT INTO journal_entries VALUES ('j_orig_1', '2026-03-10', 'Prompt', 'Started Dayseed today.', 3000, 3000)")
+                }
+                override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+            }
+            origV1Helper.writableDatabase.close()
+
+            val upgradedHelper = DayseedDatabaseHelper(context, origV1DbName) { LocalDate.of(2026, 3, 12) }
+            val udb = upgradedHelper.writableDatabase
+            udb.rawQuery("SELECT COUNT(*) FROM habit_day_outcomes WHERE habit_id = 'h_move'", null).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(1, c.getInt(0))
+            }
+            udb.rawQuery("SELECT COUNT(*) FROM habit_date_exceptions WHERE habit_id = 'h_move' AND exception_kind = 'REST_DAY'", null).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(1, c.getInt(0))
+            }
+            udb.rawQuery("SELECT COUNT(*) FROM journal_entries WHERE journal_entry_id = 'j_orig_1'", null).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(1, c.getInt(0))
+            }
+            upgradedHelper.close()
+        } finally {
+            context.deleteDatabase(origV1DbName)
         }
 
         // 2. Existing-v3 database reconciliation on open (D-219: DATABASE_VERSION stays 3)
@@ -1912,7 +1951,7 @@ class Phase1ImplementationTest {
             ),
             effectiveDateOverride = start
         )
-        for (i in 0..6) {
+        for (i in 0..9) {
             repository.logHabitEntrySync("h_merge_active_guard", start.plusDays(i.toLong()), 1)
         }
 

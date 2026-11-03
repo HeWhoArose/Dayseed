@@ -493,4 +493,10 @@ The decision log and register now contain 206 unique decision IDs through D-212 
 
 The decision log and register now contain 212 unique decision IDs through D-218 (gaps preserved).
 
+## D-219 — Phase 1 Implementation Specification (Revision 7), resolution of U-1 through U-13, and Phase 2 Stage B execution (2026-11-02 / 2026-11-03)
+
+| D-219 | Phase 1 Implementation Specification (Revision 7), `U-1`–`U-13`, and Phase 2 everyday habit experience execution | **Owner decision — Approved for Stage B execution (2026-11-02 / 2026-11-03); Stage C and Stage D remain not yet open** | Approves the Phase 1 `v3` database/domain/streak/Grove/backup foundation (`DATABASE_VERSION = 3`, `U-1`–`U-13` Option A / `U-12`–`U-13` Option B) and the Phase 2 everyday habit experience (`5-destination bottom navigation`, `SecondaryRoute` back-stack, `Today` hierarchy & longest active streak indicator, `Habits` directory & contiguous reordering, full-screen `CreateEditHabitScreen`, `RecordSessionSheet` with `D-188` bounds & single-entry 8s Undo, `HabitDetailScreen`, and `LivingGroveScreen`). Routine reversible implementation details recorded under `D-196`: (1) `app_settings` key `acknowledged_terminal_run_ids` for one-shot dormant Grove transition banner acknowledgment; (2) `350 ms` rapid-tap idempotency window reusing `lastQuickActionIdempotencyKey` on `Today`; and (3) contiguous `0..N-1` `sort_order` maintenance across `habit_versions` in `reorderHabitSync`. | Stage B self-check evidence (2026-11-03): `compile_applet` PASSED; `gradle :app:testDebugUnitTest --rerun-tasks` PASSED **81/81** (`Phase1ImplementationTest` 29 + `Phase2ImplementationTest` 22 + `DayseedAcceptanceTest` 12 + `DayseedSettingsValidationTest` 10 + `DayseedVisualResolutionTest` 8). Consolidated human/device checks (`P1-H01`–`P1-H27` and `P2-H01`–`P2-H17` in `docs/38-PHASE-1-HUMAN-VALIDATION-REGISTER.md`) remain `NOT RUN`. Stage C and Stage D remain not open. |
+
+The decision log and register now contain 213 unique decision IDs through D-219 (gaps preserved).
+
 

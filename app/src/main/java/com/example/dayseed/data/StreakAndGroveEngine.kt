@@ -498,6 +498,7 @@ object StreakAndGroveEngine {
                 val targetBi = BigInteger.valueOf(targetVal.toLong())
 
                 var totalUnits = BigInteger.ZERO
+                val completedCheckOffDates = mutableSetOf<String>()
                 var lastActivityDate: LocalDate? = null
                 for (d in segmentDates) {
                     val dStr = d.toString()
@@ -511,9 +512,9 @@ object StreakAndGroveEngine {
                             }
                         }
                         TrackingMode.COMPLETION_ONLY -> {
-                            val out = outcomesByDate[dStr]
-                            if (out != null && out.outcomeKind == "COMPLETED") {
-                                totalUnits = totalUnits.add(BigInteger.ONE)
+                            val hasCompletedOnDay = outcomes.any { it.localDate == dStr && it.outcomeKind == "COMPLETED" }
+                            if (hasCompletedOnDay && completedCheckOffDates.add(dStr)) {
+                                totalUnits = BigInteger.valueOf(completedCheckOffDates.size.toLong())
                                 lastActivityDate = d
                             }
                         }
@@ -522,7 +523,9 @@ object StreakAndGroveEngine {
                             if (out != null && (out.outcomeKind == "COMPLETED" ||
                                     (out.outcomeKind == "EFFORT_LOGGED" && out.effortLevel in setOf("USUAL", "EXTRA")))
                             ) {
-                                totalUnits = totalUnits.add(BigInteger.ONE)
+                                if (completedCheckOffDates.add(dStr)) {
+                                    totalUnits = BigInteger.valueOf(completedCheckOffDates.size.toLong())
+                                }
                                 lastActivityDate = d
                             } else if (out != null && out.outcomeKind == "EFFORT_LOGGED" && out.effortLevel == "TINY") {
                                 lastActivityDate = d
@@ -723,5 +726,96 @@ object StreakAndGroveEngine {
             db.insertOrThrow(DayseedDatabaseHelper.TABLE_HABIT_STREAK_RUNS, null, cv)
         }
         return computed
+    }
+
+    data class WeeklyProgressSnapshot(
+        val weekTotalUnits: BigInteger,
+        val weekTargetUnits: BigInteger,
+        val weekProgressBand: ProgressBand,
+        val weekPercentage: Int,
+        val weekStartLocalDate: String,
+        val weekEndLocalDate: String,
+        val frozenWeekVersion: HabitVersion
+    )
+
+    /**
+     * Computes week-to-date progress on [evaluationDate] under U-12 Option B (frozen start-of-week HabitVersion).
+     */
+    fun computeWeeklyProgressSnapshot(
+        versions: List<HabitVersion>,
+        entries: List<HabitEntry>,
+        outcomes: List<HabitDayOutcome>,
+        weekStartHistory: List<WeekStartPolicyEntry>,
+        evaluationDate: LocalDate,
+        fallbackVersion: HabitVersion
+    ): WeeklyProgressSnapshot {
+        val sortedVersions = versions.sortedWith(
+            compareBy<HabitVersion> { it.effectiveFromLocalDate }.thenBy { it.createdAtUtcMs }
+        )
+        val firstDate = sortedVersions.firstOrNull()?.let {
+            try {
+                LocalDateValidator.parseStrict(it.effectiveFromLocalDate)
+            } catch (_: Exception) {
+                evaluationDate
+            }
+        } ?: evaluationDate
+
+        val weekStartDay = WeekBoundaryHelper.resolveWeekStartPolicyForDate(evaluationDate, weekStartHistory)
+        val (weekStart, weekEnd) = WeekBoundaryHelper.weekBounds(evaluationDate, weekStartDay)
+        val firstEffectiveDateInWeek = if (firstDate.isAfter(weekStart)) firstDate else weekStart
+        val frozenVersion = resolveEffectiveVersion(sortedVersions, firstEffectiveDateInWeek)
+            ?: resolveEffectiveVersion(sortedVersions, evaluationDate)
+            ?: fallbackVersion
+
+        val targetInt = (frozenVersion.targetValue ?: 1).coerceAtLeast(1)
+        val targetBi = BigInteger.valueOf(targetInt.toLong())
+        val weekDates = (0..6).map { weekStart.plusDays(it.toLong()) }
+            .filter { !it.isBefore(firstDate) }
+
+        val entriesByDate = entries.groupBy { it.localDate }
+        var totalUnits = BigInteger.ZERO
+        val completedDates = mutableSetOf<String>()
+
+        for (d in weekDates) {
+            val dStr = d.toString()
+            when (frozenVersion.trackingMode.canonical()) {
+                TrackingMode.QUANTITY, TrackingMode.DURATION -> {
+                    val dayEntries = entriesByDate[dStr].orEmpty()
+                    val daySum = ProgressBandClassifier.sumUnitsExact(dayEntries.map { it.valueUnits })
+                    if (daySum > BigInteger.ZERO) {
+                        totalUnits = totalUnits.add(daySum)
+                    }
+                }
+                TrackingMode.COMPLETION_ONLY -> {
+                    val hasCompleted = outcomes.any { it.localDate == dStr && it.outcomeKind == "COMPLETED" }
+                    if (hasCompleted && completedDates.add(dStr)) {
+                        totalUnits = BigInteger.valueOf(completedDates.size.toLong())
+                    }
+                }
+                TrackingMode.EFFORT_AWARE, TrackingMode.EFFORT_LEVELS -> {
+                    val hasQualifyingOutcome = outcomes.any { out ->
+                        out.localDate == dStr && (
+                            out.outcomeKind == "COMPLETED" ||
+                                (out.outcomeKind == "EFFORT_LOGGED" && out.effortLevel in setOf("USUAL", "EXTRA"))
+                            )
+                    }
+                    if (hasQualifyingOutcome && completedDates.add(dStr)) {
+                        totalUnits = BigInteger.valueOf(completedDates.size.toLong())
+                    }
+                }
+            }
+        }
+
+        val band = ProgressBandClassifier.classify(totalUnits, targetBi)
+        val pct = ProgressBandClassifier.percentageFloor(totalUnits, targetBi)
+        return WeeklyProgressSnapshot(
+            weekTotalUnits = totalUnits,
+            weekTargetUnits = targetBi,
+            weekProgressBand = band,
+            weekPercentage = pct,
+            weekStartLocalDate = weekStart.toString(),
+            weekEndLocalDate = weekEnd.toString(),
+            frozenWeekVersion = frozenVersion
+        )
     }
 }

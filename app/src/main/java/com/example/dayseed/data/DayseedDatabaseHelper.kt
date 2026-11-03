@@ -778,7 +778,7 @@ class DayseedDatabaseHelper(
             db.rawQuery("SELECT outcome FROM daily_records", null).use { c ->
                 while (c.moveToNext()) {
                     val outcome = c.getString(0)?.uppercase() ?: ""
-                    if (outcome == "SKIPPED" || outcome !in setOf("COMPLETED", "EFFORT_LOGGED")) {
+                    if (outcome == "SKIPPED" || outcome !in setOf("COMPLETED", "EFFORT_LOGGED", "PLANNED_REST")) {
                         throw DayseedMigrationBlockedException(
                             "Migration blocked: unsupported v1 outcome '$outcome' found in daily_records."
                         )
@@ -803,7 +803,15 @@ class DayseedDatabaseHelper(
         )
         val v1Habits = mutableListOf<V1Habit>()
         if (tableExists(db, "habits")) {
-            db.rawQuery("SELECT id, name, description, tracking_mode, tiny_desc, usual_desc, extra_desc, schedule_days, is_archived, color_hex, created_at FROM habits", null).use { c ->
+            val habitCols = getColumnNames(db, "habits")
+            val tinyExpr = if ("tiny_desc" in habitCols) "tiny_desc" else "NULL"
+            val usualExpr = if ("usual_desc" in habitCols) "usual_desc" else "NULL"
+            val extraExpr = if ("extra_desc" in habitCols) "extra_desc" else "NULL"
+            val colorExpr = if ("color_hex" in habitCols) "color_hex" else "NULL"
+            db.rawQuery(
+                "SELECT id, name, description, tracking_mode, $tinyExpr, $usualExpr, $extraExpr, schedule_days, is_archived, $colorExpr, created_at FROM habits",
+                null
+            ).use { c ->
                 while (c.moveToNext()) {
                     v1Habits.add(
                         V1Habit(
@@ -835,7 +843,16 @@ class DayseedDatabaseHelper(
         )
         val v1Records = mutableListOf<V1Record>()
         if (hasDailyRecords) {
-            db.rawQuery("SELECT id, habit_id, record_date, outcome, effort_level, note, updated_at FROM daily_records", null).use { c ->
+            val recordCols = getColumnNames(db, "daily_records")
+            val recordDateCol = when {
+                "record_date" in recordCols -> "record_date"
+                "local_date" in recordCols -> "local_date"
+                else -> "date"
+            }
+            db.rawQuery(
+                "SELECT id, habit_id, $recordDateCol, outcome, effort_level, note, updated_at FROM daily_records",
+                null
+            ).use { c ->
                 while (c.moveToNext()) {
                     v1Records.add(
                         V1Record(
@@ -862,7 +879,16 @@ class DayseedDatabaseHelper(
         )
         val v1Journals = mutableListOf<V1Journal>()
         if (tableExists(db, "journal_entries")) {
-            db.rawQuery("SELECT id, entry_date, prompt, content, created_at, updated_at FROM journal_entries", null).use { c ->
+            val journalCols = getColumnNames(db, "journal_entries")
+            val entryDateCol = when {
+                "entry_date" in journalCols -> "entry_date"
+                "local_date" in journalCols -> "local_date"
+                else -> "date"
+            }
+            db.rawQuery(
+                "SELECT id, $entryDateCol, prompt, content, created_at, updated_at FROM journal_entries",
+                null
+            ).use { c ->
                 while (c.moveToNext()) {
                     v1Journals.add(
                         V1Journal(
@@ -879,11 +905,29 @@ class DayseedDatabaseHelper(
         }
 
         val v1Prefs = mutableMapOf<String, String>()
-        if (tableExists(db, "app_preferences")) {
-            db.rawQuery("SELECT pref_key, pref_value FROM app_preferences", null).use { c ->
-                while (c.moveToNext()) {
-                    v1Prefs[c.getString(0)] = c.getString(1)
+        for (prefTable in listOf("app_preferences", "user_preferences")) {
+            if (tableExists(db, prefTable)) {
+                val prefCols = getColumnNames(db, prefTable)
+                val keyCol = if ("pref_key" in prefCols) "pref_key" else "key"
+                val valCol = if ("pref_value" in prefCols) "pref_value" else "value"
+                db.rawQuery("SELECT $keyCol, $valCol FROM $prefTable", null).use { c ->
+                    while (c.moveToNext()) {
+                        val k = c.getString(0)?.trim().orEmpty()
+                        val v = if (c.isNull(1)) "" else c.getString(1)
+                        if (k.isNotEmpty()) {
+                            v1Prefs[k] = v
+                        }
+                    }
                 }
+            }
+        }
+
+        val habitIdSet = v1Habits.map { it.id }.toSet()
+        for (r in v1Records) {
+            if (r.habitId !in habitIdSet) {
+                throw DayseedMigrationBlockedException(
+                    "Migration blocked: orphaned daily_records row '${r.id}' references missing habit '${r.habitId}'."
+                )
             }
         }
 
@@ -891,6 +935,7 @@ class DayseedDatabaseHelper(
         db.execSQL("DROP TABLE IF EXISTS daily_records;")
         db.execSQL("DROP TABLE IF EXISTS journal_entries;")
         db.execSQL("DROP TABLE IF EXISTS app_preferences;")
+        db.execSQL("DROP TABLE IF EXISTS user_preferences;")
         db.execSQL("DROP TABLE IF EXISTS habits;")
 
         createV3Schema(db)
@@ -900,7 +945,7 @@ class DayseedDatabaseHelper(
         val latestRecordByHabit = v1Records.groupBy { it.habitId }
             .mapValues { (_, list) -> list.maxOf { it.recordDate } }
 
-        for (h in v1Habits) {
+        for ((idx, h) in v1Habits.withIndex()) {
             val hCv = ContentValues().apply {
                 put("habit_id", h.id)
                 put("created_at_utc_ms", h.createdAt)
@@ -957,7 +1002,7 @@ class DayseedDatabaseHelper(
                 put("usual_description", h.usualDesc?.takeIf { it.isNotBlank() } ?: "The ordinary intended action")
                 put("extra_description", h.extraDesc?.takeIf { it.isNotBlank() } ?: "Optional stretch action")
                 put("color_hex", h.colorHex?.takeIf { it.isNotBlank() } ?: "#286143")
-                put("sortOrder".replace("sortOrder", "sort_order"), 0)
+                put("sort_order", idx)
                 put("created_at_utc_ms", h.createdAt)
             }
             db.insertOrThrow(TABLE_HABIT_VERSIONS, null, vCv)
@@ -983,39 +1028,52 @@ class DayseedDatabaseHelper(
         }
 
         for (r in v1Records) {
-            val mode = modeByHabit[r.habitId] ?: "EFFORT_AWARE"
-            if (mode in listOf("QUANTITY", "DURATION")) {
-                val eCv = ContentValues().apply {
-                    put("entry_id", r.id)
+            if (r.outcome.equals("PLANNED_REST", ignoreCase = true)) {
+                val exCv = ContentValues().apply {
+                    put("id", r.id)
                     put("habit_id", r.habitId)
                     put("local_date", r.recordDate)
-                    put("value_units", 1)
-                    if (!r.note.isNullOrBlank()) put("entry_note", r.note.trim()) else putNull("entry_note")
+                    put("exception_kind", "REST_DAY")
+                    if (!r.note.isNullOrBlank()) put("note", r.note.trim().take(500)) else putNull("note")
                     put("created_at_utc_ms", r.updatedAt)
                     put("updated_at_utc_ms", r.updatedAt)
-                    put("idempotency_key", "v1_ent_${r.id}")
                 }
-                db.insertOrThrow(TABLE_HABIT_ENTRIES, null, eCv)
+                db.insertOrThrow(TABLE_HABIT_DATE_EXCEPTIONS, null, exCv)
             } else {
-                val outcomeKind = if (mode == "EFFORT_AWARE") "EFFORT_LOGGED" else "COMPLETED"
-                val effort = if (outcomeKind == "EFFORT_LOGGED") {
-                    val e = r.effortLevel?.uppercase()
-                    if (e in setOf("TINY", "USUAL", "EXTRA")) e else "USUAL"
+                val mode = modeByHabit[r.habitId] ?: "EFFORT_AWARE"
+                if (mode in listOf("QUANTITY", "DURATION")) {
+                    val eCv = ContentValues().apply {
+                        put("entry_id", r.id)
+                        put("habit_id", r.habitId)
+                        put("local_date", r.recordDate)
+                        put("value_units", 1)
+                        if (!r.note.isNullOrBlank()) put("entry_note", r.note.trim()) else putNull("entry_note")
+                        put("created_at_utc_ms", r.updatedAt)
+                        put("updated_at_utc_ms", r.updatedAt)
+                        put("idempotency_key", "v1_ent_${r.id}")
+                    }
+                    db.insertOrThrow(TABLE_HABIT_ENTRIES, null, eCv)
                 } else {
-                    null
-                }
+                    val outcomeKind = if (mode == "EFFORT_AWARE") "EFFORT_LOGGED" else "COMPLETED"
+                    val effort = if (outcomeKind == "EFFORT_LOGGED") {
+                        val e = r.effortLevel?.uppercase()
+                        if (e in setOf("TINY", "USUAL", "EXTRA")) e else "USUAL"
+                    } else {
+                        null
+                    }
 
-                val oCv = ContentValues().apply {
-                    put("outcome_id", r.id)
-                    put("habit_id", r.habitId)
-                    put("local_date", r.recordDate)
-                    put("outcome_kind", outcomeKind)
-                    if (effort != null) put("effort_level", effort) else putNull("effort_level")
-                    put("idempotency_key", "v1_out_${r.id}")
-                    put("created_at_utc_ms", r.updatedAt)
-                    put("updated_at_utc_ms", r.updatedAt)
+                    val oCv = ContentValues().apply {
+                        put("outcome_id", r.id)
+                        put("habit_id", r.habitId)
+                        put("local_date", r.recordDate)
+                        put("outcome_kind", outcomeKind)
+                        if (effort != null) put("effort_level", effort) else putNull("effort_level")
+                        put("idempotency_key", "v1_out_${r.id}")
+                        put("created_at_utc_ms", r.updatedAt)
+                        put("updated_at_utc_ms", r.updatedAt)
+                    }
+                    db.insertOrThrow(TABLE_HABIT_DAY_OUTCOMES, null, oCv)
                 }
-                db.insertOrThrow(TABLE_HABIT_DAY_OUTCOMES, null, oCv)
             }
 
             if (!r.note.isNullOrBlank()) {

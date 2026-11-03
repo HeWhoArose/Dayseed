@@ -2,6 +2,7 @@ package com.example.dayseed.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -49,6 +51,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -63,9 +67,9 @@ import com.example.dayseed.data.HabitDayOutcome
 import com.example.dayseed.data.HabitEntry
 import com.example.dayseed.data.HabitLifecycleState
 import com.example.dayseed.data.HabitSummary
-import com.example.dayseed.data.ProgressBand
 import com.example.dayseed.data.ProgressBandClassifier
 import com.example.dayseed.data.StreakUnit
+import com.example.dayseed.data.TargetPeriod
 import com.example.dayseed.data.TrackingMode
 import com.example.dayseed.ui.theme.ExtraBranchColor
 import com.example.dayseed.ui.theme.TinySproutColor
@@ -81,6 +85,8 @@ fun HabitCard(
     restDayException: HabitDateException? = null,
     summary: HabitSummary? = null,
     retrospectivePromptEligible: Boolean = false,
+    onOpenHabitDetail: (() -> Unit)? = null,
+    onOpenRecordSession: ((entryId: String?) -> Unit)? = null,
     onLogOutcome: (outcome: DailyOutcome, effort: EffortLevel) -> Unit,
     onLogQuantityOrDuration: ((valueUnits: Int, entryNote: String?) -> Unit)? = null,
     onDeleteEntry: ((entryId: String) -> Unit)? = null,
@@ -98,13 +104,17 @@ fun HabitCard(
     var showMenu by remember { mutableStateOf(false) }
     var showNoteEditor by remember { mutableStateOf(false) }
     var noteDraft by remember(dateNote) { mutableStateOf(dateNote?.body ?: "") }
-    val mode = habit.trackingMode.canonical()
+    val effVersion = summary?.effectiveVersion
+    val mode = (effVersion?.trackingMode ?: habit.trackingMode).canonical()
     val isRecorded = outcome != null || entries.isNotEmpty() || restDayException != null
 
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .testTag("habit_card_${habit.id}"),
+            .testTag("habit_card_${habit.id}")
+            .semantics {
+                contentDescription = "Habit card for ${habit.name}"
+            },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -121,14 +131,26 @@ fun HabitCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Header Row: Habit Name, Mode badge, Menu
+            // Header Row: Habit Name (tappable to open HabitDetail), Target/Schedule summary, Menu
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 48.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .then(
+                            if (onOpenHabitDetail != null) {
+                                Modifier.clickable { onOpenHabitDetail() }
+                            } else {
+                                Modifier
+                            }
+                        )
+                        .padding(vertical = 4.dp)
+                        .testTag("open_habit_detail_${habit.id}"),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
@@ -145,15 +167,40 @@ fun HabitCard(
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
-                        Text(
-                            text = habit.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        if (habit.description.isNotBlank()) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
                             Text(
-                                text = habit.description,
+                                text = habit.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            if (!habit.category.isNullOrBlank()) {
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant
+                                ) {
+                                    Text(
+                                        text = habit.category,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+                        val metaLine = if (summary != null) {
+                            "${summary.formatTargetAndPeriodSummary()} • ${summary.formatScheduleSummary()}"
+                        } else if (habit.description.isNotBlank()) {
+                            habit.description
+                        } else {
+                            ""
+                        }
+                        if (metaLine.isNotBlank()) {
+                            Text(
+                                text = metaLine,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -164,7 +211,9 @@ fun HabitCard(
                 Box {
                     IconButton(
                         onClick = { showMenu = true },
-                        modifier = Modifier.testTag("habit_menu_${habit.id}")
+                        modifier = Modifier
+                            .size(48.dp)
+                            .testTag("habit_menu_${habit.id}")
                     ) {
                         Icon(
                             imageVector = Icons.Default.MoreVert,
@@ -177,6 +226,27 @@ fun HabitCard(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false }
                     ) {
+                        if (onOpenHabitDetail != null) {
+                            DropdownMenuItem(
+                                text = { Text("Habit Details & History") },
+                                onClick = {
+                                    showMenu = false
+                                    onOpenHabitDetail()
+                                },
+                                modifier = Modifier.testTag("menu_open_detail_${habit.id}")
+                            )
+                        }
+                        if (onOpenRecordSession != null) {
+                            DropdownMenuItem(
+                                text = { Text("Record Session") },
+                                leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) },
+                                onClick = {
+                                    showMenu = false
+                                    onOpenRecordSession(null)
+                                },
+                                modifier = Modifier.testTag("menu_record_session_${habit.id}")
+                            )
+                        }
                         DropdownMenuItem(
                             text = { Text(if (dateNote != null) "Edit Date Note" else "Add Date Note") },
                             leadingIcon = { Icon(Icons.Default.Notes, contentDescription = null) },
@@ -243,7 +313,7 @@ fun HabitCard(
                 ) {
                     if (summary.currentCompletedStreak > 0 || summary.currentElapsedActiveSpan > 0) {
                         val unitWord = if (summary.streakUnit == StreakUnit.WEEKS) {
-                            if (summary.currentCompletedStreak == 1) "wk" else "wks"
+                            if (summary.currentCompletedStreak == 1) "week" else "weeks"
                         } else {
                             if (summary.currentCompletedStreak == 1) "day" else "days"
                         }
@@ -305,7 +375,9 @@ fun HabitCard(
                     if (onClearRestDayToday != null) {
                         TextButton(
                             onClick = onClearRestDayToday,
-                            modifier = Modifier.testTag("clear_rest_day_btn_${habit.id}")
+                            modifier = Modifier
+                                .heightIn(min = 48.dp)
+                                .testTag("clear_rest_day_btn_${habit.id}")
                         ) {
                             Text("Resume Today")
                         }
@@ -316,10 +388,12 @@ fun HabitCard(
                     TrackingMode.QUANTITY, TrackingMode.DURATION -> {
                         QuantityOrDurationSection(
                             habit = habit,
+                            summary = summary,
                             entries = entries,
                             onAddEntry = { units, note ->
                                 onLogQuantityOrDuration?.invoke(units, note)
                             },
+                            onOpenRecordSession = onOpenRecordSession,
                             onDeleteEntry = { entryId ->
                                 onDeleteEntry?.invoke(entryId)
                             }
@@ -327,6 +401,11 @@ fun HabitCard(
                     }
 
                     TrackingMode.COMPLETION_ONLY, TrackingMode.EFFORT_AWARE -> {
+                        val isWeeklyTarget = (summary?.effectiveVersion?.targetPeriod ?: habit.targetPeriod) == TargetPeriod.WEEK
+                        if (isWeeklyTarget && summary != null) {
+                            WeeklyCheckOffProgressBanner(habit = habit, summary = summary)
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
                         if (outcome != null) {
                             RecordedOutcomeRow(
                                 outcome = outcome,
@@ -370,7 +449,10 @@ fun HabitCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = { showNoteEditor = false }) {
+                    TextButton(
+                        onClick = { showNoteEditor = false },
+                        modifier = Modifier.heightIn(min = 48.dp)
+                    ) {
                         Text("Cancel")
                     }
                     TextButton(
@@ -380,7 +462,9 @@ fun HabitCard(
                             }
                             showNoteEditor = false
                         },
-                        modifier = Modifier.testTag("save_habit_note_btn_${habit.id}")
+                        modifier = Modifier
+                            .heightIn(min = 48.dp)
+                            .testTag("save_habit_note_btn_${habit.id}")
                     ) {
                         Text("Save Note")
                     }
@@ -409,12 +493,17 @@ fun HabitCard(
                     Row {
                         TextButton(
                             onClick = onOpenRetrospectiveJournal,
-                            modifier = Modifier.testTag("retrospective_write_btn_${habit.id}")
+                            modifier = Modifier
+                                .heightIn(min = 48.dp)
+                                .testTag("retrospective_write_btn_${habit.id}")
                         ) {
                             Text("Reflect")
                         }
                         if (onDismissRetrospectivePrompt != null) {
-                            TextButton(onClick = onDismissRetrospectivePrompt) {
+                            TextButton(
+                                onClick = onDismissRetrospectivePrompt,
+                                modifier = Modifier.heightIn(min = 48.dp)
+                            ) {
                                 Text("Later")
                             }
                         }
@@ -426,18 +515,75 @@ fun HabitCard(
 }
 
 @Composable
+private fun WeeklyCheckOffProgressBanner(
+    habit: Habit,
+    summary: HabitSummary
+) {
+    val band = summary.weekProgressBand
+    val pct = summary.weekPercentage
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "This week: ${summary.weekTotalUnits} / ${summary.weekTargetUnits} days ($pct%)",
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.testTag("habit_weekly_progress_text_${habit.id}")
+            )
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.testTag("habit_band_badge_${habit.id}")
+            ) {
+                Text(
+                    text = band.label,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                )
+            }
+        }
+        LinearProgressIndicator(
+            progress = { (pct.toFloat() / 100f).coerceIn(0f, 1f) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(6.dp)
+                .clip(RoundedCornerShape(3.dp)),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+        )
+    }
+}
+
+@Composable
 private fun QuantityOrDurationSection(
     habit: Habit,
+    summary: HabitSummary?,
     entries: List<HabitEntry>,
     onAddEntry: (Int, String?) -> Unit,
+    onOpenRecordSession: ((String?) -> Unit)? = null,
     onDeleteEntry: (String) -> Unit
 ) {
-    val target = (habit.targetValue ?: 1).coerceAtLeast(1)
+    val isWeekly = (summary?.effectiveVersion?.targetPeriod ?: habit.targetPeriod) == TargetPeriod.WEEK
+    val target = if (isWeekly && summary != null) {
+        summary.weekTargetUnits.min(BigInteger.valueOf(Int.MAX_VALUE.toLong())).toInt().coerceAtLeast(1)
+    } else {
+        (summary?.effectiveVersion?.targetValue ?: habit.targetValue ?: 1).coerceAtLeast(1)
+    }
     val targetBig = BigInteger.valueOf(target.toLong())
-    val unitLabel = habit.unitCode ?: if (habit.trackingMode == TrackingMode.DURATION) "min" else "units"
-    val totalUnitsBig = ProgressBandClassifier.sumUnitsExact(entries.map { it.valueUnits })
-    val band = ProgressBandClassifier.classify(totalUnitsBig, targetBig)
-    val pct = ProgressBandClassifier.displayPercentage(totalUnitsBig, targetBig)
+    val unitLabel = summary?.effectiveVersion?.unitCode
+        ?: habit.unitCode
+        ?: if (habit.trackingMode == TrackingMode.DURATION) "min" else "units"
+
+    val todayUnitsBig = ProgressBandClassifier.sumUnitsExact(entries.map { it.valueUnits })
+    val activeUnitsBig = if (isWeekly && summary != null) summary.weekTotalUnits else todayUnitsBig
+    val band = ProgressBandClassifier.classify(activeUnitsBig, targetBig)
+    val pct = ProgressBandClassifier.displayPercentage(activeUnitsBig, targetBig)
 
     var customAmountText by remember { mutableStateOf("") }
     var showCustomInput by remember { mutableStateOf(false) }
@@ -449,8 +595,9 @@ private fun QuantityOrDurationSection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val progressPrefix = if (isWeekly) "This week: " else ""
             Text(
-                text = "$totalUnitsBig / $target $unitLabel ($pct%)",
+                text = "$progressPrefix$activeUnitsBig / $target $unitLabel ($pct%)",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -471,6 +618,14 @@ private fun QuantityOrDurationSection(
             }
         }
 
+        if (isWeekly && todayUnitsBig > BigInteger.ZERO) {
+            Text(
+                text = "Today: +$todayUnitsBig $unitLabel",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+
         LinearProgressIndicator(
             progress = { (pct.toFloat() / 100f).coerceIn(0f, 1f) },
             modifier = Modifier
@@ -481,7 +636,7 @@ private fun QuantityOrDurationSection(
             trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
         )
 
-        if (entries.isNotEmpty()) {
+        if (entries.isNotEmpty() || activeUnitsBig > BigInteger.ZERO) {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     text = band.encouragementQuote,
@@ -508,6 +663,7 @@ private fun QuantityOrDurationSection(
                 onClick = { onAddEntry(stepSmall, null) },
                 modifier = Modifier
                     .weight(1f)
+                    .heightIn(min = 48.dp)
                     .testTag("quick_add_small_${habit.id}"),
                 shape = RoundedCornerShape(10.dp)
             ) {
@@ -518,6 +674,7 @@ private fun QuantityOrDurationSection(
                     onClick = { onAddEntry(stepHalf, null) },
                     modifier = Modifier
                         .weight(1f)
+                        .heightIn(min = 48.dp)
                         .testTag("quick_add_half_${habit.id}"),
                     shape = RoundedCornerShape(10.dp)
                 ) {
@@ -526,12 +683,13 @@ private fun QuantityOrDurationSection(
             }
             Button(
                 onClick = {
-                    val remainingBig = targetBig.subtract(totalUnitsBig)
+                    val remainingBig = targetBig.subtract(activeUnitsBig)
                     val remaining = if (remainingBig <= BigInteger.ONE) 1 else remainingBig.min(BigInteger.valueOf(Int.MAX_VALUE.toLong())).toInt()
                     onAddEntry(remaining, null)
                 },
                 modifier = Modifier
                     .weight(1f)
+                    .heightIn(min = 48.dp)
                     .testTag("quick_add_goal_${habit.id}"),
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
@@ -542,11 +700,28 @@ private fun QuantityOrDurationSection(
                 Text("Goal", fontSize = 12.sp)
             }
             OutlinedButton(
-                onClick = { showCustomInput = !showCustomInput },
-                modifier = Modifier.testTag("toggle_custom_entry_${habit.id}"),
+                onClick = {
+                    if (onOpenRecordSession != null) {
+                        onOpenRecordSession(null)
+                    } else {
+                        showCustomInput = !showCustomInput
+                    }
+                },
+                modifier = Modifier
+                    .heightIn(min = 48.dp)
+                    .testTag("open_record_session_${habit.id}"),
                 shape = RoundedCornerShape(10.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Custom entry amount", modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Add, contentDescription = "Record session for ${habit.name}", modifier = Modifier.size(16.dp))
+            }
+            OutlinedButton(
+                onClick = { showCustomInput = !showCustomInput },
+                modifier = Modifier
+                    .heightIn(min = 48.dp)
+                    .testTag("toggle_custom_entry_${habit.id}"),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Icon(Icons.Default.Edit, contentDescription = "Inline custom entry amount", modifier = Modifier.size(16.dp))
             }
         }
 
@@ -575,7 +750,9 @@ private fun QuantityOrDurationSection(
                             showCustomInput = false
                         }
                     },
-                    modifier = Modifier.testTag("submit_custom_entry_${habit.id}")
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .testTag("submit_custom_entry_${habit.id}")
                 ) {
                     Text("Log")
                 }
@@ -599,20 +776,38 @@ private fun QuantityOrDurationSection(
                             text = if (entry.valueUnits == 0) "0 $unitLabel (Checked in)"
                             else "+${entry.valueUnits} $unitLabel" + (entry.entryNote?.let { " • $it" } ?: ""),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
                         )
-                        IconButton(
-                            onClick = { onDeleteEntry(entry.entryId) },
-                            modifier = Modifier
-                                .size(28.dp)
-                                .testTag("delete_entry_${entry.entryId}")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Delete entry",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
-                            )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (onOpenRecordSession != null) {
+                                IconButton(
+                                    onClick = { onOpenRecordSession(entry.entryId) },
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .testTag("edit_entry_${entry.entryId}")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "Edit session",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                            IconButton(
+                                onClick = { onDeleteEntry(entry.entryId) },
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .testTag("delete_entry_${entry.entryId}")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Delete entry",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -670,7 +865,7 @@ private fun RecordedOutcomeRow(
             border = BorderStroke(1.dp, effColor.copy(alpha = 0.5f)),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = effColor),
             modifier = Modifier
-                .height(36.dp)
+                .heightIn(min = 48.dp)
                 .testTag("reset_outcome_btn_${outcome.habitId}")
         ) {
             Text(text = "Change", style = MaterialTheme.typography.labelMedium)
@@ -718,6 +913,7 @@ private fun UnrecordedOutcomeActionRow(
             onClick = { onLog(DailyOutcome.COMPLETED, EffortLevel.STANDARD) },
             modifier = Modifier
                 .fillMaxWidth()
+                .heightIn(min = 48.dp)
                 .testTag("habit_done_btn_${habit.id}"),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
@@ -744,6 +940,7 @@ private fun EffortButton(
     Surface(
         onClick = onClick,
         modifier = modifier
+            .heightIn(min = 48.dp)
             .clip(RoundedCornerShape(12.dp))
             .testTag("effort_btn_${title.lowercase()}"),
         color = color.copy(alpha = 0.08f),

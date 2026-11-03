@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -20,8 +21,10 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -36,7 +39,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -73,87 +75,119 @@ fun HistoryScreen(
     val dateNotes by viewModel.habitDateNotes.collectAsState()
     val journals by viewModel.journalEntries.collectAsState()
     val selectedDate by viewModel.selectedHistoryDate.collectAsState()
+    val journalSearchQuery by viewModel.journalSearchQuery.collectAsState()
+    val selectedMoodFilter by viewModel.journalMoodFilter.collectAsState()
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
-    var journalSearchQuery by remember { mutableStateOf("") }
-    var selectedMoodFilter by remember { mutableStateOf<String?>(null) }
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
-            .testTag("history_screen")
+            .testTag("journal_screen")
     ) {
-        // Top Header
-        Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp)) {
-            Text(
-                text = "History & Archive",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Text(
-                text = "Look back without shame. Past records can always be adjusted.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        TabRow(
-            selectedTabIndex = selectedTabIndex,
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.primary
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .testTag("history_screen")
         ) {
-            Tab(
-                selected = selectedTabIndex == 0,
-                onClick = { selectedTabIndex = 0 },
-                text = { Text("Daily Log", fontWeight = FontWeight.Medium) },
-                modifier = Modifier.testTag("history_log_tab")
-            )
-            Tab(
-                selected = selectedTabIndex == 1,
-                onClick = { selectedTabIndex = 1 },
-                text = { Text("Journal Archive", fontWeight = FontWeight.Medium) },
-                modifier = Modifier.testTag("history_journal_tab")
-            )
-        }
+            // Top Header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Journal & Reflections",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = "Look back without shame. Past records can always be adjusted.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
-        if (selectedTabIndex == 0) {
-            DailyLogView(
-                viewModel = viewModel,
-                selectedDate = selectedDate,
-                onSelectDate = { viewModel.selectHistoryDate(it) },
-                habits = habits,
-                outcomes = outcomes,
-                entries = entries,
-                dateNotes = dateNotes,
-                onLogHabit = { habit, outcome, effort ->
-                    viewModel.logHabit(habit, selectedDate, outcome, effort)
-                },
-                onLogQuantityOrDuration = { habit, units, note ->
-                    viewModel.logHabitQuantityOrDuration(habit, units, selectedDate, note)
-                },
-                onDeleteEntry = { entryId ->
-                    viewModel.deleteHabitEntry(entryId)
-                },
-                onSaveDateNote = { habitId, body ->
-                    viewModel.saveHabitDateNote(habitId, selectedDate, body)
-                },
-                onResetRecord = { habitId ->
-                    viewModel.removeRecord(habitId, selectedDate)
-                },
-                onEditHabit = { viewModel.openEditHabit(it) },
-                onArchiveHabit = { viewModel.toggleHabitArchive(it.habitId, !it.isArchived) }
-            )
-        } else {
-            JournalArchiveView(
-                journals = journals,
-                habitsById = habits.associate { it.habitId to it.name },
-                searchQuery = journalSearchQuery,
-                selectedMoodCode = selectedMoodFilter,
-                onSearchChange = { journalSearchQuery = it },
-                onSelectMoodFilter = { selectedMoodFilter = if (selectedMoodFilter == it) null else it },
-                onEntryClick = { viewModel.openJournalEditor(it, it.date) }
-            )
+                Button(
+                    onClick = {
+                        viewModel.openJournalEditor(
+                            entry = null,
+                            forDate = viewModel.repository.clock.todayLocal()
+                        )
+                    },
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .testTag("journal_add_entry_fab")
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Reflect")
+                }
+            }
+
+            TabRow(
+                selectedTabIndex = selectedTabIndex,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.primary
+            ) {
+                Tab(
+                    selected = selectedTabIndex == 0,
+                    onClick = { selectedTabIndex = 0 },
+                    text = { Text("Journal Archive", fontWeight = FontWeight.Medium) },
+                    modifier = Modifier.testTag("history_journal_tab")
+                )
+                Tab(
+                    selected = selectedTabIndex == 1,
+                    onClick = { selectedTabIndex = 1 },
+                    text = { Text("Daily Log", fontWeight = FontWeight.Medium) },
+                    modifier = Modifier.testTag("history_log_tab")
+                )
+            }
+
+            if (selectedTabIndex == 0) {
+                JournalArchiveView(
+                    journals = journals,
+                    habitsById = habits.associate { it.habitId to it.name },
+                    searchQuery = journalSearchQuery,
+                    selectedMoodCode = selectedMoodFilter,
+                    onSearchChange = { viewModel.setJournalSearchQuery(it) },
+                    onSelectMoodFilter = {
+                        viewModel.setJournalMoodFilter(if (selectedMoodFilter == it) null else it)
+                    },
+                    onEntryClick = { viewModel.openJournalEditor(it, it.date) }
+                )
+            } else {
+                DailyLogView(
+                    viewModel = viewModel,
+                    selectedDate = selectedDate,
+                    onSelectDate = { viewModel.selectHistoryDate(it) },
+                    habits = habits,
+                    outcomes = outcomes,
+                    entries = entries,
+                    dateNotes = dateNotes,
+                    onLogHabit = { habit, outcome, effort ->
+                        viewModel.logHabit(habit, selectedDate, outcome, effort)
+                    },
+                    onLogQuantityOrDuration = { habit, units, note ->
+                        viewModel.logHabitQuantityOrDuration(habit, units, selectedDate, note)
+                    },
+                    onDeleteEntry = { entryId ->
+                        viewModel.deleteHabitEntry(entryId)
+                    },
+                    onSaveDateNote = { habitId, body ->
+                        viewModel.saveHabitDateNote(habitId, selectedDate, body)
+                    },
+                    onResetRecord = { habitId ->
+                        viewModel.removeRecord(habitId, selectedDate)
+                    },
+                    onEditHabit = { viewModel.openEditHabit(it) },
+                    onArchiveHabit = { viewModel.toggleHabitArchive(it.habitId, !it.isArchived) }
+                )
+            }
         }
     }
 }
@@ -316,7 +350,11 @@ private fun DailyLogView(
                         onResetRecord(habit.habitId)
                     },
                     onEditHabit = { onEditHabit(habit) },
-                    onArchiveHabit = { onArchiveHabit(habit) }
+                    onArchiveHabit = { onArchiveHabit(habit) },
+                    onOpenHabitDetail = { viewModel.openHabitDetail(habit.habitId, selectedDate) },
+                    onOpenRecordSession = { entryId ->
+                        viewModel.openRecordSession(habit.habitId, selectedDate, entryId)
+                    }
                 )
             }
         }
