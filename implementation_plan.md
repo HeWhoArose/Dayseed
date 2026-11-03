@@ -937,7 +937,7 @@ A full source-level pass over the Phase 2 feature surface and the 26-method `Pha
 5. **Phase 2 audit disposition:**
    - The source/test map covers T2-01 through T2-51 across navigation, Today, Habits, create/edit, weekly targets, D-194, record/correct/Undo, lifecycle, Grove, reduced motion, and idempotent quick actions.
    - All Phase 2 human/device cases P2-H01 through P2-H17 and targeted cases P2-C01 through P2-C05 remain `NOT RUN`; this source audit does not substitute for device validation.
-   - **Unresolved Phase 2 requirement:** the plan calls for an event-driven Grove run-ending animation that plays once on the transition event. Current `HabitBranchCanvas` is static and no Compose animation API is used in the Grove components. This remains an explicit gap; do not mark Phase 2 fully complete until implemented or explicitly deferred by the owner.
+   - **Grove run-ending animation:** Today now detects active-to-ended run transitions from the streak-run state snapshot and displays a short animated Grove-preservation notice once for each run ID. Recomposition with the same snapshot and initial loading of an already-ended run do not replay it. Reduced-motion mode shows the notice without motion. Pure transition detection is covered by `t2_c06`; device timing/reduced-motion behaviour remains P2-C06 and is still `NOT RUN`.
    - Phase 3, Stage C independent validation, Stage D owner acceptance, release approval, and merge remain separate gates and are not authorised by this addendum.
 
 
