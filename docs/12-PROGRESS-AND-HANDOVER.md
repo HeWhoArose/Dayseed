@@ -7,6 +7,8 @@
 
 **Latest remediation commit:** `70c6aa83ba5ffae5dfe72cc439a723ae025ca172`. Source changes and added tests are committed on the remediation branch, but **have not yet been independently executed** in a Gradle environment. Do not describe the new tests as passing until the exact branch head is built and the full `gradle :app:testDebugUnitTest --rerun-tasks` suite is run with retained XML results.
 
+**Schema extension boundary:** v3 reconciliation supports the canonical app-managed schema only. It drops and recreates app triggers and recreates canonical indexes for rebuilt tables. Custom/external triggers are not preserved; custom indexes attached to rebuilt tables are not a supported extension point. Do not add out-of-band schema objects without first changing the reconciliation contract and its tests.
+
 
 > **Start here for any new AI/session:** [Continuation Handover and Decision Protocol](32-CONTINUATION-HANDOVER.md). It defines source-of-truth order, D-196 decision rules, owner authority, current Stage A approval, corrected Stage B/C/D sequence, GitHub verification discipline and evidence requirements. Root [AGENTS.md](../AGENTS.md) points contributors to the same canonical handover. Do not use historical next-action lists below when they conflict with the current readiness snapshot or handover.
 
