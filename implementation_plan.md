@@ -941,3 +941,5 @@ A full source-level pass over the Phase 2 feature surface and the 26-method `Pha
 
 
 6. **Correction H — Destructive deletion confirmation parity:** The shared Create/Edit form now opens a confirmation dialog before calling the existing permanent-delete/8-second-Undo ViewModel path. Cancel preserves the habit; confirm invokes the existing route cleanup. P2-C01 now explicitly checks both outcomes and remains deferred for device validation.
+
+7. **Correction I — Undo reachability after deletion navigation:** Habit deletion from Habit Detail or Create/Edit cleans up the editor/detail route and returns to the Habits destination. `HabitsScreen` now renders the active guarded 8-second Undo banner, preventing the undo action from becoming unreachable after that route transition. P2-C01 verifies restore of the habit and associated data.
