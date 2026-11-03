@@ -925,11 +925,16 @@ A full source-level pass over the Phase 2 feature surface and the 26-method `Pha
    - `evaluateDerivedDayStatus` previously returned `UNSCHEDULED` after target satisfaction for every date, including preferred weekdays. It now returns `UNSCHEDULED` only for non-preferred weekdays; preferred weekdays remain eligible and report `OPEN_TODAY` while the week is in progress.
    - Expanded `t2_c03` and `t2_c04` assertions cover the all-days default, a non-preferred Thursday, and a preferred Friday.
 
-3. **Reproducible verification workflow:**
+3. **Correction G — Record Session failure handling and session-count preview:**
+   - `DayseedViewModel.logHabit`, `logHabitQuantityOrDuration`, `updateHabitEntry`, and `deleteHabitEntry` now return an explicit success Boolean. Missing records, invalid values, and repository exceptions report failure rather than being treated as successful mutations.
+   - `RecordSessionSheet` now navigates back only after a successful create, update, or delete. If a mutation fails, the editor remains open with the entered date/value/note intact while the existing snackbar message explains the failure.
+   - Weekly `Quantity / sessions` preview now counts each positive entry as one session in the selected date's preview, defaults a new session value to 1, and labels the input/preset to explain that any positive entry counts as one weekly session. The weekly aggregate remains calculated from the frozen week version.
+
+4. **Reproducible verification workflow:**
    - Added `.github/workflows/android-validation.yml` to install JDK 21, Android API 36/build tools 36.0.0, and Gradle 9.3.1; generate an ephemeral debug keystore (not committed); run `gradle :app:testDebugUnitTest --rerun-tasks` and `gradle :app:assembleDebug`; and retain test reports plus the debug APK as a workflow artifact.
    - The workflow result must be inspected on the pull request before this follow-up is marked build/test verified. The previously recorded 85/85 Stage B self-check remains historical evidence only; the GitHub integration returned no workflow runs or status contexts for the original `cbc2718` commit.
 
-4. **Phase 2 audit disposition:**
+5. **Phase 2 audit disposition:**
    - The source/test map covers T2-01 through T2-51 across navigation, Today, Habits, create/edit, weekly targets, D-194, record/correct/Undo, lifecycle, Grove, reduced motion, and idempotent quick actions.
    - All Phase 2 human/device cases P2-H01 through P2-H17 and targeted cases P2-C01 through P2-C05 remain `NOT RUN`; this source audit does not substitute for device validation.
    - Phase 3, Stage C independent validation, Stage D owner acceptance, release approval, and merge remain separate gates and are not authorised by this addendum.
