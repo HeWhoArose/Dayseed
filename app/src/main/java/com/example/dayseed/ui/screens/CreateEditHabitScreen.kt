@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -133,6 +134,7 @@ fun CreateEditHabitFormContent(
     modifier: Modifier = Modifier
 ) {
     val isEditing = initialHabit != null
+    var showDeleteConfirmDialog by remember(initialHabit) { mutableStateOf(false) }
 
     var name by remember(initialHabit) { mutableStateOf(initialHabit?.name ?: "") }
     var description by remember(initialHabit) { mutableStateOf(initialHabit?.description ?: "") }
@@ -951,7 +953,7 @@ fun CreateEditHabitFormContent(
         ) {
             if (initialHabit != null && onDelete != null) {
                 IconButton(
-                    onClick = { onDelete(initialHabit.id) },
+                    onClick = { showDeleteConfirmDialog = true },
                     modifier = Modifier
                         .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                         .testTag("delete_habit_btn")
@@ -1069,5 +1071,47 @@ fun CreateEditHabitFormContent(
                 Text("Save")
             }
         }
+    }
+
+    if (showDeleteConfirmDialog && initialHabit != null && onDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            title = { Text("Delete \"" + initialHabit.name + "\" permanently?") },
+            text = {
+                Text(
+                    "This removes the habit, its logged sessions, and its streak runs. " +
+                        "Any journal reflections linked to this habit will be preserved safely. " +
+                        "You will have 8 seconds to Undo after confirming."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirmDialog = false
+                        onDelete(initialHabit.id)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    ),
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .testTag("confirm_delete_habit_btn")
+                ) {
+                    Text("Delete Habit")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showDeleteConfirmDialog = false },
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .testTag("cancel_delete_habit_btn")
+                ) {
+                    Text("Cancel")
+                }
+            },
+            modifier = Modifier.testTag("delete_habit_confirm_dialog")
+        )
     }
 }
