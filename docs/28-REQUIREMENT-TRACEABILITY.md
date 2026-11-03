@@ -201,3 +201,11 @@ Following explicit owner authorisation in Google AI Studio to execute the Correc
   - `gradle :app:assembleDebug`: **PASSED** (`BUILD SUCCESSFUL in 18s`).
   - **Deferred Human/Device Validation:** Phase 1 (`P1-H01`–`P1-H27`), Phase 2 (`P2-H01`–`P2-H17`), and Phase 2 Targeted Remediation (`P2-C01`–`P2-C05`) human/device validation cases in `docs/38-PHASE-1-HUMAN-VALIDATION-REGISTER.md` remain **`NOT RUN`**. Stage C independent technical validation and Stage D final owner acceptance remain **NOT OPEN**.
 
+
+
+### Phase 2 Final Source Audit Follow-up (2026-11-03)
+
+- **Save-error lifecycle:** The full-screen form now clears a previous save error on every relevant field/control edit, not only on retry or effective-date selection. The legacy `AddEditHabitDialog` compatibility fallback now receives the same `lastSaveError` state, clears it on edits, and propagates the real save-success Boolean instead of unconditionally reporting success.
+- **D-194 compatibility parity:** The legacy fallback now derives its lock prompt from `hasRecordedActivityForVersionLockOnDate`, covering positive entries, explicit zero entries, and day outcomes, and its delete callback has one navigation owner.
+- **Flexible weekly date status:** `evaluateDerivedDayStatus` now mirrors the Today partition: after the weekly goal is met, a non-preferred weekday is `UNSCHEDULED`, while a preferred weekday remains scheduled. Regression assertions cover both cases and the no-preference/all-days default.
+- **Verification boundary:** The 85/85 Stage B test result and debug build are documented in the handover, but the GitHub Actions API returned no workflow runs or status contexts for `cbc2718bb803315de6ad03d570f960ea59fe57cd`. A new PR-triggered workflow is added on the follow-up branch; its result must be inspected before this follow-up can be called build/test verified. P1/P2 human/device checks remain `NOT RUN`.
