@@ -18,6 +18,7 @@ import com.example.dayseed.data.TargetPeriod
 import com.example.dayseed.data.TestDayseedClock
 import com.example.dayseed.data.TrackingMode
 import com.example.dayseed.data.WeekdayMask
+import com.example.dayseed.ui.screens.newlyEndedRunIds
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -1405,6 +1406,25 @@ class Phase2ImplementationTest {
         repository.saveHabitSync(completionHabit, effectiveDateOverride = testClock.todayLocal())
         assertTrue(viewModel.logHabit(completionHabit, date = testClock.todayLocal()))
         assertNotNull(repository.getOutcomeForHabitOnDate(completionHabit.habitId, testClock.todayLocal()))
+    }
+
+    @Test
+    fun t2_c06_groveRunEndingAnimationTriggersOnlyForNewActiveToEndedTransitions() {
+        val previous = mapOf(
+            "active_run" to true,
+            "already_dormant" to false
+        )
+        val current = mapOf(
+            "active_run" to false,
+            "already_dormant" to false,
+            "new_active_run" to true
+        )
+
+        assertEquals(setOf("active_run"), newlyEndedRunIds(previous, current))
+
+        // Recomposition with the same snapshot and initial load of an already-ended run do not replay.
+        assertTrue(newlyEndedRunIds(current, current).isEmpty())
+        assertTrue(newlyEndedRunIds(emptyMap(), current).isEmpty())
     }
 }
 
