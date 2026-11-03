@@ -1850,4 +1850,156 @@ class Phase1ImplementationTest {
             assertEquals("COMPLETED", c.getString(0))
         }
     }
+
+    // =========================================================================
+    // T1-43: MERGE rejects replacement of an unrelated active streak run
+    // =========================================================================
+    @Test
+    fun t1_43_mergeDoesNotDeleteUnrelatedActiveStreakRun() {
+        val start = LocalDate.of(2026, 3, 1)
+        testClock.currentLocalDate = LocalDate.of(2026, 3, 10)
+        repository.saveHabitSync(
+            Habit(
+                habitId = "h_merge_active_guard",
+                name = "Daily walk",
+                trackingMode = TrackingMode.QUANTITY,
+                unitCode = "km",
+                targetValue = 1
+            ),
+            effectiveDateOverride = start
+        )
+        for (i in 0..6) {
+            repository.logHabitEntrySync("h_merge_active_guard", start.plusDays(i.toLong()), 1)
+        }
+
+        val activeBefore = repository.dbHelper.readableDatabase.rawQuery(
+            "SELECT run_id, start_local_date FROM habit_streak_runs WHERE habit_id = ? AND is_active = 1",
+            arrayOf("h_merge_active_guard")
+        ).use { c ->
+            assertTrue(c.moveToFirst())
+            c.getString(0) to c.getString(1)
+        }
+
+        val backupRun = JSONObject(
+            JSONObject(repository.exportPortableBackupSync(password = null))
+                .getJSONArray("habit_streak_runs")
+                .getJSONObject(0)
+                .toString()
+        ).apply {
+            put("run_id", "run_backup_different_start")
+            put("start_local_date", "2026-02-28")
+            put("end_local_date", "2026-03-10")
+            put("is_active", 1)
+            put("terminal_reason", JSONObject.NULL)
+            put("qualified_for_grove", 0)
+            put("qualified_at_utc_ms", JSONObject.NULL)
+            put("broken_on_local_date", JSONObject.NULL)
+            put("tree_state", "SAPLING_ACTIVE")
+        }
+
+        val db = repository.dbHelper.writableDatabase
+        val now = testClock.nowUtcMs()
+        val sessionId = "rs_active_guard"
+        val conflictId = "rc_active_guard"
+        db.insertOrThrow(
+            DayseedDatabaseHelper.TABLE_RESTORE_SESSIONS,
+            null,
+            ContentValues().apply {
+                put("restore_session_id", sessionId)
+                put("restore_mode", "MERGE")
+                put("format_version", 1)
+                put("source_schema_version", 3)
+                put("session_state", "AWAITING_CONFLICT_RESOLUTION")
+                put("started_at_utc_ms", now)
+                put("updated_at_utc_ms", now)
+                put("manifest_json", "{}")
+                putNull("safety_backup_ref")
+                put("safety_backup_verified", 1)
+            }
+        )
+        db.insertOrThrow(
+            DayseedDatabaseHelper.TABLE_RESTORE_CONFLICTS,
+            null,
+            ContentValues().apply {
+                put("conflict_id", conflictId)
+                put("restore_session_id", sessionId)
+                put("record_type", "habit_streak_run")
+                put("record_key", "h_merge_active_guard:2026-02-28")
+                put("current_payload_json", "{}")
+                put("backup_payload_json", backupRun.toString())
+                put("created_at_utc_ms", now)
+            }
+        )
+        repository.refreshAllSync()
+
+        try {
+            repository.resolveRestoreConflictSync(conflictId, ConflictResolution.USE_BACKUP)
+            fail("Expected USE_BACKUP to reject replacement of a different active streak run")
+        } catch (_: IllegalStateException) {
+            // Expected: the active run is unrelated and must remain untouched.
+        }
+
+        db.rawQuery(
+            "SELECT run_id, start_local_date FROM habit_streak_runs WHERE habit_id = ? AND is_active = 1",
+            arrayOf("h_merge_active_guard")
+        ).use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals(activeBefore.first, c.getString(0))
+            assertEquals(activeBefore.second, c.getString(1))
+        }
+        db.rawQuery(
+            "SELECT COUNT(*) FROM restore_conflicts WHERE conflict_id = ?",
+            arrayOf(conflictId)
+        ).use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals(1, c.getInt(0))
+        }
+    }
+
+    // =========================================================================
+    // T1-44: REPLACE fails closed and rolls back orphaned streak-run records
+    // =========================================================================
+    @Test
+    fun t1_44_replaceRejectsOrphanedStreakRunAndPreservesLocalData() {
+        val start = LocalDate.of(2026, 3, 1)
+        repository.saveHabitSync(
+            Habit(
+                habitId = "h_replace_orphan_guard",
+                name = "Read",
+                trackingMode = TrackingMode.QUANTITY,
+                unitCode = "pages",
+                targetValue = 2
+            ),
+            effectiveDateOverride = start
+        )
+        for (i in 0..6) {
+            repository.logHabitEntrySync("h_replace_orphan_guard", start.plusDays(i.toLong()), 2)
+        }
+
+        val beforeRunCount = repository.habitStreakRuns.value.count { it.habitId == "h_replace_orphan_guard" }
+        assertTrue(beforeRunCount > 0)
+        val backupRoot = JSONObject(repository.exportPortableBackupSync(password = null))
+        val orphanRun = JSONObject(
+            backupRoot.getJSONArray("habit_streak_runs").getJSONObject(0).toString()
+        ).apply {
+            put("run_id", "run_with_missing_parent")
+            put("habit_id", "missing_parent_habit")
+        }
+        backupRoot.getJSONArray("habit_streak_runs").put(orphanRun)
+
+        try {
+            repository.restorePortableBackupSync(backupRoot.toString(), restoreMode = "REPLACE")
+            fail("Expected REPLACE to reject a streak run whose parent habit is missing")
+        } catch (_: IllegalStateException) {
+            // Expected: transaction must roll back instead of silently skipping the run.
+        }
+
+        assertTrue(repository.habits.value.any { it.habitId == "h_replace_orphan_guard" })
+        assertEquals(
+            beforeRunCount,
+            repository.habitStreakRuns.value.count { it.habitId == "h_replace_orphan_guard" }
+        )
+        assertFalse(repository.habits.value.any { it.habitId == "missing_parent_habit" })
+    }
+
 }
