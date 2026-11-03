@@ -352,7 +352,7 @@ The following five human/device validation cases cover the Phase 2 targeted reme
   4. Re-open `Edit` from `Habit Detail` and tap `Cancel` / system Back.
   5. On a disposable synthetic habit, open `Habit Detail` from `Habits`, tap `Edit`, and tap the delete icon.
   6. Inspect the confirmation dialog, choose `Cancel`, and verify the habit remains. Repeat and confirm deletion.
-- **Expected:** Saving or cancelling from `Habit Detail -> Edit` pops only `Create/Edit Habit` once and returns directly to `Habit Detail` for that same habit (showing the updated fields), rather than double-popping to `Today` or `Habits`. Deleting from the editor first shows a destructive confirmation dialog; `Cancel` leaves the habit and editor intact, while confirmation deletes the habit through the guarded 8-second Undo path, removes both the editor and deleted detail route, and returns cleanly to `Habits`.
+- **Expected:** Saving or cancelling from `Habit Detail -> Edit` pops only `Create/Edit Habit` once and returns directly to `Habit Detail` for that same habit (showing the updated fields), rather than double-popping to `Today` or `Habits`. Deleting from the editor first shows a destructive confirmation dialog; `Cancel` leaves the habit and editor intact, while confirmation deletes the habit, removes both the editor and deleted detail route, and returns cleanly to `Habits`. The `Habits` destination must display the guarded 8-second `undo_action_banner`; tapping `Undo` restores the habit, its sessions, and its journal links.
 
 ### P2-C02 — Failed save keeps editor open with inline error banner and preserves form inputs
 
