@@ -141,12 +141,17 @@ fun RecordSessionSheet(
 
     val effectiveDate = parsedDate?.takeIf { dateValidationError == null } ?: today
     val effectiveMode = habit.trackingMode.canonical()
+    val isWeeklyHabit = habit.targetPeriod == TargetPeriod.WEEK
+    val isWeeklySessionCountHabit = isWeeklyHabit &&
+        effectiveMode == TrackingMode.QUANTITY &&
+        habit.unitCode?.trim()?.equals("sessions", ignoreCase = true) == true
 
     var valueText by remember(existingEntry, habit.habitId) {
         mutableStateOf(
             when {
                 existingEntry != null -> existingEntry.valueUnits.toString()
                 effectiveMode == TrackingMode.COMPLETION_ONLY || effectiveMode == TrackingMode.EFFORT_AWARE -> "1"
+                isWeeklySessionCountHabit -> "1"
                 else -> (habit.targetValue ?: 10).toString()
             }
         )
@@ -170,10 +175,13 @@ fun RecordSessionSheet(
                 it.entryId != existingEntry?.entryId
         }
     }
-    val projectedDailyTotal = existingEntriesOnDate.sumOf { it.valueUnits } + previewValueUnits
-    val dailyTarget = (habit.targetValue ?: 1).coerceAtLeast(1)
+    val projectedDailyTotal = if (isWeeklySessionCountHabit) {
+        existingEntriesOnDate.count { it.valueUnits > 0 } + if (previewValueUnits > 0) 1 else 0
+    } else {
+        existingEntriesOnDate.sumOf { it.valueUnits } + previewValueUnits
+    }
+    val dailyTarget = if (isWeeklySessionCountHabit) 1 else (habit.targetValue ?: 1).coerceAtLeast(1)
 
-    val isWeeklyHabit = habit.targetPeriod == TargetPeriod.WEEK
     val projectedWeeklySnapshot = remember(
         habit,
         versionsForHabit,
@@ -390,7 +398,9 @@ fun RecordSessionSheet(
                 ) {
                     val unitLabel = habit.unitCode?.takeIf { it.isNotBlank() } ?: "units"
                     Text(
-                        text = if (effectiveMode in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION)) {
+                        text = if (isWeeklySessionCountHabit) {
+                            "Session Record"
+                        } else if (effectiveMode in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION)) {
                             "Amount ($unitLabel)"
                         } else {
                             "Check-In Value"
@@ -407,10 +417,11 @@ fun RecordSessionSheet(
                         },
                         label = {
                             Text(
-                                if (effectiveMode in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION)) {
-                                    "Session $unitLabel (0 or more)"
-                                } else {
-                                    "Sessions (1 = completed, 0 = honest check-in)"
+                                when {
+                                    isWeeklySessionCountHabit -> "Session value (positive = one session)"
+                                    effectiveMode in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION) ->
+                                        "Session $unitLabel (0 or more)"
+                                    else -> "Sessions (1 = completed, 0 = honest check-in)"
                                 }
                             )
                         },
@@ -418,6 +429,8 @@ fun RecordSessionSheet(
                         supportingText = {
                             if (valueError != null) {
                                 Text(valueError!!, color = MaterialTheme.colorScheme.error)
+                            } else if (isWeeklySessionCountHabit) {
+                                Text("Each positive entry counts as one weekly session. Logging 0 records an honest check-in but adds no session.")
                             } else {
                                 Text("Logging 0 records an honest check-in without shame.")
                             }
@@ -443,7 +456,16 @@ fun RecordSessionSheet(
                                 .testTag("preset_zero_chip")
                         )
 
-                        if (effectiveMode in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION)) {
+                        if (isWeeklySessionCountHabit) {
+                            FilterChip(
+                                selected = previewValueUnits > 0,
+                                onClick = { valueText = "1" },
+                                label = { Text("Record 1 session") },
+                                modifier = Modifier
+                                    .heightIn(min = 48.dp)
+                                    .testTag("preset_full_chip")
+                            )
+                        } else if (effectiveMode in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION)) {
                             val quarter = (dailyTarget / 4).coerceAtLeast(1)
                             val half = (dailyTarget / 2).coerceAtLeast(1)
                             val full = dailyTarget
@@ -571,7 +593,11 @@ fun RecordSessionSheet(
 
                     val unitSuffix = habit.unitCode?.let { " $it" } ?: ""
                     Text(
-                        text = "Resulting daily total on $effectiveDate: $projectedDailyTotal$unitSuffix",
+                        text = if (isWeeklySessionCountHabit) {
+                            "Resulting sessions on $effectiveDate: $projectedDailyTotal"
+                        } else {
+                            "Resulting daily total on $effectiveDate: $projectedDailyTotal$unitSuffix"
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.testTag("record_session_preview_daily_total")
