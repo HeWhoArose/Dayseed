@@ -731,3 +731,5 @@ The legacy AI Studio correction-plan artifact under `.aistudio/artifacts/brain/`
 
 
 A further review of the Record Session journey found that the ViewModel swallowed repository failures and the screen navigated back regardless, which could discard an unsaved session edit. The follow-up now returns success/failure from create/update/delete operations and keeps the Record Session editor open on failure. It also corrects the weekly `sessions` input/preview so the selected-date count reflects positive session records rather than summing their raw numeric values. Regression test `t2_c05` covers successful and rejected repository mutations.
+
+The Phase 2 audit also found that the shared Create/Edit form's delete icon bypassed the destructive confirmation required by the Phase 2 contract. The follow-up now presents an explicit confirmation dialog before invoking the existing guarded 8-second Undo deletion path. P2-C01 has been expanded to verify both Cancel and Confirm outcomes; it remains `NOT RUN`.
