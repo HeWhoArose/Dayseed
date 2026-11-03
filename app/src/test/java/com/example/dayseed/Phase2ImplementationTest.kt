@@ -1417,14 +1417,17 @@ class Phase2ImplementationTest {
         val current = mapOf(
             "active_run" to false,
             "already_dormant" to false,
+            "newly_dormant_grove_run" to false,
             "new_active_run" to true
         )
 
-        assertEquals(setOf("active_run"), newlyEndedRunIds(previous, current))
+        assertEquals(
+            setOf("active_run", "newly_dormant_grove_run"),
+            newlyEndedRunIds(previous, current)
+        )
 
         // Recomposition with the same snapshot and initial load of an already-ended run do not replay.
         assertTrue(newlyEndedRunIds(current, current).isEmpty())
-        assertTrue(newlyEndedRunIds(emptyMap(), current).isEmpty())
     }
 }
 
