@@ -4,36 +4,36 @@
 You are implementing **Phase 2 only** of Dayseed's approved initial-v1 programme.
 
 Repository: https://github.com/HeWhoArose/Dayseed  
-Canonical branch: \`main\`  
-Current known main SHA when this prompt was prepared: \`bf19bc11c37dd9a7929594871266bdff07dfc94e\`  
+Canonical branch: `main`  
+Current known main SHA when this prompt was prepared: `bf19bc11c37dd9a7929594871266bdff07dfc94e`  
 Authorisation: Full Stage B initial-v1 implementation was owner-authorised under D-213. This prompt is the next bounded workstream; it does not authorise Phase 3, Phase 4, Stage C independent validation, Stage D owner acceptance, or release.
 
 ## 1. Mandatory start procedure — do this before editing
 
-1. Fetch the latest remote \`main\`. Do not assume the SHA above is still current.
+1. Fetch the latest remote `main`. Do not assume the SHA above is still current.
 2. Record the exact HEAD SHA, branch, working-tree state, and whether the workspace is ahead/behind remote.
 3. Reconcile the AI Studio workspace with the latest GitHub main. Preserve newer remote commits and any legitimate workspace changes. Never overwrite or force-push.
 4. Read, in this order:
-   - \`AGENTS.md\`
-   - \`README.md\`
-   - \`DESIGN.md\`
-   - \`docs/09-DECISION-LOG.md\`
-   - \`docs/25-DECISION-REGISTER-AND-RECONCILIATION.md\`
-   - \`docs/26-SCREEN-AND-DATA-CONTRACTS.md\`
-   - \`docs/28-REQUIREMENT-TRACEABILITY.md\`
-   - \`docs/32-CONTINUATION-HANDOVER.md\`
-   - \`docs/34-UX-TASK-AND-ACCESSIBILITY-REVIEW-PROTOCOL.md\`
-   - the Phase 2 section of root \`implementation_plan.md\`
-   - \`docs/38-PHASE-1-HUMAN-VALIDATION-REGISTER.md\`
+   - `AGENTS.md`
+   - `README.md`
+   - `DESIGN.md`
+   - `docs/09-DECISION-LOG.md`
+   - `docs/25-DECISION-REGISTER-AND-RECONCILIATION.md`
+   - `docs/26-SCREEN-AND-DATA-CONTRACTS.md`
+   - `docs/28-REQUIREMENT-TRACEABILITY.md`
+   - `docs/32-CONTINUATION-HANDOVER.md`
+   - `docs/34-UX-TASK-AND-ACCESSIBILITY-REVIEW-PROTOCOL.md`
+   - the Phase 2 section of root `implementation_plan.md`
+   - `docs/38-PHASE-1-HUMAN-VALIDATION-REGISTER.md`
 5. Inspect the actual current navigation, ViewModel, repository, models, screens, components, theme, and tests. Do not trust historical line numbers or assume the source still matches the earlier audit.
-6. Run the available automated test suite and debug build as a baseline before feature edits. The known repository configuration uses AGP 9.1.1, Kotlin 2.2.10, compileSdk 36, and Java 21 source compatibility. Use the compatible installed toolchain actually available. The repository previously had no checked-in Gradle wrapper; do not assume \`gradlew\` exists or claim it ran. Record the exact command and output.
+6. Run the available automated test suite and debug build as a baseline before feature edits. The known repository configuration uses AGP 9.1.1, Kotlin 2.2.10, compileSdk 36, and Java 21 source compatibility. Use the compatible installed toolchain actually available. The repository previously had no checked-in Gradle wrapper; do not assume `gradlew` exists or claim it ran. Record the exact command and output.
 7. **Phase 1 verification warning:** Phase 1 source and test remediation was merged through PR #5. The earlier 57/57 Phase 1 self-check predates the final remediation. The newly added/expanded schema-reconciliation and restore-safety tests still require execution evidence. Run them as part of the baseline. If a Phase 1 regression fails, fix or isolate that defect before building Phase 2 on top of it. Do not relabel a merge as a test pass.
 8. If the baseline cannot be run because the environment/toolchain is unavailable, report the precise blocker and stop before feature implementation. Do not invent test evidence.
 
 ## 2. Authority and non-negotiable product rules
 
 - Preserve the existing native Android app: Kotlin, Jetpack Compose, SQLiteOpenHelper. Do not scaffold a second app, website, or alternate framework.
-- Treat GitHub \`main\` and the canonical decision log as source of truth.
+- Treat GitHub `main` and the canonical decision log as source of truth.
 - Preserve all Phase 1 domain/data behaviour and stored data. Do not rewrite the data layer for convenience.
 - Follow D-215: primary navigation is exactly **Today, Habits, Journal, Insights, Settings**. Historical habit calendar belongs inside Insights; Day Detail and Habit Detail are secondary routes. Do not restore the old four-tab arrangement.
 - Follow D-216: new habits offer Quantity, Duration, and Simple check-off. Preserve legacy EFFORT_AWARE/EFFORT_LEVELS records losslessly; do not expose legacy modes as new-habit choices. Progress is derived from recorded activity and applicable targets.
@@ -41,7 +41,7 @@ Authorisation: Full Stage B initial-v1 implementation was owner-authorised under
 - Follow D-218: the one-off action is labelled **Take a rest day**. It is not Skip, Miss, Complete, or Record; it does not create activity or reduce a weekly target.
 - Follow D-194 and the approved U-1 through U-13 decisions. In particular: preserve effective-dated history; honour the current-week target snapshot; do not mix units; keep week-start history stable; do not cross lifecycle closures when recalculating streaks.
 - Keep Journal text and personal data local. Do not log or upload private content.
-- Keep the UI consistent with the approved direction and \`DESIGN.md\`. Do not invent new design tokens or silently promote exploratory values to approved tokens.
+- Keep the UI consistent with the approved direction and `DESIGN.md`. Do not invent new design tokens or silently promote exploratory values to approved tokens.
 - No ads, analytics SDK, billing, cloud sync, accounts, online backup, social comparison, XP, or runtime AI analysis. These are outside this phase/initial-v1 scope.
 
 ## 3. Phase 2 objective
@@ -155,7 +155,7 @@ The owner wants all tests requiring human/device intervention consolidated into 
 
 - Do not ask the owner to perform device tests during Phase 2.
 - Do not claim manual tests passed from emulator screenshots, mock-ups, source inspection, or automated tests.
-- Append Phase 2 human/device checks to \`docs/38-PHASE-1-HUMAN-VALIDATION-REGISTER.md\` in a clearly labelled Phase 2 section. Include a unique ID, prerequisites, exact steps, expected result, evidence to capture, and dependency on later phases.
+- Append Phase 2 human/device checks to `docs/38-PHASE-1-HUMAN-VALIDATION-REGISTER.md` in a clearly labelled Phase 2 section. Include a unique ID, prerequisites, exact steps, expected result, evidence to capture, and dependency on later phases.
 - At minimum register: five-tab navigation and Back behaviour; Today comprehension and unscheduled group discovery; create/edit flows for each mode; multiple-session record/correction/Undo; lifecycle discoverability; individual streak/Grove comprehension; large text/compact-width/reduced-motion checks that require a rendered device.
 - Do not execute those human checks now. Phase 3 and Phase 4 must add their own cases to the same register. Run the combined register only after Stage B Phase 5 integration closeout and explicit Stage C authorisation.
 
