@@ -3684,18 +3684,36 @@ class DayseedRepository(
                             check(habitExistsInDb(db, hId)) { "Parent habit $hId does not exist for habit_streak_run $rId" }
                             val startDate = LocalDateValidator.requireValid(backupObj.getString("start_local_date"), "habit_streak_runs.start_local_date")
                             val isBackupActive = backupObj.optBoolean("is_active", backupObj.optInt("is_active", 0) == 1)
+
+                            // A backup active run may replace only the same logical run (same start date)
+                            // or the same run ID. Never erase a different active run to satisfy the
+                            // one-active-run invariant: that run represents distinct streak history.
+                            if (isBackupActive) {
+                                db.rawQuery(
+                                    """
+                                    SELECT run_id, start_local_date
+                                    FROM ${DayseedDatabaseHelper.TABLE_HABIT_STREAK_RUNS}
+                                    WHERE habit_id = ? AND is_active = 1
+                                      AND run_id != ? AND start_local_date != ?
+                                    LIMIT 1
+                                    """.trimIndent(),
+                                    arrayOf(hId, rId, startDate)
+                                ).use { c ->
+                                    if (c.moveToFirst()) {
+                                        throw IllegalStateException(
+                                            "Cannot replace active streak run $rId for habit $hId: " +
+                                                "a different active run (${c.getString(0)}) starts on ${c.getString(1)}. " +
+                                                "Keep the current run or resolve the conflict after preserving its history."
+                                        )
+                                    }
+                                }
+                            }
+
                             db.delete(
                                 DayseedDatabaseHelper.TABLE_HABIT_STREAK_RUNS,
                                 "run_id = ? OR (habit_id = ? AND start_local_date = ?)",
                                 arrayOf(rId, hId, startDate)
                             )
-                            if (isBackupActive) {
-                                db.delete(
-                                    DayseedDatabaseHelper.TABLE_HABIT_STREAK_RUNS,
-                                    "habit_id = ? AND is_active = 1",
-                                    arrayOf(hId)
-                                )
-                            }
                             db.insertOrThrow(
                                 DayseedDatabaseHelper.TABLE_HABIT_STREAK_RUNS,
                                 null,
