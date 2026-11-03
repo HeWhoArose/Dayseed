@@ -360,7 +360,7 @@ The following five human/device validation cases cover the Phase 2 targeted reme
   1. Log any activity (or `0` check-in) for a habit on `Today`.
   2. Open `Edit Habit`, change the target value or unit, select `Apply today` in the `D-194` effective-timing prompt, and tap `Save`.
   3. Inspect the editor state, then select `Apply tomorrow` and tap `Save`.
-- **Expected:** The `Apply today` save is rejected without any silent fallback to `Apply tomorrow`; `Create/Edit Habit` remains open with all entered fields preserved and displays the inline error banner (`habit_save_error_banner`) explaining why today's configuration is locked. Selecting `Apply tomorrow` clears the error banner and saves cleanly.
+- **Expected:** The `Apply today` save is rejected without any silent fallback to `Apply tomorrow`; `Create/Edit Habit` remains open with all entered fields preserved and displays the inline error banner (`habit_save_error_banner`) explaining why today's configuration is locked. Editing the name, target, unit, schedule, reminder, or another relevant field clears the stale banner immediately. Selecting `Apply tomorrow` or retrying a valid save also clears the banner and saves cleanly. The compatibility dialog fallback must show the same lock and failed-save feedback if that legacy path is exercised by a test harness.
 
 ### P2-C03 — Explicit zero check-in locks today's configuration (`D-194`)
 
@@ -390,6 +390,6 @@ The following five human/device validation cases cover the Phase 2 targeted reme
   2. View `Today` on a non-preferred weekday (e.g. `Tue` or `Thu`) while weekly progress is `< 3 / 3`.
   3. Complete the 3rd session so weekly progress reaches `3 / 3` (`Goal met`), then view `Today` on a non-preferred weekday (`Thu`) and on a preferred weekday (`Fri`).
   4. Expand `"Not scheduled today"` on `Thu` and log a bonus 4th session.
-- **Expected:** Before reaching `3 / 3`, the habit appears under `"Scheduled today"` on every day of the week (preferred and non-preferred). After reaching `3 / 3`, it moves to `"Not scheduled today"` on non-preferred days (`Thu`), remains under `"Scheduled today"` on preferred days (`Fri`), and still permits bonus session logging (`4 / 3 sessions`, `133%`, `Extra`).
+- **Expected:** Before reaching `3 / 3`, the habit appears under `"Scheduled today"` on every day of the week (preferred and non-preferred). After reaching `3 / 3`, it moves to `"Not scheduled today"` on non-preferred days (`Thu`), remains under `"Scheduled today"` on preferred days (`Fri`), and still permits bonus session logging (`4 / 3 sessions`, `133%`, `Extra`). The selected-date status must agree: a satisfied non-preferred Thursday is `UNSCHEDULED`, while a preferred Friday remains an eligible scheduled day (not `UNSCHEDULED`).
 
 
