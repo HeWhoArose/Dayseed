@@ -394,3 +394,14 @@ The following five human/device validation cases cover the Phase 2 targeted reme
 - **Expected:** Before reaching `3 / 3`, the habit appears under `"Scheduled today"` on every day of the week (preferred and non-preferred). After reaching `3 / 3`, it moves to `"Not scheduled today"` on non-preferred days (`Thu`), remains under `"Scheduled today"` on preferred days (`Fri`), and still permits bonus session logging (`4 / 3 sessions`, `133%`, `Extra`). The selected-date status must agree: a satisfied non-preferred Thursday is `UNSCHEDULED`, while a preferred Friday remains an eligible scheduled day (not `UNSCHEDULED`).
 
 
+
+
+### P2-C06 — Grove run-ending animation is event-driven and respects reduced motion
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Ensure system/app reduced motion is disabled and open `Today`.
+  2. Using a disposable synthetic habit with an active streak, trigger a run-ending transition while `Today` remains visible (use the controlled test clock/seeded data procedure).
+  3. Observe the Grove-preservation notice, then trigger ordinary recomposition without ending another run.
+  4. Repeat with reduced motion enabled and a different run ending.
+- **Expected:** The notice animates once for the newly ended run, does not replay on ordinary recomposition or initial loading of an already-ended run, and appears without motion when reduced motion is enabled.
