@@ -1209,7 +1209,7 @@ class Phase2ImplementationTest {
         assertEquals(BigInteger.valueOf(3), summaryThu.weekTargetUnits)
         assertEquals(ProgressBand.GOAL_MET, summaryThu.weekProgressBand)
         assertEquals(
-            DerivedDayStatus.UNSCHEDULED,
+            DerivedDayStatus.OPEN_TODAY,
             repository.evaluateDerivedDayStatus(sessionHabit.habitId, LocalDate.of(2026, 3, 19))
         )
 
@@ -1332,6 +1332,11 @@ class Phase2ImplementationTest {
             "Satisfied flexible weekly habit (3/3) must move to Not scheduled today on non-preferred Thursday",
             repository.loadHabitSummariesSync()[flexHabit.habitId]!!.isScheduledToday
         )
+        assertEquals(
+            "A satisfied flexible weekly habit must be UNSCHEDULED on a non-preferred weekday",
+            DerivedDayStatus.UNSCHEDULED,
+            repository.evaluateDerivedDayStatus(flexHabit.habitId, LocalDate.of(2026, 3, 19))
+        )
         assertTrue(repository.loadHabitSummariesSync()[dailyHabit.habitId]!!.isScheduledToday)
         assertFalse(repository.loadHabitSummariesSync()[selectedWeekdaysHabit.habitId]!!.isScheduledToday)
 
@@ -1348,6 +1353,11 @@ class Phase2ImplementationTest {
         assertTrue(
             "Satisfied flexible weekly habit must remain scheduled on preferred Friday",
             repository.loadHabitSummariesSync()[flexHabit.habitId]!!.isScheduledToday
+        )
+        assertEquals(
+            "A satisfied flexible weekly habit must remain scheduled on a preferred weekday",
+            DerivedDayStatus.OPEN_TODAY,
+            repository.evaluateDerivedDayStatus(flexHabit.habitId, LocalDate.of(2026, 3, 20))
         )
         assertTrue(repository.loadHabitSummariesSync()[dailyHabit.habitId]!!.isScheduledToday)
         assertTrue(repository.loadHabitSummariesSync()[selectedWeekdaysHabit.habitId]!!.isScheduledToday)
