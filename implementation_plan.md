@@ -907,3 +907,29 @@ Before starting Phase 3, four targeted Phase 2 defects (`Correction A` through `
    - `gradle :app:testDebugUnitTest --rerun-tasks`: **PASSED 85/85** executed JUnit test methods across all 5 test classes (`Phase1ImplementationTest`: **29/29** [XML `2026-11-03T19:27:39.133Z`, `2.272s`]; `Phase2ImplementationTest`: **26/26** [XML `2026-11-03T19:27:24.515Z`, `12.841s`, including `t2_c01`..`t2_c04`]; `DayseedAcceptanceTest`: **12/12** [XML `2026-11-03T19:27:37.392Z`, `1.662s`]; `DayseedSettingsValidationTest`: **10/10** [XML `2026-11-03T19:27:39.062Z`, `0.013s`]; `DayseedVisualResolutionTest`: **8/8** [XML `2026-11-03T19:27:39.078Z`, `0.043s`]), **0 failed, 0 errors, 0 skipped** (`BUILD SUCCESSFUL in 37s`).
    - `gradle :app:assembleDebug` / `compile_applet`: **PASSED**.
    - Appended Phase 2 Targeted Remediation human/device validation cases (`P2-C01` through `P2-C05`, all marked `NOT RUN`) to `docs/38-PHASE-1-HUMAN-VALIDATION-REGISTER.md`. Stage C independent technical validation and Stage D final owner acceptance remain **NOT OPEN**.
+
+
+---
+
+## 16. Phase 2 Final Audit Addendum — Follow-up Corrections (2026-11-03)
+
+A full source-level pass over the Phase 2 feature surface and the 26-method `Phase2ImplementationTest` suite found three additional correctness gaps beyond the earlier Corrections A–D. This follow-up is isolated on `fix/phase-2-final-remediation-audit`; it does not start Phase 3.
+
+1. **Correction E — Save-error lifecycle and legacy editor compatibility:**
+   - Clear `lastSaveError` when the user changes any relevant field in `CreateEditHabitFormContent` (identity, description/category, lifetime goal, color, measurement mode/unit, target/period, schedule/weekdays, reminder, and legacy effort descriptions), not only when retrying or changing the D-194 timing chips.
+   - Bring the compatibility `AddEditHabitDialog` fallback into parity with the full-screen editor: use `hasRecordedActivityForVersionLockOnDate` so positive entries, explicit zero entries, and outcomes all trigger D-194; pass the observable error message and clear callback through; propagate the actual save Boolean rather than always returning success.
+   - Remove the fallback's redundant second close after deletion; `DayseedViewModel.deleteHabit` remains the single navigation owner.
+
+2. **Correction F — Flexible weekly selected-date status consistency:**
+   - `DayseedRepository.recomputeDerivedState` already keeps a flexible weekly habit scheduled while its target is incomplete and, after target satisfaction, only on configured preferred weekdays (with null/zero preference masks treated as all days).
+   - `evaluateDerivedDayStatus` previously returned `UNSCHEDULED` after target satisfaction for every date, including preferred weekdays. It now returns `UNSCHEDULED` only for non-preferred weekdays; preferred weekdays remain eligible and report `OPEN_TODAY` while the week is in progress.
+   - Expanded `t2_c03` and `t2_c04` assertions cover the all-days default, a non-preferred Thursday, and a preferred Friday.
+
+3. **Reproducible verification workflow:**
+   - Added `.github/workflows/android-validation.yml` to install JDK 21, Android API 36/build tools 36.0.0, and Gradle 9.3.1; generate an ephemeral debug keystore (not committed); run `gradle :app:testDebugUnitTest --rerun-tasks` and `gradle :app:assembleDebug`; and retain test reports plus the debug APK as a workflow artifact.
+   - The workflow result must be inspected on the pull request before this follow-up is marked build/test verified. The previously recorded 85/85 Stage B self-check remains historical evidence only; the GitHub integration returned no workflow runs or status contexts for the original `cbc2718` commit.
+
+4. **Phase 2 audit disposition:**
+   - The source/test map covers T2-01 through T2-51 across navigation, Today, Habits, create/edit, weekly targets, D-194, record/correct/Undo, lifecycle, Grove, reduced motion, and idempotent quick actions.
+   - All Phase 2 human/device cases P2-H01 through P2-H17 and targeted cases P2-C01 through P2-C05 remain `NOT RUN`; this source audit does not substitute for device validation.
+   - Phase 3, Stage C independent validation, Stage D owner acceptance, release approval, and merge remain separate gates and are not authorised by this addendum.
