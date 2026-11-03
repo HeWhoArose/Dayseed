@@ -380,7 +380,7 @@ The following five human/device validation cases cover the Phase 2 targeted reme
   3. Inspect `Today` and `Habit Detail`.
   4. Record an explicit `0` check-in on day 3.
   5. Edit one positive session's value, delete one positive session, and tap `Undo` within 8 seconds.
-- **Expected:** Progress displays `2 / 3 sessions` (`66%`, `Halfway`), not `40 / 3`. The explicit `0` check-in remains recorded as `Checked in (0 recorded)` on day 3 while keeping weekly progress at `2 / 3 sessions`. Deleting a positive session reduces weekly progress to `1 / 3 sessions`, and tapping `Undo` restores `2 / 3 sessions`.
+- **Expected:** Progress displays `2 / 3 sessions` (`66%`, `Halfway`), not `40 / 3`. The Record Session preview shows the number of positive session records for the selected date, not the sum of their raw numeric values; a new session defaults to a value of `1` and the UI explains that any positive value counts as one session. The explicit `0` check-in remains recorded as `Checked in (0 recorded)` on day 3 while keeping weekly progress at `2 / 3 sessions`. Deleting a positive session reduces weekly progress to `1 / 3 sessions`, and tapping `Undo` restores `2 / 3 sessions`.
 
 ### P2-C05 — Flexible weekly habit partition on `Today` before and after weekly target satisfaction
 
