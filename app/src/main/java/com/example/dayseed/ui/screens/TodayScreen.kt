@@ -108,7 +108,7 @@ fun TodayScreen(
     var showGroveTransition by remember { mutableStateOf(false) }
     var groveTransitionCount by remember { mutableStateOf(0) }
 
-    LaunchedEffect(runStates, reducedMotion) {
+    LaunchedEffect(runStates) {
         val newlyEndedRunIds = newlyEndedRunIds(previousRunStates, runStates) - animatedRunIds
         previousRunStates = runStates
         if (newlyEndedRunIds.isNotEmpty()) {
