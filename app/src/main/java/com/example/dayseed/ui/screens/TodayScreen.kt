@@ -98,7 +98,11 @@ fun TodayScreen(
     val notScheduledExpanded by viewModel.todayNotScheduledExpanded.collectAsState()
 
     val reducedMotion = remember(appSettings) { viewModel.isReducedMotionEnabled() }
-    val runStates = remember(streakRuns) { streakRuns.associate { it.runId to it.isActive } }
+    val runStates = remember(streakRuns) {
+        streakRuns
+            .filter { it.qualifiedForGrove }
+            .associate { it.runId to it.isActive }
+    }
     var previousRunStates by remember { mutableStateOf(runStates) }
     var animatedRunIds by remember { mutableStateOf(emptySet<String>()) }
     var showGroveTransition by remember { mutableStateOf(false) }
@@ -735,6 +739,6 @@ internal fun newlyEndedRunIds(
     currentRunStates: Map<String, Boolean>
 ): Set<String> {
     return currentRunStates
-        .filter { (runId, isActive) -> previousRunStates[runId] == true && !isActive }
+        .filter { (runId, isActive) -> !isActive && previousRunStates[runId] != false }
         .keys
 }
