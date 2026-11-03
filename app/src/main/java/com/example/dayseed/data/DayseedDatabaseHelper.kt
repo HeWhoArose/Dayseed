@@ -1475,6 +1475,10 @@ class DayseedDatabaseHelper(
                 }
             }
 
+            // The supported v3 schema is the canonical app-managed schema only.
+            // Reconciliation deliberately drops and recreates app triggers; custom/external
+            // triggers are not a supported extension point and are not preserved. Indexes on
+            // rebuilt tables are likewise recreated from the canonical index definitions.
             dropAllUserTriggers(db)
 
             if (needsHabitVersionsUpgrade) {
