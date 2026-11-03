@@ -38,7 +38,10 @@ fun AddEditHabitDialog(
                 suggestedReminderTime = suggestedReminderTime,
                 isFullScreen = false,
                 onDismiss = onDismiss,
-                onSave = onSave,
+                onSave = { habit, applyTodayWhenLogged ->
+                    onSave(habit, applyTodayWhenLogged)
+                    true
+                },
                 onDelete = onDelete
             )
         }

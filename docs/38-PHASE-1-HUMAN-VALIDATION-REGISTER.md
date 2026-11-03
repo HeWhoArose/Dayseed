@@ -336,3 +336,60 @@ All Phase 2 human/device cases below are prepared for the consolidated human/dev
   2. Force-stop or kill the app process and relaunch.
 - **Expected:** All committed entries, outcomes, notes, `REST_DAY` exceptions, streak runs, habit sort orders, and dormant transition acknowledgments persist without duplication or loss.
 
+---
+
+## 7. Phase 2 targeted remediation human-intervention cases (Status: `NOT RUN`)
+
+The following five human/device validation cases cover the Phase 2 targeted remediation items (Corrections A, B, C, and D). None of these cases have been executed on a physical device or interactive emulator session during Stage B (`NOT RUN`).
+
+### P2-C01 — `Habit Detail -> Edit -> Save` single-pop return path and deletion navigation
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Open any existing habit's `Habit Detail` screen from `Today` or `Habits`.
+  2. Tap the `Edit` action to open `Create/Edit Habit`.
+  3. Change the habit description or name and tap `Save`.
+  4. Re-open `Edit` from `Habit Detail` and tap `Cancel` / system Back.
+  5. On a disposable synthetic habit, open `Habit Detail` from `Habits`, tap `Edit`, and delete the habit.
+- **Expected:** Saving or cancelling from `Habit Detail -> Edit` pops only `Create/Edit Habit` once and returns directly to `Habit Detail` for that same habit (showing the updated fields), rather than double-popping to `Today` or `Habits`. Deleting a habit from `Habit Detail -> Edit` removes both the editor and the deleted habit's detail route and returns cleanly to `Habits`.
+
+### P2-C02 — Failed save keeps editor open with inline error banner and preserves form inputs
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Log any activity (or `0` check-in) for a habit on `Today`.
+  2. Open `Edit Habit`, change the target value or unit, select `Apply today` in the `D-194` effective-timing prompt, and tap `Save`.
+  3. Inspect the editor state, then select `Apply tomorrow` and tap `Save`.
+- **Expected:** The `Apply today` save is rejected without any silent fallback to `Apply tomorrow`; `Create/Edit Habit` remains open with all entered fields preserved and displays the inline error banner (`habit_save_error_banner`) explaining why today's configuration is locked. Selecting `Apply tomorrow` clears the error banner and saves cleanly.
+
+### P2-C03 — Explicit zero check-in locks today's configuration (`D-194`)
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. On `Today`, record an explicit `0` check-in (`0 (Honest check-in)`) for a `Quantity` or `Duration` habit that has no other entries today.
+  2. Open `Edit Habit` for that habit on the same day.
+  3. Inspect the `5. Reminder & Effective Timing` section and save a target change with `Apply tomorrow`.
+- **Expected:** Recording an explicit `0` triggers the `D-194` `"You already logged this habit today"` prompt (`Apply today` / `Apply tomorrow`) with `Apply tomorrow` pre-selected. Saving with `Apply tomorrow` creates a version effective tomorrow while leaving today's effective configuration and `0` entry unchanged.
+
+### P2-C04 — Weekly session habit counts positive sessions (`unitCode = "sessions"`) across log, zero, edit, delete, and Undo
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Create a weekly `Quantity` habit with target `3` and unit `sessions`.
+  2. Log a session with value `20` on day 1 and another session with value `20` on day 2.
+  3. Inspect `Today` and `Habit Detail`.
+  4. Record an explicit `0` check-in on day 3.
+  5. Edit one positive session's value, delete one positive session, and tap `Undo` within 8 seconds.
+- **Expected:** Progress displays `2 / 3 sessions` (`66%`, `Halfway`), not `40 / 3`. The explicit `0` check-in remains recorded as `Checked in (0 recorded)` on day 3 while keeping weekly progress at `2 / 3 sessions`. Deleting a positive session reduces weekly progress to `1 / 3 sessions`, and tapping `Undo` restores `2 / 3 sessions`.
+
+### P2-C05 — Flexible weekly habit partition on `Today` before and after weekly target satisfaction
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Create a flexible weekly habit (`3 sessions / week`, preferred weekdays `Mon / Wed / Fri`).
+  2. View `Today` on a non-preferred weekday (e.g. `Tue` or `Thu`) while weekly progress is `< 3 / 3`.
+  3. Complete the 3rd session so weekly progress reaches `3 / 3` (`Goal met`), then view `Today` on a non-preferred weekday (`Thu`) and on a preferred weekday (`Fri`).
+  4. Expand `"Not scheduled today"` on `Thu` and log a bonus 4th session.
+- **Expected:** Before reaching `3 / 3`, the habit appears under `"Scheduled today"` on every day of the week (preferred and non-preferred). After reaching `3 / 3`, it moves to `"Not scheduled today"` on non-preferred days (`Thu`), remains under `"Scheduled today"` on preferred days (`Fri`), and still permits bonus session logging (`4 / 3 sessions`, `133%`, `Extra`).
+
+

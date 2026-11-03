@@ -32,6 +32,7 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.math.BigInteger
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -274,9 +275,11 @@ class Phase2ImplementationTest {
         assertEquals("days", longest.explicitUnitLabel)
         assertTrue(longest.formatIndicatorText().contains("12 days"))
 
-        // Now give weeklyHabit a 4-week active streak by logging earlier weeks (Feb 23..Mar 1 and Mar 2..Mar 8 -> elapsed span = 24 days)
-        repository.logHabitEntrySync(weeklyHabit.habitId, LocalDate.of(2026, 2, 24), 2, null)
-        repository.logHabitEntrySync(weeklyHabit.habitId, LocalDate.of(2026, 3, 3), 2, null)
+        // Now give weeklyHabit a 4-week active streak by logging 2 sessions in each earlier week (Feb 23..Mar 1 and Mar 2..Mar 8 -> elapsed span = 24 days)
+        repository.logHabitEntrySync(weeklyHabit.habitId, LocalDate.of(2026, 2, 24), 1, null)
+        repository.logHabitEntrySync(weeklyHabit.habitId, LocalDate.of(2026, 2, 26), 1, null)
+        repository.logHabitEntrySync(weeklyHabit.habitId, LocalDate.of(2026, 3, 3), 1, null)
+        repository.logHabitEntrySync(weeklyHabit.habitId, LocalDate.of(2026, 3, 5), 1, null)
 
         val longestAfter = repository.selectLongestActiveRun()
         assertNotNull(longestAfter)
@@ -923,4 +926,431 @@ class Phase2ImplementationTest {
             assertNotEquals(band.encouragementQuote, band.motivationQuote)
         }
     }
+
+    // =========================================================================
+    // 8. Phase 2 Targeted Remediation Regression Tests (Corrections A, B, C, D)
+    // =========================================================================
+
+    @Test
+    fun t2_c01_correctionA_createEditHabitSaveCancelDeleteAndFailedSaveErrorState() {
+        // 1. Create from Today -> Save pops once and returns to Today
+        viewModel.selectTab(NavTab.TODAY)
+        viewModel.openCreateEditHabit(null)
+        assertTrue(viewModel.currentSecondaryRoute.value is SecondaryRoute.CreateEditHabit)
+
+        val habitFromToday = Habit(
+            habitId = "h_corr_a_today",
+            name = "Morning Walk",
+            trackingMode = TrackingMode.DURATION,
+            unitCode = "min",
+            targetPeriod = TargetPeriod.DAY,
+            targetValue = 20
+        )
+        val saved1 = viewModel.saveHabit(habitFromToday)
+        assertNotNull(saved1)
+        assertEquals(null, viewModel.currentSecondaryRoute.value)
+        assertEquals(NavTab.TODAY, viewModel.selectedTab.value)
+        assertNull(viewModel.lastSaveError.value)
+
+        // 2. Create from Habits -> Save pops once and returns to Habits
+        viewModel.selectTab(NavTab.HABITS)
+        viewModel.openCreateEditHabit(null)
+        assertTrue(viewModel.currentSecondaryRoute.value is SecondaryRoute.CreateEditHabit)
+
+        val habitFromHabits = Habit(
+            habitId = "h_corr_a_habits",
+            name = "Evening Reading",
+            trackingMode = TrackingMode.QUANTITY,
+            unitCode = "pages",
+            targetPeriod = TargetPeriod.DAY,
+            targetValue = 15
+        )
+        val saved2 = viewModel.saveHabit(habitFromHabits)
+        assertNotNull(saved2)
+        assertEquals(null, viewModel.currentSecondaryRoute.value)
+        assertEquals(NavTab.HABITS, viewModel.selectedTab.value)
+
+        // 3. HabitDetail -> Edit -> Save pops CreateEditHabit once and returns to HabitDetail for same habitId
+        viewModel.openHabitDetail(habitFromHabits.habitId)
+        assertTrue(viewModel.currentSecondaryRoute.value is SecondaryRoute.HabitDetail)
+        viewModel.openEditHabit(habitFromHabits)
+        assertTrue(viewModel.currentSecondaryRoute.value is SecondaryRoute.CreateEditHabit)
+
+        val savedEdit = viewModel.saveHabit(habitFromHabits.copy(description = "Read before sleep"))
+        assertNotNull(savedEdit)
+        val routeAfterSave = viewModel.currentSecondaryRoute.value
+        assertTrue(
+            "Expected SecondaryRoute.HabitDetail after saving from HabitDetail -> Edit, but was $routeAfterSave",
+            routeAfterSave is SecondaryRoute.HabitDetail && routeAfterSave.habitId == habitFromHabits.habitId
+        )
+
+        // 4. HabitDetail -> Edit -> Cancel pops CreateEditHabit once and returns to HabitDetail
+        viewModel.openEditHabit(habitFromHabits)
+        assertTrue(viewModel.currentSecondaryRoute.value is SecondaryRoute.CreateEditHabit)
+        viewModel.closeAddEditHabit()
+        val routeAfterCancel = viewModel.currentSecondaryRoute.value
+        assertTrue(routeAfterCancel is SecondaryRoute.HabitDetail && routeAfterCancel.habitId == habitFromHabits.habitId)
+
+        // 5. Failed save keeps CreateEditHabit open and populates lastSaveError / lastErrorMessage
+        repository.logHabitEntrySync(habitFromHabits.habitId, testClock.todayLocal(), 15, null)
+        viewModel.openEditHabit(habitFromHabits)
+        assertTrue(viewModel.currentSecondaryRoute.value is SecondaryRoute.CreateEditHabit)
+
+        val failedSave = viewModel.saveHabit(
+            habitFromHabits.copy(targetValue = 30),
+            applyTodayWhenLogged = true
+        )
+        assertNull(failedSave)
+        assertTrue(viewModel.currentSecondaryRoute.value is SecondaryRoute.CreateEditHabit)
+        assertNotNull(viewModel.lastSaveError.value)
+        assertNotNull(viewModel.lastErrorMessage.value)
+
+        // Clearing error and retrying with Apply Tomorrow succeeds and returns to HabitDetail
+        viewModel.clearSaveError()
+        assertNull(viewModel.lastSaveError.value)
+        val retrySave = viewModel.saveHabit(
+            habitFromHabits.copy(targetValue = 30),
+            applyTodayWhenLogged = false
+        )
+        assertNotNull(retrySave)
+        val routeAfterRetry = viewModel.currentSecondaryRoute.value
+        assertTrue(routeAfterRetry is SecondaryRoute.HabitDetail && routeAfterRetry.habitId == habitFromHabits.habitId)
+
+        // 6. Delete from HabitDetail -> Edit removes both routes for the deleted habit and synchronizes currentSecondaryRoute
+        viewModel.openEditHabit(habitFromHabits)
+        assertEquals(2, viewModel.secondaryRouteStack.value.size)
+        viewModel.deleteHabit(habitFromHabits.habitId)
+        assertTrue(viewModel.secondaryRouteStack.value.isEmpty())
+        assertEquals(null, viewModel.currentSecondaryRoute.value)
+        assertEquals(NavTab.HABITS, viewModel.selectedTab.value)
+    }
+
+    @Test
+    fun t2_c02_correctionB_d194PositiveZeroAndOutcomeLocksRejectApplyTodayWithoutSilentRetryAndSupportThreeEffectiveDateCases() {
+        val today = testClock.todayLocal() // Wednesday 2026-03-18
+        val tomorrow = today.plusDays(1)   // Thursday 2026-03-19
+
+        // 1. Positive activity recorded today -> locks today's version; Apply Today rejected without silent retry
+        val positiveHabit = Habit(
+            habitId = "h_corr_b_pos",
+            name = "Water Intake",
+            trackingMode = TrackingMode.QUANTITY,
+            unitCode = "glasses",
+            targetPeriod = TargetPeriod.DAY,
+            targetValue = 8,
+            createdAtUtcMs = LocalDate.of(2026, 3, 10).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
+        )
+        repository.saveHabitSync(positiveHabit, effectiveDateOverride = LocalDate.of(2026, 3, 10))
+        repository.logHabitEntrySync(positiveHabit.habitId, today, 5, null)
+        assertTrue(repository.hasRecordedActivityForVersionLockOnDate(positiveHabit.habitId, today))
+
+        val rejectedPos = viewModel.saveHabit(positiveHabit.copy(targetValue = 12), applyTodayWhenLogged = true)
+        assertNull(rejectedPos)
+        assertNotNull(viewModel.lastSaveError.value)
+        // Verify no silent retry created a tomorrow version
+        assertEquals(8, repository.getEffectiveHabitVersion(positiveHabit.habitId, today)?.targetValue)
+        assertEquals(8, repository.getEffectiveHabitVersion(positiveHabit.habitId, tomorrow)?.targetValue)
+        assertEquals(5, repository.getEntriesForHabitOnDate(positiveHabit.habitId, today).single().valueUnits)
+
+        // 2. Explicit zero activity recorded today -> also locks today's version; Apply Today rejected without silent retry
+        val zeroHabit = Habit(
+            habitId = "h_corr_b_zero",
+            name = "Vocabulary Cards",
+            trackingMode = TrackingMode.QUANTITY,
+            unitCode = "cards",
+            targetPeriod = TargetPeriod.DAY,
+            targetValue = 20,
+            createdAtUtcMs = LocalDate.of(2026, 3, 10).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
+        )
+        repository.saveHabitSync(zeroHabit, effectiveDateOverride = LocalDate.of(2026, 3, 10))
+        repository.logHabitEntrySync(zeroHabit.habitId, today, 0, "Honest zero check-in")
+        assertFalse(repository.hasQualifyingActivityOnDate(zeroHabit.habitId, today))
+        assertTrue(repository.hasRecordedActivityForVersionLockOnDate(zeroHabit.habitId, today))
+
+        val rejectedZero = viewModel.saveHabit(zeroHabit.copy(targetValue = 35), applyTodayWhenLogged = true)
+        assertNull(rejectedZero)
+        assertNotNull(viewModel.lastSaveError.value)
+        assertEquals(20, repository.getEffectiveHabitVersion(zeroHabit.habitId, today)?.targetValue)
+        assertEquals(20, repository.getEffectiveHabitVersion(zeroHabit.habitId, tomorrow)?.targetValue)
+        assertEquals(0, repository.getEntriesForHabitOnDate(zeroHabit.habitId, today).single().valueUnits)
+
+        // 3. Recorded day outcome today -> locks today's version; Apply Today rejected without silent retry
+        val outcomeHabit = Habit(
+            habitId = "h_corr_b_out",
+            name = "Stretch Routine",
+            trackingMode = TrackingMode.COMPLETION_ONLY,
+            targetPeriod = TargetPeriod.WEEK,
+            targetValue = 3,
+            scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET,
+            createdAtUtcMs = LocalDate.of(2026, 3, 10).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
+        )
+        repository.saveHabitSync(outcomeHabit, effectiveDateOverride = LocalDate.of(2026, 3, 10))
+        repository.logHabitDayOutcomeSync(outcomeHabit.habitId, today, "COMPLETED", null)
+        assertTrue(repository.hasRecordedActivityForVersionLockOnDate(outcomeHabit.habitId, today))
+
+        val rejectedOut = viewModel.saveHabit(outcomeHabit.copy(targetValue = 5), applyTodayWhenLogged = true)
+        assertNull(rejectedOut)
+        assertNotNull(viewModel.lastSaveError.value)
+        assertEquals(3, repository.getEffectiveHabitVersion(outcomeHabit.habitId, today)?.targetValue)
+
+        // 4. Ordinary Daily Apply Tomorrow succeeds with effectiveFromLocalDate == tomorrow and preserves today's version/activity
+        val appliedTomorrowDaily = viewModel.saveHabit(zeroHabit.copy(targetValue = 35), applyTodayWhenLogged = false)
+        assertNotNull(appliedTomorrowDaily)
+        assertEquals(tomorrow.toString(), appliedTomorrowDaily!!.effectiveFromLocalDate)
+        assertEquals(20, repository.getEffectiveHabitVersion(zeroHabit.habitId, today)?.targetValue)
+        assertEquals(35, repository.getEffectiveHabitVersion(zeroHabit.habitId, tomorrow)?.targetValue)
+        assertEquals(0, repository.getEntriesForHabitOnDate(zeroHabit.habitId, today).single().valueUnits)
+
+        // 5. Weekly same-unit target change takes effect tomorrow while current week retains frozen start-of-week version
+        val appliedTomorrowWeeklySameUnit = viewModel.saveHabit(
+            outcomeHabit.copy(targetValue = 5),
+            applyTodayWhenLogged = false
+        )
+        assertNotNull(appliedTomorrowWeeklySameUnit)
+        assertEquals(tomorrow.toString(), appliedTomorrowWeeklySameUnit!!.effectiveFromLocalDate)
+        val currentWeekSummary = repository.loadHabitSummariesSync()[outcomeHabit.habitId]!!
+        assertEquals(BigInteger.valueOf(3), currentWeekSummary.weekTargetUnits)
+
+        // 6. Weekly unit or tracking-mode change is deferred to the next weekly boundary (Monday 2026-03-23)
+        val weeklyModeChange = viewModel.saveHabit(
+            outcomeHabit.copy(
+                trackingMode = TrackingMode.DURATION,
+                unitCode = "min",
+                targetValue = 90
+            ),
+            applyTodayWhenLogged = false
+        )
+        assertNotNull(weeklyModeChange)
+        assertEquals("2026-03-23", weeklyModeChange!!.effectiveFromLocalDate)
+    }
+
+    @Test
+    fun t2_c03_correctionC_weeklySessionCountHabitCountsPositiveSessionsEditsDeletesUndosAndFreezesWeekConfig() {
+        // Week starts Monday 2026-03-16; today is Wednesday 2026-03-18
+        val sessionHabit = Habit(
+            habitId = "h_corr_c_sessions",
+            name = "Gym Workout",
+            trackingMode = TrackingMode.QUANTITY,
+            unitCode = "sessions",
+            targetPeriod = TargetPeriod.WEEK,
+            targetValue = 3,
+            scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET,
+            createdAtUtcMs = LocalDate.of(2026, 3, 16).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
+        )
+        repository.saveHabitSync(sessionHabit, effectiveDateOverride = LocalDate.of(2026, 3, 16))
+
+        // 1. Log positive session with valueUnits = 20 on Monday and valueUnits = 20 on Tuesday -> counts as 2 sessions (not 40!)
+        repository.logHabitEntrySync(sessionHabit.habitId, LocalDate.of(2026, 3, 16), 20, "Upper body")
+        val (tueEntry1, _) = repository.logHabitEntrySync(sessionHabit.habitId, LocalDate.of(2026, 3, 17), 20, "Lower body")
+
+        val summaryAfter2 = repository.loadHabitSummariesSync()[sessionHabit.habitId]!!
+        assertEquals(BigInteger.valueOf(2), summaryAfter2.weekTotalUnits)
+        assertEquals(BigInteger.valueOf(3), summaryAfter2.weekTargetUnits)
+        assertEquals(66, summaryAfter2.weekPercentage)
+        assertEquals(ProgressBand.HALFWAY, summaryAfter2.weekProgressBand)
+        assertEquals(
+            DerivedDayStatus.PARTIAL,
+            repository.evaluateDerivedDayStatus(sessionHabit.habitId, LocalDate.of(2026, 3, 17))
+        )
+
+        // 2. Multiple positive entries on the same date count separately: add 2nd entry on Tuesday (valueUnits = 15) -> 3 / 3 sessions
+        val (tueEntry2, _) = repository.logHabitEntrySync(sessionHabit.habitId, LocalDate.of(2026, 3, 17), 15, "Cardio")
+        val summaryAfter3 = repository.loadHabitSummariesSync()[sessionHabit.habitId]!!
+        assertEquals(BigInteger.valueOf(3), summaryAfter3.weekTotalUnits)
+        assertEquals(100, summaryAfter3.weekPercentage)
+        assertEquals(ProgressBand.GOAL_MET, summaryAfter3.weekProgressBand)
+        assertEquals(
+            DerivedDayStatus.COMPLETED,
+            repository.evaluateDerivedDayStatus(sessionHabit.habitId, LocalDate.of(2026, 3, 17))
+        )
+        assertEquals(1, summaryAfter3.activeRun?.completedStreakCount)
+
+        // 3. Explicit zero entry on Wednesday remains recorded (LOGGED_ZERO) but adds 0 to completed sessions
+        repository.logHabitEntrySync(sessionHabit.habitId, LocalDate.of(2026, 3, 18), 0, "Rested today")
+        val summaryAfterZero = repository.loadHabitSummariesSync()[sessionHabit.habitId]!!
+        assertEquals(BigInteger.valueOf(3), summaryAfterZero.weekTotalUnits)
+        assertEquals(
+            DerivedDayStatus.LOGGED_ZERO,
+            repository.evaluateDerivedDayStatus(sessionHabit.habitId, LocalDate.of(2026, 3, 18))
+        )
+
+        // 4. Editing, deleting, and undoing sessions recalculate weekly session counts accurately
+        // Edit tueEntry1 from 20 to 30 -> still 3 positive sessions
+        repository.updateHabitEntrySync(tueEntry1.entryId, 30, "Extended lower body")
+        assertEquals(BigInteger.valueOf(3), repository.loadHabitSummariesSync()[sessionHabit.habitId]!!.weekTotalUnits)
+
+        // Edit tueEntry2 from 15 to 0 -> drops to 2 positive sessions
+        repository.updateHabitEntrySync(tueEntry2.entryId, 0, "Zeroed")
+        assertEquals(BigInteger.valueOf(2), repository.loadHabitSummariesSync()[sessionHabit.habitId]!!.weekTotalUnits)
+
+        // Restore tueEntry2 to 10 -> back to 3 positive sessions
+        repository.updateHabitEntrySync(tueEntry2.entryId, 10, "Restored")
+        assertEquals(BigInteger.valueOf(3), repository.loadHabitSummariesSync()[sessionHabit.habitId]!!.weekTotalUnits)
+
+        // Delete tueEntry2 with Undo -> drops to 2 / 3 sessions
+        val delToken = repository.deleteHabitEntryWithUndoSync(tueEntry2.entryId)
+        assertNotNull(delToken)
+        assertEquals(BigInteger.valueOf(2), repository.loadHabitSummariesSync()[sessionHabit.habitId]!!.weekTotalUnits)
+
+        // Execute Undo -> returns to 3 / 3 sessions
+        assertTrue(repository.executeUndoSync(delToken!!))
+        assertEquals(BigInteger.valueOf(3), repository.loadHabitSummariesSync()[sessionHabit.habitId]!!.weekTotalUnits)
+
+        // 5. Midweek configuration change (U-12 Option B) & per-day lifecycle independence
+        repository.saveHabitSync(
+            sessionHabit.copy(targetValue = 5),
+            applyTodayWhenLogged = false
+        )
+        advanceClockToDate(LocalDate.of(2026, 3, 19)) // Thursday 2026-03-19 (where new version target=5 is effective for daily lookups)
+        repository.recomputeAllStreakRunsAndSummariesSync()
+        val summaryThu = repository.loadHabitSummariesSync()[sessionHabit.habitId]!!
+        // Frozen Monday version (3 sessions/week) still governs the current week
+        assertEquals(BigInteger.valueOf(3), summaryThu.weekTotalUnits)
+        assertEquals(BigInteger.valueOf(3), summaryThu.weekTargetUnits)
+        assertEquals(ProgressBand.GOAL_MET, summaryThu.weekProgressBand)
+        assertEquals(
+            DerivedDayStatus.UNSCHEDULED,
+            repository.evaluateDerivedDayStatus(sessionHabit.habitId, LocalDate.of(2026, 3, 19))
+        )
+
+        // Pausing on Friday 2026-03-20 sets Friday to INACTIVE_LIFECYCLE without altering Tuesday's historical COMPLETED status
+        advanceClockToDate(LocalDate.of(2026, 3, 20))
+        repository.updateHabitLifecycleSync(sessionHabit.habitId, HabitLifecycleState.PAUSED, LocalDate.of(2026, 3, 20))
+        assertEquals(
+            DerivedDayStatus.INACTIVE_LIFECYCLE,
+            repository.evaluateDerivedDayStatus(sessionHabit.habitId, LocalDate.of(2026, 3, 20))
+        )
+        assertEquals(
+            DerivedDayStatus.COMPLETED,
+            repository.evaluateDerivedDayStatus(sessionHabit.habitId, LocalDate.of(2026, 3, 17))
+        )
+
+        // 6. Non-session QUANTITY ("pages") and DURATION ("min") continue to sum valueUnits
+        val pagesHabit = Habit(
+            habitId = "h_corr_c_pages",
+            name = "Weekly Reading",
+            trackingMode = TrackingMode.QUANTITY,
+            unitCode = "pages",
+            targetPeriod = TargetPeriod.WEEK,
+            targetValue = 100,
+            scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET,
+            createdAtUtcMs = LocalDate.of(2026, 3, 16).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
+        )
+        repository.saveHabitSync(pagesHabit, effectiveDateOverride = LocalDate.of(2026, 3, 16))
+        repository.logHabitEntrySync(pagesHabit.habitId, LocalDate.of(2026, 3, 16), 20, null)
+        repository.logHabitEntrySync(pagesHabit.habitId, LocalDate.of(2026, 3, 17), 30, null)
+        val pagesSummary = repository.loadHabitSummariesSync()[pagesHabit.habitId]!!
+        assertEquals(BigInteger.valueOf(50), pagesSummary.weekTotalUnits)
+        assertEquals(ProgressBand.HALFWAY, pagesSummary.weekProgressBand)
+
+        val durationHabit = Habit(
+            habitId = "h_corr_c_min",
+            name = "Weekly Meditation",
+            trackingMode = TrackingMode.DURATION,
+            unitCode = "min",
+            targetPeriod = TargetPeriod.WEEK,
+            targetValue = 60,
+            scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET,
+            createdAtUtcMs = LocalDate.of(2026, 3, 16).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
+        )
+        repository.saveHabitSync(durationHabit, effectiveDateOverride = LocalDate.of(2026, 3, 16))
+        repository.logHabitEntrySync(durationHabit.habitId, LocalDate.of(2026, 3, 16), 20, null)
+        repository.logHabitEntrySync(durationHabit.habitId, LocalDate.of(2026, 3, 17), 25, null)
+        val durationSummary = repository.loadHabitSummariesSync()[durationHabit.habitId]!!
+        assertEquals(BigInteger.valueOf(45), durationSummary.weekTotalUnits)
+        assertEquals(ProgressBand.ALMOST_THERE, durationSummary.weekProgressBand)
+    }
+
+    @Test
+    fun t2_c04_correctionD_flexibleWeeklySchedulingBeforeAndAfterTargetMetBonusLoggingAndUnchangedDailySelectedWeekdays() {
+        val mwfMask = WeekdayMask.toMask(setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY))
+
+        val flexHabit = Habit(
+            habitId = "h_corr_d_flex",
+            name = "Pilates",
+            trackingMode = TrackingMode.QUANTITY,
+            unitCode = "sessions",
+            targetPeriod = TargetPeriod.WEEK,
+            targetValue = 3,
+            scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET,
+            preferredWeekdaysMask = mwfMask,
+            scheduleDays = setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY),
+            createdAtUtcMs = LocalDate.of(2026, 3, 16).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
+        )
+        val dailyHabit = Habit(
+            habitId = "h_corr_d_daily",
+            name = "Daily Gratitude",
+            trackingMode = TrackingMode.COMPLETION_ONLY,
+            targetPeriod = TargetPeriod.DAY,
+            scheduleKind = ScheduleKind.DAILY,
+            createdAtUtcMs = LocalDate.of(2026, 3, 16).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
+        )
+        val selectedWeekdaysHabit = Habit(
+            habitId = "h_corr_d_mwf",
+            name = "MWF Run",
+            trackingMode = TrackingMode.COMPLETION_ONLY,
+            targetPeriod = TargetPeriod.DAY,
+            scheduleKind = ScheduleKind.SELECTED_WEEKDAYS,
+            scheduledWeekdaysMask = mwfMask,
+            scheduleDays = setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY),
+            createdAtUtcMs = LocalDate.of(2026, 3, 16).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
+        )
+        repository.saveHabitSync(flexHabit, effectiveDateOverride = LocalDate.of(2026, 3, 16))
+        repository.saveHabitSync(dailyHabit, effectiveDateOverride = LocalDate.of(2026, 3, 16))
+        repository.saveHabitSync(selectedWeekdaysHabit, effectiveDateOverride = LocalDate.of(2026, 3, 16))
+
+        // 1. Before reaching weekly target (0 / 3 on Monday, 2 / 3 on Tuesday):
+        // Scheduled on Monday (preferred) AND Tuesday (non-preferred)
+        advanceClockToDate(LocalDate.of(2026, 3, 16)) // Monday (preferred)
+        repository.recomputeAllStreakRunsAndSummariesSync()
+        assertTrue(repository.loadHabitSummariesSync()[flexHabit.habitId]!!.isScheduledToday)
+        assertTrue(repository.loadHabitSummariesSync()[dailyHabit.habitId]!!.isScheduledToday)
+        assertTrue(repository.loadHabitSummariesSync()[selectedWeekdaysHabit.habitId]!!.isScheduledToday)
+
+        repository.logHabitEntrySync(flexHabit.habitId, LocalDate.of(2026, 3, 16), 1, null)
+        advanceClockToDate(LocalDate.of(2026, 3, 17)) // Tuesday (non-preferred)
+        repository.logHabitEntrySync(flexHabit.habitId, LocalDate.of(2026, 3, 17), 1, null) // 2 / 3 sessions
+        repository.recomputeAllStreakRunsAndSummariesSync()
+        assertTrue(
+            "Incomplete flexible weekly habit (2/3) must remain scheduled on non-preferred Tuesday",
+            repository.loadHabitSummariesSync()[flexHabit.habitId]!!.isScheduledToday
+        )
+        assertTrue(repository.loadHabitSummariesSync()[dailyHabit.habitId]!!.isScheduledToday)
+        assertFalse(repository.loadHabitSummariesSync()[selectedWeekdaysHabit.habitId]!!.isScheduledToday)
+
+        // 2. Reach weekly target (3 / 3) on Wednesday 2026-03-18
+        advanceClockToDate(LocalDate.of(2026, 3, 18)) // Wednesday (preferred)
+        repository.logHabitEntrySync(flexHabit.habitId, LocalDate.of(2026, 3, 18), 1, null) // 3 / 3 sessions
+        repository.recomputeAllStreakRunsAndSummariesSync()
+        assertEquals(ProgressBand.GOAL_MET, repository.loadHabitSummariesSync()[flexHabit.habitId]!!.weekProgressBand)
+        assertTrue(repository.loadHabitSummariesSync()[flexHabit.habitId]!!.isScheduledToday)
+
+        // 3. On Thursday 2026-03-19 (non-preferred day after target met): moves to Not scheduled today (isScheduledToday == false)
+        advanceClockToDate(LocalDate.of(2026, 3, 19)) // Thursday (non-preferred)
+        repository.recomputeAllStreakRunsAndSummariesSync()
+        assertFalse(
+            "Satisfied flexible weekly habit (3/3) must move to Not scheduled today on non-preferred Thursday",
+            repository.loadHabitSummariesSync()[flexHabit.habitId]!!.isScheduledToday
+        )
+        assertTrue(repository.loadHabitSummariesSync()[dailyHabit.habitId]!!.isScheduledToday)
+        assertFalse(repository.loadHabitSummariesSync()[selectedWeekdaysHabit.habitId]!!.isScheduledToday)
+
+        // 4. Bonus logging remains possible on Thursday when habit is Not scheduled today -> 4 / 3 sessions (133%, EXTRA)
+        repository.logHabitEntrySync(flexHabit.habitId, LocalDate.of(2026, 3, 19), 1, "Bonus Thursday session")
+        val summaryAfterBonus = repository.loadHabitSummariesSync()[flexHabit.habitId]!!
+        assertEquals(BigInteger.valueOf(4), summaryAfterBonus.weekTotalUnits)
+        assertEquals(133, summaryAfterBonus.weekPercentage)
+        assertEquals(ProgressBand.EXTRA, summaryAfterBonus.weekProgressBand)
+
+        // 5. On Friday 2026-03-20 (preferred day after target met): remains scheduled on preferred day (isScheduledToday == true)
+        advanceClockToDate(LocalDate.of(2026, 3, 20)) // Friday (preferred)
+        repository.recomputeAllStreakRunsAndSummariesSync()
+        assertTrue(
+            "Satisfied flexible weekly habit must remain scheduled on preferred Friday",
+            repository.loadHabitSummariesSync()[flexHabit.habitId]!!.isScheduledToday
+        )
+        assertTrue(repository.loadHabitSummariesSync()[dailyHabit.habitId]!!.isScheduledToday)
+        assertTrue(repository.loadHabitSummariesSync()[selectedWeekdaysHabit.habitId]!!.isScheduledToday)
+    }
 }
+

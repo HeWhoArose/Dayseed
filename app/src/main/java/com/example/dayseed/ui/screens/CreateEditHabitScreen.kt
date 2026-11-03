@@ -76,12 +76,15 @@ fun CreateEditHabitScreen(
     modifier: Modifier = Modifier
 ) {
     val habits by viewModel.habits.collectAsState()
+    val habitEntries by viewModel.habitEntries.collectAsState()
+    val habitDayOutcomes by viewModel.habitDayOutcomes.collectAsState()
+    val saveError by viewModel.lastSaveError.collectAsState()
     val initialHabit = remember(habits, habitId) {
         habitId?.let { id -> habits.find { it.habitId == id } }
     }
     val today = viewModel.repository.clock.todayLocal()
-    val alreadyLoggedToday = remember(initialHabit, today) {
-        initialHabit?.let { viewModel.repository.hasQualifyingActivityOnDate(it.habitId, today) } ?: false
+    val alreadyLoggedToday = remember(initialHabit, today, habitEntries, habitDayOutcomes) {
+        initialHabit?.let { viewModel.repository.hasRecordedActivityForVersionLockOnDate(it.habitId, today) } ?: false
     }
     val suggestedReminder = remember(initialHabit) {
         initialHabit?.let { viewModel.repository.getSuggestedReminderTimeForHabit(it.habitId) }
@@ -98,15 +101,15 @@ fun CreateEditHabitScreen(
             alreadyLoggedToday = alreadyLoggedToday,
             suggestedReminderTime = suggestedReminder,
             isFullScreen = true,
+            saveErrorMessage = saveError,
+            onClearSaveError = { viewModel.clearSaveError() },
             onDismiss = onNavigateBack,
             onSave = { habit, applyTodayWhenLogged ->
-                viewModel.saveHabit(habit, applyTodayWhenLogged)
-                onNavigateBack()
+                viewModel.saveHabit(habit, applyTodayWhenLogged) != null
             },
             onDelete = if (initialHabit != null) {
                 { id ->
                     viewModel.deleteHabit(id)
-                    onNavigateBack()
                 }
             } else {
                 null
@@ -122,8 +125,10 @@ fun CreateEditHabitFormContent(
     alreadyLoggedToday: Boolean = false,
     suggestedReminderTime: String? = null,
     isFullScreen: Boolean = false,
+    saveErrorMessage: String? = null,
+    onClearSaveError: () -> Unit = {},
     onDismiss: () -> Unit,
-    onSave: (habit: Habit, applyTodayWhenLogged: Boolean) -> Unit,
+    onSave: (habit: Habit, applyTodayWhenLogged: Boolean) -> Boolean,
     onDelete: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -846,7 +851,10 @@ fun CreateEditHabitFormContent(
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 FilterChip(
                                     selected = applyTodayWhenLogged,
-                                    onClick = { applyTodayWhenLogged = true },
+                                    onClick = {
+                                        applyTodayWhenLogged = true
+                                        onClearSaveError()
+                                    },
                                     label = { Text("Apply today") },
                                     modifier = Modifier
                                         .heightIn(min = 48.dp)
@@ -854,7 +862,10 @@ fun CreateEditHabitFormContent(
                                 )
                                 FilterChip(
                                     selected = !applyTodayWhenLogged,
-                                    onClick = { applyTodayWhenLogged = false },
+                                    onClick = {
+                                        applyTodayWhenLogged = false
+                                        onClearSaveError()
+                                    },
                                     label = { Text("Apply tomorrow") },
                                     modifier = Modifier
                                         .heightIn(min = 48.dp)
@@ -864,6 +875,26 @@ fun CreateEditHabitFormContent(
                         }
                     }
                 }
+            }
+        }
+
+        if (!saveErrorMessage.isNullOrBlank()) {
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("habit_save_error_banner")
+            ) {
+                Text(
+                    text = saveErrorMessage,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.padding(12.dp)
+                )
             }
         }
 
@@ -899,6 +930,7 @@ fun CreateEditHabitFormContent(
 
             Button(
                 onClick = {
+                    onClearSaveError()
                     val trimmedName = name.trim()
                     if (trimmedName.isEmpty() || trimmedName.length > 80) {
                         nameError = "Please enter a habit name (1–80 characters)."

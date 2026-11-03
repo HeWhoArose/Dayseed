@@ -580,7 +580,14 @@ private fun QuantityOrDurationSection(
         ?: habit.unitCode
         ?: if (habit.trackingMode == TrackingMode.DURATION) "min" else "units"
 
-    val todayUnitsBig = ProgressBandClassifier.sumUnitsExact(entries.map { it.valueUnits })
+    val isSessionCountHabit = isWeekly &&
+        (summary?.effectiveVersion?.trackingMode ?: habit.trackingMode).canonical() == TrackingMode.QUANTITY &&
+        unitLabel.trim().equals("sessions", ignoreCase = true)
+    val todayUnitsBig = if (isSessionCountHabit) {
+        BigInteger.valueOf(entries.count { it.valueUnits > 0 }.toLong())
+    } else {
+        ProgressBandClassifier.sumUnitsExact(entries.map { it.valueUnits })
+    }
     val activeUnitsBig = if (isWeekly && summary != null) summary.weekTotalUnits else todayUnitsBig
     val band = ProgressBandClassifier.classify(activeUnitsBig, targetBig)
     val pct = ProgressBandClassifier.displayPercentage(activeUnitsBig, targetBig)

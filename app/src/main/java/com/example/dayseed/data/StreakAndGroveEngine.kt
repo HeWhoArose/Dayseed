@@ -30,6 +30,51 @@ object StreakAndGroveEngine {
     }
 
     /**
+     * Returns true when [version] represents a weekly session-count habit (`TrackingMode.QUANTITY`,
+     * `TargetPeriod.WEEK`, and `unitCode == "sessions"`, case-insensitive).
+     */
+    fun isWeeklySessionCountHabit(version: HabitVersion): Boolean {
+        return version.trackingMode.canonical() == TrackingMode.QUANTITY &&
+            version.targetPeriod == TargetPeriod.WEEK &&
+            version.unitCode?.trim()?.equals("sessions", ignoreCase = true) == true
+    }
+
+    /**
+     * Resolves the frozen start-of-week [HabitVersion] under U-12 Option B.
+     * Uses `maxOf(firstHabitDate, weekStart)` as the freeze anchor date, falling back to [fallbackDate]
+     * or [fallbackVersion] if needed.
+     */
+    fun resolveFrozenWeekVersion(
+        sortedVersions: List<HabitVersion>,
+        weekStart: LocalDate,
+        firstHabitDate: LocalDate,
+        fallbackDate: LocalDate,
+        fallbackVersion: HabitVersion? = null
+    ): HabitVersion? {
+        val anchorDate = if (firstHabitDate.isAfter(weekStart)) firstHabitDate else weekStart
+        return resolveEffectiveVersion(sortedVersions, anchorDate)
+            ?: resolveEffectiveVersion(sortedVersions, fallbackDate)
+            ?: fallbackVersion
+    }
+
+    /**
+     * Counts qualifying weekly progress for a single day's entries under [frozenWeekVersion]:
+     * - If `isWeeklySessionCountHabit(frozenWeekVersion)` is true, counts each entry with `valueUnits > 0`
+     *   as `1` session (excluding explicit zero `valueUnits == 0` entries from the completed count).
+     * - Otherwise sums positive `valueUnits` via [ProgressBandClassifier.sumUnitsExact].
+     */
+    fun countDailyUnitsOrSessionsForWeek(
+        frozenWeekVersion: HabitVersion,
+        dayEntries: List<HabitEntry>
+    ): BigInteger {
+        return if (isWeeklySessionCountHabit(frozenWeekVersion)) {
+            BigInteger.valueOf(dayEntries.count { it.valueUnits > 0 }.toLong())
+        } else {
+            ProgressBandClassifier.sumUnitsExact(dayEntries.map { it.valueUnits })
+        }
+    }
+
+    /**
      * Computes distinct local dates with real qualifying activity for U-6 Option A (`lifetime_goal_days`).
      * Counts positive numeric entries (`sum(valueUnits) > 0`), `COMPLETED` outcomes, and `EFFORT_LOGGED`
      * outcomes (`TINY`, `USUAL`, `EXTRA`).
@@ -84,7 +129,7 @@ object StreakAndGroveEngine {
         return when (version.trackingMode.canonical()) {
             TrackingMode.QUANTITY, TrackingMode.DURATION -> {
                 if (dayEntries.isNotEmpty()) {
-                    val total = ProgressBandClassifier.sumUnitsExact(dayEntries.map { it.valueUnits })
+                    val total = countDailyUnitsOrSessionsForWeek(version, dayEntries)
                     if (total == BigInteger.ZERO) {
                         DayRecordState.EXPLICIT_ZERO to ProgressBand.ZERO
                     } else {
@@ -474,10 +519,13 @@ object StreakAndGroveEngine {
             val weekDates = (0..6).map { weekStart.plusDays(it.toLong()) }
             val weekEnd = weekDates.last()
 
-            // U-12 Option B: freeze the HabitVersion at the start of the active segment of the week
-            val firstEffectiveDateInWeek = if (firstDate.isAfter(weekStart)) firstDate else weekStart
-            val frozenVersion = resolveEffectiveVersion(versions, firstEffectiveDateInWeek)
-                ?: resolveEffectiveVersion(versions, weekEnd)
+            // U-12 Option B: freeze the HabitVersion at the start of the week
+            val frozenVersion = resolveFrozenWeekVersion(
+                sortedVersions = versions,
+                weekStart = weekStart,
+                firstHabitDate = firstDate,
+                fallbackDate = weekEnd
+            )
 
             if (frozenVersion == null) {
                 periodCursor = weekEnd.plusDays(1)
@@ -493,7 +541,8 @@ object StreakAndGroveEngine {
                 if (segmentDates.isEmpty()) return
                 val segStart = segmentDates.first()
                 val segEnd = segmentDates.last()
-                val segVersion = resolveEffectiveVersion(versions, segStart) ?: frozenVersion
+                // Use frozen start-of-week HabitVersion for target, mode, unit, and schedule semantics under U-12 Option B
+                val segVersion = frozenVersion
                 val targetVal = (segVersion.targetValue ?: 1).coerceAtLeast(1)
                 val targetBi = BigInteger.valueOf(targetVal.toLong())
 
@@ -505,7 +554,7 @@ object StreakAndGroveEngine {
                     when (segVersion.trackingMode.canonical()) {
                         TrackingMode.QUANTITY, TrackingMode.DURATION -> {
                             val dEntries = entriesByDate[dStr].orEmpty()
-                            val daySum = ProgressBandClassifier.sumUnitsExact(dEntries.map { it.valueUnits })
+                            val daySum = countDailyUnitsOrSessionsForWeek(segVersion, dEntries)
                             if (daySum > BigInteger.ZERO) {
                                 totalUnits = totalUnits.add(daySum)
                                 lastActivityDate = d
@@ -762,10 +811,13 @@ object StreakAndGroveEngine {
 
         val weekStartDay = WeekBoundaryHelper.resolveWeekStartPolicyForDate(evaluationDate, weekStartHistory)
         val (weekStart, weekEnd) = WeekBoundaryHelper.weekBounds(evaluationDate, weekStartDay)
-        val firstEffectiveDateInWeek = if (firstDate.isAfter(weekStart)) firstDate else weekStart
-        val frozenVersion = resolveEffectiveVersion(sortedVersions, firstEffectiveDateInWeek)
-            ?: resolveEffectiveVersion(sortedVersions, evaluationDate)
-            ?: fallbackVersion
+        val frozenVersion = resolveFrozenWeekVersion(
+            sortedVersions = sortedVersions,
+            weekStart = weekStart,
+            firstHabitDate = firstDate,
+            fallbackDate = evaluationDate,
+            fallbackVersion = fallbackVersion
+        ) ?: fallbackVersion
 
         val targetInt = (frozenVersion.targetValue ?: 1).coerceAtLeast(1)
         val targetBi = BigInteger.valueOf(targetInt.toLong())
@@ -781,7 +833,7 @@ object StreakAndGroveEngine {
             when (frozenVersion.trackingMode.canonical()) {
                 TrackingMode.QUANTITY, TrackingMode.DURATION -> {
                     val dayEntries = entriesByDate[dStr].orEmpty()
-                    val daySum = ProgressBandClassifier.sumUnitsExact(dayEntries.map { it.valueUnits })
+                    val daySum = countDailyUnitsOrSessionsForWeek(frozenVersion, dayEntries)
                     if (daySum > BigInteger.ZERO) {
                         totalUnits = totalUnits.add(daySum)
                     }

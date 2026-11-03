@@ -156,6 +156,11 @@ class DayseedViewModel @JvmOverloads constructor(
     private val _userMessage = MutableStateFlow<String?>(null)
     val userMessage: StateFlow<String?> = _userMessage.asStateFlow()
 
+    private val _lastSaveError = MutableStateFlow<String?>(null)
+    val lastSaveError: StateFlow<String?> = _lastSaveError.asStateFlow()
+    val lastErrorMessage: StateFlow<String?>
+        get() = lastSaveError
+
     // Compatibility & Dialog States
     private val _editingHabit = MutableStateFlow<Habit?>(null)
     val editingHabit: StateFlow<Habit?> = _editingHabit.asStateFlow()
@@ -242,6 +247,7 @@ class DayseedViewModel @JvmOverloads constructor(
     }
 
     fun openCreateEditHabit(habitId: String? = null) {
+        _lastSaveError.value = null
         val habit = habitId?.let { id -> _habitsOrNull(id) }
         _editingHabit.value = habit
         _selectedHabitId.value = habitId ?: _selectedHabitId.value
@@ -453,6 +459,10 @@ class DayseedViewModel @JvmOverloads constructor(
         _userMessage.value = null
     }
 
+    fun clearSaveError() {
+        _lastSaveError.value = null
+    }
+
     // =========================================================================
     // HABIT LOGGING, SESSION MANAGEMENT, REORDERING & UNDO (§5–§9)
     // =========================================================================
@@ -610,6 +620,7 @@ class DayseedViewModel @JvmOverloads constructor(
     }
 
     fun closeAddEditHabit() {
+        _lastSaveError.value = null
         _editingHabit.value = null
         _isAddHabitOpen.value = false
         if (_currentSecondaryRoute.value is SecondaryRoute.CreateEditHabit) {
@@ -636,25 +647,20 @@ class DayseedViewModel @JvmOverloads constructor(
         applyTodayWhenLogged: Boolean = true,
         policy: HabitConfigEffectivePolicy? = null
     ): HabitVersion? {
+        _lastSaveError.value = null
         return try {
-            val savedVer = try {
-                repository.saveHabitSync(
-                    habit = habit,
-                    applyTodayWhenLogged = applyTodayWhenLogged,
-                    policy = policy
-                )
-            } catch (_: HabitConfigurationLockedTodayException) {
-                repository.saveHabitSync(
-                    habit = habit,
-                    applyTodayWhenLogged = false,
-                    policy = HabitConfigEffectivePolicy.APPLY_TOMORROW
-                )
-            }
+            val savedVer = repository.saveHabitSync(
+                habit = habit,
+                applyTodayWhenLogged = applyTodayWhenLogged,
+                policy = policy
+            )
             closeAddEditHabit()
             _userMessage.value = "Habit saved (effective ${savedVer.effectiveFromLocalDate})"
             savedVer
         } catch (e: Exception) {
-            _userMessage.value = e.message ?: "Unable to save habit"
+            val msg = e.message ?: "Unable to save habit"
+            _lastSaveError.value = msg
+            _userMessage.value = msg
             null
         }
     }
@@ -682,11 +688,19 @@ class DayseedViewModel @JvmOverloads constructor(
 
     fun deleteHabit(habitId: String) {
         repository.deleteHabitPermanentlySync(habitId)
-        if (_currentSecondaryRoute.value is SecondaryRoute.HabitDetail &&
-            (_currentSecondaryRoute.value as SecondaryRoute.HabitDetail).habitId == habitId
-        ) {
-            navigateBack()
+        val filteredStack = _secondaryRouteStack.value.filterNot { route ->
+            (route is SecondaryRoute.CreateEditHabit && route.habitId == habitId) ||
+                (route is SecondaryRoute.HabitDetail && route.habitId == habitId)
         }
+        _secondaryRouteStack.value = filteredStack
+        _currentSecondaryRoute.value = filteredStack.lastOrNull()
+        if (_editingHabit.value?.habitId == habitId) {
+            _editingHabit.value = null
+        }
+        if (_currentSecondaryRoute.value !is SecondaryRoute.CreateEditHabit) {
+            _isAddHabitOpen.value = false
+        }
+        _lastSaveError.value = null
         _userMessage.value = "Habit permanently deleted (8s undo available)"
     }
 

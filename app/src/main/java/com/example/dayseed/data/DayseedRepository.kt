@@ -2070,6 +2070,22 @@ class DayseedRepository(
                     val todayEntries = entries.filter { it.localDate == todayStr }
                     val todayOutcome = outcomes.find { it.localDate == todayStr }
                     val todayException = exceptions.find { it.localDate == todayStr }
+                    val weekSnapshot = StreakAndGroveEngine.computeWeeklyProgressSnapshot(
+                        versions = versions,
+                        entries = entries,
+                        outcomes = outcomes,
+                        weekStartHistory = _weekStartHistory.value,
+                        evaluationDate = today,
+                        fallbackVersion = effToday
+                    )
+                    val evalTodayVersion = if (
+                        weekSnapshot.frozenWeekVersion.targetPeriod == TargetPeriod.WEEK ||
+                            effToday.targetPeriod == TargetPeriod.WEEK
+                    ) {
+                        weekSnapshot.frozenWeekVersion
+                    } else {
+                        effToday
+                    }
                     val (todayState, todayBand) = StreakAndGroveEngine.evaluateDayRecordState(
                         version = effToday,
                         date = today,
@@ -2077,16 +2093,16 @@ class DayseedRepository(
                         dayOutcome = todayOutcome,
                         dayException = todayException
                     )
-                    val todayUnits = when (effToday.trackingMode.canonical()) {
+                    val todayUnits = when (evalTodayVersion.trackingMode.canonical()) {
                         TrackingMode.QUANTITY, TrackingMode.DURATION ->
-                            ProgressBandClassifier.sumUnitsExact(todayEntries.map { it.valueUnits })
+                            StreakAndGroveEngine.countDailyUnitsOrSessionsForWeek(evalTodayVersion, todayEntries)
                         TrackingMode.COMPLETION_ONLY ->
                             if (todayOutcome?.outcomeKind == "COMPLETED") BigInteger.ONE else BigInteger.ZERO
                         TrackingMode.EFFORT_AWARE, TrackingMode.EFFORT_LEVELS ->
                             if (todayOutcome != null) BigInteger.ONE else BigInteger.ZERO
                     }
-                    val targetBi = BigInteger.valueOf((effToday.targetValue ?: 1).coerceAtLeast(1).toLong())
-                    val todayPct = when (effToday.trackingMode.canonical()) {
+                    val targetBi = BigInteger.valueOf((evalTodayVersion.targetValue ?: 1).coerceAtLeast(1).toLong())
+                    val todayPct = when (evalTodayVersion.trackingMode.canonical()) {
                         TrackingMode.QUANTITY, TrackingMode.DURATION ->
                             ProgressBandClassifier.percentageFloor(todayUnits, targetBi)
                         TrackingMode.COMPLETION_ONLY ->
@@ -2102,16 +2118,8 @@ class DayseedRepository(
 
                     val activeRun = runs.find { it.isActive }
                     val groveRuns = runs.filter { it.qualifiedForGrove }
-                    val streakUnit = if (effToday.targetPeriod == TargetPeriod.WEEK) StreakUnit.WEEKS else StreakUnit.DAYS
+                    val streakUnit = if (evalTodayVersion.targetPeriod == TargetPeriod.WEEK) StreakUnit.WEEKS else StreakUnit.DAYS
                     val lifetimeActive = StreakAndGroveEngine.computeLifetimeActiveDays(versions, entries, outcomes)
-                    val weekSnapshot = StreakAndGroveEngine.computeWeeklyProgressSnapshot(
-                        versions = versions,
-                        entries = entries,
-                        outcomes = outcomes,
-                        weekStartHistory = _weekStartHistory.value,
-                        evaluationDate = today,
-                        fallbackVersion = effToday
-                    )
                     val isOpportunityToday = effToday.lifecycleState == HabitLifecycleState.ACTIVE &&
                         StreakAndGroveEngine.isScheduledOpportunityOnDate(effToday, today)
                     val isScheduledToday = if (effToday.lifecycleState != HabitLifecycleState.ACTIVE) {
@@ -2123,9 +2131,13 @@ class DayseedRepository(
                                 WeekdayMask.contains(effToday.scheduledWeekdaysMask ?: WeekdayMask.ALL_DAYS_MASK, today.dayOfWeek)
                             ScheduleKind.FLEXIBLE_WEEKLY_TARGET -> {
                                 val prefMask = effToday.preferredWeekdaysMask
-                                val matchesPreferred = prefMask == null || prefMask == 0 || WeekdayMask.contains(prefMask, today.dayOfWeek)
+                                val matchesPreferred = prefMask == null ||
+                                    prefMask == 0 ||
+                                    WeekdayMask.contains(prefMask, today.dayOfWeek)
+
                                 val weekSatisfied = weekSnapshot.weekTotalUnits >= weekSnapshot.weekTargetUnits
-                                if (weekSatisfied && !matchesPreferred) false else matchesPreferred
+
+                                !weekSatisfied || matchesPreferred
                             }
                         }
                     }
@@ -2243,12 +2255,38 @@ class DayseedRepository(
             return DerivedDayStatus.INACTIVE_LIFECYCLE
         }
 
+        val habitVersionsForHabit = _habitVersions.value
+            .filter { it.habitId == habitId }
+            .sortedWith(compareBy<HabitVersion> { it.effectiveFromLocalDate }.thenBy { it.createdAtUtcMs })
+        val firstDate = habitVersionsForHabit.firstOrNull()?.let {
+            try {
+                LocalDateValidator.parseStrict(it.effectiveFromLocalDate)
+            } catch (_: Exception) {
+                targetDate
+            }
+        } ?: targetDate
+        val weekStart = getWeekStartDay(targetDate)
+        val (weekStartDate, weekEnd) = WeekBoundaryHelper.weekBounds(targetDate, weekStart)
+        val frozenWeekVersion = StreakAndGroveEngine.resolveFrozenWeekVersion(
+            sortedVersions = habitVersionsForHabit,
+            weekStart = weekStartDate,
+            firstHabitDate = firstDate,
+            fallbackDate = targetDate,
+            fallbackVersion = version
+        ) ?: version
+        val isWeeklyPeriod = frozenWeekVersion.targetPeriod == TargetPeriod.WEEK ||
+            frozenWeekVersion.scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET ||
+            version.targetPeriod == TargetPeriod.WEEK ||
+            version.scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET
+        // Keep per-day lifecycle state on `version` separate from frozen weekly measurement/schedule semantics
+        val evalVersion = if (isWeeklyPeriod) frozenWeekVersion else version
+
         val today = referenceToday
         val entriesOnDate = getEntriesForHabitOnDate(habitId, targetDate)
         val outcomeOnDate = getOutcomeForHabitOnDate(habitId, targetDate)
         val exceptionOnDate = getExceptionForHabitOnDate(habitId, targetDate)
 
-        when (version.trackingMode.canonical()) {
+        when (evalVersion.trackingMode.canonical()) {
             TrackingMode.COMPLETION_ONLY -> {
                 if (outcomeOnDate != null) {
                     return DerivedDayStatus.COMPLETED
@@ -2265,9 +2303,29 @@ class DayseedRepository(
             }
             TrackingMode.QUANTITY, TrackingMode.DURATION -> {
                 if (entriesOnDate.isNotEmpty()) {
-                    val sum = ProgressBandClassifier.sumUnitsExact(entriesOnDate.map { it.valueUnits })
-                    val target = BigInteger.valueOf((version.targetValue ?: 1).coerceAtLeast(1).toLong())
-                    val band = ProgressBandClassifier.classify(sum, target)
+                    val sum = StreakAndGroveEngine.countDailyUnitsOrSessionsForWeek(evalVersion, entriesOnDate)
+                    if (sum == BigInteger.ZERO) {
+                        return DerivedDayStatus.LOGGED_ZERO
+                    }
+                    val target = BigInteger.valueOf((evalVersion.targetValue ?: 1).coerceAtLeast(1).toLong())
+                    val comparisonTotal = if (evalVersion.targetPeriod == TargetPeriod.WEEK ||
+                        evalVersion.scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET
+                    ) {
+                        val weekDates = (0..6).map { weekStartDate.plusDays(it.toLong()) }
+                            .filter { !it.isBefore(firstDate) }
+                        var weekTotal = BigInteger.ZERO
+                        for (d in weekDates) {
+                            val dSum = StreakAndGroveEngine.countDailyUnitsOrSessionsForWeek(
+                                evalVersion,
+                                getEntriesForHabitOnDate(habitId, d)
+                            )
+                            weekTotal = weekTotal.add(dSum)
+                        }
+                        weekTotal
+                    } else {
+                        sum
+                    }
+                    val band = ProgressBandClassifier.classify(comparisonTotal, target)
                     return when (band) {
                         ProgressBand.GOAL_MET, ProgressBand.EXTRA, ProgressBand.HUGE -> DerivedDayStatus.COMPLETED
                         ProgressBand.ZERO -> DerivedDayStatus.LOGGED_ZERO
@@ -2283,12 +2341,12 @@ class DayseedRepository(
         }
 
         // No recorded entry, outcome, or REST_DAY on targetDate
-        return when (version.scheduleKind) {
+        return when (evalVersion.scheduleKind) {
             ScheduleKind.DAILY -> {
                 if (targetDate.isBefore(today)) DerivedDayStatus.DERIVED_MISSED else DerivedDayStatus.OPEN_TODAY
             }
             ScheduleKind.SELECTED_WEEKDAYS -> {
-                val mask = version.scheduledWeekdaysMask ?: WeekdayMask.ALL_DAYS_MASK
+                val mask = evalVersion.scheduledWeekdaysMask ?: WeekdayMask.ALL_DAYS_MASK
                 if (!WeekdayMask.contains(mask, targetDate.dayOfWeek)) {
                     DerivedDayStatus.UNSCHEDULED
                 } else if (targetDate.isBefore(today)) {
@@ -2301,15 +2359,17 @@ class DayseedRepository(
                 if (WeekBoundaryHelper.isNeutralTransitionDate(targetDate, _weekStartHistory.value)) {
                     return DerivedDayStatus.UNSCHEDULED
                 }
-                val weekStart = getWeekStartDay(targetDate)
-                val (_, weekEnd) = WeekBoundaryHelper.weekBounds(targetDate, weekStart)
-                val weekDates = (0..6).map { weekEnd.minusDays((6 - it).toLong()) }
-                val targetBi = BigInteger.valueOf((version.targetValue ?: 1).coerceAtLeast(1).toLong())
-                val weekSatisfied = when (version.trackingMode.canonical()) {
+                val weekDates = (0..6).map { weekStartDate.plusDays(it.toLong()) }
+                    .filter { !it.isBefore(firstDate) }
+                val targetBi = BigInteger.valueOf((evalVersion.targetValue ?: 1).coerceAtLeast(1).toLong())
+                val weekSatisfied = when (evalVersion.trackingMode.canonical()) {
                     TrackingMode.QUANTITY, TrackingMode.DURATION -> {
                         var weekTotal = BigInteger.ZERO
                         for (d in weekDates) {
-                            val dSum = ProgressBandClassifier.sumUnitsExact(getEntriesForHabitOnDate(habitId, d).map { it.valueUnits })
+                            val dSum = StreakAndGroveEngine.countDailyUnitsOrSessionsForWeek(
+                                evalVersion,
+                                getEntriesForHabitOnDate(habitId, d)
+                            )
                             weekTotal = weekTotal.add(dSum)
                         }
                         weekTotal >= targetBi
