@@ -295,8 +295,9 @@ fun RecordSessionSheet(
                 if (isEditing && existingEntry != null) {
                     IconButton(
                         onClick = {
-                            viewModel.deleteHabitEntry(existingEntry.entryId)
-                            onNavigateBack()
+                            if (viewModel.deleteHabitEntry(existingEntry.entryId)) {
+                                onNavigateBack()
+                            }
                         },
                         modifier = Modifier
                             .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
@@ -637,40 +638,31 @@ fun RecordSessionSheet(
                             return@Button
                         }
 
-                        if (isEditing && existingEntry != null) {
+                        val saved = if (isEditing && existingEntry != null) {
                             viewModel.updateHabitEntry(
                                 entryId = existingEntry.entryId,
                                 newValueUnits = units,
                                 newEntryNote = noteText.trim().ifBlank { null }
                             )
+                        } else if (effectiveMode in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION) || units == 0) {
+                            viewModel.logHabitQuantityOrDuration(
+                                habit = habit,
+                                valueUnits = units,
+                                date = parsedDate,
+                                entryNote = noteText.trim().ifBlank { null }
+                            )
                         } else {
-                            if (effectiveMode in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION)) {
-                                viewModel.logHabitQuantityOrDuration(
-                                    habit = habit,
-                                    valueUnits = units,
-                                    date = parsedDate,
-                                    entryNote = noteText.trim().ifBlank { null }
-                                )
-                            } else {
-                                if (units == 0) {
-                                    viewModel.logHabitQuantityOrDuration(
-                                        habit = habit,
-                                        valueUnits = 0,
-                                        date = parsedDate,
-                                        entryNote = noteText.trim().ifBlank { null }
-                                    )
-                                } else {
-                                    viewModel.logHabit(
-                                        habit = habit,
-                                        date = parsedDate,
-                                        outcome = DailyOutcome.COMPLETED,
-                                        effortLevel = selectedEffort,
-                                        note = noteText.trim()
-                                    )
-                                }
-                            }
+                            viewModel.logHabit(
+                                habit = habit,
+                                date = parsedDate,
+                                outcome = DailyOutcome.COMPLETED,
+                                effortLevel = selectedEffort,
+                                note = noteText.trim()
+                            )
                         }
-                        onNavigateBack()
+                        if (saved) {
+                            onNavigateBack()
+                        }
                     },
                     enabled = dateValidationError == null,
                     modifier = Modifier
