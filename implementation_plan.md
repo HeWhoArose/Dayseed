@@ -2,9 +2,10 @@
 
 **Prepared:** 2026-11-01  
 **Repository:** HeWhoArose/Dayseed  
-**Branch base inspected:** `main` (originally audited at `334679775643ffb43f384646cf7cced75d401f96`; Phase 0 reconciled at `ebeca3ebff1155c220f8e09f1e00e07fdb28209b` on `2026-11-01`; PR #3 closed as superseded)  
-**Technology:** Native Android, Kotlin (`2.2.10`), Jetpack Compose (`BOM 2024.09.00`), AGP (`9.1.1`), `SQLiteOpenHelper` (`DATABASE_VERSION = 2`)  
-**Status (reconciled 2026-11-01):** Consolidated audit and implementation roadmap; full Stage B initial-v1 implementation is explicitly authorised by owner under **D-213** (`2026-11-01`). **Phase 0 preflight is **PASSED** (`30/30` baseline tests + build verified, schema/toolchain/signing inventories reconciled, and the final `D-040`/`D-216` owner decision closed in `docs/37-PHASE-0-PREFLIGHT-RECONCILIATION.md`). The owner selected Option A: preserve all seven D-040 bands and pair each detailed band with both an encouragement quote and a distinct motivation quote. Stage C independent validation and Stage D final acceptance remain separately gated. Stage C independent validation and Stage D final acceptance remain separately gated.  
+**Current repository baseline:** `main` at `41ec70b268df2a1345390292a606e28a610663c0` (2026-11-03); Stage C remediation is isolated on `stage-c-remediation`  
+**Technology:** Native Android, Kotlin (`2.2.10`), Jetpack Compose (`BOM 2024.09.00`), AGP (`9.1.1`), `SQLiteOpenHelper` (`DATABASE_VERSION = 3`)  
+**Current status (reconciled 2026-11-03):** Stage A planning is closed and Stage B initial-v1 implementation was authorised under D-213. Phase 0 and Phase 1 implementation work is present on `main`; the Phase 1 implementation self-check recorded 57/57 tests on 2026-11-03 but is not independent Stage C evidence. The independent Stage C review found blocking MERGE streak-history deletion and additional restore/schema/test-evidence/documentation gaps. Stage C is **NOT PASSED**; corrective work is isolated on `stage-c-remediation`. No Phase 2 implementation, Stage D acceptance, release approval, or merge is authorised by this remediation. The latest remediation branch commit is `30e0116830a6ed2adcc4a4518c358212b18d8fe3`; the new tests still require execution on that exact branch head.
+
 **Historical note on original audit body (§1–§10):** Sections 1–10 below preserve the read-only source/document audit authored against commit `334679775643ffb43f384646cf7cced75d401f96`. See **Section 11** and **[docs/37-PHASE-0-PREFLIGHT-RECONCILIATION.md](docs/37-PHASE-0-PREFLIGHT-RECONCILIATION.md)** for the verified Phase 0 baseline at `ebeca3ebff1155c220f8e09f1e00e07fdb28209b`.
 
 > This plan replaces the older root implementation plan. AI Studio agents must use this file as the implementation-plan entry point and must not treat historical AI Studio brain artifacts or older planning branches as the fresher source of truth. The owner decision log, product specification, privacy/architecture contracts and owner-authority rules remain higher authority where this plan identifies an unresolved decision.
@@ -13,7 +14,7 @@
 
 ## 1. Executive summary
 
-Dayseed already has a meaningful native Android implementation. It is not a blank project and must not be rebuilt from scratch. The current source contains:
+Dayseed already has a meaningful native Android implementation. It is not a blank project and must not be rebuilt from scratch. The current source on the audited Phase 1 baseline contains:
 
 - A Kotlin/Jetpack Compose app shell with Today, History, Insights and Settings destinations.
 - A SQLiteOpenHelper database at schema version 2, a 12-table schema and a fail-closed version-1-to-version-2 migration path.
