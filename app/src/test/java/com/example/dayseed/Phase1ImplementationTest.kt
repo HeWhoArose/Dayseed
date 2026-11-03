@@ -1237,9 +1237,101 @@ class Phase1ImplementationTest {
             db.execSQL("INSERT INTO habit_versions VALUES ('v_weekly_check', 'h_existing_v3', '2026-03-10', 'Yoga 3x', NULL, 'COMPLETION_ONLY', NULL, 'WEEK', 3, 'FLEXIBLE_WEEKLY_TARGET', NULL, NULL, 'ACTIVE', 'OFF', NULL, 'Tiny', 'Usual', 'Extra', '#286143', 0, 2000);")
             db.execSQL("INSERT INTO restore_conflicts VALUES ('rc_streak', 'rs_existing', 'habit_streak_run', 'h_existing_v3:2026-03-01', '{}', '{}', 2000);")
 
-            // Verify idempotence: calling reconcileExistingV3SchemaIfNeeded again is a fast no-op
+            // The reconciliation must preserve records in every related table touched by this fixture.
+            db.rawQuery("SELECT COUNT(*) FROM habits WHERE habit_id = 'h_existing_v3'", null).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(1, c.getInt(0))
+            }
+            db.rawQuery("SELECT COUNT(*) FROM restore_sessions WHERE restore_session_id = 'rs_existing'", null).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(1, c.getInt(0))
+            }
+            db.rawQuery("SELECT COUNT(*) FROM restore_conflicts WHERE conflict_id IN ('rc_existing', 'rc_streak')", null).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(2, c.getInt(0))
+            }
+
+            // Primary keys and foreign keys must survive the in-place table rebuilds.
+            db.rawQuery("PRAGMA table_info(habit_versions)", null).use { c ->
+                var versionIdIsPrimaryKey = false
+                while (c.moveToNext()) {
+                    if (c.getString(c.getColumnIndexOrThrow("name")) == "version_id") {
+                        versionIdIsPrimaryKey = c.getInt(c.getColumnIndexOrThrow("pk")) == 1
+                    }
+                }
+                assertTrue(versionIdIsPrimaryKey)
+            }
+            db.rawQuery("PRAGMA foreign_key_list(habit_versions)", null).use { c ->
+                var habitForeignKeyFound = false
+                while (c.moveToNext()) {
+                    if (c.getString(c.getColumnIndexOrThrow("table")) == "habits" &&
+                        c.getString(c.getColumnIndexOrThrow("from")) == "habit_id"
+                    ) habitForeignKeyFound = true
+                }
+                assertTrue(habitForeignKeyFound)
+            }
+            db.rawQuery("PRAGMA foreign_key_list(restore_conflicts)", null).use { c ->
+                var sessionForeignKeyFound = false
+                while (c.moveToNext()) {
+                    if (c.getString(c.getColumnIndexOrThrow("table")) == "restore_sessions" &&
+                        c.getString(c.getColumnIndexOrThrow("from")) == "restore_session_id"
+                    ) sessionForeignKeyFound = true
+                }
+                assertTrue(sessionForeignKeyFound)
+            }
+            db.rawQuery("PRAGMA table_info(restore_conflicts)", null).use { c ->
+                var conflictIdIsPrimaryKey = false
+                while (c.moveToNext()) {
+                    if (c.getString(c.getColumnIndexOrThrow("name")) == "conflict_id") {
+                        conflictIdIsPrimaryKey = c.getInt(c.getColumnIndexOrThrow("pk")) == 1
+                    }
+                }
+                assertTrue(conflictIdIsPrimaryKey)
+            }
+
+            // All canonical app-managed indexes and triggers must exist after reconciliation.
+            val actualIndexes = mutableSetOf<String>()
+            db.rawQuery("SELECT name FROM sqlite_master WHERE type = 'index' AND name NOT LIKE 'sqlite_%'", null).use { c ->
+                while (c.moveToNext()) actualIndexes.add(c.getString(0))
+            }
+            assertTrue(actualIndexes.containsAll(DayseedDatabaseHelper.ALL_V3_INDEXES))
+            val actualTriggers = mutableSetOf<String>()
+            db.rawQuery("SELECT name FROM sqlite_master WHERE type = 'trigger'", null).use { c ->
+                while (c.moveToNext()) actualTriggers.add(c.getString(0))
+            }
+            assertEquals(
+                setOf(
+                    "trg_habit_entries_validate_insert",
+                    "trg_habit_entries_validate_update",
+                    "trg_habit_outcomes_validate_insert",
+                    "trg_habit_outcomes_validate_update",
+                    "trg_habit_exceptions_validate_insert",
+                    "trg_habit_exceptions_validate_update"
+                ),
+                actualTriggers
+            )
+            db.rawQuery("PRAGMA integrity_check", null).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("ok", c.getString(0))
+            }
+
+            // Verify idempotence, then close/reopen to exercise the actual onOpen path twice.
             reconciledHelper.reconcileExistingV3SchemaIfNeeded(db)
             reconciledHelper.close()
+            val reopenedHelper = DayseedDatabaseHelper(context, oldV3DbName)
+            val reopenedDb = reopenedHelper.writableDatabase
+            reopenedDb.rawQuery("PRAGMA integrity_check", null).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("ok", c.getString(0))
+            }
+            reopenedDb.rawQuery("PRAGMA foreign_key_check", null).use { c ->
+                assertFalse(c.moveToFirst())
+            }
+            reopenedDb.rawQuery("SELECT COUNT(*) FROM restore_conflicts WHERE conflict_id IN ('rc_existing', 'rc_streak')", null).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(2, c.getInt(0))
+            }
+            reopenedHelper.close()
         } finally {
             context.deleteDatabase(oldV3DbName)
         }
@@ -1261,6 +1353,22 @@ class Phase1ImplementationTest {
             }
             badOldV3Helper.writableDatabase.close()
 
+            // Capture the exact pre-reconciliation schema objects so rollback is checked, not inferred.
+            val beforeRollbackDb = SQLiteDatabase.openDatabase(
+                context.getDatabasePath(badOldV3DbName).absolutePath,
+                null,
+                SQLiteDatabase.OPEN_READONLY
+            )
+            val originalConflictTableSql = beforeRollbackDb.rawQuery(
+                "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'restore_conflicts'",
+                null
+            ).use { c -> assertTrue(c.moveToFirst()); c.getString(0) }
+            val originalTriggerNames = mutableSetOf<String>()
+            beforeRollbackDb.rawQuery("SELECT name FROM sqlite_master WHERE type = 'trigger'", null).use { c ->
+                while (c.moveToNext()) originalTriggerNames.add(c.getString(0))
+            }
+            beforeRollbackDb.close()
+
             val failingHelper = DayseedDatabaseHelper(context, badOldV3DbName)
             try {
                 failingHelper.writableDatabase
@@ -1279,6 +1387,22 @@ class Phase1ImplementationTest {
             rawDb.rawQuery("SELECT COUNT(*) FROM habits WHERE habit_id = 'h_recover'", null).use { c ->
                 assertTrue(c.moveToFirst())
                 assertEquals(1, c.getInt(0))
+            }
+            rawDb.rawQuery(
+                "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'restore_conflicts'",
+                null
+            ).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(originalConflictTableSql, c.getString(0))
+            }
+            val restoredTriggerNames = mutableSetOf<String>()
+            rawDb.rawQuery("SELECT name FROM sqlite_master WHERE type = 'trigger'", null).use { c ->
+                while (c.moveToNext()) restoredTriggerNames.add(c.getString(0))
+            }
+            assertEquals(originalTriggerNames, restoredTriggerNames)
+            rawDb.rawQuery("PRAGMA integrity_check", null).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("ok", c.getString(0))
             }
             rawDb.close()
         } finally {
@@ -1770,4 +1894,156 @@ class Phase1ImplementationTest {
             assertEquals("COMPLETED", c.getString(0))
         }
     }
+
+    // =========================================================================
+    // T1-43: MERGE rejects replacement of an unrelated active streak run
+    // =========================================================================
+    @Test
+    fun t1_43_mergeDoesNotDeleteUnrelatedActiveStreakRun() {
+        val start = LocalDate.of(2026, 3, 1)
+        testClock.currentLocalDate = LocalDate.of(2026, 3, 10)
+        repository.saveHabitSync(
+            Habit(
+                habitId = "h_merge_active_guard",
+                name = "Daily walk",
+                trackingMode = TrackingMode.QUANTITY,
+                unitCode = "km",
+                targetValue = 1
+            ),
+            effectiveDateOverride = start
+        )
+        for (i in 0..6) {
+            repository.logHabitEntrySync("h_merge_active_guard", start.plusDays(i.toLong()), 1)
+        }
+
+        val activeBefore = repository.dbHelper.readableDatabase.rawQuery(
+            "SELECT run_id, start_local_date FROM habit_streak_runs WHERE habit_id = ? AND is_active = 1",
+            arrayOf("h_merge_active_guard")
+        ).use { c ->
+            assertTrue(c.moveToFirst())
+            c.getString(0) to c.getString(1)
+        }
+
+        val backupRun = JSONObject(
+            JSONObject(repository.exportPortableBackupSync(password = null))
+                .getJSONArray("habit_streak_runs")
+                .getJSONObject(0)
+                .toString()
+        ).apply {
+            put("run_id", "run_backup_different_start")
+            put("start_local_date", "2026-02-28")
+            put("end_local_date", "2026-03-10")
+            put("is_active", 1)
+            put("terminal_reason", JSONObject.NULL)
+            put("qualified_for_grove", 0)
+            put("qualified_at_utc_ms", JSONObject.NULL)
+            put("broken_on_local_date", JSONObject.NULL)
+            put("tree_state", "SAPLING_ACTIVE")
+        }
+
+        val db = repository.dbHelper.writableDatabase
+        val now = 1_777_777_000_000L
+        val sessionId = "rs_active_guard"
+        val conflictId = "rc_active_guard"
+        db.insertOrThrow(
+            DayseedDatabaseHelper.TABLE_RESTORE_SESSIONS,
+            null,
+            ContentValues().apply {
+                put("restore_session_id", sessionId)
+                put("restore_mode", "MERGE")
+                put("format_version", 1)
+                put("source_schema_version", 3)
+                put("session_state", "AWAITING_CONFLICT_RESOLUTION")
+                put("started_at_utc_ms", now)
+                put("updated_at_utc_ms", now)
+                put("manifest_json", "{}")
+                putNull("safety_backup_ref")
+                put("safety_backup_verified", 1)
+            }
+        )
+        db.insertOrThrow(
+            DayseedDatabaseHelper.TABLE_RESTORE_CONFLICTS,
+            null,
+            ContentValues().apply {
+                put("conflict_id", conflictId)
+                put("restore_session_id", sessionId)
+                put("record_type", "habit_streak_run")
+                put("record_key", "h_merge_active_guard:2026-02-28")
+                put("current_payload_json", "{}")
+                put("backup_payload_json", backupRun.toString())
+                put("created_at_utc_ms", now)
+            }
+        )
+        repository.refreshAllSync()
+
+        try {
+            repository.resolveRestoreConflictSync(conflictId, ConflictResolution.USE_BACKUP)
+            fail("Expected USE_BACKUP to reject replacement of a different active streak run")
+        } catch (_: IllegalStateException) {
+            // Expected: the active run is unrelated and must remain untouched.
+        }
+
+        db.rawQuery(
+            "SELECT run_id, start_local_date FROM habit_streak_runs WHERE habit_id = ? AND is_active = 1",
+            arrayOf("h_merge_active_guard")
+        ).use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals(activeBefore.first, c.getString(0))
+            assertEquals(activeBefore.second, c.getString(1))
+        }
+        db.rawQuery(
+            "SELECT COUNT(*) FROM restore_conflicts WHERE conflict_id = ?",
+            arrayOf(conflictId)
+        ).use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals(1, c.getInt(0))
+        }
+    }
+
+    // =========================================================================
+    // T1-44: REPLACE fails closed and rolls back orphaned streak-run records
+    // =========================================================================
+    @Test
+    fun t1_44_replaceRejectsOrphanedStreakRunAndPreservesLocalData() {
+        val start = LocalDate.of(2026, 3, 1)
+        repository.saveHabitSync(
+            Habit(
+                habitId = "h_replace_orphan_guard",
+                name = "Read",
+                trackingMode = TrackingMode.QUANTITY,
+                unitCode = "pages",
+                targetValue = 2
+            ),
+            effectiveDateOverride = start
+        )
+        for (i in 0..6) {
+            repository.logHabitEntrySync("h_replace_orphan_guard", start.plusDays(i.toLong()), 2)
+        }
+
+        val beforeRunCount = repository.habitStreakRuns.value.count { it.habitId == "h_replace_orphan_guard" }
+        assertTrue(beforeRunCount > 0)
+        val backupRoot = JSONObject(repository.exportPortableBackupSync(password = null))
+        val orphanRun = JSONObject(
+            backupRoot.getJSONArray("habit_streak_runs").getJSONObject(0).toString()
+        ).apply {
+            put("run_id", "run_with_missing_parent")
+            put("habit_id", "missing_parent_habit")
+        }
+        backupRoot.getJSONArray("habit_streak_runs").put(orphanRun)
+
+        try {
+            repository.restorePortableBackupSync(backupRoot.toString(), restoreMode = "REPLACE")
+            fail("Expected REPLACE to reject a streak run whose parent habit is missing")
+        } catch (_: IllegalStateException) {
+            // Expected: transaction must roll back instead of silently skipping the run.
+        }
+
+        assertTrue(repository.habits.value.any { it.habitId == "h_replace_orphan_guard" })
+        assertEquals(
+            beforeRunCount,
+            repository.habitStreakRuns.value.count { it.habitId == "h_replace_orphan_guard" }
+        )
+        assertFalse(repository.habits.value.any { it.habitId == "missing_parent_habit" })
+    }
+
 }

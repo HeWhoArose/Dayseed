@@ -1,7 +1,7 @@
 # Requirement-to-Test Traceability Matrix
 
-**Date:** 2026-10-31
-**Status:** Initial planning traceability pass completed under Stage A (APPROVED / OPEN under D-208). Stage B implementation now in progress; Stage C independent technical validation pending Stage B completion. Stage D final owner acceptance/release readiness pending Stage C completion. The matrix does not itself authorise code changes, technical validation, or release claims.
+**Date:** 2026-11-03
+**Current status:** Stage A planning is closed; Stage B Phase 1 implementation and its self-check are recorded in the historical execution entries below. Independent Stage C review has **NOT PASSED** because restore-safety defects and evidence gaps were found. Remediation is in progress on the separate `stage-c-remediation` branch from `main` baseline `41ec70b268df2a1345390292a606e28a610663c0`. The corrective source/tests are not yet independently executed; no Stage D owner acceptance, release readiness, Phase 2 implementation, or merge is implied. Historical traceability entries below retain the status and context that applied when they were written. The matrix does not itself authorise code changes, technical validation, or release claims.
 
 **Purpose:** Keep each high-priority requirement connected to the screen/data contract and at least one acceptance case. The detailed behaviour authority remains the product specification, approved decision log, and feature contracts; the quality plan remains the test-strategy authority. This matrix is the navigation/index layer between them.
 
