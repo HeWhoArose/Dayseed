@@ -172,26 +172,26 @@ enum class ProgressBand(
         motivationQuote = "Even a single small unit can shift today's momentum whenever you're ready."
     ),
     TINY_STEP(
-        label = "Tiny step",
-        shortBadge = "1–24%",
+        label = "Tiny",
+        shortBadge = ">0–<25%",
         encouragementQuote = "The hardest boundary is starting—you crossed it.",
         motivationQuote = "One small brick laid today keeps the path open for tomorrow."
     ),
     GETTING_STARTED(
-        label = "Getting started",
-        shortBadge = "25–49%",
+        label = "Small",
+        shortBadge = "25–<50%",
         encouragementQuote = "You've built real traction today.",
         motivationQuote = "Steady steps compound faster than occasional bursts."
     ),
     HALFWAY(
-        label = "Halfway there",
-        shortBadge = "50–74%",
+        label = "Halfway",
+        shortBadge = "50–<75%",
         encouragementQuote = "More than halfway—your consistency is taking root.",
         motivationQuote = "You're closer to the finish than the starting line."
     ),
     ALMOST_THERE(
-        label = "Almost there",
-        shortBadge = "75–99%",
+        label = "Nearly there",
+        shortBadge = "75–<100%",
         encouragementQuote = "Strong effort—you're right on the doorstep of your goal.",
         motivationQuote = "One last push brings today's target home."
     ),
@@ -202,14 +202,14 @@ enum class ProgressBand(
         motivationQuote = "Reliability like this is how lasting habits grow."
     ),
     EXTRA(
-        label = "Extra credit",
-        shortBadge = "101–149%",
+        label = "Extra",
+        shortBadge = ">100–150%",
         encouragementQuote = "You went beyond what you asked of yourself today.",
         motivationQuote = "Surplus energy invested wisely strengthens the root."
     ),
     HUGE(
-        label = "Huge day",
-        shortBadge = "150%+",
+        label = "Huge",
+        shortBadge = ">150%",
         encouragementQuote = "An extraordinary session—celebrate the abundance.",
         motivationQuote = "Let today's high tide inspire calm confidence, not pressure, tomorrow."
     );
@@ -279,7 +279,7 @@ object ProgressBandClassifier {
             scaled < t75 -> ProgressBand.HALFWAY
             scaled < t100 -> ProgressBand.ALMOST_THERE
             scaled == t100 -> ProgressBand.GOAL_MET
-            scaled < t150 -> ProgressBand.EXTRA
+            scaled <= t150 -> ProgressBand.EXTRA
             else -> ProgressBand.HUGE
         }
     }

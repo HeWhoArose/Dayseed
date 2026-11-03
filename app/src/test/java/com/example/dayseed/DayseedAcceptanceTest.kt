@@ -285,7 +285,8 @@ class DayseedAcceptanceTest {
         assertEquals(ProgressBand.GOAL_MET, ProgressBandClassifier.classify(100, 100))
         assertEquals(ProgressBand.EXTRA, ProgressBandClassifier.classify(101, 100))
         assertEquals(ProgressBand.EXTRA, ProgressBandClassifier.classify(149, 100))
-        assertEquals(ProgressBand.HUGE, ProgressBandClassifier.classify(150, 100))
+        assertEquals(ProgressBand.EXTRA, ProgressBandClassifier.classify(150, 100))
+        assertEquals(ProgressBand.HUGE, ProgressBandClassifier.classify(151, 100))
 
         // Tiny integer targets skip unreachable intermediate bands cleanly (D-040 / D-216 Option A)
         // Target = 1 -> reachable: ZERO (0), GOAL_MET (1 -> 100%), HUGE (2 -> 200%)
@@ -293,9 +294,9 @@ class DayseedAcceptanceTest {
             listOf(ProgressBand.ZERO, ProgressBand.GOAL_MET, ProgressBand.HUGE),
             ProgressBandClassifier.reachableBandsForTarget(1)
         )
-        // Target = 2 -> reachable: ZERO (0), HALFWAY (1 -> 50%), GOAL_MET (2 -> 100%), HUGE (3 -> 150%)
+        // Target = 2 -> reachable: ZERO (0), HALFWAY (1 -> 50%), GOAL_MET (2 -> 100%), EXTRA (3 -> 150%), HUGE (4 -> 200%)
         assertEquals(
-            listOf(ProgressBand.ZERO, ProgressBand.HALFWAY, ProgressBand.GOAL_MET, ProgressBand.HUGE),
+            listOf(ProgressBand.ZERO, ProgressBand.HALFWAY, ProgressBand.GOAL_MET, ProgressBand.EXTRA, ProgressBand.HUGE),
             ProgressBandClassifier.reachableBandsForTarget(2)
         )
         // Target = 3 -> reachable: ZERO (0), GETTING_STARTED (1 -> 33%), HALFWAY (2 -> 66%), GOAL_MET (3 -> 100%), EXTRA (4 -> 133%), HUGE (5 -> 166%)

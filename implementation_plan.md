@@ -822,4 +822,31 @@ During **Phase 0 (Implementation Preflight, Repository Reconciliation and Baseli
 
 **Phase 1 Readiness (Reconciled):** Phase 1 work on `D-194` effective-dating enforcement (`AUD-001`), flexible weekly target persistence and status (`AUD-002`–`AUD-005`), schema v2-to-v3 migration (`habit_pauses`, `habit_date_exceptions`, `habit_streak_runs`, habit metadata), individual streaks/Grove (`D-217`), one-off rest days (`D-218`), neutral explicit zero (`AUD-015`), and `Long` ratio overflow prevention (`AUD-009`) can begin immediately. Implementing the owner-confirmed seven D-040 progress-band labels, separate compact Calendar/History groupings, and the paired encouragement/motivation quote presentation is now unblocked (`AUD-008`, `AUD-029`); Phase 1 must add boundary and quote-selection tests.
 
+---
+
+## 12. Phase 1 Implementation & Corrective Completion Addendum (2026-11-02 / 2026-11-03, Stage B Self-Check)
+
+Following the owner's approval of the Phase 1 Implementation Plan (Revision 7, resolving `D-219`–`D-227` and `U-1`–`U-13`, including eliminating a separate `habit_pauses` table in favour of deriving pause ranges from `habit_versions.lifecycle_state = 'PAUSED'`) and the subsequent **Phase 1 Corrective Completion Plan (Revised)** on `2026-11-02` / `2026-11-03`:
+
+1. **`D-040` / `D-216` Progress-Band Classification, Labels, Fractional-Safe Badges & Dual Quotes (`Models.kt`):**
+   - Corrected `ProgressBandClassifier.classify` (`scaled <= t150 -> ProgressBand.EXTRA`) so exact `150%` (`150/100`, `3/2`, `300/200`) classifies as `ProgressBand.EXTRA` and only strictly `> 150%` classifies as `ProgressBand.HUGE`.
+   - Updated `ProgressBand` visible `label` strings (`Zero logged`, `Tiny`, `Small`, `Halfway`, `Nearly there`, `Goal met`, `Extra`, `Huge`) and fractional-safe `shortBadge` strings (`0%`, `>0–<25%`, `25–<50%`, `50–<75%`, `75–<100%`, `100%`, `>100–150%`, `>150%`).
+   - Preserved both `encouragementQuote` and `motivationQuote` on every `ProgressBand` (`D-216` Option A) and kept `CompactHistoryBucket` (`NONE`, `ZERO_LOGGED`, `PARTIAL`, `REST_DAY`, `TARGET_MET`, `OVER_TARGET`) separate (`§5.6`).
+2. **SQLite v3 Schema (`DATABASE_VERSION = 3`, `D-219`), Chained `v1 -> v2 -> v3` Migration, `U-11` Weekly Conversion & In-Place v3 Reconciliation (`DayseedDatabaseHelper.kt`):**
+   - Updated `habit_versions` CHECK constraints to allow weekly `COMPLETION_ONLY` and `EFFORT_AWARE` habits (`target_period = 'WEEK'`) to store `target_value >= 1` (`N days/week`) while keeping daily check-off `target_value IS NULL` and allowing legacy weekly `NULL`.
+   - Added `'habit_streak_run'` to `restore_conflicts.record_type IN (...)`.
+   - Updated `migrateV1ToV2FailClosed` so v1 `QUANTITY` and `DURATION` daily records migrate into `habit_entries` (`value_units = 1`) rather than `habit_day_outcomes`, and archived v1 habits with historical records retain an `ACTIVE` effective version covering their record dates before transitioning to an `ARCHIVED` effective version on the day after their latest record.
+   - Updated `migrateV2ToV3FailClosed` and `validateV2DataBeforeMigration` to convert legacy v2 weekly schedules `(DAILY, WEEK)` -> `(FLEXIBLE_WEEKLY_TARGET, WEEK, preferred_weekdays_mask = null)` and `(SELECTED_WEEKDAYS, mask, WEEK)` -> `(FLEXIBLE_WEEKLY_TARGET, WEEK, scheduled_weekdays_mask = null, preferred_weekdays_mask = mask)` (`U-11`), and fail-closed on malformed v2 `habit_versions` schedule/period/mask/target rows.
+   - Implemented `reconcileExistingV3SchemaIfNeeded(db)` invoked from `onOpen(db)` to idempotently and transactionally rebuild `habit_versions` and `restore_conflicts` on any existing v3 database (`DATABASE_VERSION = 3` per `D-219`) that still has the older CHECK constraints, preserving all records, foreign keys, indexes, and triggers and rolling back cleanly on failure.
+3. **Complete v3 Portable Backup, `REPLACE`, `MERGE` & Per-Conflict Destructive Authorization (`DayseedRepository.kt`, `StreakAndGroveEngine.kt`):**
+   - Preserved `targetValue >= 1` in `saveHabitSync` for weekly `COMPLETION_ONLY` and `EFFORT_AWARE` habits.
+   - Updated `MutableRun` in `StreakAndGroveEngine.kt` to preserve prior `qualifiedAtUtcMs` when `activeSpanDays >= 7` and reset `qualifiedForGrove = false` / `qualifiedAtUtcMs = null` when a previously qualified run shrinks below 7 days.
+   - Updated `REPLACE` (`importBackupArraysDirect`) to import valid `habit_streak_runs` (preserving original `run_id`, `created_at_utc_ms`, and `qualified_at_utc_ms` across post-restore recalculation) and seed `week_start_history` for legacy v2 backups at the earliest restored local date using the restored `week_start` setting without overwriting `week_start`.
+   - Updated `MERGE` (`mergeBackupWithConflictDetection`) and `resolveRestoreConflictSync` to detect and resolve conflicts across `"habit"`, `"habit_date_exception"` (requiring explicit per-conflict `allowDestructiveActivityRemoval == true && authorizedDestructiveConflictId == conflictId` before `USE_BACKUP` removes local activity on that date), `"habit_streak_run"`, `"week_start_history"`, and `"journal_draft"`, while disallowing `KEEP_BOTH` for those five record types.
+4. **Executed Build & Test Verification Evidence (Stage B Self-Check, `2026-11-03T06:29:54Z` – `2026-11-03T06:30:31Z`):**
+   - `compile_applet`: **PASSED** (`Build succeeded - the applet is compiled`).
+   - `gradle :app:testDebugUnitTest --rerun-tasks`: **PASSED 57/57** executed JUnit test methods across 4 test classes (`Phase1ImplementationTest`: **27/27** JUnit methods covering `T1-01` through `T1-42` [XML `2026-11-03T06:30:19.975Z`, `10.118s`]; `DayseedAcceptanceTest`: **12/12** [XML `2026-11-03T06:30:30.118Z`, `1.386s`]; `DayseedSettingsValidationTest`: **10/10** [XML `2026-11-03T06:30:31.510Z`, `0.011s`]; `DayseedVisualResolutionTest`: **8/8** [XML `2026-11-03T06:30:31.525Z`, `0.06s`]), **0 failed, 0 errors, 0 skipped** (`BUILD SUCCESSFUL in 31s`).
+   - **Stage gates:** Stage B Phase 1 self-checks are complete. Stage C (independent technical validation) and Stage D (final owner acceptance) remain separate later gates and are not claimed here.
+
+
 

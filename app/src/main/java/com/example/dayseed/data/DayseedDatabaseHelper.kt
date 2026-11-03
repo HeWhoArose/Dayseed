@@ -81,6 +81,9 @@ class DayseedDatabaseHelper(
     override fun onOpen(db: SQLiteDatabase) {
         super.onOpen(db)
         db.execSQL("PRAGMA foreign_keys = ON;")
+        if (!db.isReadOnly && db.version == DATABASE_VERSION) {
+            reconcileExistingV3SchemaIfNeeded(db)
+        }
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -197,32 +200,7 @@ class DayseedDatabaseHelper(
         )
 
         // 14. restore_conflicts
-        db.execSQL(
-            """
-            CREATE TABLE $TABLE_RESTORE_CONFLICTS (
-                conflict_id TEXT NOT NULL PRIMARY KEY CHECK (length(trim(conflict_id)) > 0),
-                restore_session_id TEXT NOT NULL REFERENCES $TABLE_RESTORE_SESSIONS(restore_session_id) ON DELETE CASCADE,
-                record_type TEXT NOT NULL CHECK (
-                    record_type IN (
-                        'habit',
-                        'habit_version',
-                        'habit_entry',
-                        'habit_day_outcome',
-                        'habit_date_note',
-                        'habit_date_exception',
-                        'journal_entry',
-                        'journal_draft',
-                        'app_setting',
-                        'week_start_history'
-                    )
-                ),
-                record_key TEXT NOT NULL CHECK (length(trim(record_key)) > 0),
-                current_payload_json TEXT NOT NULL,
-                backup_payload_json TEXT NOT NULL,
-                created_at_utc_ms INTEGER NOT NULL CHECK (created_at_utc_ms >= 0)
-            );
-            """.trimIndent()
-        )
+        db.execSQL(buildRestoreConflictsTableSql(TABLE_RESTORE_CONFLICTS))
 
         // 15. notification_cancel_outbox
         db.execSQL(buildNotificationCancelOutboxTableSql(TABLE_NOTIFICATION_CANCEL_OUTBOX))
@@ -230,6 +208,33 @@ class DayseedDatabaseHelper(
         createV3Indexes(db)
         createV3Triggers(db)
     }
+
+    private fun buildRestoreConflictsTableSql(tableName: String): String =
+        """
+        CREATE TABLE $tableName (
+            conflict_id TEXT NOT NULL PRIMARY KEY CHECK (length(trim(conflict_id)) > 0),
+            restore_session_id TEXT NOT NULL REFERENCES $TABLE_RESTORE_SESSIONS(restore_session_id) ON DELETE CASCADE,
+            record_type TEXT NOT NULL CHECK (
+                record_type IN (
+                    'habit',
+                    'habit_version',
+                    'habit_entry',
+                    'habit_day_outcome',
+                    'habit_date_note',
+                    'habit_date_exception',
+                    'habit_streak_run',
+                    'journal_entry',
+                    'journal_draft',
+                    'app_setting',
+                    'week_start_history'
+                )
+            ),
+            record_key TEXT NOT NULL CHECK (length(trim(record_key)) > 0),
+            current_payload_json TEXT NOT NULL,
+            backup_payload_json TEXT NOT NULL,
+            created_at_utc_ms INTEGER NOT NULL CHECK (created_at_utc_ms >= 0)
+        );
+        """.trimIndent()
 
     private fun buildHabitVersionsTableSql(tableName: String): String =
         """
@@ -249,7 +254,8 @@ class DayseedDatabaseHelper(
             target_period TEXT NOT NULL CHECK (target_period IN ('DAY', 'WEEK')),
             target_value INTEGER CHECK (
                 (tracking_mode IN ('QUANTITY', 'DURATION') AND target_value IS NOT NULL AND target_value >= 1 AND target_value <= 2147483647)
-                OR (tracking_mode IN ('COMPLETION_ONLY', 'EFFORT_AWARE') AND target_value IS NULL)
+                OR (tracking_mode IN ('COMPLETION_ONLY', 'EFFORT_AWARE') AND target_period = 'DAY' AND target_value IS NULL)
+                OR (tracking_mode IN ('COMPLETION_ONLY', 'EFFORT_AWARE') AND target_period = 'WEEK' AND (target_value IS NULL OR (target_value >= 1 AND target_value <= 2147483647)))
             ),
             schedule_kind TEXT NOT NULL CHECK (
                 schedule_kind IN ('DAILY', 'SELECTED_WEEKDAYS', 'FLEXIBLE_WEEKLY_TARGET')
@@ -891,6 +897,8 @@ class DayseedDatabaseHelper(
 
         val earliestRecordByHabit = v1Records.groupBy { it.habitId }
             .mapValues { (_, list) -> list.minOf { it.recordDate } }
+        val latestRecordByHabit = v1Records.groupBy { it.habitId }
+            .mapValues { (_, list) -> list.maxOf { it.recordDate } }
 
         for (h in v1Habits) {
             val hCv = ContentValues().apply {
@@ -902,6 +910,7 @@ class DayseedDatabaseHelper(
 
             val createdDate = Instant.ofEpochMilli(h.createdAt).atZone(ZoneId.systemDefault()).toLocalDate().toString()
             val effDate = minOf(createdDate, earliestRecordByHabit[h.id] ?: createdDate)
+            val latestRecordDate = latestRecordByHabit[h.id]
             val mappedMode = when (h.trackingMode.uppercase()) {
                 "BINARY", "COMPLETION_ONLY" -> "COMPLETION_ONLY"
                 "QUANTITY" -> "QUANTITY"
@@ -925,6 +934,7 @@ class DayseedDatabaseHelper(
             if (mask == 0) mask = WeekdayMask.ALL_DAYS_MASK
             val isDaily = mask == WeekdayMask.ALL_DAYS_MASK
 
+            val initialLifecycle = if (h.isArchived == 1 && latestRecordDate == null) "ARCHIVED" else "ACTIVE"
             val vCv = ContentValues().apply {
                 put("version_id", "v1_mig_${h.id}")
                 put("habit_id", h.id)
@@ -940,17 +950,27 @@ class DayseedDatabaseHelper(
                 put("schedule_kind", if (isDaily) "DAILY" else "SELECTED_WEEKDAYS")
                 if (isDaily) putNull("scheduled_weekdays_mask") else put("scheduled_weekdays_mask", mask)
                 putNull("preferred_weekdays_mask")
-                put("lifecycle_state", if (h.isArchived == 1) "ARCHIVED" else "ACTIVE")
+                put("lifecycle_state", initialLifecycle)
                 put("reminder_mode", "OFF")
                 putNull("reminder_time_local")
                 put("tiny_description", h.tinyDesc?.takeIf { it.isNotBlank() } ?: "Deliberately small action")
                 put("usual_description", h.usualDesc?.takeIf { it.isNotBlank() } ?: "The ordinary intended action")
                 put("extra_description", h.extraDesc?.takeIf { it.isNotBlank() } ?: "Optional stretch action")
                 put("color_hex", h.colorHex?.takeIf { it.isNotBlank() } ?: "#286143")
-                put("sort_order", 0)
+                put("sortOrder".replace("sortOrder", "sort_order"), 0)
                 put("created_at_utc_ms", h.createdAt)
             }
             db.insertOrThrow(TABLE_HABIT_VERSIONS, null, vCv)
+
+            if (h.isArchived == 1 && latestRecordDate != null) {
+                val archiveEffectiveDate = LocalDate.parse(latestRecordDate).plusDays(1).toString()
+                val archCv = ContentValues(vCv).apply {
+                    put("version_id", "v1_mig_arch_${h.id}")
+                    put("effective_from_local_date", archiveEffectiveDate)
+                    put("lifecycle_state", "ARCHIVED")
+                }
+                db.insertOrThrow(TABLE_HABIT_VERSIONS, null, archCv)
+            }
         }
 
         val modeByHabit = v1Habits.associate {
@@ -964,25 +984,39 @@ class DayseedDatabaseHelper(
 
         for (r in v1Records) {
             val mode = modeByHabit[r.habitId] ?: "EFFORT_AWARE"
-            val outcomeKind = if (mode == "EFFORT_AWARE") "EFFORT_LOGGED" else "COMPLETED"
-            val effort = if (outcomeKind == "EFFORT_LOGGED") {
-                val e = r.effortLevel?.uppercase()
-                if (e in setOf("TINY", "USUAL", "EXTRA")) e else "USUAL"
+            if (mode in listOf("QUANTITY", "DURATION")) {
+                val eCv = ContentValues().apply {
+                    put("entry_id", r.id)
+                    put("habit_id", r.habitId)
+                    put("local_date", r.recordDate)
+                    put("value_units", 1)
+                    if (!r.note.isNullOrBlank()) put("entry_note", r.note.trim()) else putNull("entry_note")
+                    put("created_at_utc_ms", r.updatedAt)
+                    put("updated_at_utc_ms", r.updatedAt)
+                    put("idempotency_key", "v1_ent_${r.id}")
+                }
+                db.insertOrThrow(TABLE_HABIT_ENTRIES, null, eCv)
             } else {
-                null
-            }
+                val outcomeKind = if (mode == "EFFORT_AWARE") "EFFORT_LOGGED" else "COMPLETED"
+                val effort = if (outcomeKind == "EFFORT_LOGGED") {
+                    val e = r.effortLevel?.uppercase()
+                    if (e in setOf("TINY", "USUAL", "EXTRA")) e else "USUAL"
+                } else {
+                    null
+                }
 
-            val oCv = ContentValues().apply {
-                put("outcome_id", r.id)
-                put("habit_id", r.habitId)
-                put("local_date", r.recordDate)
-                put("outcome_kind", outcomeKind)
-                if (effort != null) put("effort_level", effort) else putNull("effort_level")
-                put("idempotency_key", "v1_out_${r.id}")
-                put("created_at_utc_ms", r.updatedAt)
-                put("updated_at_utc_ms", r.updatedAt)
+                val oCv = ContentValues().apply {
+                    put("outcome_id", r.id)
+                    put("habit_id", r.habitId)
+                    put("local_date", r.recordDate)
+                    put("outcome_kind", outcomeKind)
+                    if (effort != null) put("effort_level", effort) else putNull("effort_level")
+                    put("idempotency_key", "v1_out_${r.id}")
+                    put("created_at_utc_ms", r.updatedAt)
+                    put("updated_at_utc_ms", r.updatedAt)
+                }
+                db.insertOrThrow(TABLE_HABIT_DAY_OUTCOMES, null, oCv)
             }
-            db.insertOrThrow(TABLE_HABIT_DAY_OUTCOMES, null, oCv)
 
             if (!r.note.isNullOrBlank()) {
                 val nCv = ContentValues().apply {
@@ -1093,11 +1127,23 @@ class DayseedDatabaseHelper(
             while (c.moveToNext()) {
                 val rawDesc = if (c.isNull(4)) null else c.getString(4)
                 val extracted = extractLegacyHabitMeta(rawDesc)
-                val scheduleKind = c.getString(9)
-                // Normalize target_period if needed to satisfy v3 schedule_kind x target_period CHECK constraint
-                val normalizedTargetPeriod = when (scheduleKind) {
-                    "FLEXIBLE_WEEKLY_TARGET" -> "WEEK"
-                    else -> "DAY"
+                val rawTargetPeriod = c.getString(7)
+                val rawScheduleKind = c.getString(9)
+                val rawScheduledMask = if (c.isNull(10)) null else c.getValidatedInt(10, "scheduled_weekdays_mask")
+                val rawPreferredMask = if (c.isNull(11)) null else c.getValidatedInt(11, "preferred_weekdays_mask")
+
+                // Preserve legacy v2 weekly schedules (U-11):
+                // - (DAILY, WEEK) -> (FLEXIBLE_WEEKLY_TARGET, WEEK, preferred_weekdays_mask = null)
+                // - (SELECTED_WEEKDAYS, mask, WEEK) -> (FLEXIBLE_WEEKLY_TARGET, WEEK, scheduled_weekdays_mask = null, preferred_weekdays_mask = mask)
+                val (normalizedScheduleKind, normalizedTargetPeriod, finalScheduledMask, finalPreferredMask) = when {
+                    rawTargetPeriod == "WEEK" && rawScheduleKind == "DAILY" ->
+                        Quadruple("FLEXIBLE_WEEKLY_TARGET", "WEEK", null, null)
+                    rawTargetPeriod == "WEEK" && rawScheduleKind == "SELECTED_WEEKDAYS" ->
+                        Quadruple("FLEXIBLE_WEEKLY_TARGET", "WEEK", null, rawScheduledMask)
+                    rawScheduleKind == "FLEXIBLE_WEEKLY_TARGET" ->
+                        Quadruple("FLEXIBLE_WEEKLY_TARGET", "WEEK", null, rawPreferredMask)
+                    else ->
+                        Quadruple(rawScheduleKind, "DAY", rawScheduledMask, null)
                 }
 
                 val cv = ContentValues().apply {
@@ -1110,9 +1156,9 @@ class DayseedDatabaseHelper(
                     if (c.isNull(6)) putNull("unit_code") else put("unit_code", c.getString(6))
                     put("target_period", normalizedTargetPeriod)
                     if (c.isNull(8)) putNull("target_value") else put("target_value", c.getValidatedInt(8, "target_value"))
-                    put("schedule_kind", scheduleKind)
-                    if (c.isNull(10)) putNull("scheduled_weekdays_mask") else put("scheduled_weekdays_mask", c.getValidatedInt(10, "scheduled_weekdays_mask"))
-                    if (c.isNull(11)) putNull("preferred_weekdays_mask") else put("preferred_weekdays_mask", c.getValidatedInt(11, "preferred_weekdays_mask"))
+                    put("schedule_kind", normalizedScheduleKind)
+                    if (finalScheduledMask == null) putNull("scheduled_weekdays_mask") else put("scheduled_weekdays_mask", finalScheduledMask)
+                    if (finalPreferredMask == null) putNull("preferred_weekdays_mask") else put("preferred_weekdays_mask", finalPreferredMask)
                     put("lifecycle_state", c.getString(12))
                     put("reminder_mode", c.getString(13))
                     if (c.isNull(14)) putNull("reminder_time_local") else put("reminder_time_local", c.getString(14))
@@ -1192,30 +1238,7 @@ class DayseedDatabaseHelper(
         rebuildTableCopy(
             db = db,
             tableName = TABLE_RESTORE_CONFLICTS,
-            createSql = """
-                CREATE TABLE restore_conflicts_v3_new (
-                    conflict_id TEXT NOT NULL PRIMARY KEY CHECK (length(trim(conflict_id)) > 0),
-                    restore_session_id TEXT NOT NULL REFERENCES $TABLE_RESTORE_SESSIONS(restore_session_id) ON DELETE CASCADE,
-                    record_type TEXT NOT NULL CHECK (
-                        record_type IN (
-                            'habit',
-                            'habit_version',
-                            'habit_entry',
-                            'habit_day_outcome',
-                            'habit_date_note',
-                            'habit_date_exception',
-                            'journal_entry',
-                            'journal_draft',
-                            'app_setting',
-                            'week_start_history'
-                        )
-                    ),
-                    record_key TEXT NOT NULL CHECK (length(trim(record_key)) > 0),
-                    current_payload_json TEXT NOT NULL,
-                    backup_payload_json TEXT NOT NULL,
-                    created_at_utc_ms INTEGER NOT NULL CHECK (created_at_utc_ms >= 0)
-                );
-            """.trimIndent(),
+            createSql = buildRestoreConflictsTableSql("restore_conflicts_v3_new"),
             tempName = "restore_conflicts_v3_new",
             columns = "conflict_id, restore_session_id, record_type, record_key, current_payload_json, backup_payload_json, created_at_utc_ms"
         )
@@ -1313,6 +1336,201 @@ class DayseedDatabaseHelper(
                     }
                 }
             }
+        }
+
+        // 4. Validate habit_versions schedule_kind, target_period, masks, and target_value
+        if (tableExists(db, TABLE_HABIT_VERSIONS)) {
+            db.rawQuery(
+                """
+                SELECT version_id, tracking_mode, target_period, target_value,
+                       schedule_kind, scheduled_weekdays_mask, preferred_weekdays_mask
+                FROM $TABLE_HABIT_VERSIONS
+                """.trimIndent(),
+                null
+            ).use { c ->
+                while (c.moveToNext()) {
+                    val vId = if (c.isNull(0)) "" else c.getString(0)
+                    val rawMode = if (c.isNull(1)) "" else c.getString(1)
+                    val canonicalMode = try {
+                        TrackingMode.fromDb(rawMode).canonical().name
+                    } catch (_: Exception) {
+                        throw DayseedMigrationBlockedException("Migration blocked: invalid tracking_mode '$rawMode' on version '$vId'.")
+                    }
+                    val period = if (c.isNull(2)) "" else c.getString(2)
+                    if (period !in setOf("DAY", "WEEK")) {
+                        throw DayseedMigrationBlockedException("Migration blocked: invalid target_period '$period' on version '$vId'.")
+                    }
+                    val targetVal = try {
+                        c.getNullableValidatedInt(3, "target_value")
+                    } catch (e: DayseedNumericRangeException) {
+                        throw DayseedMigrationBlockedException("Migration blocked: ${e.message}")
+                    }
+                    val schedKind = if (c.isNull(4)) "" else c.getString(4)
+                    if (schedKind !in setOf("DAILY", "SELECTED_WEEKDAYS", "FLEXIBLE_WEEKLY_TARGET")) {
+                        throw DayseedMigrationBlockedException("Migration blocked: invalid schedule_kind '$schedKind' on version '$vId'.")
+                    }
+                    val schedMask = try {
+                        c.getNullableValidatedInt(5, "scheduled_weekdays_mask")
+                    } catch (e: DayseedNumericRangeException) {
+                        throw DayseedMigrationBlockedException("Migration blocked: ${e.message}")
+                    }
+                    val prefMask = try {
+                        c.getNullableValidatedInt(6, "preferred_weekdays_mask")
+                    } catch (e: DayseedNumericRangeException) {
+                        throw DayseedMigrationBlockedException("Migration blocked: ${e.message}")
+                    }
+
+                    // Validate schedule/mask/period invariants (allowing legacy v2 DAILY+WEEK and SELECTED_WEEKDAYS+WEEK)
+                    when (schedKind) {
+                        "DAILY" -> {
+                            if (schedMask != null || prefMask != null) {
+                                throw DayseedMigrationBlockedException("Migration blocked: DAILY schedule_kind cannot have weekday masks on version '$vId'.")
+                            }
+                        }
+                        "SELECTED_WEEKDAYS" -> {
+                            if (schedMask == null || schedMask !in 1..127 || prefMask != null) {
+                                throw DayseedMigrationBlockedException("Migration blocked: invalid SELECTED_WEEKDAYS mask ($schedMask) on version '$vId'.")
+                            }
+                        }
+                        "FLEXIBLE_WEEKLY_TARGET" -> {
+                            if (period != "WEEK" || schedMask != null || (prefMask != null && prefMask !in 1..127)) {
+                                throw DayseedMigrationBlockedException("Migration blocked: invalid FLEXIBLE_WEEKLY_TARGET configuration (period=$period, schedMask=$schedMask, prefMask=$prefMask) on version '$vId'.")
+                            }
+                        }
+                    }
+
+                    // Validate target_value bounds
+                    if (canonicalMode in setOf("QUANTITY", "DURATION")) {
+                        if (targetVal == null || targetVal < 1) {
+                            throw DayseedMigrationBlockedException("Migration blocked: $canonicalMode requires target_value >= 1 (was $targetVal) on version '$vId'.")
+                        }
+                    } else {
+                        if (period == "DAY" && targetVal != null) {
+                            throw DayseedMigrationBlockedException("Migration blocked: daily $canonicalMode requires target_value IS NULL (was $targetVal) on version '$vId'.")
+                        }
+                        if (period == "WEEK" && targetVal != null && targetVal < 1) {
+                            throw DayseedMigrationBlockedException("Migration blocked: weekly $canonicalMode requires target_value IS NULL or >= 1 (was $targetVal) on version '$vId'.")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private data class Quadruple<A, B, C, D>(
+        val first: A,
+        val second: B,
+        val third: C,
+        val fourth: D
+    )
+
+    /**
+     * Preserves D-219 (`DATABASE_VERSION = 3`) while idempotently upgrading any existing v3 database
+     * whose `habit_versions` or `restore_conflicts` table still has the older v3 CHECK constraints.
+     */
+    fun reconcileExistingV3SchemaIfNeeded(db: SQLiteDatabase) {
+        val habitVersionsSql = getTableCreateSql(db, TABLE_HABIT_VERSIONS)
+        val restoreConflictsSql = getTableCreateSql(db, TABLE_RESTORE_CONFLICTS)
+
+        val needsHabitVersionsUpgrade = habitVersionsSql != null &&
+            !habitVersionsSql.contains("target_period = 'WEEK' AND (target_value IS NULL")
+        val needsRestoreConflictsUpgrade = restoreConflictsSql != null &&
+            !restoreConflictsSql.contains("'habit_streak_run'")
+
+        if (!needsHabitVersionsUpgrade && !needsRestoreConflictsUpgrade) {
+            return
+        }
+
+        db.beginTransaction()
+        try {
+            if (needsHabitVersionsUpgrade) {
+                validateV2DataBeforeMigration(db)
+            }
+            if (needsRestoreConflictsUpgrade && tableExists(db, TABLE_RESTORE_CONFLICTS)) {
+                val allowedTypes = setOf(
+                    "habit",
+                    "habit_version",
+                    "habit_entry",
+                    "habit_day_outcome",
+                    "habit_date_note",
+                    "habit_date_exception",
+                    "habit_streak_run",
+                    "journal_entry",
+                    "journal_draft",
+                    "app_setting",
+                    "week_start_history"
+                )
+                db.rawQuery("SELECT conflict_id, record_type, record_key, created_at_utc_ms FROM $TABLE_RESTORE_CONFLICTS", null).use { c ->
+                    while (c.moveToNext()) {
+                        val cId = if (c.isNull(0)) "" else c.getString(0).trim()
+                        val rType = if (c.isNull(1)) "" else c.getString(1)
+                        val rKey = if (c.isNull(2)) "" else c.getString(2).trim()
+                        val createdMs = if (c.isNull(3)) -1L else c.getLong(3)
+                        if (cId.isEmpty() || rType !in allowedTypes || rKey.isEmpty() || createdMs < 0L) {
+                            throw DayseedMigrationBlockedException(
+                                "v3 schema reconciliation blocked: invalid restore_conflicts row (conflict_id='$cId', record_type='$rType')."
+                            )
+                        }
+                    }
+                }
+            }
+
+            dropAllUserTriggers(db)
+
+            if (needsHabitVersionsUpgrade) {
+                rebuildTableCopy(
+                    db = db,
+                    tableName = TABLE_HABIT_VERSIONS,
+                    createSql = buildHabitVersionsTableSql("habit_versions_v3_reconcile"),
+                    tempName = "habit_versions_v3_reconcile",
+                    columns = "version_id, habit_id, effective_from_local_date, name, description, tracking_mode, unit_code, target_period, target_value, schedule_kind, scheduled_weekdays_mask, preferred_weekdays_mask, lifecycle_state, reminder_mode, reminder_time_local, tiny_description, usual_description, extra_description, color_hex, sort_order, created_at_utc_ms"
+                )
+            }
+
+            if (needsRestoreConflictsUpgrade) {
+                rebuildTableCopy(
+                    db = db,
+                    tableName = TABLE_RESTORE_CONFLICTS,
+                    createSql = buildRestoreConflictsTableSql("restore_conflicts_v3_reconcile"),
+                    tempName = "restore_conflicts_v3_reconcile",
+                    columns = "conflict_id, restore_session_id, record_type, record_key, current_payload_json, backup_payload_json, created_at_utc_ms"
+                )
+            }
+
+            createV3Indexes(db)
+            createV3Triggers(db)
+
+            db.rawQuery("PRAGMA foreign_key_check;", null).use { c ->
+                if (c.moveToFirst()) {
+                    val tbl = c.getString(0)
+                    throw DayseedMigrationBlockedException("PRAGMA foreign_key_check failed on table '$tbl' during v3 schema reconciliation.")
+                }
+            }
+            db.rawQuery("PRAGMA integrity_check;", null).use { c ->
+                if (c.moveToFirst()) {
+                    val res = c.getString(0)
+                    if (!res.equals("ok", ignoreCase = true)) {
+                        throw DayseedMigrationBlockedException("PRAGMA integrity_check failed during v3 schema reconciliation: $res")
+                    }
+                }
+            }
+
+            db.setTransactionSuccessful()
+        } catch (e: DayseedMigrationBlockedException) {
+            throw e
+        } catch (e: Exception) {
+            throw DayseedMigrationBlockedException("v3 schema reconciliation failed and rolled back: ${e.message}")
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    private fun getTableCreateSql(db: SQLiteDatabase, tableName: String): String? {
+        db.rawQuery(
+            "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?",
+            arrayOf(tableName)
+        ).use { c ->
+            return if (c.moveToFirst() && !c.isNull(0)) c.getString(0) else null
         }
     }
 

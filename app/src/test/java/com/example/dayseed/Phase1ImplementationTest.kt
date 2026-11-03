@@ -8,6 +8,7 @@ import android.database.sqlite.SQLiteException
 import android.database.sqlite.SQLiteOpenHelper
 import androidx.test.core.app.ApplicationProvider
 import com.example.dayseed.data.CompactHistoryBucket
+import com.example.dayseed.data.ConflictResolution
 import com.example.dayseed.data.DayRecordState
 import com.example.dayseed.data.DayseedDatabaseHelper
 import com.example.dayseed.data.DayseedMigrationBlockedException
@@ -57,6 +58,8 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
 import java.util.UUID
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * Exhaustive Phase 1 test suite covering all 36 mandatory test cases (T1-01 through T1-36)
@@ -142,10 +145,45 @@ class Phase1ImplementationTest {
         assertEquals(ProgressBand.GOAL_MET, ProgressBandClassifier.classify(100, target))
         assertEquals(ProgressBand.EXTRA, ProgressBandClassifier.classify(101, target))
         assertEquals(ProgressBand.EXTRA, ProgressBandClassifier.classify(149, target))
-        assertEquals(ProgressBand.HUGE, ProgressBandClassifier.classify(150, target))
+        assertEquals(ProgressBand.EXTRA, ProgressBandClassifier.classify(150, target))
+        assertEquals(ProgressBand.EXTRA, ProgressBandClassifier.classify(3, 2))
+        assertEquals(ProgressBand.HUGE, ProgressBandClassifier.classify(151, target))
+        assertEquals(ProgressBand.HUGE, ProgressBandClassifier.classify(301, 200))
         assertEquals(ProgressBand.HUGE, ProgressBandClassifier.classify(250, target))
 
-        // Every detailed band has non-blank, distinct encouragement and motivation quotes
+        // Fractional boundary ratios (target = 200)
+        assertEquals(ProgressBand.TINY_STEP, ProgressBandClassifier.classify(1, 200)) // 0.5%
+        assertEquals(ProgressBand.TINY_STEP, ProgressBandClassifier.classify(49, 200)) // 24.5%
+        assertEquals(ProgressBand.GETTING_STARTED, ProgressBandClassifier.classify(50, 200)) // 25.0%
+        assertEquals(ProgressBand.GETTING_STARTED, ProgressBandClassifier.classify(99, 200)) // 49.5%
+        assertEquals(ProgressBand.HALFWAY, ProgressBandClassifier.classify(100, 200)) // 50.0%
+        assertEquals(ProgressBand.HALFWAY, ProgressBandClassifier.classify(149, 200)) // 74.5%
+        assertEquals(ProgressBand.ALMOST_THERE, ProgressBandClassifier.classify(150, 200)) // 75.0%
+        assertEquals(ProgressBand.ALMOST_THERE, ProgressBandClassifier.classify(199, 200)) // 99.5%
+        assertEquals(ProgressBand.GOAL_MET, ProgressBandClassifier.classify(200, 200)) // 100.0%
+        assertEquals(ProgressBand.EXTRA, ProgressBandClassifier.classify(201, 200)) // 100.5%
+        assertEquals(ProgressBand.EXTRA, ProgressBandClassifier.classify(300, 200)) // 150.0%
+        assertEquals(ProgressBand.HUGE, ProgressBandClassifier.classify(301, 200)) // 150.5%
+
+        // D-040 visible labels and fractional-safe shortBadges
+        assertEquals("Zero logged", ProgressBand.ZERO.label)
+        assertEquals("0%", ProgressBand.ZERO.shortBadge)
+        assertEquals("Tiny", ProgressBand.TINY_STEP.label)
+        assertEquals(">0–<25%", ProgressBand.TINY_STEP.shortBadge)
+        assertEquals("Small", ProgressBand.GETTING_STARTED.label)
+        assertEquals("25–<50%", ProgressBand.GETTING_STARTED.shortBadge)
+        assertEquals("Halfway", ProgressBand.HALFWAY.label)
+        assertEquals("50–<75%", ProgressBand.HALFWAY.shortBadge)
+        assertEquals("Nearly there", ProgressBand.ALMOST_THERE.label)
+        assertEquals("75–<100%", ProgressBand.ALMOST_THERE.shortBadge)
+        assertEquals("Goal met", ProgressBand.GOAL_MET.label)
+        assertEquals("100%", ProgressBand.GOAL_MET.shortBadge)
+        assertEquals("Extra", ProgressBand.EXTRA.label)
+        assertEquals(">100–150%", ProgressBand.EXTRA.shortBadge)
+        assertEquals("Huge", ProgressBand.HUGE.label)
+        assertEquals(">150%", ProgressBand.HUGE.shortBadge)
+
+        // Every detailed band has non-blank, distinct encouragement and motivation quotes (D-216 Option A)
         for (band in ProgressBand.values()) {
             assertTrue(band.encouragementQuote.isNotBlank())
             assertTrue(band.motivationQuote.isNotBlank())
@@ -1047,5 +1085,689 @@ class Phase1ImplementationTest {
         assertEquals("h_del_undo", relinkedUnchanged.linkedHabitId)
         assertNull("Modified journal entry must not have its post-deletion edit clobbered", untouchedModified.linkedHabitId)
         assertEquals("Edited after habit deletion", untouchedModified.body)
+    }
+
+    // =========================================================================
+    // T1-37: Chained v1->v2->v3 Migration & Existing-v3 In-Place Reconciliation (D-219)
+    // =========================================================================
+    @Test
+    fun t1_37_chainedV1ToV2ToV3MigrationAndExistingV3Reconciliation() {
+        // 1. Chained v1 -> v3 migration across all 4 v1 tracking modes
+        val v1DbName = "test_chained_v1_v3_${UUID.randomUUID()}.db"
+        try {
+            val v1Helper = object : SQLiteOpenHelper(context, v1DbName, null, 1) {
+                override fun onCreate(db: SQLiteDatabase) {
+                    db.execSQL("CREATE TABLE habits (id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, tracking_mode TEXT NOT NULL, tiny_desc TEXT, usual_desc TEXT, extra_desc TEXT, schedule_days TEXT NOT NULL, is_archived INTEGER NOT NULL DEFAULT 0, color_hex TEXT NOT NULL, created_at INTEGER NOT NULL)")
+                    db.execSQL("CREATE TABLE daily_records (id TEXT PRIMARY KEY, habit_id TEXT NOT NULL, record_date TEXT NOT NULL, outcome TEXT NOT NULL, effort_level TEXT NOT NULL, note TEXT, updated_at INTEGER NOT NULL, UNIQUE(habit_id, record_date))")
+                    db.execSQL("CREATE TABLE journal_entries (id TEXT PRIMARY KEY, entry_date TEXT NOT NULL, prompt TEXT, content TEXT NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)")
+                    db.execSQL("CREATE TABLE app_preferences (pref_key TEXT PRIMARY KEY, pref_value TEXT NOT NULL)")
+
+                    db.execSQL("INSERT INTO habits VALUES ('h_bin', 'Make Bed', 'Morning', 'BINARY', '', '', '', '1,2,3,4,5,6,7', 0, '#286143', 1000)")
+                    db.execSQL("INSERT INTO habits VALUES ('h_eff', 'Stretch', 'Back', 'EFFORT_LEVELS', '1m', '5m', '10m', 'MONDAY,WEDNESDAY', 0, '#3B6955', 1000)")
+                    db.execSQL("INSERT INTO habits VALUES ('h_qty', 'Water', 'Glasses', 'QUANTITY', '', '', '', '1,2,3,4,5,6,7', 0, '#4A7C59', 1000)")
+                    db.execSQL("INSERT INTO habits VALUES ('h_dur', 'Walk', 'Outdoor', 'DURATION', '', '', '', '1,2,3,4,5,6,7', 1, '#588157', 1000)")
+
+                    db.execSQL("INSERT INTO daily_records VALUES ('r_bin', 'h_bin', '2026-03-10', 'COMPLETED', 'STANDARD', 'Neat', 2000)")
+                    db.execSQL("INSERT INTO daily_records VALUES ('r_eff', 'h_eff', '2026-03-11', 'COMPLETED', 'TINY', 'Gentle', 2000)")
+                    db.execSQL("INSERT INTO daily_records VALUES ('r_qty', 'h_qty', '2026-03-12', 'COMPLETED', 'STANDARD', 'Hydrated', 2000)")
+                    db.execSQL("INSERT INTO daily_records VALUES ('r_dur', 'h_dur', '2026-03-12', 'COMPLETED', 'STANDARD', '', 2000)")
+                    db.execSQL("INSERT INTO journal_entries VALUES ('j_1', '2026-03-12', 'prompt_energy', 'Felt steady today', 3000, 3500)")
+                    db.execSQL("INSERT INTO app_preferences VALUES ('week_start', 'SUNDAY')")
+                }
+                override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+            }
+            v1Helper.writableDatabase.close()
+
+            val v3Helper = DayseedDatabaseHelper(
+                context,
+                v1DbName,
+                migrationEvaluationDateProvider = { LocalDate.of(2026, 3, 12) }
+            )
+            val db = v3Helper.writableDatabase
+            assertEquals(3, db.version)
+
+            // Verify BINARY + EFFORT_LEVELS records migrated to habit_day_outcomes and QUANTITY + DURATION migrated to habit_entries
+            db.rawQuery("SELECT COUNT(*) FROM habit_day_outcomes", null).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(2, c.getInt(0))
+            }
+            db.rawQuery("SELECT COUNT(*) FROM habit_entries", null).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(2, c.getInt(0))
+            }
+            // Verify streak runs were backfilled during chained v1 -> v2 -> v3 upgrade
+            db.rawQuery("SELECT COUNT(*) FROM habit_streak_runs", null).use { c ->
+                assertTrue(c.moveToFirst())
+                assertTrue(c.getInt(0) >= 3)
+            }
+            v3Helper.close()
+        } finally {
+            context.deleteDatabase(v1DbName)
+        }
+
+        // 2. Existing-v3 database reconciliation on open (D-219: DATABASE_VERSION stays 3)
+        val oldV3DbName = "test_old_v3_reconcile_${UUID.randomUUID()}.db"
+        try {
+            val oldV3Helper = object : SQLiteOpenHelper(context, oldV3DbName, null, 3) {
+                override fun onCreate(db: SQLiteDatabase) {
+                    // Create canonical v3 schema first, then replace habit_versions and restore_conflicts with the older v3 CHECK definitions
+                    val tempHelper = DayseedDatabaseHelper(context, null)
+                    tempHelper.createV3Schema(db)
+                    db.execSQL("DROP TRIGGER IF EXISTS trg_entries_mode_insert;")
+                    db.execSQL("DROP TRIGGER IF EXISTS trg_entries_mode_update;")
+                    db.execSQL("DROP TRIGGER IF EXISTS trg_outcomes_mode_insert;")
+                    db.execSQL("DROP TRIGGER IF EXISTS trg_outcomes_mode_update;")
+                    db.execSQL("DROP TABLE habit_versions;")
+                    db.execSQL(
+                        """
+                        CREATE TABLE habit_versions (
+                            version_id TEXT NOT NULL PRIMARY KEY CHECK (length(trim(version_id)) > 0),
+                            habit_id TEXT NOT NULL REFERENCES habits(habit_id) ON DELETE CASCADE,
+                            effective_from_local_date TEXT NOT NULL,
+                            name TEXT NOT NULL,
+                            description TEXT,
+                            tracking_mode TEXT NOT NULL CHECK (tracking_mode IN ('QUANTITY', 'DURATION', 'COMPLETION_ONLY', 'EFFORT_AWARE')),
+                            unit_code TEXT,
+                            target_period TEXT NOT NULL CHECK (target_period IN ('DAY', 'WEEK')),
+                            target_value INTEGER CHECK (
+                                (tracking_mode IN ('QUANTITY', 'DURATION') AND target_value IS NOT NULL AND target_value >= 1 AND target_value <= 2147483647)
+                                OR (tracking_mode IN ('COMPLETION_ONLY', 'EFFORT_AWARE') AND target_value IS NULL)
+                            ),
+                            schedule_kind TEXT NOT NULL,
+                            scheduled_weekdays_mask INTEGER,
+                            preferred_weekdays_mask INTEGER,
+                            lifecycle_state TEXT NOT NULL,
+                            reminder_mode TEXT NOT NULL,
+                            reminder_time_local TEXT,
+                            tiny_description TEXT NOT NULL DEFAULT 'Deliberately small action',
+                            usual_description TEXT NOT NULL DEFAULT 'The ordinary intended action',
+                            extra_description TEXT NOT NULL DEFAULT 'Optional stretch action',
+                            color_hex TEXT NOT NULL DEFAULT '#286143',
+                            sort_order INTEGER NOT NULL DEFAULT 0,
+                            created_at_utc_ms INTEGER NOT NULL CHECK (created_at_utc_ms >= 0),
+                            UNIQUE (habit_id, effective_from_local_date)
+                        );
+                        """.trimIndent()
+                    )
+                    db.execSQL("DROP TABLE restore_conflicts;")
+                    db.execSQL(
+                        """
+                        CREATE TABLE restore_conflicts (
+                            conflict_id TEXT NOT NULL PRIMARY KEY CHECK (length(trim(conflict_id)) > 0),
+                            restore_session_id TEXT NOT NULL REFERENCES restore_sessions(restore_session_id) ON DELETE CASCADE,
+                            record_type TEXT NOT NULL CHECK (
+                                record_type IN (
+                                    'habit',
+                                    'habit_version',
+                                    'habit_entry',
+                                    'habit_day_outcome',
+                                    'habit_date_note',
+                                    'habit_date_exception',
+                                    'journal_entry',
+                                    'journal_draft',
+                                    'app_setting',
+                                    'week_start_history'
+                                )
+                            ),
+                            record_key TEXT NOT NULL CHECK (length(trim(record_key)) > 0),
+                            current_payload_json TEXT NOT NULL,
+                            backup_payload_json TEXT NOT NULL,
+                            created_at_utc_ms INTEGER NOT NULL CHECK (created_at_utc_ms >= 0)
+                        );
+                        """.trimIndent()
+                    )
+                    db.execSQL("INSERT INTO habits VALUES ('h_existing_v3', 1000, 1000, 'Health', 30);")
+                    db.execSQL("INSERT INTO habit_versions VALUES ('v_existing_v3', 'h_existing_v3', '2026-03-01', 'Yoga', NULL, 'COMPLETION_ONLY', NULL, 'DAY', NULL, 'DAILY', NULL, NULL, 'ACTIVE', 'OFF', NULL, 'Tiny', 'Usual', 'Extra', '#286143', 0, 1000);")
+                    db.execSQL("INSERT INTO restore_sessions VALUES ('rs_existing', 'MERGE', 1, 3, 'AWAITING_CONFLICT_RESOLUTION', 1000, 1000, '{}', NULL, 1);")
+                    db.execSQL("INSERT INTO restore_conflicts VALUES ('rc_existing', 'rs_existing', 'habit', 'h_existing_v3', '{}', '{}', 1000);")
+                }
+                override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+            }
+            oldV3Helper.writableDatabase.close()
+
+            val reconciledHelper = DayseedDatabaseHelper(context, oldV3DbName)
+            val db = reconciledHelper.writableDatabase
+            assertEquals(3, db.version)
+
+            // Verify existing rows were preserved and new v3 constraints now permit weekly COMPLETION_ONLY target_value > 1 and 'habit_streak_run' conflicts
+            db.rawQuery("SELECT COUNT(*) FROM habit_versions WHERE version_id = 'v_existing_v3'", null).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(1, c.getInt(0))
+            }
+            db.execSQL("INSERT INTO habit_versions VALUES ('v_weekly_check', 'h_existing_v3', '2026-03-10', 'Yoga 3x', NULL, 'COMPLETION_ONLY', NULL, 'WEEK', 3, 'FLEXIBLE_WEEKLY_TARGET', NULL, NULL, 'ACTIVE', 'OFF', NULL, 'Tiny', 'Usual', 'Extra', '#286143', 0, 2000);")
+            db.execSQL("INSERT INTO restore_conflicts VALUES ('rc_streak', 'rs_existing', 'habit_streak_run', 'h_existing_v3:2026-03-01', '{}', '{}', 2000);")
+
+            // Verify idempotence: calling reconcileExistingV3SchemaIfNeeded again is a fast no-op
+            reconciledHelper.reconcileExistingV3SchemaIfNeeded(db)
+            reconciledHelper.close()
+        } finally {
+            context.deleteDatabase(oldV3DbName)
+        }
+
+        // 3. Verify failed v3 reconciliation rolls back and leaves the original v3 database recoverable
+        val badOldV3DbName = "test_bad_old_v3_${UUID.randomUUID()}.db"
+        try {
+            val badOldV3Helper = object : SQLiteOpenHelper(context, badOldV3DbName, null, 3) {
+                override fun onCreate(db: SQLiteDatabase) {
+                    val tempHelper = DayseedDatabaseHelper(context, null)
+                    tempHelper.createV3Schema(db)
+                    db.execSQL("DROP TABLE restore_conflicts;")
+                    // Older table without 'habit_streak_run' and with a corrupt row (empty conflict_id)
+                    db.execSQL("CREATE TABLE restore_conflicts (conflict_id TEXT NOT NULL PRIMARY KEY, restore_session_id TEXT NOT NULL, record_type TEXT NOT NULL, record_key TEXT NOT NULL, current_payload_json TEXT NOT NULL, backup_payload_json TEXT NOT NULL, created_at_utc_ms INTEGER NOT NULL);")
+                    db.execSQL("INSERT INTO habits VALUES ('h_recover', 1000, 1000, NULL, NULL);")
+                    db.execSQL("INSERT INTO restore_conflicts VALUES ('   ', 'rs_none', 'INVALID_TYPE', 'k', '{}', '{}', 1000);")
+                }
+                override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+            }
+            badOldV3Helper.writableDatabase.close()
+
+            val failingHelper = DayseedDatabaseHelper(context, badOldV3DbName)
+            try {
+                failingHelper.writableDatabase
+                fail("Expected DayseedMigrationBlockedException on corrupt restore_conflicts row during v3 reconciliation")
+            } catch (_: DayseedMigrationBlockedException) {
+                // Expected rollback
+            }
+            failingHelper.close()
+
+            // Verify original database was left intact and recoverable
+            val rawDb = SQLiteDatabase.openDatabase(
+                context.getDatabasePath(badOldV3DbName).absolutePath,
+                null,
+                SQLiteDatabase.OPEN_READONLY
+            )
+            rawDb.rawQuery("SELECT COUNT(*) FROM habits WHERE habit_id = 'h_recover'", null).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(1, c.getInt(0))
+            }
+            rawDb.close()
+        } finally {
+            context.deleteDatabase(badOldV3DbName)
+        }
+    }
+
+    // =========================================================================
+    // T1-38: Fail-Closed v2->v3 Migration Rollback Tests (Negative/Overflow Units, Unsupported Outcomes, Corrupt Schedules)
+    // =========================================================================
+    @Test
+    fun t1_38_v2ToV3FailClosedRollbacksPreserveOriginalV2State() {
+        fun assertV2MigrationRollsBack(setupCorruptV2: (SQLiteDatabase) -> Unit, expectedMessageFragment: String) {
+            val dbName = "test_v2_rollback_${UUID.randomUUID()}.db"
+            try {
+                val v2Helper = object : SQLiteOpenHelper(context, dbName, null, 2) {
+                    override fun onCreate(db: SQLiteDatabase) {
+                        db.execSQL("CREATE TABLE habits (habit_id TEXT NOT NULL PRIMARY KEY, created_at_utc_ms INTEGER NOT NULL, updated_at_utc_ms INTEGER NOT NULL);")
+                        db.execSQL("CREATE TABLE habit_versions (version_id TEXT NOT NULL PRIMARY KEY, habit_id TEXT NOT NULL, effective_from_local_date TEXT NOT NULL, name TEXT NOT NULL, description TEXT, tracking_mode TEXT NOT NULL, unit_code TEXT, target_period TEXT NOT NULL, target_value INTEGER, schedule_kind TEXT NOT NULL, scheduled_weekdays_mask INTEGER, preferred_weekdays_mask INTEGER, lifecycle_state TEXT NOT NULL, reminder_mode TEXT NOT NULL, reminder_time_local TEXT, created_at_utc_ms INTEGER NOT NULL);")
+                        db.execSQL("CREATE TABLE habit_entries (entry_id TEXT NOT NULL PRIMARY KEY, habit_id TEXT NOT NULL, local_date TEXT NOT NULL, value_units INTEGER NOT NULL, entry_note TEXT, created_at_utc_ms INTEGER NOT NULL, updated_at_utc_ms INTEGER NOT NULL, idempotency_key TEXT NOT NULL UNIQUE);")
+                        db.execSQL("CREATE TABLE habit_day_outcomes (outcome_id TEXT NOT NULL PRIMARY KEY, habit_id TEXT NOT NULL, local_date TEXT NOT NULL, outcome_kind TEXT NOT NULL, effort_level TEXT, idempotency_key TEXT NOT NULL UNIQUE, created_at_utc_ms INTEGER NOT NULL, updated_at_utc_ms INTEGER NOT NULL);")
+                        db.execSQL("INSERT INTO habits VALUES ('h1', 1000, 1000);")
+                        db.execSQL("INSERT INTO habit_versions VALUES ('v1', 'h1', '2026-03-01', 'Valid', NULL, 'QUANTITY', 'count', 'DAY', 5, 'DAILY', NULL, NULL, 'ACTIVE', 'OFF', NULL, 1000);")
+                        setupCorruptV2(db)
+                    }
+                    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+                }
+                v2Helper.writableDatabase.close()
+
+                val v3Helper = DayseedDatabaseHelper(context, dbName)
+                try {
+                    v3Helper.writableDatabase
+                    fail("Expected DayseedMigrationBlockedException containing '$expectedMessageFragment'")
+                } catch (e: DayseedMigrationBlockedException) {
+                    assertTrue("Message was: ${e.message}", e.message!!.contains(expectedMessageFragment, ignoreCase = true))
+                }
+                v3Helper.close()
+
+                // Verify SQLite rolled back the failed upgrade: version is still 2 and original rows remain intact
+                val rawDb = SQLiteDatabase.openDatabase(
+                    context.getDatabasePath(dbName).absolutePath,
+                    null,
+                    SQLiteDatabase.OPEN_READONLY
+                )
+                assertEquals(2, rawDb.version)
+                rawDb.rawQuery("SELECT COUNT(*) FROM habits WHERE habit_id = 'h1'", null).use { c ->
+                    assertTrue(c.moveToFirst())
+                    assertEquals(1, c.getInt(0))
+                }
+                rawDb.close()
+            } finally {
+                context.deleteDatabase(dbName)
+            }
+        }
+
+        // 1. Negative value_units in habit_entries
+        assertV2MigrationRollsBack(
+            setupCorruptV2 = { db ->
+                db.execSQL("INSERT INTO habit_entries VALUES ('e_neg', 'h1', '2026-03-02', -5, NULL, 1000, 1000, 'idem_neg');")
+            },
+            expectedMessageFragment = "negative value_units"
+        )
+
+        // 2. Out-of-range 64-bit integer (> Int.MAX_VALUE) in habit_entries
+        assertV2MigrationRollsBack(
+            setupCorruptV2 = { db ->
+                val overflow = Int.MAX_VALUE.toLong() + 50L
+                db.execSQL("INSERT INTO habit_entries VALUES ('e_ovf', 'h1', '2026-03-02', $overflow, NULL, 1000, 1000, 'idem_ovf');")
+            },
+            expectedMessageFragment = "value_units"
+        )
+
+        // 3. Unsupported outcome_kind ('SKIPPED') in habit_day_outcomes
+        assertV2MigrationRollsBack(
+            setupCorruptV2 = { db ->
+                db.execSQL("INSERT INTO habit_day_outcomes VALUES ('o_skip', 'h1', '2026-03-02', 'SKIPPED', NULL, 'idem_skip', 1000, 1000);")
+            },
+            expectedMessageFragment = "SKIPPED"
+        )
+
+        // 4. Corrupt schedule_kind / target_period / mask combination in habit_versions
+        assertV2MigrationRollsBack(
+            setupCorruptV2 = { db ->
+                db.execSQL("INSERT INTO habit_versions VALUES ('v_bad_sched', 'h1', '2026-03-05', 'BadSched', NULL, 'QUANTITY', 'count', 'DAY', 5, 'FLEXIBLE_WEEKLY_TARGET', NULL, NULL, 'ACTIVE', 'OFF', NULL, 2000);")
+            },
+            expectedMessageFragment = "FLEXIBLE_WEEKLY_TARGET"
+        )
+    }
+
+    // =========================================================================
+    // T1-39: U-11 Legacy v2 Weekly Schedule Conversion & Weekly Check-Off Target >= 1
+    // =========================================================================
+    @Test
+    fun t1_39_u11LegacyV2WeeklySchedulesAndWeeklyCheckOffTargets() {
+        val v2WeeklyDbName = "test_u11_weekly_${UUID.randomUUID()}.db"
+        try {
+            val v2Helper = object : SQLiteOpenHelper(context, v2WeeklyDbName, null, 2) {
+                override fun onCreate(db: SQLiteDatabase) {
+                    db.execSQL("CREATE TABLE habits (habit_id TEXT NOT NULL PRIMARY KEY, created_at_utc_ms INTEGER NOT NULL, updated_at_utc_ms INTEGER NOT NULL);")
+                    db.execSQL("CREATE TABLE habit_versions (version_id TEXT NOT NULL PRIMARY KEY, habit_id TEXT NOT NULL, effective_from_local_date TEXT NOT NULL, name TEXT NOT NULL, description TEXT, tracking_mode TEXT NOT NULL, unit_code TEXT, target_period TEXT NOT NULL, target_value INTEGER, schedule_kind TEXT NOT NULL, scheduled_weekdays_mask INTEGER, preferred_weekdays_mask INTEGER, lifecycle_state TEXT NOT NULL, reminder_mode TEXT NOT NULL, reminder_time_local TEXT, created_at_utc_ms INTEGER NOT NULL);")
+                    db.execSQL("CREATE TABLE habit_entries (entry_id TEXT NOT NULL PRIMARY KEY, habit_id TEXT NOT NULL, local_date TEXT NOT NULL, value_units INTEGER NOT NULL, entry_note TEXT, created_at_utc_ms INTEGER NOT NULL, updated_at_utc_ms INTEGER NOT NULL, idempotency_key TEXT NOT NULL UNIQUE);")
+                    db.execSQL("CREATE TABLE habit_day_outcomes (outcome_id TEXT NOT NULL PRIMARY KEY, habit_id TEXT NOT NULL, local_date TEXT NOT NULL, outcome_kind TEXT NOT NULL, effort_level TEXT, idempotency_key TEXT NOT NULL UNIQUE, created_at_utc_ms INTEGER NOT NULL, updated_at_utc_ms INTEGER NOT NULL);")
+                    db.execSQL("CREATE TABLE habit_date_notes (note_id TEXT NOT NULL PRIMARY KEY, habit_id TEXT NOT NULL, local_date TEXT NOT NULL, body TEXT NOT NULL, created_at_utc_ms INTEGER NOT NULL, updated_at_utc_ms INTEGER NOT NULL);")
+                    db.execSQL("CREATE TABLE journal_entries (journal_entry_id TEXT NOT NULL PRIMARY KEY, local_date TEXT NOT NULL, body TEXT NOT NULL, title TEXT, primary_mood_code TEXT, secondary_mood_code TEXT, prompt_id TEXT, linked_habit_id TEXT, created_at_utc_ms INTEGER NOT NULL, updated_at_utc_ms INTEGER NOT NULL);")
+                    db.execSQL("CREATE TABLE journal_drafts (draft_id TEXT NOT NULL PRIMARY KEY, local_date TEXT NOT NULL, title TEXT, body TEXT NOT NULL, primary_mood_code TEXT, secondary_mood_code TEXT, prompt_id TEXT, linked_habit_id TEXT, intended_journal_entry_id TEXT, source_context TEXT NOT NULL, created_at_utc_ms INTEGER NOT NULL, updated_at_utc_ms INTEGER NOT NULL);")
+                    db.execSQL("CREATE TABLE app_settings (setting_key TEXT NOT NULL PRIMARY KEY, value_type TEXT NOT NULL, value_text TEXT NOT NULL, schema_version INTEGER NOT NULL DEFAULT 1, updated_at_utc_ms INTEGER NOT NULL);")
+                    db.execSQL("CREATE TABLE reminder_deliveries (delivery_key TEXT NOT NULL PRIMARY KEY, reminder_type TEXT NOT NULL, habit_id TEXT, target_period_key TEXT NOT NULL, delivery_status TEXT NOT NULL, scheduled_at_utc_ms INTEGER NOT NULL, attempted_at_utc_ms INTEGER, delivered_at_utc_ms INTEGER, platform_notification_tag TEXT, platform_notification_id INTEGER, suppression_reason TEXT);")
+                    db.execSQL("CREATE TABLE restore_sessions (restore_session_id TEXT NOT NULL PRIMARY KEY, restore_mode TEXT NOT NULL, format_version INTEGER NOT NULL, source_schema_version INTEGER NOT NULL, session_state TEXT NOT NULL, started_at_utc_ms INTEGER NOT NULL, updated_at_utc_ms INTEGER NOT NULL, manifest_json TEXT NOT NULL, safety_backup_ref TEXT, safety_backup_verified INTEGER NOT NULL DEFAULT 0);")
+                    db.execSQL("CREATE TABLE restore_conflicts (conflict_id TEXT NOT NULL PRIMARY KEY, restore_session_id TEXT NOT NULL, record_type TEXT NOT NULL, record_key TEXT NOT NULL, current_payload_json TEXT NOT NULL, backup_payload_json TEXT NOT NULL, created_at_utc_ms INTEGER NOT NULL);")
+                    db.execSQL("CREATE TABLE notification_cancel_outbox (cancel_id TEXT NOT NULL PRIMARY KEY, platform_notification_tag TEXT NOT NULL, platform_notification_id INTEGER NOT NULL, created_at_utc_ms INTEGER NOT NULL, last_attempt_at_utc_ms INTEGER, attempt_count INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL, error_category TEXT);")
+
+                    // Habit 1: Legacy (DAILY, WEEK) with COMPLETION_ONLY and target_value = 3
+                    db.execSQL("INSERT INTO habits VALUES ('h_w_daily', 1000, 1000);")
+                    db.execSQL("INSERT INTO habit_versions VALUES ('v_w_daily', 'h_w_daily', '2026-03-02', 'Call Family', NULL, 'COMPLETION_ONLY', NULL, 'WEEK', 3, 'DAILY', NULL, NULL, 'ACTIVE', 'OFF', NULL, 1000);")
+
+                    // Habit 2: Legacy (SELECTED_WEEKDAYS, mask=21 Mon/Wed/Fri, WEEK) with EFFORT_AWARE and target_value = 2
+                    db.execSQL("INSERT INTO habits VALUES ('h_w_sel', 1000, 1000);")
+                    db.execSQL("INSERT INTO habit_versions VALUES ('v_w_sel', 'h_w_sel', '2026-03-02', 'Strength', NULL, 'EFFORT_AWARE', NULL, 'WEEK', 2, 'SELECTED_WEEKDAYS', 21, NULL, 'ACTIVE', 'OFF', NULL, 1000);")
+                }
+                override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+            }
+            v2Helper.writableDatabase.close()
+
+            val migratedRepo = DayseedRepository(context, clock = testClock, databaseName = v2WeeklyDbName)
+            try {
+                val vDaily = migratedRepo.getEffectiveHabitVersion("h_w_daily", LocalDate.of(2026, 3, 5))!!
+                assertEquals(ScheduleKind.FLEXIBLE_WEEKLY_TARGET, vDaily.scheduleKind)
+                assertEquals(TargetPeriod.WEEK, vDaily.targetPeriod)
+                assertNull(vDaily.scheduledWeekdaysMask)
+                assertNull(vDaily.preferredWeekdaysMask)
+                assertEquals(3, vDaily.targetValue)
+
+                val vSel = migratedRepo.getEffectiveHabitVersion("h_w_sel", LocalDate.of(2026, 3, 5))!!
+                assertEquals(ScheduleKind.FLEXIBLE_WEEKLY_TARGET, vSel.scheduleKind)
+                assertEquals(TargetPeriod.WEEK, vSel.targetPeriod)
+                assertNull(vSel.scheduledWeekdaysMask)
+                assertEquals(21, vSel.preferredWeekdaysMask)
+                assertEquals(2, vSel.targetValue)
+            } finally {
+                migratedRepo.dbHelper.close()
+            }
+        } finally {
+            context.deleteDatabase(v2WeeklyDbName)
+        }
+
+        // Also verify weekly COMPLETION_ONLY habit saved via saveHabitSync preserves targetValue = 3 and requires 3 completions/week
+        val monW1 = LocalDate.of(2026, 3, 9) // Mon Mar 9 .. Sun Mar 15
+        val weeklyCheckOff = Habit(
+            habitId = "h_weekly_checkoff_3",
+            name = "Floss 3x/week",
+            trackingMode = TrackingMode.COMPLETION_ONLY,
+            targetPeriod = TargetPeriod.WEEK,
+            targetValue = 3,
+            scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET
+        )
+        val savedVer = repository.saveHabitSync(weeklyCheckOff, effectiveDateOverride = monW1)
+        assertEquals(3, savedVer.targetValue)
+
+        // Log 2 completions in Week Mar 9..15 -> below target (3), so currentCompletedStreak is 0
+        repository.logHabitDayOutcomeSync("h_weekly_checkoff_3", LocalDate.of(2026, 3, 9), "COMPLETED", null)
+        repository.logHabitDayOutcomeSync("h_weekly_checkoff_3", LocalDate.of(2026, 3, 11), "COMPLETED", null)
+        assertEquals(0, repository.habitSummaries.value["h_weekly_checkoff_3"]?.currentCompletedStreak)
+
+        // Log 3rd completion on Mar 13 -> reaches weekly target of 3 -> currentCompletedStreak becomes 1 week!
+        repository.logHabitDayOutcomeSync("h_weekly_checkoff_3", LocalDate.of(2026, 3, 13), "COMPLETED", null)
+        assertEquals(1, repository.habitSummaries.value["h_weekly_checkoff_3"]?.currentCompletedStreak)
+    }
+
+    // =========================================================================
+    // T1-40: ARCHIVED/COMPLETED Closures, D-188 Backdated Healing, and Shrinking Below 7 Days
+    // =========================================================================
+    @Test
+    fun t1_40_lifecycleClosuresArchivedCompletedBackdatedHealingAndShrinkingBelow7Days() {
+        val start = LocalDate.of(2026, 3, 1)
+        // 1. ARCHIVED and COMPLETED lifecycle closures close active runs with matching terminalReason and brokenOnLocalDate = null
+        val archiveHabit = Habit(habitId = "h_arch_close", name = "Archive Me", trackingMode = TrackingMode.COMPLETION_ONLY)
+        val completeHabit = Habit(habitId = "h_comp_close", name = "Complete Me", trackingMode = TrackingMode.COMPLETION_ONLY)
+        repository.saveHabitSync(archiveHabit, effectiveDateOverride = start)
+        repository.saveHabitSync(completeHabit, effectiveDateOverride = start)
+
+        for (i in 0..2) {
+            val d = start.plusDays(i.toLong())
+            testClock.currentLocalDate = d
+            repository.logHabitDayOutcomeSync("h_arch_close", d, "COMPLETED", null)
+            repository.logHabitDayOutcomeSync("h_comp_close", d, "COMPLETED", null)
+        }
+        testClock.currentLocalDate = LocalDate.of(2026, 3, 4)
+        repository.updateHabitLifecycleSync("h_arch_close", HabitLifecycleState.ARCHIVED)
+        repository.updateHabitLifecycleSync("h_comp_close", HabitLifecycleState.COMPLETED)
+
+        val archRun = repository.habitStreakRuns.value.first { it.habitId == "h_arch_close" }
+        assertFalse(archRun.isActive)
+        assertEquals(GroveTerminalReason.ARCHIVED, archRun.terminalReason)
+        assertNull(archRun.brokenOnLocalDate)
+
+        val compRun = repository.habitStreakRuns.value.first { it.habitId == "h_comp_close" }
+        assertFalse(compRun.isActive)
+        assertEquals(GroveTerminalReason.COMPLETED, compRun.terminalReason)
+        assertNull(compRun.brokenOnLocalDate)
+
+        // 2. D-188 Backdated healing & shrinking a qualified run below 7 days
+        testClock.currentLocalDate = LocalDate.of(2026, 3, 8)
+        testClock.currentUtcMs = 1_773_000_000_000L
+        val healHabit = Habit(
+            habitId = "h_heal",
+            name = "Meditate",
+            trackingMode = TrackingMode.QUANTITY,
+            unitCode = "min",
+            targetValue = 10
+        )
+        repository.saveHabitSync(healHabit, effectiveDateOverride = start)
+
+        // Log Mar 1..3 (3 days) and Mar 5..8 (4 days), leaving Mar 4 missed -> 2 separate runs
+        for (d in listOf(1, 2, 3, 5, 6, 7, 8)) {
+            repository.logHabitEntrySync("h_heal", LocalDate.of(2026, 3, d), 10)
+        }
+        val runsBeforeHeal = repository.habitStreakRuns.value.filter { it.habitId == "h_heal" }
+        assertEquals(2, runsBeforeHeal.size)
+        val firstRunId = runsBeforeHeal.first().runId
+        val firstRunCreatedAt = runsBeforeHeal.first().createdAtUtcMs
+        assertFalse(runsBeforeHeal.first().qualifiedForGrove)
+
+        // Backdate an entry on Mar 4 -> heals the two runs into a single 8-day run preserving firstRunId and firstRunCreatedAt!
+        testClock.advanceMillis(5_000L)
+        val healTimeMs = testClock.nowUtcMs()
+        val mar4Entry = repository.logHabitEntrySync("h_heal", LocalDate.of(2026, 3, 4), 10)
+        val runsAfterHeal = repository.habitStreakRuns.value.filter { it.habitId == "h_heal" }
+        assertEquals(1, runsAfterHeal.size)
+        val healedRun = runsAfterHeal.first()
+        assertEquals(firstRunId, healedRun.runId)
+        assertEquals(firstRunCreatedAt, healedRun.createdAtUtcMs)
+        assertEquals(8, healedRun.completedStreakCount)
+        assertTrue(healedRun.qualifiedForGrove)
+        assertEquals(healTimeMs, healedRun.qualifiedAtUtcMs)
+        assertEquals(GroveTreeState.GROWING_TREE, healedRun.treeState)
+
+        // Extend run on Mar 9 -> runId and qualifiedAtUtcMs remain stable!
+        testClock.currentLocalDate = LocalDate.of(2026, 3, 9)
+        testClock.advanceMillis(10_000L)
+        val mar9Entry = repository.logHabitEntrySync("h_heal", LocalDate.of(2026, 3, 9), 10)
+        val extendedRun = repository.habitStreakRuns.value.first { it.habitId == "h_heal" }
+        assertEquals(firstRunId, extendedRun.runId)
+        assertEquals(healTimeMs, extendedRun.qualifiedAtUtcMs)
+        assertEquals(9, extendedRun.completedStreakCount)
+
+        // Now delete Mar 4 and Mar 9 entries so the run starting on Mar 1 shrinks to 3 days (< 7 days):
+        // Verify qualifiedForGrove becomes false and qualifiedAtUtcMs becomes null without violating SQLite CHECK constraint!
+        repository.deleteHabitEntrySync(mar9Entry.first.entryId)
+        repository.deleteHabitEntrySync(mar4Entry.first.entryId)
+        val shrunkFirstRun = repository.habitStreakRuns.value.first { it.habitId == "h_heal" && it.startLocalDate == "2026-03-01" }
+        assertEquals(firstRunId, shrunkFirstRun.runId)
+        assertFalse(shrunkFirstRun.qualifiedForGrove)
+        assertNull(shrunkFirstRun.qualifiedAtUtcMs)
+        assertEquals(GroveTreeState.UNQUALIFIED_HISTORY, shrunkFirstRun.treeState)
+    }
+
+    // =========================================================================
+    // T1-41: Complete v3 Portable Backup REPLACE Round-Trip & Legacy v2 Baseline Seeding
+    // =========================================================================
+    @Test
+    fun t1_41_v3BackupReplaceAndMergeRoundTripWithLegacyV2BaselineSeeding() {
+        val start = LocalDate.of(2026, 3, 1)
+        testClock.currentLocalDate = LocalDate.of(2026, 3, 8)
+        val habit = Habit(
+            habitId = "h_backup_full",
+            name = "Botanical Walk",
+            trackingMode = TrackingMode.QUANTITY,
+            unitCode = "km",
+            targetValue = 5,
+            category = "Outdoors",
+            lifetimeGoalDays = 90
+        )
+        repository.saveHabitSync(habit, effectiveDateOverride = start)
+        for (i in 0..6) {
+            repository.logHabitEntrySync("h_backup_full", start.plusDays(i.toLong()), 5)
+        }
+        repository.setRestDayExceptionSync("h_backup_full", LocalDate.of(2026, 3, 8), "Rainy rest day")
+        repository.setWeekStartSync(DayOfWeek.WEDNESDAY)
+
+        val originalRun = repository.habitStreakRuns.value.first { it.habitId == "h_backup_full" }
+        assertTrue(originalRun.qualifiedForGrove)
+        assertNotNull(originalRun.qualifiedAtUtcMs)
+
+        // Advance clock and export v3 backup
+        val exportedJson = repository.exportPortableBackupSync(password = null)
+        testClock.advanceMillis(60_000L)
+
+        // Wipe local data and restore via REPLACE
+        repository.deleteAllDataSync()
+        assertTrue(repository.habits.value.isEmpty())
+
+        val replaceSession = repository.restorePortableBackupSync(exportedJson, restoreMode = "REPLACE")
+        assertEquals("COMPLETED", replaceSession.sessionState)
+
+        val restoredHabit = repository.habits.value.first { it.habitId == "h_backup_full" }
+        assertEquals("Outdoors", restoredHabit.category)
+        assertEquals(90, restoredHabit.lifetimeGoalDays)
+
+        val restoredRun = repository.habitStreakRuns.value.first { it.habitId == "h_backup_full" }
+        assertEquals(originalRun.runId, restoredRun.runId)
+        assertEquals(originalRun.createdAtUtcMs, restoredRun.createdAtUtcMs)
+        assertEquals(originalRun.qualifiedAtUtcMs, restoredRun.qualifiedAtUtcMs)
+        assertEquals(originalRun.treeState, restoredRun.treeState)
+
+        val restoredEx = repository.habitDateExceptions.value.first { it.habitId == "h_backup_full" }
+        assertEquals("2026-03-08", restoredEx.localDate)
+        assertEquals("Rainy rest day", restoredEx.note)
+        assertTrue(repository.weekStartHistory.value.any { it.effectiveFromLocalDate == "2026-03-11" && it.weekStartIsoDay == 3 })
+
+        // Verify legacy v2 backup REPLACE seeds week_start_history at earliest restored local date using restored week_start = SUNDAY
+        val v2Root = JSONObject(exportedJson).apply {
+            put("source_schema_version", 2)
+            remove("week_start_history")
+            remove("habit_streak_runs")
+            remove("habit_date_exceptions")
+            put("app_settings", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("setting_key", "week_start")
+                    put("value_type", "ENUM")
+                    put("value_text", "SUNDAY")
+                    put("schema_version", 1)
+                    put("updated_at_utc_ms", 1000L)
+                })
+            })
+        }
+        repository.restorePortableBackupSync(v2Root.toString(), restoreMode = "REPLACE")
+        assertEquals("SUNDAY", repository.getSettingString("week_start", "MONDAY"))
+        val seededBaseline = repository.weekStartHistory.value.first()
+        assertEquals("2026-03-01", seededBaseline.effectiveFromLocalDate)
+        assertEquals(7, seededBaseline.weekStartIsoDay)
+        assertTrue(seededBaseline.isLegacyBaseline)
+    }
+
+    // =========================================================================
+    // T1-42: MERGE Conflict Creation & Resolution + Per-Conflict Destructive Authorization
+    // =========================================================================
+    @Test
+    fun t1_42_v3MergeConflictsAndPerConflictDestructiveAuthorization() {
+        val start = LocalDate.of(2026, 3, 1)
+        testClock.currentLocalDate = LocalDate.of(2026, 3, 10)
+        val habit = Habit(
+            habitId = "h_merge_test",
+            name = "Sketching",
+            trackingMode = TrackingMode.QUANTITY,
+            unitCode = "pages",
+            targetValue = 2,
+            category = "Art",
+            lifetimeGoalDays = 50
+        )
+        repository.saveHabitSync(habit, effectiveDateOverride = start)
+        for (i in 0..6) {
+            repository.logHabitEntrySync("h_merge_test", start.plusDays(i.toLong()), 2)
+        }
+        // Log activity on Mar 9 and Mar 10 so backup REST_DAY exceptions on both dates will collide with local recorded activity!
+        repository.logHabitEntrySync("h_merge_test", LocalDate.of(2026, 3, 9), 2)
+        repository.logHabitEntrySync("h_merge_test", LocalDate.of(2026, 3, 10), 2)
+        repository.setWeekStartSync(DayOfWeek.WEDNESDAY) // creates week_start_history row for 2026-03-18 = 3
+
+        val localRun = repository.habitStreakRuns.value.first { it.habitId == "h_merge_test" }
+
+        // Build a backup JSON that differs in:
+        // 1. habit (category = "Creative", lifetime_goal_days = 120)
+        // 2. habit_date_exceptions on 2026-03-09 and 2026-03-10 (where local has recorded activity!)
+        // 3. habit_streak_run for (h_merge_test, 2026-03-01) with different run_id, created_at_utc_ms, and qualified_at_utc_ms
+        // 4. week_start_history for 2026-03-18 with week_start_iso_day = 7 (Sunday)
+        val backupRoot = JSONObject(repository.exportPortableBackupSync(password = null))
+        backupRoot.getJSONArray("habits").getJSONObject(0).apply {
+            put("category", "Creative")
+            put("lifetime_goal_days", 120)
+        }
+        backupRoot.put("habit_date_exceptions", JSONArray().apply {
+            put(JSONObject().apply {
+                put("id", "ex_mar9")
+                put("habit_id", "h_merge_test")
+                put("local_date", "2026-03-09")
+                put("exception_kind", "REST_DAY")
+                put("note", "Backup rest Mar 9")
+                put("created_at_utc_ms", 5000L)
+                put("updated_at_utc_ms", 5000L)
+            })
+            put(JSONObject().apply {
+                put("id", "ex_mar10")
+                put("habit_id", "h_merge_test")
+                put("local_date", "2026-03-10")
+                put("exception_kind", "REST_DAY")
+                put("note", "Backup rest Mar 10")
+                put("created_at_utc_ms", 5000L)
+                put("updated_at_utc_ms", 5000L)
+            })
+        })
+        backupRoot.getJSONArray("habit_streak_runs").getJSONObject(0).apply {
+            put("run_id", "run_from_backup_999")
+            put("created_at_utc_ms", 123_456L)
+            put("qualified_at_utc_ms", 234_567L)
+        }
+        val whArr = backupRoot.getJSONArray("week_start_history")
+        for (i in 0 until whArr.length()) {
+            val wObj = whArr.getJSONObject(i)
+            if (wObj.getString("effective_from_local_date") == "2026-03-18") {
+                wObj.put("week_start_iso_day", 7)
+            }
+        }
+
+        val mergeSession = repository.restorePortableBackupSync(backupRoot.toString(), restoreMode = "MERGE")
+        assertEquals("AWAITING_CONFLICT_RESOLUTION", mergeSession.sessionState)
+
+        val conflicts = repository.restoreConflicts.value
+        val habitConflict = conflicts.first { it.recordType == "habit" && it.recordKey == "h_merge_test" }
+        val exMar9Conflict = conflicts.first { it.recordType == "habit_date_exception" && it.recordKey == "h_merge_test:2026-03-09" }
+        val exMar10Conflict = conflicts.first { it.recordType == "habit_date_exception" && it.recordKey == "h_merge_test:2026-03-10" }
+        val runConflict = conflicts.first { it.recordType == "habit_streak_run" && it.recordKey == "h_merge_test:2026-03-01" }
+        val weekConflict = conflicts.first { it.recordType == "week_start_history" && it.recordKey == "2026-03-18" }
+
+        // Verify KEEP_BOTH is disallowed for all four non-journal record types
+        for (c in listOf(habitConflict, exMar9Conflict, runConflict, weekConflict)) {
+            assertFalse(c.allowedResolutions().contains(ConflictResolution.KEEP_BOTH))
+            try {
+                repository.resolveRestoreConflictSync(c.conflictId, ConflictResolution.KEEP_BOTH)
+                fail("Expected IllegalArgumentException for KEEP_BOTH on ${c.recordType}")
+            } catch (_: IllegalArgumentException) {
+                // Expected
+            }
+        }
+
+        // 1. Resolve habitConflict with USE_BACKUP -> updates category and lifetimeGoalDays
+        repository.resolveRestoreConflictSync(habitConflict.conflictId, ConflictResolution.USE_BACKUP)
+        val updatedHabit = repository.habits.value.first { it.habitId == "h_merge_test" }
+        assertEquals("Creative", updatedHabit.category)
+        assertEquals(120, updatedHabit.lifetimeGoalDays)
+
+        // 2. Attempting USE_BACKUP on exMar9Conflict WITHOUT destructive authorization must fail and roll back!
+        try {
+            repository.resolveRestoreConflictSync(exMar9Conflict.conflictId, ConflictResolution.USE_BACKUP)
+            fail("Expected IllegalStateException when resolving habit_date_exception with USE_BACKUP without destructive authorization")
+        } catch (_: IllegalStateException) {
+            // Expected
+        }
+        // Local entry on Mar 9, unresolved conflict row, and AWAITING_CONFLICT_RESOLUTION state remain intact
+        assertEquals(1, repository.getEntriesForHabitOnDate("h_merge_test", LocalDate.of(2026, 3, 9)).size)
+        assertTrue(repository.restoreConflicts.value.any { it.conflictId == exMar9Conflict.conflictId })
+
+        // 3. Attempting USE_BACKUP on exMar10Conflict using exMar9Conflict's authorization ID must ALSO fail!
+        try {
+            repository.resolveRestoreConflictSync(
+                conflictId = exMar10Conflict.conflictId,
+                resolution = ConflictResolution.USE_BACKUP,
+                allowDestructiveActivityRemoval = true,
+                authorizedDestructiveConflictId = exMar9Conflict.conflictId
+            )
+            fail("Expected per-conflict authorization check to reject mismatched conflictId")
+        } catch (_: IllegalStateException) {
+            // Expected
+        }
+        assertEquals(1, repository.getEntriesForHabitOnDate("h_merge_test", LocalDate.of(2026, 3, 10)).size)
+
+        // 4. Resolve exMar9Conflict with explicit per-conflict authorization -> removes Mar 9 entry and inserts Mar 9 REST_DAY, while Mar 10 entry remains untouched!
+        repository.resolveRestoreConflictSync(
+            conflictId = exMar9Conflict.conflictId,
+            resolution = ConflictResolution.USE_BACKUP,
+            allowDestructiveActivityRemoval = true,
+            authorizedDestructiveConflictId = exMar9Conflict.conflictId
+        )
+        assertTrue(repository.getEntriesForHabitOnDate("h_merge_test", LocalDate.of(2026, 3, 9)).isEmpty())
+        assertEquals("Backup rest Mar 9", repository.getExceptionForHabitOnDate("h_merge_test", LocalDate.of(2026, 3, 9))?.note)
+        assertEquals(1, repository.getEntriesForHabitOnDate("h_merge_test", LocalDate.of(2026, 3, 10)).size)
+
+        // Resolve exMar10Conflict with KEEP_CURRENT -> preserves Mar 10 entry
+        repository.resolveRestoreConflictSync(exMar10Conflict.conflictId, ConflictResolution.KEEP_CURRENT)
+        assertEquals(1, repository.getEntriesForHabitOnDate("h_merge_test", LocalDate.of(2026, 3, 10)).size)
+        assertNull(repository.getExceptionForHabitOnDate("h_merge_test", LocalDate.of(2026, 3, 10)))
+
+        // 5. Resolve runConflict with USE_BACKUP -> preserves backup run_id, created_at_utc_ms, and qualified_at_utc_ms across recalculation!
+        assertNotEquals("run_from_backup_999", localRun.runId)
+        repository.resolveRestoreConflictSync(runConflict.conflictId, ConflictResolution.USE_BACKUP)
+        val resolvedRun = repository.habitStreakRuns.value.first { it.habitId == "h_merge_test" && it.startLocalDate == "2026-03-01" }
+        assertEquals("run_from_backup_999", resolvedRun.runId)
+        assertEquals(123_456L, resolvedRun.createdAtUtcMs)
+        assertEquals(234_567L, resolvedRun.qualifiedAtUtcMs)
+
+        // 6. Resolve weekConflict with USE_BACKUP -> updates 2026-03-18 policy to Sunday (7) and completes session
+        repository.resolveRestoreConflictSync(weekConflict.conflictId, ConflictResolution.USE_BACKUP)
+        assertEquals(7, repository.weekStartHistory.value.first { it.effectiveFromLocalDate == "2026-03-18" }.weekStartIsoDay)
+        assertTrue(repository.restoreConflicts.value.isEmpty())
+        repository.dbHelper.readableDatabase.rawQuery(
+            "SELECT session_state FROM restore_sessions WHERE restore_session_id = ?",
+            arrayOf(mergeSession.restoreSessionId)
+        ).use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals("COMPLETED", c.getString(0))
+        }
     }
 }

@@ -635,7 +635,40 @@ Following the owner's commit of the workspace changes to GitHub `main` at **`ebe
   - `compile_applet`: **PASSED**.
 - **Remaining Open Owner Decision (`D-040` vs. `D-216` Progress-Band Labels):** Phase 0 exit status is recorded as **`PARTIAL`** solely because `D-040` defines 7 positive progress bands (`Tiny`, `Small`, `Halfway`, `Nearly there`, `Goal met`, `Extra`, `Huge`) whereas the initial `D-216` summary parenthetically listed 5 labels (`Minimal`, `Partial`, `Target met`, `Extra`, `Huge`). All Phase 1 data-integrity, effective-dating (`D-194`), flexible weekly target, `REST_DAY` (`D-218`), individual streak/Grove (`D-217`), neutral zero, and schema v2-to-v3 migration work is ready to start immediately; changing user-visible `ProgressBand` enum labels (`AUD-008`, `AUD-029`) awaits the owner's confirmation on the `D-040` / `D-216` item.
 
+## Phase 1 Implementation & Corrective Completion — 2026-11-02 / 2026-11-03 (`D-040`, `D-216` Option A, `D-217`–`D-227`, `U-1`–`U-13`)
 
+Following the owner's confirmation of `D-216` Option A (preserving all seven `D-040` progress-band labels and pairing each band with both an encouragement quote and a distinct motivation quote), approval of the Phase 1 Implementation Plan (Revision 7), and approval of the **Phase 1 Corrective Completion Plan (Revised)**:
 
-
-
+- **Inspection Baseline:**
+  - **Repository & Branch:** `HeWhoArose/Dayseed`, branch `main` (carried forward from inspected baseline `097f314e068d4f30db78ba4728729e8e01f10737` / `ebeca3ebff1155c220f8e09f1e00e07fdb28209b`; the AI Studio container workspace `/app/applet` has no `.git` directory).
+  - **Inspected & Modified Files:**
+    - `app/src/main/java/com/example/dayseed/data/Models.kt`
+    - `app/src/main/java/com/example/dayseed/data/StreakAndGroveEngine.kt`
+    - `app/src/main/java/com/example/dayseed/data/DayseedDatabaseHelper.kt`
+    - `app/src/main/java/com/example/dayseed/data/DayseedRepository.kt`
+    - `app/src/test/java/com/example/dayseed/DayseedAcceptanceTest.kt`
+    - `app/src/test/java/com/example/dayseed/Phase1ImplementationTest.kt`
+    - `implementation_plan.md`, `docs/28-REQUIREMENT-TRACEABILITY.md`, `docs/12-PROGRESS-AND-HANDOVER.md`
+- **Summary of Phase 1 & Corrective Changes Implemented:**
+  1. **Correction A — `D-040` / `D-216` Progress Classification, Labels, Fractional-Safe Badges & Dual Quotes (`Models.kt`):**
+     - Fixed the `150%` boundary in `ProgressBandClassifier.classify` (`scaled <= t150 -> ProgressBand.EXTRA`) so exact `150%` (`150/100`, `3/2`, `300/200`) classifies as `ProgressBand.EXTRA` and strictly `> 150%` classifies as `ProgressBand.HUGE`.
+     - Updated `ProgressBand` visible `label` strings (`Zero logged`, `Tiny`, `Small`, `Halfway`, `Nearly there`, `Goal met`, `Extra`, `Huge`) and fractional-safe `shortBadge` strings (`0%`, `>0–<25%`, `25–<50%`, `50–<75%`, `75–<100%`, `100%`, `>100–150%`, `>150%`), while preserving distinct non-empty `encouragementQuote` and `motivationQuote` strings on every band and keeping `CompactHistoryBucket` separate.
+  2. **Correction B — SQLite v3 (`DATABASE_VERSION = 3`, `D-219`), Chained `v1 -> v2 -> v3` Migration, `U-11` Weekly Conversion & In-Place v3 Schema Reconciliation (`DayseedDatabaseHelper.kt`):**
+     - Updated `buildHabitVersionsTableSql` so weekly `COMPLETION_ONLY` and `EFFORT_AWARE` habits (`target_period = 'WEEK'`) can persist `target_value >= 1` (`N days/week`) while daily check-off retains `target_value IS NULL`.
+     - Extracted `buildRestoreConflictsTableSql` with `'habit_streak_run'` in `record_type IN (...)`.
+     - Updated `migrateV1ToV2FailClosed` so v1 `QUANTITY` and `DURATION` daily records migrate into `habit_entries` (`value_units = 1`) rather than `habit_day_outcomes`, and archived v1 habits with historical records receive an `ACTIVE` effective version covering their historical record dates and an `ARCHIVED` effective version on the day after their latest record.
+     - Updated `migrateV2ToV3FailClosed` and `validateV2DataBeforeMigration` to convert legacy v2 weekly schedules `(DAILY, WEEK)` and `(SELECTED_WEEKDAYS, mask, WEEK)` into `(FLEXIBLE_WEEKLY_TARGET, WEEK)` (`U-11`) and fail-closed on malformed v2 `habit_versions` schedule/period/mask/target rows.
+     - Implemented `reconcileExistingV3SchemaIfNeeded(db)` in `onOpen(db)` to idempotently and transactionally upgrade any existing v3 database (`DATABASE_VERSION = 3` per `D-219`) that still has the older `habit_versions` or `restore_conflicts` CHECK constraints, rolling back cleanly on failure.
+  3. **Correction C — Complete v3 Portable Backup, `REPLACE`, `MERGE` & Per-Conflict Destructive Authorization (`DayseedRepository.kt`, `StreakAndGroveEngine.kt`):**
+     - Preserved `targetValue >= 1` in `saveHabitSync` for weekly `COMPLETION_ONLY` and `EFFORT_AWARE` habits.
+     - Updated `MutableRun` in `StreakAndGroveEngine.kt` to preserve prior `qualifiedAtUtcMs` when `activeSpanDays >= 7` and reset `qualifiedForGrove = false` / `qualifiedAtUtcMs = null` when a previously qualified run shrinks below 7 days.
+     - Updated `REPLACE` (`importBackupArraysDirect`) to import valid `habit_streak_runs` (preserving original `run_id`, `created_at_utc_ms`, and `qualified_at_utc_ms` across recalculation) and seed `week_start_history` for legacy v2 backups at the earliest restored local date using the restored `week_start` setting without overwriting `week_start`.
+     - Updated `MERGE` (`mergeBackupWithConflictDetection`) and `resolveRestoreConflictSync` to detect and resolve conflicts across `"habit"`, `"habit_date_exception"` (requiring explicit per-conflict `allowDestructiveActivityRemoval == true && authorizedDestructiveConflictId == conflictId` before `USE_BACKUP` removes local activity on that date), `"habit_streak_run"`, `"week_start_history"`, and `"journal_draft"`, while disallowing `KEEP_BOTH` for those five record types.
+- **Verification Evidence (Executed `2026-11-03T06:29:54Z` – `2026-11-03T06:30:31Z`, Stage B Self-Check):**
+  - `compile_applet`: **PASSED** (`Build succeeded - the applet is compiled`).
+  - `gradle :app:testDebugUnitTest --rerun-tasks`: **PASSED 57/57** executed JUnit test methods across all 4 test suites, **0 failed, 0 errors, 0 skipped** (`BUILD SUCCESSFUL in 31s`, Gradle `9.3.1`, Temurin JDK `21.0.13+9-LTS`, Robolectric `4.14.1` SDK 34):
+    - `com.example.dayseed.Phase1ImplementationTest`: **27/27 PASSED** (`10.118s`, XML timestamp `2026-11-03T06:30:19.975Z`, covering `T1-01` through `T1-42` at `app/build/test-results/testDebugUnitTest/TEST-com.example.dayseed.Phase1ImplementationTest.xml`).
+    - `com.example.dayseed.DayseedAcceptanceTest`: **12/12 PASSED** (`1.386s`, XML timestamp `2026-11-03T06:30:30.118Z`, at `app/build/test-results/testDebugUnitTest/TEST-com.example.dayseed.DayseedAcceptanceTest.xml`).
+    - `com.example.dayseed.DayseedSettingsValidationTest`: **10/10 PASSED** (`0.011s`, XML timestamp `2026-11-03T06:30:31.510Z`, at `app/build/test-results/testDebugUnitTest/TEST-com.example.dayseed.DayseedSettingsValidationTest.xml`).
+    - `com.example.dayseed.DayseedVisualResolutionTest`: **8/8 PASSED** (`0.060s`, XML timestamp `2026-11-03T06:30:31.525Z`, at `app/build/test-results/testDebugUnitTest/TEST-com.example.dayseed.DayseedVisualResolutionTest.xml`).
+- **Stage Gate Status:** Stage B Phase 1 implementation and corrective completion self-checks are **COMPLETE**. **Stage C (independent technical validation)** and **Stage D (final owner acceptance / release readiness)** remain **NOT OPEN**.

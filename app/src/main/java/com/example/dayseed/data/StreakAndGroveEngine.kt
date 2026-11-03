@@ -218,17 +218,23 @@ object StreakAndGroveEngine {
         var isActive: Boolean = true,
         var qualifiedForGrove: Boolean = false,
         var qualifiedAtUtcMs: Long? = null,
+        val priorQualifiedAtUtcMs: Long? = null,
         var brokenOnLocalDate: LocalDate? = null,
         val createdAtUtcMs: Long,
         var updatedAtUtcMs: Long
     ) {
         fun updateQualification(nowUtcMs: Long) {
             val activeSpanDays = activeDatesCount
-            if (!qualifiedForGrove && activeSpanDays >= 7) {
-                qualifiedForGrove = true
-                if (qualifiedAtUtcMs == null) {
-                    qualifiedAtUtcMs = nowUtcMs
+            if (activeSpanDays >= 7) {
+                if (!qualifiedForGrove) {
+                    qualifiedForGrove = true
                 }
+                if (qualifiedAtUtcMs == null) {
+                    qualifiedAtUtcMs = priorQualifiedAtUtcMs ?: nowUtcMs
+                }
+            } else {
+                qualifiedForGrove = false
+                qualifiedAtUtcMs = null
             }
         }
 
@@ -242,6 +248,11 @@ object StreakAndGroveEngine {
                 !isActive && qualifiedForGrove -> GroveTreeState.DORMANT_TREE
                 else -> GroveTreeState.UNQUALIFIED_HISTORY
             }
+            val effectiveQualifiedAt = if (qualifiedForGrove) {
+                qualifiedAtUtcMs ?: priorQualifiedAtUtcMs ?: updatedAtUtcMs
+            } else {
+                null
+            }
             return HabitStreakRun(
                 runId = runId,
                 habitId = habitId,
@@ -253,11 +264,11 @@ object StreakAndGroveEngine {
                 terminalReason = terminalReason,
                 isActive = isActive,
                 qualifiedForGrove = qualifiedForGrove,
-                qualifiedAtUtcMs = qualifiedAtUtcMs,
+                qualifiedAtUtcMs = effectiveQualifiedAt,
                 brokenOnLocalDate = brokenOnLocalDate?.toString(),
                 treeState = treeState,
                 createdAtUtcMs = createdAtUtcMs,
-                updatedAtUtcMs = updatedAtUtcMs
+                updatedAtUtcMs = maxOf(createdAtUtcMs, updatedAtUtcMs)
             )
         }
     }
@@ -331,8 +342,8 @@ object StreakAndGroveEngine {
                             activeDatesCount = 1,
                             streakUnit = StreakUnit.DAYS,
                             createdAtUtcMs = existing?.createdAtUtcMs ?: nowUtcMs,
-                            updatedAtUtcMs = nowUtcMs,
-                            qualifiedAtUtcMs = existing?.qualifiedAtUtcMs
+                            updatedAtUtcMs = maxOf(existing?.createdAtUtcMs ?: nowUtcMs, nowUtcMs),
+                            priorQualifiedAtUtcMs = existing?.qualifiedAtUtcMs
                         )
                         newRun.updateQualification(nowUtcMs)
                         openRun = newRun
@@ -550,8 +561,8 @@ object StreakAndGroveEngine {
                                 activeDatesCount = 7, // 1 completed weekly period = 7 active calendar days for Grove
                                 streakUnit = StreakUnit.WEEKS,
                                 createdAtUtcMs = existing?.createdAtUtcMs ?: nowUtcMs,
-                                updatedAtUtcMs = nowUtcMs,
-                                qualifiedAtUtcMs = existing?.qualifiedAtUtcMs
+                                updatedAtUtcMs = maxOf(existing?.createdAtUtcMs ?: nowUtcMs, nowUtcMs),
+                                priorQualifiedAtUtcMs = existing?.qualifiedAtUtcMs
                             )
                             newRun.updateQualification(nowUtcMs)
                             openRun = newRun

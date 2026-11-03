@@ -633,7 +633,15 @@ class DayseedRepository(
                 require(rawTarget >= 1) { "Target value must be >= 1." }
                 rawTarget
             }
-            TrackingMode.COMPLETION_ONLY, TrackingMode.EFFORT_AWARE -> null
+            TrackingMode.COMPLETION_ONLY, TrackingMode.EFFORT_AWARE -> {
+                if (normalizedTargetPeriod == TargetPeriod.WEEK) {
+                    val rawTarget = habit.targetValue ?: 1
+                    require(rawTarget >= 1) { "Weekly target value must be >= 1." }
+                    rawTarget
+                } else {
+                    null
+                }
+            }
             else -> null
         }
         val normalizedUnitCode: String? = when (normalizedMode) {
@@ -2951,6 +2959,8 @@ class DayseedRepository(
             "habit_day_outcomes" to "local_date",
             "habit_date_notes" to "local_date",
             "habit_date_exceptions" to "local_date",
+            "habit_streak_runs" to "start_local_date",
+            "habit_streak_runs" to "end_local_date",
             "journal_entries" to "local_date",
             "journal_drafts" to "local_date",
             "week_start_history" to "effective_from_local_date"
@@ -2963,6 +2973,18 @@ class DayseedRepository(
                 LocalDateValidator.requireValid(rawDate, "$arrName.$fieldName")
             }
         }
+        val runsArr = root.optJSONArray("habit_streak_runs")
+        if (runsArr != null) {
+            for (i in 0 until runsArr.length()) {
+                val o = runsArr.getJSONObject(i)
+                if (!o.isNull("broken_on_local_date") && o.has("broken_on_local_date")) {
+                    val brokenDate = o.optString("broken_on_local_date", "")
+                    if (brokenDate.isNotEmpty()) {
+                        LocalDateValidator.requireValid(brokenDate, "habit_streak_runs.broken_on_local_date")
+                    }
+                }
+            }
+        }
         val entriesArr = root.optJSONArray("habit_entries")
         if (entriesArr != null) {
             for (i in 0 until entriesArr.length()) {
@@ -2972,6 +2994,52 @@ class DayseedRepository(
                     throw DayseedNumericRangeException("Invalid value_units $rawVal in backup habit_entries.")
                 }
             }
+        }
+    }
+
+    private fun computeEarliestBackupLocalDate(root: JSONObject): String {
+        val candidates = mutableListOf<String>()
+        val dateArrays = listOf(
+            "habit_versions" to "effective_from_local_date",
+            "habit_entries" to "local_date",
+            "habit_day_outcomes" to "local_date",
+            "habit_date_notes" to "local_date",
+            "habit_date_exceptions" to "local_date",
+            "journal_entries" to "local_date",
+            "journal_drafts" to "local_date"
+        )
+        for ((arrName, fieldName) in dateArrays) {
+            val arr = root.optJSONArray(arrName) ?: continue
+            for (i in 0 until arr.length()) {
+                val d = arr.getJSONObject(i).optString(fieldName, "")
+                if (LocalDateValidator.isValidStrict(d)) {
+                    candidates.add(d)
+                }
+            }
+        }
+        return candidates.minOrNull() ?: "1970-01-01"
+    }
+
+    private fun habitExistsInDb(db: SQLiteDatabase, habitId: String): Boolean {
+        db.rawQuery(
+            "SELECT 1 FROM ${DayseedDatabaseHelper.TABLE_HABITS} WHERE habit_id = ? LIMIT 1",
+            arrayOf(habitId)
+        ).use { c ->
+            return c.moveToFirst()
+        }
+    }
+
+    private fun hasRecordedActivityInDb(db: SQLiteDatabase, habitId: String, localDate: String): Boolean {
+        db.rawQuery(
+            """
+            SELECT 1 FROM ${DayseedDatabaseHelper.TABLE_HABIT_ENTRIES} WHERE habit_id = ? AND local_date = ?
+            UNION ALL
+            SELECT 1 FROM ${DayseedDatabaseHelper.TABLE_HABIT_DAY_OUTCOMES} WHERE habit_id = ? AND local_date = ?
+            LIMIT 1
+            """.trimIndent(),
+            arrayOf(habitId, localDate, habitId, localDate)
+        ).use { c ->
+            return c.moveToFirst()
         }
     }
 
@@ -3012,6 +3080,24 @@ class DayseedRepository(
             db.insertOrThrow(DayseedDatabaseHelper.TABLE_HABIT_DATE_EXCEPTIONS, null, jsonToHabitDateExceptionCv(o))
         }
 
+        val runsArr = root.optJSONArray("habit_streak_runs") ?: JSONArray()
+        val seenHabitStartDates = mutableSetOf<Pair<String, String>>()
+        val seenActiveHabits = mutableSetOf<String>()
+        for (i in 0 until runsArr.length()) {
+            val o = runsArr.getJSONObject(i)
+            val hId = o.getString("habit_id")
+            if (!habitExistsInDb(db, hId)) continue
+            val startDate = LocalDateValidator.requireValid(o.getString("start_local_date"), "habit_streak_runs.start_local_date")
+            val isActive = o.optBoolean("is_active", o.optInt("is_active", 0) == 1)
+            if (!seenHabitStartDates.add(hId to startDate)) {
+                throw IllegalArgumentException("Duplicate habit_streak_run for ($hId, $startDate) in backup.")
+            }
+            if (isActive && !seenActiveHabits.add(hId)) {
+                throw IllegalArgumentException("Multiple active habit_streak_runs for habit $hId in backup.")
+            }
+            db.insertOrThrow(DayseedDatabaseHelper.TABLE_HABIT_STREAK_RUNS, null, jsonToHabitStreakRunCv(o))
+        }
+
         val journalsArr = root.optJSONArray("journal_entries") ?: JSONArray()
         for (i in 0 until journalsArr.length()) {
             val o = journalsArr.getJSONObject(i)
@@ -3047,18 +3133,24 @@ class DayseedRepository(
                 )
             }
         } else {
-            // Seed baseline week_start_history row for v2 backups
+            // Seed baseline week_start_history row for legacy v2 backups using earliest restored date
             var weekStartIso = 1
             db.rawQuery("SELECT value_text FROM ${DayseedDatabaseHelper.TABLE_APP_SETTINGS} WHERE setting_key = 'week_start' LIMIT 1", null).use { c ->
-                if (c.moveToFirst() && c.getString(0).equals("SUNDAY", ignoreCase = true)) {
-                    weekStartIso = 7
+                if (c.moveToFirst()) {
+                    val v = c.getString(0).trim()
+                    weekStartIso = when {
+                        v.equals("SUNDAY", ignoreCase = true) || v == "7" -> 7
+                        v.toIntOrNull() in 1..7 -> v.toInt()
+                        else -> 1
+                    }
                 }
             }
+            val earliestDate = computeEarliestBackupLocalDate(root)
             db.insertWithOnConflict(
                 DayseedDatabaseHelper.TABLE_WEEK_START_HISTORY,
                 null,
                 ContentValues().apply {
-                    put("effective_from_local_date", "1970-01-01")
+                    put("effective_from_local_date", earliestDate)
                     put("week_start_iso_day", weekStartIso)
                     put("is_legacy_baseline", 1)
                     put("created_at_utc_ms", nowMs)
@@ -3084,6 +3176,21 @@ class DayseedRepository(
             val existing = _habits.value.find { it.habitId == hId }
             if (existing == null) {
                 db.insertOrThrow(DayseedDatabaseHelper.TABLE_HABITS, null, jsonToHabitCv(o))
+            } else {
+                val backupCategory = if (o.isNull("category") || !o.has("category")) null else o.getString("category")
+                val backupGoalDays = if (o.isNull("lifetime_goal_days") || !o.has("lifetime_goal_days")) null else o.getInt("lifetime_goal_days")
+                if (existing.category != backupCategory || existing.lifetimeGoalDays != backupGoalDays) {
+                    insertConflictRow(
+                        db = db,
+                        sessionId = sessionId,
+                        recordType = "habit",
+                        recordKey = hId,
+                        currentPayload = habitToJson(existing).toString(),
+                        backupPayload = o.toString(),
+                        nowMs = nowMs
+                    )
+                    conflicts++
+                }
             }
         }
 
@@ -3094,14 +3201,23 @@ class DayseedRepository(
             val hId = o.getString("habit_id")
             val effDate = o.getString("effective_from_local_date")
             val existing = _habitVersions.value.find { it.habitId == hId && it.effectiveFromLocalDate == effDate }
+            val normalizedBackupCv = jsonToHabitVersionCv(o)
+            val backupModeName = normalizedBackupCv.getAsString("tracking_mode")
+            val backupSchedName = normalizedBackupCv.getAsString("schedule_kind")
+            val backupTargetVal = normalizedBackupCv.getAsInteger("target_value")
             if (existing == null) {
                 db.insertWithOnConflict(
                     DayseedDatabaseHelper.TABLE_HABIT_VERSIONS,
                     null,
-                    jsonToHabitVersionCv(o),
+                    normalizedBackupCv,
                     SQLiteDatabase.CONFLICT_IGNORE
                 )
-            } else if (existing.name != o.getString("name") || existing.trackingMode.name != o.getString("tracking_mode")) {
+            } else if (
+                existing.name != o.getString("name") ||
+                existing.trackingMode.canonical().name != backupModeName ||
+                existing.scheduleKind.name != backupSchedName ||
+                existing.targetValue != backupTargetVal
+            ) {
                 insertConflictRow(
                     db = db,
                     sessionId = sessionId,
@@ -3122,6 +3238,7 @@ class DayseedRepository(
             val hId = o.getString("habit_id")
             val dStr = o.getString("local_date")
             val existing = _habitDayOutcomes.value.find { it.habitId == hId && it.localDate == dStr }
+            val backupEffort = if (o.isNull("effort_level") || !o.has("effort_level")) null else o.getString("effort_level")
             if (existing == null) {
                 db.insertWithOnConflict(
                     DayseedDatabaseHelper.TABLE_HABIT_DAY_OUTCOMES,
@@ -3129,7 +3246,7 @@ class DayseedRepository(
                     jsonToHabitDayOutcomeCv(o),
                     SQLiteDatabase.CONFLICT_IGNORE
                 )
-            } else if (existing.outcomeKind != o.getString("outcome_kind") || existing.effortLevel != o.optString("effort_level", null)) {
+            } else if (existing.outcomeKind != o.getString("outcome_kind") || existing.effortLevel != backupEffort) {
                 insertConflictRow(
                     db = db,
                     sessionId = sessionId,
@@ -3149,6 +3266,7 @@ class DayseedRepository(
             val o = entriesArr.getJSONObject(i)
             val eId = o.getString("entry_id")
             val existing = _habitEntries.value.find { it.entryId == eId }
+            val backupNote = if (o.isNull("entry_note") || !o.has("entry_note")) "" else o.getString("entry_note")
             if (existing == null) {
                 db.insertWithOnConflict(
                     DayseedDatabaseHelper.TABLE_HABIT_ENTRIES,
@@ -3156,7 +3274,7 @@ class DayseedRepository(
                     jsonToHabitEntryCv(o),
                     SQLiteDatabase.CONFLICT_IGNORE
                 )
-            } else if (existing.valueUnits != o.getInt("value_units") || (existing.entryNote ?: "") != o.optString("entry_note", "")) {
+            } else if (existing.valueUnits != o.getInt("value_units") || (existing.entryNote ?: "") != backupNote) {
                 insertConflictRow(
                     db = db,
                     sessionId = sessionId,
@@ -3203,9 +3321,11 @@ class DayseedRepository(
         for (i in 0 until exceptionsArr.length()) {
             val o = exceptionsArr.getJSONObject(i)
             val hId = o.getString("habit_id")
-            val dStr = o.getString("local_date")
+            val dStr = LocalDateValidator.requireValid(o.getString("local_date"), "habit_date_exceptions.local_date")
             val existing = _habitDateExceptions.value.find { it.habitId == hId && it.localDate == dStr }
-            val hasActivity = hasRecordedActivityForVersionLockOnDate(hId, LocalDateValidator.parseStrict(dStr))
+            val hasActivity = hasRecordedActivityInDb(db, hId, dStr)
+            val backupKind = o.optString("exception_kind", "REST_DAY")
+            val backupNote = if (o.isNull("note") || !o.has("note")) null else o.getString("note")
             if (existing == null && !hasActivity) {
                 db.insertWithOnConflict(
                     DayseedDatabaseHelper.TABLE_HABIT_DATE_EXCEPTIONS,
@@ -3213,15 +3333,141 @@ class DayseedRepository(
                     jsonToHabitDateExceptionCv(o),
                     SQLiteDatabase.CONFLICT_IGNORE
                 )
+            } else if (hasActivity) {
+                val currentPayload = existing?.let { habitDateExceptionToJson(it).toString() }
+                    ?: JSONObject().apply {
+                        put("habit_id", hId)
+                        put("local_date", dStr)
+                        put("local_state", "RECORDED_ACTIVITY")
+                    }.toString()
+                insertConflictRow(
+                    db = db,
+                    sessionId = sessionId,
+                    recordType = "habit_date_exception",
+                    recordKey = "$hId:$dStr",
+                    currentPayload = currentPayload,
+                    backupPayload = o.toString(),
+                    nowMs = nowMs
+                )
+                conflicts++
+            } else if (existing != null && (existing.exceptionKind.name != backupKind || existing.note != backupNote)) {
+                insertConflictRow(
+                    db = db,
+                    sessionId = sessionId,
+                    recordType = "habit_date_exception",
+                    recordKey = "$hId:$dStr",
+                    currentPayload = habitDateExceptionToJson(existing).toString(),
+                    backupPayload = o.toString(),
+                    nowMs = nowMs
+                )
+                conflicts++
             }
         }
 
-        // 7. Journal Entries
+        // 7. Habit Streak Runs (v3)
+        val runsArr = root.optJSONArray("habit_streak_runs") ?: JSONArray()
+        for (i in 0 until runsArr.length()) {
+            val o = runsArr.getJSONObject(i)
+            val rId = o.getString("run_id")
+            val hId = o.getString("habit_id")
+            if (!habitExistsInDb(db, hId)) continue
+            val startDate = LocalDateValidator.requireValid(o.getString("start_local_date"), "habit_streak_runs.start_local_date")
+            val endDate = LocalDateValidator.requireValid(o.getString("end_local_date"), "habit_streak_runs.end_local_date")
+            val isBackupActive = o.optBoolean("is_active", o.optInt("is_active", 0) == 1)
+            val backupQualified = o.optBoolean("qualified_for_grove", o.optInt("qualified_for_grove", 0) == 1)
+            val backupQualifiedAt = if (o.isNull("qualified_at_utc_ms") || !o.has("qualified_at_utc_ms")) null else o.getLong("qualified_at_utc_ms")
+            val backupTerm = if (o.isNull("terminal_reason") || !o.has("terminal_reason")) null else o.getString("terminal_reason")
+
+            val existingSameStart = _habitStreakRuns.value.find { it.habitId == hId && it.startLocalDate == startDate }
+            val existingSameId = _habitStreakRuns.value.find { it.runId == rId }
+            val existingActive = if (isBackupActive) {
+                _habitStreakRuns.value.find { it.habitId == hId && it.isActive && it.startLocalDate != startDate }
+            } else {
+                null
+            }
+            val existingRun = existingSameStart ?: existingSameId ?: existingActive
+            if (existingRun == null) {
+                db.insertWithOnConflict(
+                    DayseedDatabaseHelper.TABLE_HABIT_STREAK_RUNS,
+                    null,
+                    jsonToHabitStreakRunCv(o),
+                    SQLiteDatabase.CONFLICT_IGNORE
+                )
+            } else {
+                val differs = existingRun.runId != rId ||
+                    existingRun.startLocalDate != startDate ||
+                    existingRun.endLocalDate != endDate ||
+                    existingRun.completedStreakCount != o.getInt("completed_streak_count") ||
+                    existingRun.elapsedActiveSpanCount != o.getInt("elapsed_active_span_count") ||
+                    existingRun.isActive != isBackupActive ||
+                    existingRun.qualifiedForGrove != backupQualified ||
+                    existingRun.qualifiedAtUtcMs != backupQualifiedAt ||
+                    existingRun.terminalReason?.name != backupTerm
+                if (differs) {
+                    insertConflictRow(
+                        db = db,
+                        sessionId = sessionId,
+                        recordType = "habit_streak_run",
+                        recordKey = "$hId:$startDate",
+                        currentPayload = habitStreakRunToJson(existingRun).toString(),
+                        backupPayload = o.toString(),
+                        nowMs = nowMs
+                    )
+                    conflicts++
+                }
+            }
+        }
+
+        // 8. Week Start History (v3)
+        val weekHistoryArr = root.optJSONArray("week_start_history")
+        if (weekHistoryArr != null && weekHistoryArr.length() > 0) {
+            for (i in 0 until weekHistoryArr.length()) {
+                val o = weekHistoryArr.getJSONObject(i)
+                val effDate = LocalDateValidator.requireValid(o.getString("effective_from_local_date"), "week_start_history.effective_from_local_date")
+                val isoDay = o.getInt("week_start_iso_day")
+                val existing = _weekStartHistory.value.find { it.effectiveFromLocalDate == effDate }
+                if (existing == null) {
+                    db.insertWithOnConflict(
+                        DayseedDatabaseHelper.TABLE_WEEK_START_HISTORY,
+                        null,
+                        jsonToWeekStartPolicyCv(o),
+                        SQLiteDatabase.CONFLICT_IGNORE
+                    )
+                } else if (existing.weekStartIsoDay != isoDay) {
+                    insertConflictRow(
+                        db = db,
+                        sessionId = sessionId,
+                        recordType = "week_start_history",
+                        recordKey = effDate,
+                        currentPayload = weekStartPolicyToJson(existing).toString(),
+                        backupPayload = o.toString(),
+                        nowMs = nowMs
+                    )
+                    conflicts++
+                }
+            }
+        } else if (_weekStartHistory.value.isEmpty()) {
+            val earliestDate = computeEarliestBackupLocalDate(root)
+            db.insertWithOnConflict(
+                DayseedDatabaseHelper.TABLE_WEEK_START_HISTORY,
+                null,
+                ContentValues().apply {
+                    put("effective_from_local_date", earliestDate)
+                    put("week_start_iso_day", 1)
+                    put("is_legacy_baseline", 1)
+                    put("created_at_utc_ms", nowMs)
+                },
+                SQLiteDatabase.CONFLICT_IGNORE
+            )
+        }
+
+        // 9. Journal Entries
         val journalsArr = root.optJSONArray("journal_entries") ?: JSONArray()
         for (i in 0 until journalsArr.length()) {
             val o = journalsArr.getJSONObject(i)
             val jId = o.getString("journal_entry_id")
             val existing = _journalEntries.value.find { it.journalEntryId == jId }
+            val backupTitle = if (o.isNull("title") || !o.has("title")) "" else o.getString("title")
             if (existing == null) {
                 db.insertWithOnConflict(
                     DayseedDatabaseHelper.TABLE_JOURNAL_ENTRIES,
@@ -3229,7 +3475,7 @@ class DayseedRepository(
                     jsonToJournalEntryCv(o),
                     SQLiteDatabase.CONFLICT_IGNORE
                 )
-            } else if (existing.body != o.getString("body") || (existing.title ?: "") != o.optString("title", "")) {
+            } else if (existing.body != o.getString("body") || (existing.title ?: "") != backupTitle) {
                 insertConflictRow(
                     db = db,
                     sessionId = sessionId,
@@ -3243,7 +3489,35 @@ class DayseedRepository(
             }
         }
 
-        // 8. App Settings
+        // 10. Journal Drafts
+        val draftsArr = root.optJSONArray("journal_drafts") ?: JSONArray()
+        for (i in 0 until draftsArr.length()) {
+            val o = draftsArr.getJSONObject(i)
+            val dId = o.getString("draft_id")
+            val existing = _journalDrafts.value.find { it.draftId == dId }
+            val backupTitle = if (o.isNull("title") || !o.has("title")) "" else o.getString("title")
+            if (existing == null) {
+                db.insertWithOnConflict(
+                    DayseedDatabaseHelper.TABLE_JOURNAL_DRAFTS,
+                    null,
+                    jsonToJournalDraftCv(o),
+                    SQLiteDatabase.CONFLICT_IGNORE
+                )
+            } else if (existing.body != o.getString("body") || (existing.title ?: "") != backupTitle) {
+                insertConflictRow(
+                    db = db,
+                    sessionId = sessionId,
+                    recordType = "journal_draft",
+                    recordKey = dId,
+                    currentPayload = journalDraftToJson(existing).toString(),
+                    backupPayload = o.toString(),
+                    nowMs = nowMs
+                )
+                conflicts++
+            }
+        }
+
+        // 11. App Settings
         val settingsArr = root.optJSONArray("app_settings") ?: JSONArray()
         for (i in 0 until settingsArr.length()) {
             val o = settingsArr.getJSONObject(i)
@@ -3294,7 +3568,12 @@ class DayseedRepository(
         db.insertOrThrow(DayseedDatabaseHelper.TABLE_RESTORE_CONFLICTS, null, cv)
     }
 
-    fun resolveRestoreConflictSync(conflictId: String, resolution: ConflictResolution) {
+    fun resolveRestoreConflictSync(
+        conflictId: String,
+        resolution: ConflictResolution,
+        allowDestructiveActivityRemoval: Boolean = false,
+        authorizedDestructiveConflictId: String? = null
+    ) {
         val conflict = _restoreConflicts.value.find { it.conflictId == conflictId }
             ?: throw IllegalArgumentException("Conflict not found: $conflictId")
         require(resolution in conflict.allowedResolutions()) {
@@ -3311,6 +3590,28 @@ class DayseedRepository(
                 ConflictResolution.KEEP_CURRENT -> {}
                 ConflictResolution.USE_BACKUP -> {
                     when (conflict.recordType) {
+                        "habit" -> {
+                            val hId = backupObj.getString("habit_id")
+                            val cv = ContentValues().apply {
+                                put("updated_at_utc_ms", maxOf(backupObj.getLong("updated_at_utc_ms"), nowMs))
+                                if (backupObj.isNull("category") || !backupObj.has("category")) {
+                                    putNull("category")
+                                } else {
+                                    put("category", backupObj.getString("category"))
+                                }
+                                if (backupObj.isNull("lifetime_goal_days") || !backupObj.has("lifetime_goal_days")) {
+                                    putNull("lifetime_goal_days")
+                                } else {
+                                    put("lifetime_goal_days", backupObj.getInt("lifetime_goal_days"))
+                                }
+                            }
+                            db.update(
+                                DayseedDatabaseHelper.TABLE_HABITS,
+                                cv,
+                                "habit_id = ?",
+                                arrayOf(hId)
+                            )
+                        }
                         "habit_version" -> {
                             db.insertWithOnConflict(
                                 DayseedDatabaseHelper.TABLE_HABIT_VERSIONS,
@@ -3344,10 +3645,68 @@ class DayseedRepository(
                             )
                         }
                         "habit_date_exception" -> {
-                            db.insertWithOnConflict(
+                            val hId = backupObj.getString("habit_id")
+                            val dStr = LocalDateValidator.requireValid(backupObj.getString("local_date"), "habit_date_exceptions.local_date")
+                            val hasLocalActivity = hasRecordedActivityInDb(db, hId, dStr)
+                            if (hasLocalActivity) {
+                                val isAuthorizedForThisConflict = allowDestructiveActivityRemoval &&
+                                    authorizedDestructiveConflictId == conflictId
+                                if (!isAuthorizedForThisConflict) {
+                                    throw IllegalStateException(
+                                        "Cannot apply USE_BACKUP for habit_date_exception on ($hId, $dStr) while local recorded activity exists without explicit per-conflict destructive authorization."
+                                    )
+                                }
+                                db.delete(
+                                    DayseedDatabaseHelper.TABLE_HABIT_ENTRIES,
+                                    "habit_id = ? AND local_date = ?",
+                                    arrayOf(hId, dStr)
+                                )
+                                db.delete(
+                                    DayseedDatabaseHelper.TABLE_HABIT_DAY_OUTCOMES,
+                                    "habit_id = ? AND local_date = ?",
+                                    arrayOf(hId, dStr)
+                                )
+                            }
+                            db.delete(
+                                DayseedDatabaseHelper.TABLE_HABIT_DATE_EXCEPTIONS,
+                                "habit_id = ? AND local_date = ?",
+                                arrayOf(hId, dStr)
+                            )
+                            db.insertOrThrow(
                                 DayseedDatabaseHelper.TABLE_HABIT_DATE_EXCEPTIONS,
                                 null,
-                                jsonToHabitDateExceptionCv(backupObj),
+                                jsonToHabitDateExceptionCv(backupObj)
+                            )
+                        }
+                        "habit_streak_run" -> {
+                            val rId = backupObj.getString("run_id")
+                            val hId = backupObj.getString("habit_id")
+                            check(habitExistsInDb(db, hId)) { "Parent habit $hId does not exist for habit_streak_run $rId" }
+                            val startDate = LocalDateValidator.requireValid(backupObj.getString("start_local_date"), "habit_streak_runs.start_local_date")
+                            val isBackupActive = backupObj.optBoolean("is_active", backupObj.optInt("is_active", 0) == 1)
+                            db.delete(
+                                DayseedDatabaseHelper.TABLE_HABIT_STREAK_RUNS,
+                                "run_id = ? OR (habit_id = ? AND start_local_date = ?)",
+                                arrayOf(rId, hId, startDate)
+                            )
+                            if (isBackupActive) {
+                                db.delete(
+                                    DayseedDatabaseHelper.TABLE_HABIT_STREAK_RUNS,
+                                    "habit_id = ? AND is_active = 1",
+                                    arrayOf(hId)
+                                )
+                            }
+                            db.insertOrThrow(
+                                DayseedDatabaseHelper.TABLE_HABIT_STREAK_RUNS,
+                                null,
+                                jsonToHabitStreakRunCv(backupObj)
+                            )
+                        }
+                        "week_start_history" -> {
+                            db.insertWithOnConflict(
+                                DayseedDatabaseHelper.TABLE_WEEK_START_HISTORY,
+                                null,
+                                jsonToWeekStartPolicyCv(backupObj),
                                 SQLiteDatabase.CONFLICT_REPLACE
                             )
                         }
@@ -3759,8 +4118,57 @@ class DayseedRepository(
     private fun jsonToHabitVersionCv(o: JSONObject): ContentValues {
         val rawDesc = if (o.isNull("description")) null else o.getString("description")
         val parsed = parseHabitMetadataDescription(rawDesc)
-        val scheduleKind = o.getString("schedule_kind")
-        val normalizedPeriod = if (scheduleKind == "FLEXIBLE_WEEKLY_TARGET") "WEEK" else "DAY"
+        val rawScheduleKind = o.getString("schedule_kind")
+        val rawTargetPeriod = o.optString(
+            "target_period",
+            if (rawScheduleKind == "FLEXIBLE_WEEKLY_TARGET") "WEEK" else "DAY"
+        )
+        val rawScheduledMask = if (o.isNull("scheduled_weekdays_mask") || !o.has("scheduled_weekdays_mask")) {
+            null
+        } else {
+            o.getInt("scheduled_weekdays_mask")
+        }
+        val rawPreferredMask = if (o.isNull("preferred_weekdays_mask") || !o.has("preferred_weekdays_mask")) {
+            null
+        } else {
+            o.getInt("preferred_weekdays_mask")
+        }
+
+        // Preserve legacy v2 weekly schedules (U-11):
+        // - (DAILY, WEEK) -> (FLEXIBLE_WEEKLY_TARGET, WEEK, preferred_weekdays_mask = null)
+        // - (SELECTED_WEEKDAYS, mask, WEEK) -> (FLEXIBLE_WEEKLY_TARGET, WEEK, scheduled_weekdays_mask = null, preferred_weekdays_mask = mask)
+        val normalizedScheduleKind: String
+        val normalizedPeriod: String
+        val finalScheduledMask: Int?
+        val finalPreferredMask: Int?
+        when {
+            rawTargetPeriod == "WEEK" && rawScheduleKind == "DAILY" -> {
+                normalizedScheduleKind = "FLEXIBLE_WEEKLY_TARGET"
+                normalizedPeriod = "WEEK"
+                finalScheduledMask = null
+                finalPreferredMask = null
+            }
+            rawTargetPeriod == "WEEK" && rawScheduleKind == "SELECTED_WEEKDAYS" -> {
+                normalizedScheduleKind = "FLEXIBLE_WEEKLY_TARGET"
+                normalizedPeriod = "WEEK"
+                finalScheduledMask = null
+                finalPreferredMask = rawScheduledMask
+            }
+            rawScheduleKind == "FLEXIBLE_WEEKLY_TARGET" -> {
+                normalizedScheduleKind = "FLEXIBLE_WEEKLY_TARGET"
+                normalizedPeriod = "WEEK"
+                finalScheduledMask = null
+                finalPreferredMask = rawPreferredMask
+            }
+            else -> {
+                normalizedScheduleKind = rawScheduleKind
+                normalizedPeriod = "DAY"
+                finalScheduledMask = rawScheduledMask
+                finalPreferredMask = null
+            }
+        }
+
+        val canonicalMode = TrackingMode.fromDb(o.getString("tracking_mode")).canonical()
 
         return ContentValues().apply {
             put("version_id", o.getString("version_id"))
@@ -3769,13 +4177,23 @@ class DayseedRepository(
             put("name", o.getString("name"))
             val cleanDesc = parsed.cleanDescription.ifEmpty { null }
             if (cleanDesc == null) putNull("description") else put("description", cleanDesc)
-            put("tracking_mode", TrackingMode.fromDb(o.getString("tracking_mode")).canonical().name)
+            put("tracking_mode", canonicalMode.name)
             if (o.isNull("unit_code")) putNull("unit_code") else put("unit_code", o.getString("unit_code"))
             put("target_period", normalizedPeriod)
-            if (o.isNull("target_value")) putNull("target_value") else put("target_value", o.getInt("target_value"))
-            put("schedule_kind", scheduleKind)
-            if (o.isNull("scheduled_weekdays_mask")) putNull("scheduled_weekdays_mask") else put("scheduled_weekdays_mask", o.getInt("scheduled_weekdays_mask"))
-            if (o.isNull("preferred_weekdays_mask")) putNull("preferred_weekdays_mask") else put("preferred_weekdays_mask", o.getInt("preferred_weekdays_mask"))
+            if (o.isNull("target_value") || !o.has("target_value")) {
+                if (canonicalMode in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION)) {
+                    put("target_value", 1)
+                } else {
+                    putNull("target_value")
+                }
+            } else if (canonicalMode in listOf(TrackingMode.COMPLETION_ONLY, TrackingMode.EFFORT_AWARE) && normalizedPeriod == "DAY") {
+                putNull("target_value")
+            } else {
+                put("target_value", o.getInt("target_value"))
+            }
+            put("schedule_kind", normalizedScheduleKind)
+            if (finalScheduledMask == null) putNull("scheduled_weekdays_mask") else put("scheduled_weekdays_mask", finalScheduledMask)
+            if (finalPreferredMask == null) putNull("preferred_weekdays_mask") else put("preferred_weekdays_mask", finalPreferredMask)
             put("lifecycle_state", o.getString("lifecycle_state"))
             put("reminder_mode", o.getString("reminder_mode"))
             if (o.isNull("reminder_time_local")) putNull("reminder_time_local") else put("reminder_time_local", o.getString("reminder_time_local"))
