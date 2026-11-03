@@ -1942,7 +1942,7 @@ class Phase1ImplementationTest {
         }
 
         val db = repository.dbHelper.writableDatabase
-        val now = testClock.nowUtcMs()
+        val now = 1_777_777_000_000L
         val sessionId = "rs_active_guard"
         val conflictId = "rc_active_guard"
         db.insertOrThrow(
