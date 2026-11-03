@@ -18,7 +18,7 @@ import com.example.dayseed.data.TargetPeriod
 import com.example.dayseed.data.TestDayseedClock
 import com.example.dayseed.data.TrackingMode
 import com.example.dayseed.data.WeekdayMask
-import com.example.dayseed.ui.screens.newlyEndedRunIds
+import com.example.dayseed.ui.components.newlyEndedRunIds
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
