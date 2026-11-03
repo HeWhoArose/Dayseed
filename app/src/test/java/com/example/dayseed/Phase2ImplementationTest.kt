@@ -1379,6 +1379,7 @@ class Phase2ImplementationTest {
             createdAtUtcMs = testClock.nowUtcMs()
         )
         repository.saveHabitSync(quantityHabit, effectiveDateOverride = testClock.todayLocal())
+        assertFalse(viewModel.logHabitQuantityOrDuration(quantityHabit, -1, testClock.todayLocal(), "Invalid session"))
         assertTrue(viewModel.logHabitQuantityOrDuration(quantityHabit, 5, testClock.todayLocal(), "First session"))
 
         val recordedEntry = repository.loadHabitEntriesSync().single { it.habitId == quantityHabit.habitId }
