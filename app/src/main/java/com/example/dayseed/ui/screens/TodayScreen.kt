@@ -1,5 +1,13 @@
 package com.example.dayseed.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -38,6 +46,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -85,7 +94,27 @@ fun TodayScreen(
     val comebackInfo by viewModel.comebackInfo.collectAsState()
     val growthMetrics by viewModel.growthMetrics.collectAsState()
     val activeUndoToken by viewModel.activeUndoToken.collectAsState()
+    val streakRuns by viewModel.habitStreakRuns.collectAsState()
     val notScheduledExpanded by viewModel.todayNotScheduledExpanded.collectAsState()
+
+    val reducedMotion = remember(appSettings) { viewModel.isReducedMotionEnabled() }
+    val runStates = remember(streakRuns) { streakRuns.associate { it.runId to it.isActive } }
+    var previousRunStates by remember { mutableStateOf(runStates) }
+    var animatedRunIds by remember { mutableStateOf(emptySet<String>()) }
+    var showGroveTransition by remember { mutableStateOf(false) }
+    var groveTransitionCount by remember { mutableStateOf(0) }
+
+    LaunchedEffect(runStates, reducedMotion) {
+        val newlyEndedRunIds = newlyEndedRunIds(previousRunStates, runStates) - animatedRunIds
+        previousRunStates = runStates
+        if (newlyEndedRunIds.isNotEmpty()) {
+            animatedRunIds = animatedRunIds + newlyEndedRunIds
+            groveTransitionCount = newlyEndedRunIds.size
+            showGroveTransition = true
+            delay(1_800L)
+            showGroveTransition = false
+        }
+    }
 
     val today = viewModel.repository.clock.todayLocal()
     val todayStr = today.toString()
@@ -229,6 +258,45 @@ fun TodayScreen(
                             viewModel.openLivingGrove(selectedHabitId = habitId)
                         }
                     )
+                }
+
+                item {
+                    AnimatedVisibility(
+                        visible = showGroveTransition,
+                        enter = if (reducedMotion) {
+                            EnterTransition.None
+                        } else {
+                            fadeIn(animationSpec = tween(220)) +
+                                slideInVertically(animationSpec = tween(220)) { it / 4 }
+                        },
+                        exit = if (reducedMotion) {
+                            ExitTransition.None
+                        } else {
+                            fadeOut(animationSpec = tween(220)) +
+                                slideOutVertically(animationSpec = tween(220)) { it / 4 }
+                        }
+                    ) {
+                        Card(
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("grove_run_ending_event")
+                        ) {
+                            Text(
+                                text = if (groveTransitionCount == 1) {
+                                    "🍂 A streak has been preserved in your Living Grove."
+                                } else {
+                                    "🍂 $groveTransitionCount streaks have been preserved in your Living Grove."
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.padding(14.dp)
+                            )
+                        }
+                    }
                 }
 
                 // First-run Onboarding Banner (D-015..D-021)
@@ -656,4 +724,17 @@ private fun EmptyHabitsCard(onAddHabit: () -> Unit) {
             Text("Create a Habit")
         }
     }
+}
+
+/**
+ * Returns run IDs that transitioned from active to ended between two snapshots.
+ * This is intentionally state-diff based: recomposition with the same snapshot cannot replay an event.
+ */
+internal fun newlyEndedRunIds(
+    previousRunStates: Map<String, Boolean>,
+    currentRunStates: Map<String, Boolean>
+): Set<String> {
+    return currentRunStates
+        .filter { (runId, isActive) -> previousRunStates[runId] == true && !isActive }
+        .keys
 }
