@@ -1341,6 +1341,22 @@ class Phase1ImplementationTest {
             }
             badOldV3Helper.writableDatabase.close()
 
+            // Capture the exact pre-reconciliation schema objects so rollback is checked, not inferred.
+            val beforeRollbackDb = SQLiteDatabase.openDatabase(
+                context.getDatabasePath(badOldV3DbName).absolutePath,
+                null,
+                SQLiteDatabase.OPEN_READONLY
+            )
+            val originalConflictTableSql = beforeRollbackDb.rawQuery(
+                "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'restore_conflicts'",
+                null
+            ).use { c -> assertTrue(c.moveToFirst()); c.getString(0) }
+            val originalTriggerNames = mutableSetOf<String>()
+            beforeRollbackDb.rawQuery("SELECT name FROM sqlite_master WHERE type = 'trigger'", null).use { c ->
+                while (c.moveToNext()) originalTriggerNames.add(c.getString(0))
+            }
+            beforeRollbackDb.close()
+
             val failingHelper = DayseedDatabaseHelper(context, badOldV3DbName)
             try {
                 failingHelper.writableDatabase
@@ -1359,6 +1375,22 @@ class Phase1ImplementationTest {
             rawDb.rawQuery("SELECT COUNT(*) FROM habits WHERE habit_id = 'h_recover'", null).use { c ->
                 assertTrue(c.moveToFirst())
                 assertEquals(1, c.getInt(0))
+            }
+            rawDb.rawQuery(
+                "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'restore_conflicts'",
+                null
+            ).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(originalConflictTableSql, c.getString(0))
+            }
+            val restoredTriggerNames = mutableSetOf<String>()
+            rawDb.rawQuery("SELECT name FROM sqlite_master WHERE type = 'trigger'", null).use { c ->
+                while (c.moveToNext()) restoredTriggerNames.add(c.getString(0))
+            }
+            assertEquals(originalTriggerNames, restoredTriggerNames)
+            rawDb.rawQuery("PRAGMA integrity_check", null).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("ok", c.getString(0))
             }
             rawDb.close()
         } finally {
