@@ -494,7 +494,7 @@ class DayseedViewModel @JvmOverloads constructor(
             newKey
         }
 
-        try {
+        return try {
             if (mode == TrackingMode.COMPLETION_ONLY) {
                 repository.logHabitDayOutcomeSync(
                     habitId = habit.habitId,
@@ -552,7 +552,7 @@ class DayseedViewModel @JvmOverloads constructor(
             newKey
         }
 
-        try {
+        return try {
             repository.logHabitEntrySync(
                 habitId = habit.habitId,
                 date = date,
