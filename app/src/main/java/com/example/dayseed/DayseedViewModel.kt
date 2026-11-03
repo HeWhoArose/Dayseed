@@ -575,9 +575,14 @@ class DayseedViewModel @JvmOverloads constructor(
 
     fun updateHabitEntry(entryId: String, newValueUnits: Int, newEntryNote: String?): Boolean {
         return try {
-            repository.updateHabitEntrySync(entryId, newValueUnits, newEntryNote)
-            _userMessage.value = "Session updated"
-            true
+            val undoToken = repository.updateHabitEntrySync(entryId, newValueUnits, newEntryNote)
+            if (undoToken == null) {
+                _userMessage.value = "Session no longer exists and could not be updated"
+                false
+            } else {
+                _userMessage.value = "Session updated"
+                true
+            }
         } catch (e: Exception) {
             _userMessage.value = e.message ?: "Unable to update session"
             false
