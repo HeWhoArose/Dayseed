@@ -1237,9 +1237,89 @@ class Phase1ImplementationTest {
             db.execSQL("INSERT INTO habit_versions VALUES ('v_weekly_check', 'h_existing_v3', '2026-03-10', 'Yoga 3x', NULL, 'COMPLETION_ONLY', NULL, 'WEEK', 3, 'FLEXIBLE_WEEKLY_TARGET', NULL, NULL, 'ACTIVE', 'OFF', NULL, 'Tiny', 'Usual', 'Extra', '#286143', 0, 2000);")
             db.execSQL("INSERT INTO restore_conflicts VALUES ('rc_streak', 'rs_existing', 'habit_streak_run', 'h_existing_v3:2026-03-01', '{}', '{}', 2000);")
 
-            // Verify idempotence: calling reconcileExistingV3SchemaIfNeeded again is a fast no-op
+            // The reconciliation must preserve records in every related table touched by this fixture.
+            db.rawQuery("SELECT COUNT(*) FROM habits WHERE habit_id = 'h_existing_v3'", null).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(1, c.getInt(0))
+            }
+            db.rawQuery("SELECT COUNT(*) FROM restore_sessions WHERE restore_session_id = 'rs_existing'", null).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(1, c.getInt(0))
+            }
+            db.rawQuery("SELECT COUNT(*) FROM restore_conflicts WHERE conflict_id IN ('rc_existing', 'rc_streak')", null).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(2, c.getInt(0))
+            }
+
+            // Primary keys and foreign keys must survive the in-place table rebuilds.
+            db.rawQuery("PRAGMA table_info(habit_versions)", null).use { c ->
+                var versionIdIsPrimaryKey = false
+                while (c.moveToNext()) {
+                    if (c.getString(c.getColumnIndexOrThrow("name")) == "version_id") {
+                        versionIdIsPrimaryKey = c.getInt(c.getColumnIndexOrThrow("pk")) == 1
+                    }
+                }
+                assertTrue(versionIdIsPrimaryKey)
+            }
+            db.rawQuery("PRAGMA foreign_key_list(habit_versions)", null).use { c ->
+                var habitForeignKeyFound = false
+                while (c.moveToNext()) {
+                    if (c.getString(c.getColumnIndexOrThrow("table")) == "habits" &&
+                        c.getString(c.getColumnIndexOrThrow("from")) == "habit_id"
+                    ) habitForeignKeyFound = true
+                }
+                assertTrue(habitForeignKeyFound)
+            }
+            db.rawQuery("PRAGMA foreign_key_list(restore_conflicts)", null).use { c ->
+                var sessionForeignKeyFound = false
+                while (c.moveToNext()) {
+                    if (c.getString(c.getColumnIndexOrThrow("table")) == "restore_sessions" &&
+                        c.getString(c.getColumnIndexOrThrow("from")) == "restore_session_id"
+                    ) sessionForeignKeyFound = true
+                }
+                assertTrue(sessionForeignKeyFound)
+            }
+
+            // All canonical app-managed indexes and triggers must exist after reconciliation.
+            val actualIndexes = mutableSetOf<String>()
+            db.rawQuery("SELECT name FROM sqlite_master WHERE type = 'index' AND name NOT LIKE 'sqlite_%'", null).use { c ->
+                while (c.moveToNext()) actualIndexes.add(c.getString(0))
+            }
+            assertTrue(actualIndexes.containsAll(DayseedDatabaseHelper.ALL_V3_INDEXES))
+            val actualTriggers = mutableSetOf<String>()
+            db.rawQuery("SELECT name FROM sqlite_master WHERE type = 'trigger'", null).use { c ->
+                while (c.moveToNext()) actualTriggers.add(c.getString(0))
+            }
+            assertEquals(
+                setOf(
+                    "trg_habit_entries_validate_insert",
+                    "trg_habit_entries_validate_update",
+                    "trg_habit_outcomes_validate_insert",
+                    "trg_habit_outcomes_validate_update",
+                    "trg_habit_exceptions_validate_insert",
+                    "trg_habit_exceptions_validate_update"
+                ),
+                actualTriggers
+            )
+            db.rawQuery("PRAGMA integrity_check", null).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("ok", c.getString(0))
+            }
+
+            // Verify idempotence, then close/reopen to exercise the actual onOpen path twice.
             reconciledHelper.reconcileExistingV3SchemaIfNeeded(db)
             reconciledHelper.close()
+            val reopenedHelper = DayseedDatabaseHelper(context, oldV3DbName)
+            val reopenedDb = reopenedHelper.writableDatabase
+            reopenedDb.rawQuery("PRAGMA integrity_check", null).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("ok", c.getString(0))
+            }
+            reopenedDb.rawQuery("SELECT COUNT(*) FROM restore_conflicts WHERE conflict_id IN ('rc_existing', 'rc_streak')", null).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(2, c.getInt(0))
+            }
+            reopenedHelper.close()
         } finally {
             context.deleteDatabase(oldV3DbName)
         }
