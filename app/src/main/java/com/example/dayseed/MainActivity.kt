@@ -32,9 +32,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import com.example.dayseed.ui.components.CollectedMomentsDetailSheet
+import com.example.dayseed.ui.components.GroveRunEndingEventHost
 import com.example.dayseed.ui.components.LivingGroveScreen
 import com.example.dayseed.ui.screens.AddEditHabitDialog
 import com.example.dayseed.ui.screens.CreateEditHabitScreen
@@ -270,6 +273,13 @@ fun DayseedApp(viewModel: DayseedViewModel) {
                     }
                 }
             }
+
+            GroveRunEndingEventHost(
+                viewModel = viewModel,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            )
         }
     }
 
