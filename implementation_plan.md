@@ -937,7 +937,7 @@ A full source-level pass over the Phase 2 feature surface and the original 26-me
 5. **Phase 2 audit disposition:**
    - The source/test map covers T2-01 through T2-51 across navigation, Today, Habits, create/edit, weekly targets, D-194, record/correct/Undo, lifecycle, Grove, reduced motion, and idempotent quick actions.
    - All Phase 2 human/device cases P2-H01 through P2-H17 and targeted cases P2-C01 through P2-C05 remain `NOT RUN`; this source audit does not substitute for device validation.
-   - **Grove run-ending animation:** Today now detects active-to-ended run transitions from the streak-run state snapshot and displays a short animated Grove-preservation notice once for each run ID. Recomposition with the same snapshot and initial loading of an already-ended run do not replay it. Reduced-motion mode shows the notice without motion. Pure transition detection is covered by `t2_c06`; device timing/reduced-motion behaviour remains P2-C06 and is still `NOT RUN`.
+   - **Grove run-ending animation:** Today now detects newly ended Grove-qualified runs from previous/current streak-run snapshots and displays a short animated Grove-preservation notice once for each run ID. Recomposition with the same snapshot and initial loading of an already-ended run do not replay it. Reduced-motion mode shows the notice without motion. Pure transition detection is covered by `t2_c06`; device timing/reduced-motion behaviour remains P2-C06 and is still `NOT RUN`.
    - Phase 3, Stage C independent validation, Stage D owner acceptance, release approval, and merge remain separate gates and are not authorised by this addendum.
 
 
