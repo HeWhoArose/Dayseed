@@ -58,6 +58,7 @@ import com.example.dayseed.data.EffortLevel
 import com.example.dayseed.data.HabitEntry
 import com.example.dayseed.data.HabitVersion
 import com.example.dayseed.data.ProgressBandClassifier
+import com.example.dayseed.data.ScheduleKind
 import com.example.dayseed.data.StreakAndGroveEngine
 import com.example.dayseed.data.TargetPeriod
 import com.example.dayseed.data.TrackingMode
@@ -98,7 +99,9 @@ fun resolveRecordSessionGoverningVersion(
         ?: dateVersion
     return if (
         weekStartVersion.targetPeriod == TargetPeriod.WEEK ||
-        dateVersion.targetPeriod == TargetPeriod.WEEK
+        weekStartVersion.scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET ||
+        dateVersion.targetPeriod == TargetPeriod.WEEK ||
+        dateVersion.scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET
     ) {
         StreakAndGroveEngine.resolveFrozenWeekVersion(
             sortedVersions = nonEmptyVersions,

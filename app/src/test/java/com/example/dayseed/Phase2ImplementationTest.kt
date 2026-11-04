@@ -1508,6 +1508,22 @@ class Phase2ImplementationTest {
                 todayExceptions = finalExceptions
             )
         )
+
+        // Zero-target weekly summary guard: weekTargetUnits == 0 and weekTotalUnits == 0 must NOT count as tended
+        val zeroTargetSummary = summariesInitial[hWeeklySatisfied.habitId]!!.copy(
+            weekTotalUnits = BigInteger.ZERO,
+            weekTargetUnits = BigInteger.ZERO
+        )
+        assertFalse(
+            "Zero-target weekly summary (0 >= 0) must not count as tended when weekTargetUnits == 0",
+            isScheduledHabitTendedToday(
+                habit = hWeeklySatisfied,
+                summary = zeroTargetSummary,
+                todayOutcomes = emptyList(),
+                todayEntries = emptyList(),
+                todayExceptions = emptyList()
+            )
+        )
     }
 
     @Test
@@ -1776,6 +1792,59 @@ class Phase2ImplementationTest {
         }
         assertEquals("EFFORT_LOGGED", outcomeOnMar15.outcomeKind)
         assertEquals("TINY", outcomeOnMar15.effortLevel)
+
+        // 4. Weekly mid-week tracking-mode difference: frozen start-of-week version (2026-03-16) is weekly EFFORT_AWARE,
+        //    while a mid-week version effective 2026-03-18 has COMPLETION_ONLY.
+        //    Saving on 2026-03-18 via viewModel.logHabit must follow the frozen start-of-week version (EFFORT_AWARE).
+        val weeklyModeShiftHabit = Habit(
+            habitId = "h_f03_weekly_mode_shift",
+            name = "Weekly Mindful Practice",
+            trackingMode = TrackingMode.EFFORT_AWARE,
+            targetPeriod = TargetPeriod.WEEK,
+            targetValue = 3,
+            scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET,
+            createdAtUtcMs = LocalDate.of(2026, 3, 16).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
+        )
+        repository.saveHabitSync(
+            weeklyModeShiftHabit,
+            effectiveDateOverride = LocalDate.of(2026, 3, 16),
+            allowLegacyEffortModeCreation = true
+        )
+        // Save a mid-week version effective 2026-03-18 with COMPLETION_ONLY (switching cadence/mode on 2026-03-18)
+        val savedMidWeekVer = repository.saveHabitSync(
+            weeklyModeShiftHabit.copy(
+                trackingMode = TrackingMode.COMPLETION_ONLY,
+                targetPeriod = TargetPeriod.DAY,
+                scheduleKind = ScheduleKind.DAILY
+            ),
+            effectiveDateOverride = LocalDate.of(2026, 3, 18)
+        )
+        assertEquals("2026-03-18", savedMidWeekVer.effectiveFromLocalDate)
+        val weeklyShiftVersions = repository.habitVersions.value.filter { it.habitId == weeklyModeShiftHabit.habitId }
+        val resolvedMidWeekGov = resolveRecordSessionGoverningVersion(
+            versions = weeklyShiftVersions,
+            weekStartHistory = repository.weekStartHistory.value,
+            evaluationDate = LocalDate.of(2026, 3, 18),
+            fallbackVersion = weeklyShiftVersions.last()
+        )
+        assertEquals(TrackingMode.EFFORT_AWARE, resolvedMidWeekGov.trackingMode)
+        assertEquals(ScheduleKind.FLEXIBLE_WEEKLY_TARGET, resolvedMidWeekGov.scheduleKind)
+
+        val currentWeeklyShiftHabit = repository.loadHabitsSync().single { it.habitId == weeklyModeShiftHabit.habitId }
+        assertEquals(TrackingMode.COMPLETION_ONLY, currentWeeklyShiftHabit.trackingMode)
+
+        viewModel.logHabit(
+            habit = currentWeeklyShiftHabit,
+            date = LocalDate.of(2026, 3, 18),
+            outcome = DailyOutcome.COMPLETED,
+            effortLevel = EffortLevel.EXTRA,
+            note = "Midweek frozen effort save"
+        )
+        val savedMidWeekOutcome = repository.habitDayOutcomes.value.single {
+            it.habitId == weeklyModeShiftHabit.habitId && it.localDate == "2026-03-18"
+        }
+        assertEquals("EFFORT_LOGGED", savedMidWeekOutcome.outcomeKind)
+        assertEquals("EXTRA", savedMidWeekOutcome.effortLevel)
     }
 
     @Test
@@ -1818,17 +1887,19 @@ class Phase2ImplementationTest {
         assertTrue(weeklyTargetSemanticsExplanation(TrackingMode.QUANTITY, "sessions").contains("sessions/week", ignoreCase = true))
         assertTrue(weeklyTargetSemanticsExplanation(TrackingMode.QUANTITY, "pages").contains("Weekly target progress accumulates", ignoreCase = true))
 
-        // 3. F-05: Strict 24-hour HH:mm validation (00:00..23:59)
-        assertEquals(LocalTime.of(0, 0), SettingsSupport.parseQuietHours("00:00"))
-        assertEquals(LocalTime.of(8, 30), SettingsSupport.parseQuietHours("08:30"))
-        assertEquals(LocalTime.of(23, 59), SettingsSupport.parseQuietHours("23:59"))
-        assertEquals("08:30", SettingsSupport.formatQuietHours(SettingsSupport.parseQuietHours("8:30")!!))
-        assertNull(SettingsSupport.parseQuietHours("9:5"))
-        assertNull(SettingsSupport.parseQuietHours("24:00"))
-        assertNull(SettingsSupport.parseQuietHours("12:60"))
-        assertNull(SettingsSupport.parseQuietHours("25:99"))
-        assertNull(SettingsSupport.parseQuietHours("8am"))
-        assertNull(SettingsSupport.parseQuietHours(""))
+        // 3. F-05: Strict two-digit 24-hour HH:mm validation (00:00..23:59) for habit reminder time
+        assertEquals(LocalTime.of(0, 0), SettingsSupport.parseStrictHhMm("00:00"))
+        assertEquals(LocalTime.of(8, 30), SettingsSupport.parseStrictHhMm("08:30"))
+        assertEquals(LocalTime.of(23, 59), SettingsSupport.parseStrictHhMm("23:59"))
+        assertEquals("08:30", SettingsSupport.formatQuietHours(SettingsSupport.parseStrictHhMm("08:30")!!))
+        assertNull(SettingsSupport.parseStrictHhMm("9:05"))
+        assertNull(SettingsSupport.parseStrictHhMm("8:30"))
+        assertNull(SettingsSupport.parseStrictHhMm("9:5"))
+        assertNull(SettingsSupport.parseStrictHhMm("24:00"))
+        assertNull(SettingsSupport.parseStrictHhMm("12:60"))
+        assertNull(SettingsSupport.parseStrictHhMm("25:99"))
+        assertNull(SettingsSupport.parseStrictHhMm("8am"))
+        assertNull(SettingsSupport.parseStrictHhMm(""))
 
         // 4. F-05: Stale save errors clear cleanly via clearSaveError()
         val failed = viewModel.saveHabit(

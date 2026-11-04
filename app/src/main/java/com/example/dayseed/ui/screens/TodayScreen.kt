@@ -57,6 +57,7 @@ import com.example.dayseed.data.HabitDayOutcome
 import com.example.dayseed.data.HabitEntry
 import com.example.dayseed.data.HabitLifecycleState
 import com.example.dayseed.data.HabitSummary
+import com.example.dayseed.data.ScheduleKind
 import com.example.dayseed.data.TargetPeriod
 import com.example.dayseed.ui.components.CollectedMomentsSummaryCard
 import com.example.dayseed.ui.components.ComebackCard
@@ -72,6 +73,7 @@ import com.example.dayseed.ui.theme.ThemeModeOption
 import com.example.dayseed.ui.theme.greetingFor
 import com.example.dayseed.ui.theme.resolveDayseedArtworkBlend
 import kotlinx.coroutines.delay
+import java.math.BigInteger
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
@@ -83,7 +85,9 @@ fun isScheduledHabitTendedToday(
     todayExceptions: List<HabitDateException>
 ): Boolean {
     val weekSatisfied = summary != null &&
-        summary.effectiveVersion.targetPeriod == TargetPeriod.WEEK &&
+        (summary.effectiveVersion.targetPeriod == TargetPeriod.WEEK ||
+            summary.effectiveVersion.scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET) &&
+        summary.weekTargetUnits > BigInteger.ZERO &&
         summary.weekTotalUnits >= summary.weekTargetUnits
     val hasRestDayToday = todayExceptions.any {
         it.habitId == habit.habitId && it.exceptionKind == HabitDateExceptionKind.REST_DAY

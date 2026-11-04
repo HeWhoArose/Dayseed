@@ -24,10 +24,23 @@ object SettingsSupport {
     )
 
     private val hhMm = Regex("^(\\d{1,2}):(\\d{2})$")
+    private val strictHhMm = Regex("^(\\d{2}):(\\d{2})$")
 
     /** Parses a quiet-hours time; returns null when malformed or outside 00:00–23:59. */
     fun parseQuietHours(raw: String): LocalTime? {
         val match = hhMm.matchEntire(raw.trim()) ?: return null
+        val hour = match.groupValues[1].toInt()
+        val minute = match.groupValues[2].toInt()
+        if (hour !in 0..23 || minute !in 0..59) return null
+        return LocalTime.of(hour, minute)
+    }
+
+    /**
+     * Parses a strict two-digit 24-hour time in `HH:mm` format (`00:00`–`23:59`).
+     * Rejects single-digit hours (`9:05`, `8:30`) or single-digit minutes (`09:5`) as well as out-of-range values.
+     */
+    fun parseStrictHhMm(raw: String): LocalTime? {
+        val match = strictHhMm.matchEntire(raw.trim()) ?: return null
         val hour = match.groupValues[1].toInt()
         val minute = match.groupValues[2].toInt()
         if (hour !in 0..23 || minute !in 0..59) return null

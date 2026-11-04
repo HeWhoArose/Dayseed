@@ -414,17 +414,17 @@ The following nine human/device validation cases cover the Phase 2 targeted reme
 - **Procedure:**
   1. Open `Create/Edit Habit`, select `Per week (flexible)` (`FLEXIBLE_WEEKLY_TARGET`), select two preferred weekdays, then tap `Clear` (`habit_clear_preferred_weekdays_btn`) or deselect all weekdays and save.
   2. Reopen `Edit Habit` for that habit and inspect the preferred weekday chips and the weekly target semantics explanation (`habit_weekly_semantics_explanation`).
-  3. Enable reminders, enter `9:5` or `24:00`, tap `Save`, then edit any form field and enter `08:30`.
-- **Expected:** Saving with zero preferred weekdays persists `preferredWeekdaysMask = null` and reloads with no weekdays selected. Malformed reminder times (`9:5`, `24:00`, `12:60`) block saving with `habit_reminder_time_error`; editing any field clears stale save errors, and `08:30` saves cleanly.
+  3. Enable reminders, enter `9:05`, `9:5`, or `24:00`, tap `Save`, then edit any form field and enter `08:30`.
+- **Expected:** Saving with zero preferred weekdays persists `preferredWeekdaysMask = null` and reloads with no weekdays selected. Malformed reminder times (`9:05`, `9:5`, `24:00`, `12:60`) block saving with `habit_reminder_time_error`; editing any field clears stale save errors, and `08:30` saves cleanly.
 
 ### P2-C09 — `Today` longest active streak indicator opens complete Living Grove (`F-06`)
 
 - **Status:** `NOT RUN`
 - **Procedure:**
   1. With two or more habits having active streaks/Grove entries, view `Today`.
-  2. Tap the longest active streak indicator card (`today_longest_streak_indicator`) or `Grove` button (`today_longest_streak_open_grove_btn`).
+  2. Tap the longest active streak indicator card (`today_main_streak_indicator`) or `Grove` button (`today_open_grove_btn`).
   3. Return to `Today` and tap the secondary `Habit` button (`today_longest_streak_habit_btn`).
-- **Expected:** Tapping the indicator card or `Grove` button opens `Living Grove` unfiltered (`selectedHabitId = null`, showing all habits' saplings and trees); tapping the secondary `Habit` button opens `Habit Detail` for the lead streak habit.
+- **Expected:** Tapping the indicator card (`today_main_streak_indicator`) or `Grove` button (`today_open_grove_btn`) opens `Living Grove` unfiltered (`selectedHabitId = null`, showing all habits' saplings and trees); tapping the secondary `Habit` button (`today_longest_streak_habit_btn`) opens `Habit Detail` for the lead streak habit.
 
 
 

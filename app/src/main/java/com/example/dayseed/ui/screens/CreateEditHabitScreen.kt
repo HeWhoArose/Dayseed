@@ -1075,7 +1075,7 @@ fun CreateEditHabitFormContent(
                     }
 
                     val normalizedReminderTime = if (reminderEnabled) {
-                        val parsedTime = SettingsSupport.parseQuietHours(reminderTimeLocal)
+                        val parsedTime = SettingsSupport.parseStrictHhMm(reminderTimeLocal)
                         if (parsedTime == null) {
                             reminderTimeError = "Enter a valid 24-hour time in HH:mm format (00:00–23:59)."
                             return@Button

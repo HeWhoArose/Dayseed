@@ -582,6 +582,44 @@ class DayseedRepository(
     }
 
     /**
+     * Resolves the governing [HabitVersion] for [habitId] on [evaluationDate]:
+     * - For weekly habits (`targetPeriod == TargetPeriod.WEEK` or `scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET`),
+     *   resolves the frozen start-of-week version under U-12 Option B (`StreakAndGroveEngine.resolveFrozenWeekVersion`).
+     * - For daily habits, resolves the effective version on [evaluationDate] (`StreakAndGroveEngine.resolveEffectiveVersion`).
+     */
+    fun getGoverningHabitVersion(habitId: String, evaluationDate: LocalDate): HabitVersion? {
+        val versions = _habitVersions.value.filter { it.habitId == habitId }
+        if (versions.isEmpty()) return null
+        val dateVersion = StreakAndGroveEngine.resolveEffectiveVersion(versions, evaluationDate)
+            ?: versions.minWithOrNull(compareBy<HabitVersion> { it.effectiveFromLocalDate }.thenBy { it.createdAtUtcMs })
+            ?: return null
+        val firstHabitDate = versions
+            .mapNotNull { runCatching { LocalDate.parse(it.effectiveFromLocalDate) }.getOrNull() }
+            .minOrNull() ?: evaluationDate
+        val weekStartIso = WeekBoundaryHelper.resolveWeekStartPolicyForDate(evaluationDate, _weekStartHistory.value)
+        val (weekStart, _) = WeekBoundaryHelper.weekBounds(evaluationDate, weekStartIso)
+        val anchorDate = if (firstHabitDate.isAfter(weekStart)) firstHabitDate else weekStart
+        val weekStartVersion = StreakAndGroveEngine.resolveEffectiveVersion(versions, anchorDate)
+            ?: dateVersion
+        return if (
+            weekStartVersion.targetPeriod == TargetPeriod.WEEK ||
+            weekStartVersion.scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET ||
+            dateVersion.targetPeriod == TargetPeriod.WEEK ||
+            dateVersion.scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET
+        ) {
+            StreakAndGroveEngine.resolveFrozenWeekVersion(
+                sortedVersions = versions,
+                weekStart = weekStart,
+                firstHabitDate = firstHabitDate,
+                fallbackDate = evaluationDate,
+                fallbackVersion = dateVersion
+            ) ?: dateVersion
+        } else {
+            dateVersion
+        }
+    }
+
+    /**
      * Returns true if the habit has positive qualifying activity on targetDate.
      */
     fun hasQualifyingActivityOnDate(habitId: String, targetDate: LocalDate): Boolean {

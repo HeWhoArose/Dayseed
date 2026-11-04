@@ -475,8 +475,8 @@ class DayseedViewModel @JvmOverloads constructor(
         note: String = "",
         idempotencyKey: String? = null
     ) {
-        val effVer = repository.getEffectiveHabitVersion(habit.habitId, date)
-        val mode = (effVer?.trackingMode ?: habit.trackingMode).canonical()
+        val govVer = repository.getGoverningHabitVersion(habit.habitId, date)
+        val mode = (govVer?.trackingMode ?: habit.currentVersion?.trackingMode ?: habit.trackingMode).canonical()
         val nowMs = repository.clock.nowUtcMs()
         val sig = "OUTCOME:${habit.habitId}:$date:${outcome.name}:${effortLevel.name}:$note"
         val resolvedKey = if (idempotencyKey != null) {
