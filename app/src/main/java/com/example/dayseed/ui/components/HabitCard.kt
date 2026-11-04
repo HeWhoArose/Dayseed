@@ -15,37 +15,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Notes
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,7 +38,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dayseed.data.DailyOutcome
@@ -65,7 +48,6 @@ import com.example.dayseed.data.HabitDateException
 import com.example.dayseed.data.HabitDateNote
 import com.example.dayseed.data.HabitDayOutcome
 import com.example.dayseed.data.HabitEntry
-import com.example.dayseed.data.HabitLifecycleState
 import com.example.dayseed.data.HabitSummary
 import com.example.dayseed.data.ProgressBandClassifier
 import com.example.dayseed.data.StreakUnit
@@ -89,16 +71,11 @@ fun HabitCard(
     onOpenRecordSession: ((entryId: String?) -> Unit)? = null,
     onLogOutcome: (outcome: DailyOutcome, effort: EffortLevel) -> Unit,
     onLogQuantityOrDuration: ((valueUnits: Int, entryNote: String?) -> Unit)? = null,
-    onDeleteEntry: ((entryId: String) -> Unit)? = null,
-    onSaveDateNote: ((body: String) -> Unit)? = null,
     onTakeRestDayToday: (() -> Unit)? = null,
     onClearRestDayToday: (() -> Unit)? = null,
     onOpenRetrospectiveJournal: (() -> Unit)? = null,
     onDismissRetrospectivePrompt: (() -> Unit)? = null,
     onResetRecord: () -> Unit = {},
-    onEditHabit: () -> Unit = {},
-    onArchiveHabit: () -> Unit = {},
-    onPauseResumeHabit: ((HabitLifecycleState) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val effVersion = summary?.effectiveVersion
@@ -128,7 +105,7 @@ fun HabitCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Header Row: Habit Name (tappable to open HabitDetail), Target/Schedule summary, Menu
+            // Header Row: Habit Name (tappable to open HabitDetail), Target/Schedule summary, Rest day action
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -311,10 +288,7 @@ fun HabitCard(
                             onAddEntry = { units, note ->
                                 onLogQuantityOrDuration?.invoke(units, note)
                             },
-                            onOpenRecordSession = onOpenRecordSession,
-                            onDeleteEntry = { entryId ->
-                                onDeleteEntry?.invoke(entryId)
-                            }
+                            onOpenRecordSession = onOpenRecordSession
                         )
                     }
 
@@ -333,6 +307,7 @@ fun HabitCard(
                         } else {
                             UnrecordedOutcomeActionRow(
                                 habit = habit,
+                                summary = summary,
                                 onLog = onLogOutcome,
                                 onOpenRecordSession = onOpenRecordSession
                             )
@@ -449,8 +424,7 @@ private fun QuantityOrDurationSection(
     summary: HabitSummary?,
     entries: List<HabitEntry>,
     onAddEntry: (Int, String?) -> Unit,
-    onOpenRecordSession: ((String?) -> Unit)? = null,
-    onDeleteEntry: (String) -> Unit
+    onOpenRecordSession: ((String?) -> Unit)? = null
 ) {
     val isWeekly = (summary?.effectiveVersion?.targetPeriod ?: habit.targetPeriod) == TargetPeriod.WEEK
     val target = if (isWeekly && summary != null) {
@@ -474,9 +448,6 @@ private fun QuantityOrDurationSection(
     val activeUnitsBig = if (isWeekly && summary != null) summary.weekTotalUnits else todayUnitsBig
     val band = ProgressBandClassifier.classify(activeUnitsBig, targetBig)
     val pct = ProgressBandClassifier.displayPercentage(activeUnitsBig, targetBig)
-
-    var customAmountText by remember { mutableStateOf("") }
-    var showCustomInput by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // Progress bar + Band badge
@@ -614,45 +585,22 @@ private fun QuantityOrDurationSection(
             }
         }
 
-        // Compact session summary link (individual session editing/deletion lives in RecordSessionSheet & HabitDetailScreen)
+        // Compact, read-only session count summary (editing/deletion lives in HabitDetailScreen & RecordSessionSheet)
         if (entries.isNotEmpty()) {
             val sessionCountText = if (entries.size == 1) "1 session logged today" else "${entries.size} sessions logged today"
-            val latestEntry = entries.last()
             Surface(
                 shape = RoundedCornerShape(8.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .then(
-                        if (onOpenRecordSession != null) {
-                            Modifier.clickable { onOpenRecordSession(latestEntry.entryId) }
-                        } else {
-                            Modifier
-                        }
-                    )
                     .testTag("habit_today_sessions_summary_${habit.id}")
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = sessionCountText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    if (onOpenRecordSession != null) {
-                        Text(
-                            text = "Review / Edit",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
+                Text(
+                    text = sessionCountText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                )
             }
         }
     }
@@ -735,10 +683,13 @@ private fun RecordedOutcomeRow(
 @Composable
 private fun UnrecordedOutcomeActionRow(
     habit: Habit,
+    summary: HabitSummary? = null,
     onLog: (outcome: DailyOutcome, effort: EffortLevel) -> Unit,
     onOpenRecordSession: ((String?) -> Unit)? = null
 ) {
-    if (habit.trackingMode.canonical() == TrackingMode.EFFORT_AWARE) {
+    val effVersion = summary?.effectiveVersion
+    val mode = (effVersion?.trackingMode ?: habit.trackingMode).canonical()
+    if (mode == TrackingMode.EFFORT_AWARE) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -746,7 +697,7 @@ private fun UnrecordedOutcomeActionRow(
             EffortButton(
                 symbol = "🌱",
                 title = "Tiny",
-                subtitle = habit.tinyDescription,
+                subtitle = effVersion?.tinyDescription ?: habit.tinyDescription,
                 color = TinySproutColor,
                 modifier = Modifier.weight(1f),
                 onClick = { onLog(DailyOutcome.COMPLETED, EffortLevel.TINY) }
@@ -754,7 +705,7 @@ private fun UnrecordedOutcomeActionRow(
             EffortButton(
                 symbol = "🌿",
                 title = "Usual",
-                subtitle = habit.usualDescription,
+                subtitle = effVersion?.usualDescription ?: habit.usualDescription,
                 color = UsualLeafColor,
                 modifier = Modifier.weight(1f),
                 onClick = { onLog(DailyOutcome.COMPLETED, EffortLevel.USUAL) }
@@ -762,7 +713,7 @@ private fun UnrecordedOutcomeActionRow(
             EffortButton(
                 symbol = "🌳",
                 title = "Extra",
-                subtitle = habit.extraDescription,
+                subtitle = effVersion?.extraDescription ?: habit.extraDescription,
                 color = ExtraBranchColor,
                 modifier = Modifier.weight(1f),
                 onClick = { onLog(DailyOutcome.COMPLETED, EffortLevel.EXTRA) }

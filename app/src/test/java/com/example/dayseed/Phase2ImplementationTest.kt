@@ -3,15 +3,22 @@ package com.example.dayseed
 import android.app.Application
 import android.provider.Settings
 import androidx.test.core.app.ApplicationProvider
+import com.example.dayseed.data.DailyOutcome
 import com.example.dayseed.data.DayseedRepository
 import com.example.dayseed.data.DerivedDayStatus
+import com.example.dayseed.data.EffortLevel
 import com.example.dayseed.data.GroveTerminalReason
 import com.example.dayseed.data.GroveTreeState
 import com.example.dayseed.data.Habit
 import com.example.dayseed.data.HabitConfigEffectivePolicy
 import com.example.dayseed.data.HabitConfigurationLockedTodayException
+import com.example.dayseed.data.HabitDateException
+import com.example.dayseed.data.HabitDateExceptionKind
+import com.example.dayseed.data.HabitDayOutcome
 import com.example.dayseed.data.HabitEntry
 import com.example.dayseed.data.HabitLifecycleState
+import com.example.dayseed.data.HabitVersion
+import com.example.dayseed.data.JournalDraft
 import com.example.dayseed.data.JournalEntry
 import com.example.dayseed.data.ProgressBand
 import com.example.dayseed.data.ScheduleKind
@@ -21,7 +28,10 @@ import com.example.dayseed.data.TrackingMode
 import com.example.dayseed.data.WeekdayMask
 import com.example.dayseed.ui.screens.SettingsSupport
 import com.example.dayseed.ui.screens.computeRecordSessionDailyPreviewTotal
+import com.example.dayseed.ui.screens.computeTendedTodayCount
 import com.example.dayseed.ui.screens.defaultRecordSessionValueText
+import com.example.dayseed.ui.screens.isScheduledHabitTendedToday
+import com.example.dayseed.ui.screens.resolveRecordSessionGoverningVersion
 import com.example.dayseed.ui.screens.weeklyTargetSemanticsExplanation
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -723,7 +733,7 @@ class Phase2ImplementationTest {
     }
 
     @Test
-    fun t2_34_t2_37_permanentHabitDeletionPreservesJournalAndSupports8SecondUndoAndExpiry() {
+    fun t2_34_t2_37_permanentHabitDeletionPreservesJournalAndInvalidatesOnlyDeletedHabitUndoToken() {
         val habit = Habit(
             habitId = "h_del_perm",
             name = "Deep Work",
@@ -735,6 +745,7 @@ class Phase2ImplementationTest {
         )
         repository.saveHabitSync(habit, effectiveDateOverride = LocalDate.of(2026, 3, 13))
         repository.logHabitEntrySync(habit.habitId, LocalDate.of(2026, 3, 18), 60, "Focused block")
+        repository.saveHabitDateNoteSync(habit.habitId, LocalDate.of(2026, 3, 18), "Deep focus note")
 
         val journal = JournalEntry(
             journalEntryId = "j_linked_1",
@@ -745,30 +756,38 @@ class Phase2ImplementationTest {
             linkedHabitId = habit.habitId
         )
         repository.saveJournalEntrySync(journal)
+        repository.saveJournalDraftSync(
+            draftId = "d_linked_1",
+            localDate = LocalDate.of(2026, 3, 18),
+            sourceContext = "JOURNAL_COMPOSER",
+            title = "Draft title",
+            body = "Draft body linked to habit",
+            linkedHabitId = habit.habitId
+        )
 
-        // Permanently delete habit
-        val undoToken = repository.deleteHabitWithUndoSync(habit.habitId)
-        assertNotNull(undoToken)
+        // Active undo token currently belongs to habit's date note / session
+        val activeTokenBeforeDelete = repository.activeUndoToken.value
+        assertNotNull(activeTokenBeforeDelete)
+
+        // Permanently delete habit via ViewModel -> must NOT create a HABIT_DELETION UndoToken or promise Undo
+        viewModel.deleteHabit(habit.habitId)
         assertTrue(repository.loadHabitsSync().none { it.habitId == habit.habitId })
+        assertTrue(repository.habitVersions.value.none { it.habitId == habit.habitId })
+        assertTrue(repository.habitEntries.value.none { it.habitId == habit.habitId })
+        assertTrue(repository.habitDateNotes.value.none { it.habitId == habit.habitId })
+        assertNull(
+            "Permanent habit deletion must invalidate any pending UndoToken belonging to the deleted habit and must not publish a HABIT_DELETION UndoToken",
+            viewModel.activeUndoToken.value
+        )
+        assertFalse(repository.executeUndoSync(activeTokenBeforeDelete!!))
+        assertEquals("Habit permanently deleted", viewModel.userMessage.value)
 
-        // Journal entry must still exist with linkedHabitId = null
+        // Journal entry and draft must still exist with linkedHabitId = null
         val journalAfterDelete = repository.loadJournalEntriesSync().single { it.journalEntryId == "j_linked_1" }
         assertNull(journalAfterDelete.linkedHabitId)
-
-        // Advance clock by 4 seconds (within 8s window) and Undo
-        testClock.currentUtcMs += 4_000L
-        assertTrue(repository.executeUndoSync(undoToken!!))
-
-        // Habit, entries, and journal link are all restored
-        assertTrue(repository.loadHabitsSync().any { it.habitId == habit.habitId })
-        assertEquals(60, repository.loadHabitSummariesSync()[habit.habitId]!!.todayTotalUnits.toInt())
-        val journalAfterUndo = repository.loadJournalEntriesSync().single { it.journalEntryId == "j_linked_1" }
-        assertEquals(habit.habitId, journalAfterUndo.linkedHabitId)
-
-        // Delete again and advance past 8-second window -> Undo must fail
-        val expiredToken = repository.deleteHabitWithUndoSync(habit.habitId)!!
-        testClock.currentUtcMs += 8_001L
-        assertFalse(repository.executeUndoSync(expiredToken))
+        assertEquals("Completed my deep work block calmly.", journalAfterDelete.body)
+        val draftAfterDelete = repository.journalDrafts.value.single { it.draftId == "d_linked_1" }
+        assertNull(draftAfterDelete.linkedHabitId)
     }
 
     // =========================================================================
@@ -1359,8 +1378,141 @@ class Phase2ImplementationTest {
     }
 
     @Test
-    fun t2_c05_auditPolishF01ToF06AndDuplicateScreenRemoval() {
-        // 1. Duplicate AddEditHabitDialog screen class is removed from the codebase
+    fun t2_c05_f01_todayHabitCardSimplificationAndTendedTodayCounter() {
+        val today = LocalDate.of(2026, 3, 18) // Wednesday
+        val createdMs = LocalDate.of(2026, 3, 16).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
+
+        // 1. Daily check-off habit (scheduled today)
+        val hOutcome = Habit(
+            habitId = "h_f01_outcome",
+            name = "Morning Stretch",
+            trackingMode = TrackingMode.COMPLETION_ONLY,
+            targetPeriod = TargetPeriod.DAY,
+            scheduleKind = ScheduleKind.DAILY,
+            createdAtUtcMs = createdMs
+        )
+        // 2. Daily quantity habit (scheduled today)
+        val hQuantity = Habit(
+            habitId = "h_f01_qty",
+            name = "Drink Water",
+            trackingMode = TrackingMode.QUANTITY,
+            unitCode = "glasses",
+            targetPeriod = TargetPeriod.DAY,
+            targetValue = 8,
+            scheduleKind = ScheduleKind.DAILY,
+            createdAtUtcMs = createdMs
+        )
+        // 3. Daily duration habit taking a REST_DAY today (scheduled today)
+        val hRest = Habit(
+            habitId = "h_f01_rest",
+            name = "Evening Run",
+            trackingMode = TrackingMode.DURATION,
+            unitCode = "min",
+            targetPeriod = TargetPeriod.DAY,
+            targetValue = 30,
+            scheduleKind = ScheduleKind.DAILY,
+            createdAtUtcMs = createdMs
+        )
+        // 4. Flexible weekly habit with preferred Monday/Wednesday/Friday whose weekly target (2 sessions)
+        // was already met on Monday & Tuesday — still scheduled today (Wednesday is preferred), 0 entries today
+        val hWeeklySatisfied = Habit(
+            habitId = "h_f01_weekly_sat",
+            name = "Strength Training",
+            trackingMode = TrackingMode.QUANTITY,
+            unitCode = "sessions",
+            targetPeriod = TargetPeriod.WEEK,
+            targetValue = 2,
+            scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET,
+            preferredWeekdaysMask = WeekdayMask.toMask(setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY)),
+            scheduleDays = setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY),
+            createdAtUtcMs = createdMs
+        )
+        // 5. Unscheduled weekday habit (Tuesday/Thursday only -> not scheduled on Wednesday)
+        val hUnscheduled = Habit(
+            habitId = "h_f01_unsched",
+            name = "Tuesday Piano",
+            trackingMode = TrackingMode.DURATION,
+            unitCode = "min",
+            targetPeriod = TargetPeriod.DAY,
+            targetValue = 20,
+            scheduleKind = ScheduleKind.SELECTED_WEEKDAYS,
+            scheduledWeekdaysMask = WeekdayMask.toMask(setOf(DayOfWeek.TUESDAY, DayOfWeek.THURSDAY)),
+            scheduleDays = setOf(DayOfWeek.TUESDAY, DayOfWeek.THURSDAY),
+            createdAtUtcMs = createdMs
+        )
+
+        listOf(hOutcome, hQuantity, hRest, hWeeklySatisfied, hUnscheduled).forEach {
+            repository.saveHabitSync(it, effectiveDateOverride = LocalDate.of(2026, 3, 16))
+        }
+
+        // Satisfy hWeeklySatisfied on Monday 2026-03-16 and Tuesday 2026-03-17
+        repository.logHabitEntrySync(hWeeklySatisfied.habitId, LocalDate.of(2026, 3, 16), 1, null)
+        repository.logHabitEntrySync(hWeeklySatisfied.habitId, LocalDate.of(2026, 3, 17), 1, null)
+        repository.recomputeAllStreakRunsAndSummariesSync()
+
+        val summariesInitial = repository.loadHabitSummariesSync()
+        val scheduledHabits = repository.loadHabitsSync().filter { summariesInitial[it.habitId]?.isScheduledToday == true }
+        assertEquals(4, scheduledHabits.size)
+        assertFalse(scheduledHabits.any { it.habitId == hUnscheduled.habitId })
+
+        // Initially on Wednesday: only hWeeklySatisfied is already tended (1 of 4)
+        assertEquals(
+            1,
+            computeTendedTodayCount(
+                scheduledTodayHabits = scheduledHabits,
+                habitSummaries = summariesInitial,
+                todayOutcomes = emptyList(),
+                todayEntries = emptyList(),
+                todayExceptions = emptyList()
+            )
+        )
+
+        // Log explicit zero on hQuantity -> does NOT count as tended (still 1 of 4)
+        repository.logHabitEntrySync(hQuantity.habitId, today, 0, "Honest zero")
+        // Also log bonus activity on unscheduled habit -> must NOT inflate scheduled tended count!
+        repository.logHabitEntrySync(hUnscheduled.habitId, today, 20, "Bonus practice")
+        val todayStr = today.toString()
+        assertEquals(
+            1,
+            computeTendedTodayCount(
+                scheduledTodayHabits = scheduledHabits,
+                habitSummaries = repository.loadHabitSummariesSync(),
+                todayOutcomes = repository.habitDayOutcomes.value.filter { it.localDate == todayStr },
+                todayEntries = repository.habitEntries.value.filter { it.localDate == todayStr },
+                todayExceptions = repository.habitDateExceptions.value.filter { it.localDate == todayStr }
+            )
+        )
+
+        // Log outcome on hOutcome (2 of 4), two positive entries on hQuantity (3 of 4, counted once), and REST_DAY on hRest (4 of 4)
+        repository.logHabitDayOutcomeSync(hOutcome.habitId, today, "COMPLETED", null)
+        repository.logHabitEntrySync(hQuantity.habitId, today, 3, "Morning water")
+        repository.logHabitEntrySync(hQuantity.habitId, today, 5, "Afternoon water")
+        repository.setRestDayExceptionSync(hRest.habitId, today, "Resting sore knee")
+
+        val summariesFinal = repository.loadHabitSummariesSync()
+        val finalOutcomes = repository.habitDayOutcomes.value.filter { it.localDate == todayStr }
+        val finalEntries = repository.habitEntries.value.filter { it.localDate == todayStr }
+        val finalExceptions = repository.habitDateExceptions.value.filter { it.localDate == todayStr }
+
+        assertTrue(isScheduledHabitTendedToday(hOutcome, summariesFinal[hOutcome.habitId], finalOutcomes, finalEntries, finalExceptions))
+        assertTrue(isScheduledHabitTendedToday(hQuantity, summariesFinal[hQuantity.habitId], finalOutcomes, finalEntries, finalExceptions))
+        assertTrue(isScheduledHabitTendedToday(hRest, summariesFinal[hRest.habitId], finalOutcomes, finalEntries, finalExceptions))
+        assertTrue(isScheduledHabitTendedToday(hWeeklySatisfied, summariesFinal[hWeeklySatisfied.habitId], finalOutcomes, finalEntries, finalExceptions))
+        assertEquals(
+            4,
+            computeTendedTodayCount(
+                scheduledTodayHabits = scheduledHabits,
+                habitSummaries = summariesFinal,
+                todayOutcomes = finalOutcomes,
+                todayEntries = finalEntries,
+                todayExceptions = finalExceptions
+            )
+        )
+    }
+
+    @Test
+    fun t2_c06_f02_singleHabitEditorAndPermanentDeletionSelectiveUndoTokenInvalidation() {
+        // 1. Duplicate AddEditHabitDialogKt class must not exist on classpath
         try {
             Class.forName("com.example.dayseed.ui.screens.AddEditHabitDialogKt")
             fail("Duplicate AddEditHabitDialogKt should have been removed")
@@ -1368,91 +1520,320 @@ class Phase2ImplementationTest {
             // Expected
         }
 
-        // 2. F-03: RecordSessionSheet default value & daily preview total for weekly session-count habits
+        val today = testClock.todayLocal()
+        val habitA = Habit(
+            habitId = "h_f02_a",
+            name = "Habit A",
+            trackingMode = TrackingMode.QUANTITY,
+            unitCode = "pages",
+            targetPeriod = TargetPeriod.DAY,
+            targetValue = 10,
+            createdAtUtcMs = testClock.nowUtcMs() - 86_400_000L * 3
+        )
+        val habitB = Habit(
+            habitId = "h_f02_b",
+            name = "Habit B",
+            trackingMode = TrackingMode.QUANTITY,
+            unitCode = "pages",
+            targetPeriod = TargetPeriod.DAY,
+            targetValue = 20,
+            createdAtUtcMs = testClock.nowUtcMs() - 86_400_000L * 3
+        )
+        repository.saveHabitSync(habitA, effectiveDateOverride = LocalDate.of(2026, 3, 15))
+        repository.saveHabitSync(habitB, effectiveDateOverride = LocalDate.of(2026, 3, 15))
+
+        // Case 1: Active UndoToken belongs to a session of habitA -> deleting habitA invalidates that UndoToken
+        val (_, tokenForA) = repository.logHabitEntrySync(habitA.habitId, today, 5, "Session on A")
+        assertEquals(tokenForA.tokenId, viewModel.activeUndoToken.value?.tokenId)
+
+        viewModel.selectTab(NavTab.TODAY)
+        viewModel.openHabitDetail(habitA.habitId, today)
+        viewModel.openEditHabit(habitA)
+        viewModel.deleteHabit(habitA.habitId)
+
+        assertNull("UndoToken belonging to deleted habitA must be invalidated", viewModel.activeUndoToken.value)
+        assertFalse(repository.executeUndoSync(tokenForA))
+        assertNull(viewModel.currentSecondaryRoute.value)
+        assertEquals(NavTab.TODAY, viewModel.selectedTab.value)
+        assertEquals("Habit permanently deleted", viewModel.userMessage.value)
+
+        // Case 2: Active UndoToken belongs to habitB -> deleting a third habitC must NOT invalidate habitB's UndoToken
+        val habitC = Habit(
+            habitId = "h_f02_c",
+            name = "Habit C",
+            trackingMode = TrackingMode.COMPLETION_ONLY,
+            targetPeriod = TargetPeriod.DAY,
+            createdAtUtcMs = testClock.nowUtcMs() - 86_400_000L * 3
+        )
+        repository.saveHabitSync(habitC, effectiveDateOverride = LocalDate.of(2026, 3, 15))
+        val (_, tokenForB) = repository.logHabitEntrySync(habitB.habitId, today, 10, "Session on B")
+        assertEquals(tokenForB.tokenId, viewModel.activeUndoToken.value?.tokenId)
+
+        viewModel.deleteHabit(habitC.habitId)
+        assertFalse(repository.loadHabitsSync().any { it.habitId == habitC.habitId })
+        assertEquals(
+            "Unrelated pending UndoToken belonging to habitB must remain active when habitC is deleted",
+            tokenForB.tokenId,
+            viewModel.activeUndoToken.value?.tokenId
+        )
+        assertTrue(repository.executeUndoSync(tokenForB))
+        assertTrue(repository.getEntriesForHabitOnDate(habitB.habitId, today).isEmpty())
+    }
+
+    @Test
+    fun t2_c07_f03_recordSessionGoverningVersionResolutionDefaultsPreviewsAndSaveRouting() {
+        // 1. Daily habit edited on Wednesday 2026-03-18:
+        //    v1 (effective 2026-03-10): QUANTITY, 10 pages/day
+        //    v2 (effective 2026-03-18): DURATION, 25 min/day
+        val dailyHabitId = "h_f03_daily"
+        val dailyV1 = HabitVersion(
+            versionId = "v1_daily",
+            habitId = dailyHabitId,
+            effectiveFromLocalDate = "2026-03-10",
+            name = "Daily Study v1",
+            trackingMode = TrackingMode.QUANTITY,
+            unitCode = "pages",
+            targetPeriod = TargetPeriod.DAY,
+            targetValue = 10,
+            scheduleKind = ScheduleKind.DAILY,
+            createdAtUtcMs = 1000L
+        )
+        val dailyV2 = HabitVersion(
+            versionId = "v2_daily",
+            habitId = dailyHabitId,
+            effectiveFromLocalDate = "2026-03-18",
+            name = "Daily Study v2",
+            trackingMode = TrackingMode.DURATION,
+            unitCode = "min",
+            targetPeriod = TargetPeriod.DAY,
+            targetValue = 25,
+            scheduleKind = ScheduleKind.DAILY,
+            createdAtUtcMs = 2000L
+        )
+        val dailyVersions = listOf(dailyV1, dailyV2)
+        val weekHistory = repository.weekStartHistory.value
+
+        val resolvedBeforeChange = resolveRecordSessionGoverningVersion(
+            versions = dailyVersions,
+            weekStartHistory = weekHistory,
+            evaluationDate = LocalDate.of(2026, 3, 17),
+            fallbackVersion = dailyV2
+        )
+        assertEquals("v1_daily", resolvedBeforeChange.versionId)
+        assertEquals("pages", resolvedBeforeChange.unitCode)
+        assertEquals("10", defaultRecordSessionValueText(null, resolvedBeforeChange.trackingMode, resolvedBeforeChange.targetPeriod, resolvedBeforeChange.unitCode, resolvedBeforeChange.targetValue))
+
+        val resolvedOnOrAfterChange = resolveRecordSessionGoverningVersion(
+            versions = dailyVersions,
+            weekStartHistory = weekHistory,
+            evaluationDate = LocalDate.of(2026, 3, 18),
+            fallbackVersion = dailyV2
+        )
+        assertEquals("v2_daily", resolvedOnOrAfterChange.versionId)
+        assertEquals("min", resolvedOnOrAfterChange.unitCode)
+        assertEquals("25", defaultRecordSessionValueText(null, resolvedOnOrAfterChange.trackingMode, resolvedOnOrAfterChange.targetPeriod, resolvedOnOrAfterChange.unitCode, resolvedOnOrAfterChange.targetValue))
+
+        // 2. Weekly habit edited mid-week (U-12 Option B):
+        //    Week 1 (2026-03-09..2026-03-15): 2 sessions/week
+        //    Week 2 start (2026-03-16): 3 sessions/week
+        //    Mid-week edit on Wednesday 2026-03-18: 50 pages/week (frozen during 2026-03-16..2026-03-22, applies 2026-03-23)
+        val weeklyHabitId = "h_f03_weekly"
+        val weeklyV1 = HabitVersion(
+            versionId = "v1_weekly",
+            habitId = weeklyHabitId,
+            effectiveFromLocalDate = "2026-03-09",
+            name = "Weekly Reading",
+            trackingMode = TrackingMode.QUANTITY,
+            unitCode = "sessions",
+            targetPeriod = TargetPeriod.WEEK,
+            targetValue = 2,
+            scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET,
+            createdAtUtcMs = 1000L
+        )
+        val weeklyV2 = HabitVersion(
+            versionId = "v2_weekly",
+            habitId = weeklyHabitId,
+            effectiveFromLocalDate = "2026-03-16",
+            name = "Weekly Reading",
+            trackingMode = TrackingMode.QUANTITY,
+            unitCode = "sessions",
+            targetPeriod = TargetPeriod.WEEK,
+            targetValue = 3,
+            scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET,
+            createdAtUtcMs = 2000L
+        )
+        val weeklyV3MidWeekPages = HabitVersion(
+            versionId = "v3_weekly_midweek",
+            habitId = weeklyHabitId,
+            effectiveFromLocalDate = "2026-03-18",
+            name = "Weekly Reading Pages",
+            trackingMode = TrackingMode.QUANTITY,
+            unitCode = "pages",
+            targetPeriod = TargetPeriod.WEEK,
+            targetValue = 50,
+            scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET,
+            createdAtUtcMs = 3000L
+        )
+        val weeklyVersions = listOf(weeklyV1, weeklyV2, weeklyV3MidWeekPages)
+
+        // Earlier week (2026-03-12) -> resolves v1_weekly (2 sessions/week)
+        val resolvedEarlierWeek = resolveRecordSessionGoverningVersion(
+            versions = weeklyVersions,
+            weekStartHistory = weekHistory,
+            evaluationDate = LocalDate.of(2026, 3, 12),
+            fallbackVersion = weeklyV3MidWeekPages
+        )
+        assertEquals("v1_weekly", resolvedEarlierWeek.versionId)
+        assertEquals(2, resolvedEarlierWeek.targetValue)
+        assertEquals("sessions", resolvedEarlierWeek.unitCode)
+
+        // Current week after mid-week edit (Thursday 2026-03-19) -> frozen to v2_weekly (3 sessions/week), NOT v3_weekly_midweek (50 pages/week)
+        val resolvedCurrentWeekFrozen = resolveRecordSessionGoverningVersion(
+            versions = weeklyVersions,
+            weekStartHistory = weekHistory,
+            evaluationDate = LocalDate.of(2026, 3, 19),
+            fallbackVersion = weeklyV3MidWeekPages
+        )
+        assertEquals("v2_weekly", resolvedCurrentWeekFrozen.versionId)
+        assertEquals("sessions", resolvedCurrentWeekFrozen.unitCode)
+        assertEquals(3, resolvedCurrentWeekFrozen.targetValue)
         assertEquals(
             "1",
             defaultRecordSessionValueText(
                 existingEntry = null,
-                effectiveMode = TrackingMode.QUANTITY,
-                effectiveTargetPeriod = TargetPeriod.WEEK,
-                effectiveUnitCode = "sessions",
-                effectiveTargetValue = 3
+                effectiveMode = resolvedCurrentWeekFrozen.trackingMode,
+                effectiveTargetPeriod = resolvedCurrentWeekFrozen.targetPeriod,
+                effectiveUnitCode = resolvedCurrentWeekFrozen.unitCode,
+                effectiveTargetValue = resolvedCurrentWeekFrozen.targetValue
             )
         )
         assertEquals(
-            "25",
+            2,
+            computeRecordSessionDailyPreviewTotal(
+                existingEntriesOnDate = listOf(
+                    HabitEntry("e1", weeklyHabitId, "2026-03-19", 5, null, 100L, 100L, "k1")
+                ),
+                previewValueUnits = 10,
+                effectiveMode = resolvedCurrentWeekFrozen.trackingMode,
+                effectiveTargetPeriod = resolvedCurrentWeekFrozen.targetPeriod,
+                effectiveUnitCode = resolvedCurrentWeekFrozen.unitCode
+            )
+        )
+
+        // Next week (Monday 2026-03-23) -> resolves v3_weekly_midweek (50 pages/week)
+        val resolvedNextWeek = resolveRecordSessionGoverningVersion(
+            versions = weeklyVersions,
+            weekStartHistory = weekHistory,
+            evaluationDate = LocalDate.of(2026, 3, 23),
+            fallbackVersion = weeklyV3MidWeekPages
+        )
+        assertEquals("v3_weekly_midweek", resolvedNextWeek.versionId)
+        assertEquals("pages", resolvedNextWeek.unitCode)
+        assertEquals(50, resolvedNextWeek.targetValue)
+        assertEquals(
+            "50",
             defaultRecordSessionValueText(
                 existingEntry = null,
-                effectiveMode = TrackingMode.QUANTITY,
-                effectiveTargetPeriod = TargetPeriod.WEEK,
-                effectiveUnitCode = "pages",
-                effectiveTargetValue = 25
+                effectiveMode = resolvedNextWeek.trackingMode,
+                effectiveTargetPeriod = resolvedNextWeek.targetPeriod,
+                effectiveUnitCode = resolvedNextWeek.unitCode,
+                effectiveTargetValue = resolvedNextWeek.targetValue
             )
         )
 
-        val existingSessionsToday = listOf(
-            HabitEntry(
-                entryId = "e_s1",
-                habitId = "h_sess",
-                localDate = "2026-03-18",
-                valueUnits = 1,
-                entryNote = "Morning session",
-                createdAtUtcMs = 1000L,
-                updatedAtUtcMs = 1000L,
-                idempotencyKey = "k_s1"
-            ),
-            HabitEntry(
-                entryId = "e_s2",
-                habitId = "h_sess",
-                localDate = "2026-03-18",
-                valueUnits = 5,
-                entryNote = "Afternoon session with higher numeric input",
-                createdAtUtcMs = 2000L,
-                updatedAtUtcMs = 2000L,
-                idempotencyKey = "k_s2"
-            )
+        // 3. Save routing uses the governing version's trackingMode for the selected date when Habit snapshot differs
+        val evolvingHabit = Habit(
+            habitId = "h_f03_evolving",
+            name = "Mindful Check",
+            trackingMode = TrackingMode.EFFORT_AWARE,
+            targetPeriod = TargetPeriod.DAY,
+            scheduleKind = ScheduleKind.DAILY,
+            createdAtUtcMs = LocalDate.of(2026, 3, 10).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
         )
-        // New positive session adds 1 session to the 2 existing sessions -> 3 sessions today
+        repository.saveHabitSync(
+            evolvingHabit,
+            effectiveDateOverride = LocalDate.of(2026, 3, 10),
+            allowLegacyEffortModeCreation = true
+        )
+        // Update today (2026-03-18) to COMPLETION_ONLY
+        repository.saveHabitSync(
+            evolvingHabit.copy(trackingMode = TrackingMode.COMPLETION_ONLY),
+            effectiveDateOverride = LocalDate.of(2026, 3, 18)
+        )
+        val currentSnapshot = repository.loadHabitsSync().single { it.habitId == evolvingHabit.habitId }
+        assertEquals(TrackingMode.COMPLETION_ONLY, currentSnapshot.trackingMode)
+
+        // Logging for 2026-03-15 (when EFFORT_AWARE governed) via viewModel.logHabit must record EFFORT_LOGGED
+        viewModel.logHabit(
+            habit = currentSnapshot,
+            date = LocalDate.of(2026, 3, 15),
+            outcome = DailyOutcome.COMPLETED,
+            effortLevel = EffortLevel.TINY,
+            note = "Backdated tiny effort"
+        )
+        val outcomeOnMar15 = repository.habitDayOutcomes.value.single {
+            it.habitId == evolvingHabit.habitId && it.localDate == "2026-03-15"
+        }
+        assertEquals("EFFORT_LOGGED", outcomeOnMar15.outcomeKind)
+        assertEquals("TINY", outcomeOnMar15.effortLevel)
+    }
+
+    @Test
+    fun t2_c08_f04_f05_emptyPreferredWeekdaysPersistenceAndStrictReminderTimeValidation() {
+        // 1. F-04: Save a flexible weekly habit with preferred weekdays, then clear all preferred weekdays and reload
+        val flexWithPreferred = Habit(
+            habitId = "h_f04_pref",
+            name = "Weekly Swim",
+            trackingMode = TrackingMode.QUANTITY,
+            unitCode = "sessions",
+            targetPeriod = TargetPeriod.WEEK,
+            targetValue = 3,
+            scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET,
+            preferredWeekdaysMask = WeekdayMask.toMask(setOf(DayOfWeek.MONDAY, DayOfWeek.THURSDAY)),
+            scheduleDays = setOf(DayOfWeek.MONDAY, DayOfWeek.THURSDAY),
+            createdAtUtcMs = testClock.nowUtcMs()
+        )
+        assertNotNull(viewModel.saveHabit(flexWithPreferred))
+        val savedWithPref = repository.loadHabitsSync().single { it.habitId == "h_f04_pref" }
         assertEquals(
-            3,
-            computeRecordSessionDailyPreviewTotal(
-                existingEntriesOnDate = existingSessionsToday,
-                previewValueUnits = 1,
-                effectiveMode = TrackingMode.QUANTITY,
-                effectiveTargetPeriod = TargetPeriod.WEEK,
-                effectiveUnitCode = "sessions"
-            )
+            WeekdayMask.toMask(setOf(DayOfWeek.MONDAY, DayOfWeek.THURSDAY)),
+            savedWithPref.preferredWeekdaysMask
         )
-        // Editing existing session e_s2 (so existingEntriesOnDate excludes e_s2) to 0 reduces session count from 2 to 1
-        assertEquals(
-            1,
-            computeRecordSessionDailyPreviewTotal(
-                existingEntriesOnDate = listOf(existingSessionsToday[0]),
-                previewValueUnits = 0,
-                effectiveMode = TrackingMode.QUANTITY,
-                effectiveTargetPeriod = TargetPeriod.WEEK,
-                effectiveUnitCode = "sessions"
-            )
+        assertEquals(setOf(DayOfWeek.MONDAY, DayOfWeek.THURSDAY), savedWithPref.scheduleDays)
+
+        // Now clear all preferred weekdays (preferredWeekdaysMask = null, scheduleDays = emptySet()) and save
+        val clearedPreferred = savedWithPref.copy(
+            preferredWeekdaysMask = null,
+            scheduleDays = emptySet()
         )
+        assertNotNull(viewModel.saveHabit(clearedPreferred))
 
-        // 3. F-04: Weekly target semantics explanation distinguishes days/week vs sessions/week vs cumulative units
-        val daysExplanation = weeklyTargetSemanticsExplanation(TrackingMode.COMPLETION_ONLY, null)
-        assertTrue(daysExplanation.contains("days/week", ignoreCase = true))
-        val sessionsExplanation = weeklyTargetSemanticsExplanation(TrackingMode.QUANTITY, "sessions")
-        assertTrue(sessionsExplanation.contains("sessions/week", ignoreCase = true))
-        val pagesExplanation = weeklyTargetSemanticsExplanation(TrackingMode.QUANTITY, "pages")
-        assertTrue(pagesExplanation.contains("Weekly target progress accumulates", ignoreCase = true))
+        val reloadedAfterClear = repository.loadHabitsSync().single { it.habitId == "h_f04_pref" }
+        assertNull("Cleared preferred weekdays must persist as preferredWeekdaysMask = null", reloadedAfterClear.preferredWeekdaysMask)
+        assertTrue("Cleared preferred weekdays must reload as emptySet() on scheduleDays", reloadedAfterClear.scheduleDays.isEmpty())
+        assertEquals("Flexible weekly", reloadedAfterClear.formatScheduleSummary())
 
-        // 4. F-05: Reminder time validation (HH:mm format) and clearSaveError()
+        // 2. F-04: Weekly target semantics explanation distinguishes days/week, sessions/week, and cumulative units
+        assertTrue(weeklyTargetSemanticsExplanation(TrackingMode.COMPLETION_ONLY, null).contains("days/week", ignoreCase = true))
+        assertTrue(weeklyTargetSemanticsExplanation(TrackingMode.QUANTITY, "sessions").contains("sessions/week", ignoreCase = true))
+        assertTrue(weeklyTargetSemanticsExplanation(TrackingMode.QUANTITY, "pages").contains("Weekly target progress accumulates", ignoreCase = true))
+
+        // 3. F-05: Strict 24-hour HH:mm validation (00:00..23:59)
+        assertEquals(LocalTime.of(0, 0), SettingsSupport.parseQuietHours("00:00"))
         assertEquals(LocalTime.of(8, 30), SettingsSupport.parseQuietHours("08:30"))
-        assertEquals("08:30", SettingsSupport.formatQuietHours(LocalTime.of(8, 30)))
+        assertEquals(LocalTime.of(23, 59), SettingsSupport.parseQuietHours("23:59"))
+        assertEquals("08:30", SettingsSupport.formatQuietHours(SettingsSupport.parseQuietHours("8:30")!!))
+        assertNull(SettingsSupport.parseQuietHours("9:5"))
+        assertNull(SettingsSupport.parseQuietHours("24:00"))
+        assertNull(SettingsSupport.parseQuietHours("12:60"))
         assertNull(SettingsSupport.parseQuietHours("25:99"))
         assertNull(SettingsSupport.parseQuietHours("8am"))
+        assertNull(SettingsSupport.parseQuietHours(""))
 
-        // Trigger a save error and verify clearSaveError resets both lastSaveError and lastErrorMessage
+        // 4. F-05: Stale save errors clear cleanly via clearSaveError()
         val failed = viewModel.saveHabit(
             Habit(
-                habitId = "h_blank_err",
+                habitId = "h_f05_err",
                 name = "   ",
                 trackingMode = TrackingMode.COMPLETION_ONLY
             )
@@ -1463,13 +1844,63 @@ class Phase2ImplementationTest {
         viewModel.clearSaveError()
         assertNull(viewModel.lastSaveError.value)
         assertNull(viewModel.lastErrorMessage.value)
+    }
 
-        // 5. F-06: openLivingGrove(null) opens LivingGrove with null filter (showing all streaks)
+    @Test
+    fun t2_c09_f06_todayLongestStreakOpensCompleteGroveAndHabitDetailShortcut() {
+        val startDate = LocalDate.of(2026, 3, 10)
+        val createdMs = startDate.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
+        val habit1 = Habit(
+            habitId = "h_f06_1",
+            name = "Morning Walk",
+            trackingMode = TrackingMode.COMPLETION_ONLY,
+            targetPeriod = TargetPeriod.DAY,
+            scheduleKind = ScheduleKind.DAILY,
+            createdAtUtcMs = createdMs
+        )
+        val habit2 = Habit(
+            habitId = "h_f06_2",
+            name = "Evening Read",
+            trackingMode = TrackingMode.COMPLETION_ONLY,
+            targetPeriod = TargetPeriod.DAY,
+            scheduleKind = ScheduleKind.DAILY,
+            createdAtUtcMs = createdMs
+        )
+        repository.saveHabitSync(habit1, effectiveDateOverride = startDate)
+        repository.saveHabitSync(habit2, effectiveDateOverride = startDate)
+
+        // Build 9-day streak on habit1 and 7-day streak on habit2 so both qualify for the Living Grove
+        for (offset in 0..8) {
+            repository.logHabitDayOutcomeSync(habit1.habitId, startDate.plusDays(offset.toLong()), "COMPLETED", null)
+        }
+        for (offset in 2..8) {
+            repository.logHabitDayOutcomeSync(habit2.habitId, startDate.plusDays(offset.toLong()), "COMPLETED", null)
+        }
+        repository.recomputeAllStreakRunsAndSummariesSync()
+
+        val longest = viewModel.selectLongestActiveRun()
+        assertNotNull(longest)
+        assertEquals(habit1.habitId, longest!!.habit.habitId)
+
+        // Primary Today Grove action opens complete Living Grove (selectedHabitId = null)
         viewModel.selectTab(NavTab.TODAY)
         viewModel.openLivingGrove(null)
         val groveRoute = viewModel.currentSecondaryRoute.value
         assertTrue(groveRoute is SecondaryRoute.LivingGrove && groveRoute.selectedHabitId == null)
-        viewModel.navigateBack()
+
+        // Back returns to Today
+        assertTrue(viewModel.navigateBack())
+        assertNull(viewModel.currentSecondaryRoute.value)
+        assertEquals(NavTab.TODAY, viewModel.selectedTab.value)
+
+        // Secondary Habit shortcut opens lead habit's HabitDetail
+        viewModel.openHabitDetail(longest.habit.habitId, testClock.todayLocal())
+        val detailRoute = viewModel.currentSecondaryRoute.value
+        assertTrue(detailRoute is SecondaryRoute.HabitDetail && detailRoute.habitId == habit1.habitId)
+
+        assertTrue(viewModel.navigateBack())
+        assertNull(viewModel.currentSecondaryRoute.value)
+        assertEquals(NavTab.TODAY, viewModel.selectedTab.value)
     }
 }
 

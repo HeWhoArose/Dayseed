@@ -147,15 +147,14 @@ This document is a test plan, not evidence that any test has passed. Stage C ind
 
 **Evidence:** Sanitised backup metadata, before/after screenshots, restore outcome, and commit/build details. Never share backup passwords or private payload contents.
 
-### P1-H09 — Habit deletion Undo
+### P1-H09 — Permanent habit deletion and selective Undo-token invalidation
 
 **Procedure:**
-1. Create a synthetic habit with versions, entries, date notes, REST_DAY/streak history, and any supported linked records.
-2. Permanently delete it through the UI.
-3. Use the offered Undo within the documented eight-second window.
-4. Repeat after expiry, after consuming the token, and with a deliberately conflicting/reused identity in a disposable fixture where the UI supports it.
+1. Create a synthetic habit with versions, entries, date notes, REST_DAY/streak history, and a linked Journal entry.
+2. Delete a session on a second habit so an 8-second session `Undo` snackbar is active, or delete a session on the habit being deleted.
+3. Permanently delete the first habit through `Habit Detail` or `Edit Habit` after confirming the permanent deletion dialog.
 
-**Expected:** Successful Undo restores the complete supported habit payload atomically. Expired, consumed, or colliding Undo is rejected without partial restoration or overwriting newer data.
+**Expected:** Permanent habit deletion requires explicit confirmation, removes the habit and its tracking history permanently without offering a habit-deletion Undo snackbar, preserves the independent Journal entry text (setting `linked_habit_id = null`), invalidates any pending session Undo token belonging to the deleted habit, and leaves any pending session Undo token belonging to another habit intact.
 
 **Dependency:** Phase 2 lifecycle/detail UI.
 
@@ -261,17 +260,17 @@ All Phase 2 human/device cases below are prepared for the consolidated human/dev
 - **Procedure:**
   1. Create daily and weekly habits with active streaks.
   2. Inspect the `Today` longest active streak indicator and verify explicit unit labels (`days` vs `weeks`).
-  3. Tap the indicator to open `Living Grove`, filter by active/growing/dormant states, and tap a tree to open `Habit Detail`.
-- **Expected:** The indicator never shows a unitless mixed-cadence number, and `Living Grove` displays active saplings (`1–6d`), permanent Grove trees (`>= 7d`), and dormant/completed trees clearly.
+  3. Tap the indicator card or `Grove` button to open the complete `Living Grove` (all habits), and tap the secondary `Habit` button (`today_longest_streak_habit_btn`) to open the lead habit's `Habit Detail`.
+- **Expected:** The indicator never shows a unitless mixed-cadence number; tapping the card or `Grove` button opens the complete `Living Grove` across all habits (`selectedHabitId = null`), while the secondary `Habit` button opens the lead habit's `Habit Detail`.
 
-### P2-H09 — Pause, resume, complete, archive, and permanently delete habits (with 8s Undo)
+### P2-H09 — Pause, resume, complete, archive, and permanently delete habits
 
 - **Status:** `NOT RUN`
 - **Procedure:**
   1. In `Habit Detail`, test `Pause`, `Resume`, `Mark as Completed`, and `Archive`.
   2. Filter by each lifecycle state in the `Habits` directory.
-  3. Permanently delete a habit that has a linked Journal entry, tap `Undo` within 8 seconds, then permanently delete again and let the 8-second window expire.
-- **Expected:** Lifecycle changes preserve Grove history appropriately; permanent deletion requires confirmation, preserves the independent Journal entry text (setting `linked_habit_id = null`), and supports atomic 8-second Undo restoration.
+  3. Permanently delete a habit that has a linked Journal entry and confirm the permanent deletion dialog.
+- **Expected:** Lifecycle changes preserve Grove history appropriately; permanent deletion requires confirmation (`"This action is permanent and cannot be undone."`), preserves the independent Journal entry text (setting `linked_habit_id = null`), does not offer a snackbar Undo action for the permanently deleted habit, and invalidates any pending session Undo token belonging to the deleted habit while preserving unrelated Undo tokens.
 
 ### P2-H10 — Manual habit ordering in `Habits` and `Today`
 
@@ -338,9 +337,9 @@ All Phase 2 human/device cases below are prepared for the consolidated human/dev
 
 ---
 
-## 7. Phase 2 targeted remediation human-intervention cases (Status: `NOT RUN`)
+## 7. Phase 2 targeted and final remediation human-intervention cases (Status: `NOT RUN`)
 
-The following five human/device validation cases cover the Phase 2 targeted remediation items (Corrections A, B, C, and D). None of these cases have been executed on a physical device or interactive emulator session during Stage B (`NOT RUN`).
+The following nine human/device validation cases cover the Phase 2 targeted remediation items (`Corrections A–D`) and final audit remediation items (`F-01` through `F-06`). None of these cases have been executed on a physical device or interactive emulator session during Stage B (`NOT RUN`).
 
 ### P2-C01 — `Habit Detail -> Edit -> Save` single-pop return path and deletion navigation
 
@@ -391,5 +390,41 @@ The following five human/device validation cases cover the Phase 2 targeted reme
   3. Complete the 3rd session so weekly progress reaches `3 / 3` (`Goal met`), then view `Today` on a non-preferred weekday (`Thu`) and on a preferred weekday (`Fri`).
   4. Expand `"Not scheduled today"` on `Thu` and log a bonus 4th session.
 - **Expected:** Before reaching `3 / 3`, the habit appears under `"Scheduled today"` on every day of the week (preferred and non-preferred). After reaching `3 / 3`, it moves to `"Not scheduled today"` on non-preferred days (`Thu`), remains under `"Scheduled today"` on preferred days (`Fri`), and still permits bonus session logging (`4 / 3 sessions`, `133%`, `Extra`).
+
+### P2-C06 — Simplified `Today` habit cards and `Tended today` counter (`F-01`)
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. On `Today`, inspect scheduled habit cards across `Simple check-off`, `Quantity`, and `Duration` modes.
+  2. Log a positive session on one habit, take a rest day on a second habit, record an explicit `0` on a third habit, and satisfy a flexible weekly habit's target earlier in the week.
+  3. Inspect the `Tended today` counter (`today_tended_count_text`) and the compact session count summary (`habit_today_sessions_summary_<habitId>`).
+- **Expected:** `Today` habit cards do not display a 3-dot lifecycle/edit menu, inline custom amount field, inline date-note editor, or individual session edit/delete rows; tapping the card header opens `Habit Detail` and tapping `Record` opens `Record Session` for a new entry. The `Tended today` counter counts the positive-entry habit, the `REST_DAY` habit, and the already-satisfied flexible weekly habit (at most once per scheduled habit), and excludes the explicit-zero-only habit.
+
+### P2-C07 — `Record Session` governing-version resolution across historical dates and mid-week frozen weekly configs (`F-03`)
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Edit a daily habit's target or unit effective today, then open `Record Session` and switch the selected date to an earlier date governed by the prior version.
+  2. Edit a weekly habit's unit or tracking mode mid-week (deferred to the next week boundary under `U-12 Option B`), then open `Record Session` for a date in the current week.
+- **Expected:** `Record Session` resolves the effective-date `HabitVersion` for daily habits and the frozen start-of-week `HabitVersion` for weekly habits, updating the header subtitle, unit label, default new-session value (`1` for weekly `"sessions"` habits), quick chips, and daily/weekly preview totals accordingly.
+
+### P2-C08 — Clear preferred weekdays, weekly semantics explanation, and strict `HH:mm` reminder time validation (`F-04`, `F-05`)
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Open `Create/Edit Habit`, select `Per week (flexible)` (`FLEXIBLE_WEEKLY_TARGET`), select two preferred weekdays, then tap `Clear` (`habit_clear_preferred_weekdays_btn`) or deselect all weekdays and save.
+  2. Reopen `Edit Habit` for that habit and inspect the preferred weekday chips and the weekly target semantics explanation (`habit_weekly_semantics_explanation`).
+  3. Enable reminders, enter `9:5` or `24:00`, tap `Save`, then edit any form field and enter `08:30`.
+- **Expected:** Saving with zero preferred weekdays persists `preferredWeekdaysMask = null` and reloads with no weekdays selected. Malformed reminder times (`9:5`, `24:00`, `12:60`) block saving with `habit_reminder_time_error`; editing any field clears stale save errors, and `08:30` saves cleanly.
+
+### P2-C09 — `Today` longest active streak indicator opens complete Living Grove (`F-06`)
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. With two or more habits having active streaks/Grove entries, view `Today`.
+  2. Tap the longest active streak indicator card (`today_longest_streak_indicator`) or `Grove` button (`today_longest_streak_open_grove_btn`).
+  3. Return to `Today` and tap the secondary `Habit` button (`today_longest_streak_habit_btn`).
+- **Expected:** Tapping the indicator card or `Grove` button opens `Living Grove` unfiltered (`selectedHabitId = null`, showing all habits' saplings and trees); tapping the secondary `Habit` button opens `Habit Detail` for the lead streak habit.
+
 
 

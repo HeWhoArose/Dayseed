@@ -481,7 +481,14 @@ class DayseedRepository(
                     val schedDays = when (effective.scheduleKind) {
                         ScheduleKind.DAILY -> DayOfWeek.values().toSet()
                         ScheduleKind.SELECTED_WEEKDAYS -> WeekdayMask.fromMask(effective.scheduledWeekdaysMask ?: WeekdayMask.ALL_DAYS_MASK)
-                        ScheduleKind.FLEXIBLE_WEEKLY_TARGET -> WeekdayMask.fromMask(effective.preferredWeekdaysMask ?: WeekdayMask.ALL_DAYS_MASK)
+                        ScheduleKind.FLEXIBLE_WEEKLY_TARGET -> {
+                            val prefMask = effective.preferredWeekdaysMask
+                            if (prefMask != null && prefMask in 1 until WeekdayMask.ALL_DAYS_MASK) {
+                                WeekdayMask.fromMask(prefMask)
+                            } else {
+                                emptySet()
+                            }
+                        }
                     }
                     list.add(
                         Habit(
@@ -685,7 +692,7 @@ class DayseedRepository(
         val preferredMask: Int? = when (normalizedScheduleKind) {
             ScheduleKind.FLEXIBLE_WEEKLY_TARGET -> {
                 val m = habit.preferredWeekdaysMask ?: habit.scheduledWeekdaysMask ?: WeekdayMask.toMask(habit.scheduleDays)
-                if (m in 1..WeekdayMask.ALL_DAYS_MASK) m else null
+                if (m in 1 until WeekdayMask.ALL_DAYS_MASK) m else null
             }
             else -> null
         }
@@ -818,7 +825,7 @@ class DayseedRepository(
                 currentEffectiveToday!!.targetPeriod == TargetPeriod.WEEK &&
                 normalizedTargetPeriod == TargetPeriod.WEEK &&
                 !isWeeklyUnitOrModeChange &&
-                evalConfigChanged &&
+                currentEffectiveToday!!.targetValue != normalizedTargetValue &&
                 today.isAfter(currentWeekStart) &&
                 policy == null &&
                 effectiveDateOverride == null
@@ -4229,11 +4236,100 @@ class DayseedRepository(
         return token
     }
 
-    fun deleteHabitPermanentlySync(habitId: String): UndoToken? {
-        return deleteHabitWithUndoSync(habitId)
+    private fun doesUndoTokenBelongToHabit(token: UndoToken, habitId: String): Boolean {
+        val payloadHabitId = token.previousPayloadJson?.let { json ->
+            runCatching { JSONObject(json).optString("habit_id", "") }.getOrNull()
+        }.orEmpty()
+        if (payloadHabitId == habitId) {
+            return true
+        }
+        return when (token.entityType) {
+            UndoEntityType.HABIT_ENTRY ->
+                _habitEntries.value.any { it.entryId == token.entityId && it.habitId == habitId }
+            UndoEntityType.HABIT_DAY_OUTCOME ->
+                _habitDayOutcomes.value.any { it.outcomeId == token.entityId && it.habitId == habitId }
+            UndoEntityType.HABIT_DATE_NOTE ->
+                _habitDateNotes.value.any { it.noteId == token.entityId && it.habitId == habitId }
+            UndoEntityType.REST_DAY_EXCEPTION ->
+                _habitDateExceptions.value.any { it.id == token.entityId && it.habitId == habitId }
+            UndoEntityType.HABIT_DELETION ->
+                token.entityId == habitId
+        }
     }
 
-    suspend fun deleteHabit(id: String): UndoToken? = withContext(Dispatchers.IO) {
+    /**
+     * Permanently deletes a habit in a single atomic SQLite transaction (Phase 2 F-02):
+     * - Cancels active/scheduled habit notifications via the durable outbox.
+     * - Unlinks any linked journal entries and drafts (`linked_habit_id = NULL`) while preserving their text.
+     * - Deletes the habit and its cascaded versions, entries, outcomes, date notes, exceptions, and streak runs.
+     * - Invalidates any active [UndoToken] that belongs to a session/record of [habitId], while preserving
+     *   unrelated pending [UndoToken]s belonging to other habits.
+     * - Does NOT call [deleteHabitWithUndoSync] or generate a `HABIT_DELETION` [UndoToken].
+     */
+    fun deleteHabitPermanentlySync(habitId: String): Boolean {
+        _habits.value.find { it.habitId == habitId } ?: return false
+
+        val currentUndo = _activeUndoToken.value
+        if (currentUndo != null && doesUndoTokenBelongToHabit(currentUndo, habitId)) {
+            consumedUndoTokenIds.add(currentUndo.tokenId)
+            _activeUndoToken.value = null
+        }
+
+        val db = dbHelper.writableDatabase
+        val nowMs = clock.nowUtcMs()
+
+        db.beginTransaction()
+        try {
+            val toCancel = mutableListOf<Pair<String, Int>>()
+            db.rawQuery(
+                """
+                SELECT DISTINCT platform_notification_tag, platform_notification_id
+                FROM ${DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES}
+                WHERE habit_id = ? AND platform_notification_tag IS NOT NULL AND platform_notification_id IS NOT NULL
+                """.trimIndent(),
+                arrayOf(habitId)
+            ).use { c ->
+                while (c.moveToNext()) {
+                    toCancel.add(c.getString(0) to c.getValidatedInt(1, "platform_notification_id"))
+                }
+            }
+
+            if (toCancel.isEmpty()) {
+                toCancel.add("dayseed_habit_$habitId" to habitId.hashCode())
+            }
+
+            for ((tag, notifId) in toCancel) {
+                ReminderEngine.enqueueNotificationCancel(db, tag, notifId, nowMs)
+            }
+
+            val unlinkedCv = ContentValues().apply {
+                putNull("linked_habit_id")
+            }
+            db.update(
+                DayseedDatabaseHelper.TABLE_JOURNAL_ENTRIES,
+                unlinkedCv,
+                "linked_habit_id = ?",
+                arrayOf(habitId)
+            )
+            db.update(
+                DayseedDatabaseHelper.TABLE_JOURNAL_DRAFTS,
+                unlinkedCv,
+                "linked_habit_id = ?",
+                arrayOf(habitId)
+            )
+
+            db.delete(DayseedDatabaseHelper.TABLE_HABITS, "habit_id = ?", arrayOf(habitId))
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+
+        processCancelOutboxSync()
+        refreshAllSync()
+        return true
+    }
+
+    suspend fun deleteHabit(id: String): Boolean = withContext(Dispatchers.IO) {
         deleteHabitPermanentlySync(id)
     }
 

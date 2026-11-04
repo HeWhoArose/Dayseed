@@ -61,10 +61,56 @@ import com.example.dayseed.data.ProgressBandClassifier
 import com.example.dayseed.data.StreakAndGroveEngine
 import com.example.dayseed.data.TargetPeriod
 import com.example.dayseed.data.TrackingMode
+import com.example.dayseed.data.WeekBoundaryHelper
+import com.example.dayseed.data.WeekStartPolicyEntry
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+
+/**
+ * Resolves the governing [HabitVersion] for [evaluationDate] in RecordSessionSheet (Phase 2 F-03, U-12 Option B):
+ * 1. Resolves the effective version on [evaluationDate] using `StreakAndGroveEngine.resolveEffectiveVersion`
+ *    (falling back to [fallbackVersion]).
+ * 2. Resolves the week-start policy for [evaluationDate] using `WeekBoundaryHelper.resolveWeekStartPolicyForDate`
+ *    and computes `(weekStart, weekEnd)` via `WeekBoundaryHelper.weekBounds`.
+ * 3. Resolves the version at `weekStart` via `StreakAndGroveEngine.resolveEffectiveVersion(versions, weekStart) ?: dateVersion`.
+ * 4. If either `weekStartVersion.targetPeriod == TargetPeriod.WEEK` or `dateVersion.targetPeriod == TargetPeriod.WEEK`,
+ *    returns `StreakAndGroveEngine.resolveFrozenWeekVersion(versions, weekStart, weekEnd, dateVersion)`.
+ * 5. Otherwise (daily habit), returns `dateVersion`.
+ */
+fun resolveRecordSessionGoverningVersion(
+    versions: List<HabitVersion>,
+    weekStartHistory: List<WeekStartPolicyEntry>,
+    evaluationDate: LocalDate,
+    fallbackVersion: HabitVersion
+): HabitVersion {
+    val nonEmptyVersions = versions.ifEmpty { listOf(fallbackVersion) }
+    val dateVersion = StreakAndGroveEngine.resolveEffectiveVersion(nonEmptyVersions, evaluationDate)
+        ?: fallbackVersion
+    val firstHabitDate = nonEmptyVersions
+        .mapNotNull { runCatching { LocalDate.parse(it.effectiveFromLocalDate) }.getOrNull() }
+        .minOrNull() ?: evaluationDate
+    val weekStartIso = WeekBoundaryHelper.resolveWeekStartPolicyForDate(evaluationDate, weekStartHistory)
+    val (weekStart, _) = WeekBoundaryHelper.weekBounds(evaluationDate, weekStartIso)
+    val anchorDate = if (firstHabitDate.isAfter(weekStart)) firstHabitDate else weekStart
+    val weekStartVersion = StreakAndGroveEngine.resolveEffectiveVersion(nonEmptyVersions, anchorDate)
+        ?: dateVersion
+    return if (
+        weekStartVersion.targetPeriod == TargetPeriod.WEEK ||
+        dateVersion.targetPeriod == TargetPeriod.WEEK
+    ) {
+        StreakAndGroveEngine.resolveFrozenWeekVersion(
+            sortedVersions = nonEmptyVersions,
+            weekStart = weekStart,
+            firstHabitDate = firstHabitDate,
+            fallbackDate = evaluationDate,
+            fallbackVersion = dateVersion
+        ) ?: dateVersion
+    } else {
+        dateVersion
+    }
+}
 
 fun defaultRecordSessionValueText(
     existingEntry: HabitEntry?,
@@ -180,21 +226,50 @@ fun RecordSessionSheet(
     }
 
     val effectiveDate = parsedDate?.takeIf { dateValidationError == null } ?: today
-    val effectiveVersion = remember(habit.habitId, effectiveDate, versionsForHabit) {
-        viewModel.repository.getEffectiveHabitVersion(habit.habitId, effectiveDate)
+    val fallbackVer = remember(habit, earliestEffectiveDate) {
+        habit.currentVersion ?: HabitVersion(
+            versionId = "fallback_${habit.habitId}",
+            habitId = habit.habitId,
+            effectiveFromLocalDate = earliestEffectiveDate.toString(),
+            name = habit.name,
+            description = habit.description,
+            trackingMode = habit.trackingMode,
+            unitCode = habit.unitCode,
+            targetPeriod = habit.targetPeriod,
+            targetValue = habit.targetValue,
+            scheduleKind = habit.scheduleKind,
+            scheduledWeekdaysMask = habit.scheduledWeekdaysMask,
+            preferredWeekdaysMask = habit.preferredWeekdaysMask,
+            lifecycleState = habit.lifecycleState,
+            createdAtUtcMs = habit.createdAtUtcMs
+        )
     }
-    val effectiveMode = (effectiveVersion?.trackingMode ?: habit.trackingMode).canonical()
-    val effectiveTargetPeriod = effectiveVersion?.targetPeriod ?: habit.targetPeriod
-    val effectiveUnitCode = effectiveVersion?.unitCode ?: habit.unitCode
-    val effectiveTargetValue = effectiveVersion?.targetValue ?: habit.targetValue
+    val governingVersion = remember(habit.habitId, effectiveDate, versionsForHabit, weekStartHistory, fallbackVer) {
+        resolveRecordSessionGoverningVersion(
+            versions = versionsForHabit,
+            weekStartHistory = weekStartHistory,
+            evaluationDate = effectiveDate,
+            fallbackVersion = fallbackVer
+        )
+    }
+    val effectiveMode = governingVersion.trackingMode.canonical()
+    val effectiveTargetPeriod = governingVersion.targetPeriod
+    val effectiveUnitCode = governingVersion.unitCode
+    val effectiveTargetValue = governingVersion.targetValue
     val isWeeklyHabit = effectiveTargetPeriod == TargetPeriod.WEEK
-    val isWeeklySessionCount = StreakAndGroveEngine.isWeeklySessionCountHabit(
-        trackingMode = effectiveMode,
-        targetPeriod = effectiveTargetPeriod,
-        unitCode = effectiveUnitCode
-    )
+    val isWeeklySessionCount = StreakAndGroveEngine.isWeeklySessionCountHabit(governingVersion)
 
-    var valueText by remember(existingEntry, habit.habitId, isWeeklySessionCount, effectiveMode, effectiveTargetValue) {
+    var valueText by remember(
+        existingEntry,
+        habit.habitId,
+        effectiveDate,
+        governingVersion.versionId,
+        isWeeklySessionCount,
+        effectiveMode,
+        effectiveTargetPeriod,
+        effectiveUnitCode,
+        effectiveTargetValue
+    ) {
         mutableStateOf(
             defaultRecordSessionValueText(
                 existingEntry = existingEntry,
@@ -241,27 +316,13 @@ fun RecordSessionSheet(
         weekStartHistory,
         effectiveDate,
         previewValueUnits,
-        existingEntry
+        existingEntry,
+        governingVersion,
+        isWeeklyHabit
     ) {
         if (!isWeeklyHabit) {
             null
         } else {
-            val fallbackVer = effectiveVersion ?: habit.currentVersion ?: HabitVersion(
-                versionId = "fallback_${habit.habitId}",
-                habitId = habit.habitId,
-                effectiveFromLocalDate = earliestEffectiveDate.toString(),
-                name = habit.name,
-                description = habit.description,
-                trackingMode = habit.trackingMode,
-                unitCode = habit.unitCode,
-                targetPeriod = habit.targetPeriod,
-                targetValue = habit.targetValue,
-                scheduleKind = habit.scheduleKind,
-                scheduledWeekdaysMask = habit.scheduledWeekdaysMask,
-                preferredWeekdaysMask = habit.preferredWeekdaysMask,
-                lifecycleState = habit.lifecycleState,
-                createdAtUtcMs = habit.createdAtUtcMs
-            )
             val simulatedEntry = HabitEntry(
                 entryId = existingEntry?.entryId ?: "preview_entry",
                 habitId = habit.habitId,
@@ -276,12 +337,12 @@ fun RecordSessionSheet(
                 .filter { it.habitId == habit.habitId && it.entryId != existingEntry?.entryId } + simulatedEntry
             val habitOutcomes = outcomes.filter { it.habitId == habit.habitId }
             StreakAndGroveEngine.computeWeeklyProgressSnapshot(
-                versions = versionsForHabit.ifEmpty { listOf(fallbackVer) },
+                versions = versionsForHabit.ifEmpty { listOf(governingVersion) },
                 entries = simulatedEntries,
                 outcomes = habitOutcomes,
                 weekStartHistory = weekStartHistory,
                 evaluationDate = effectiveDate,
-                fallbackVersion = fallbackVer
+                fallbackVersion = governingVersion
             )
         }
     }
@@ -344,9 +405,10 @@ fun RecordSessionSheet(
                             color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
-                            text = "${habit.name} • ${habit.formatTargetAndPeriodSummary()}",
+                            text = "${governingVersion.name} • ${governingVersion.formatTargetAndPeriodSummary()}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag("record_session_header_subtitle")
                         )
                     }
                 }
@@ -446,7 +508,8 @@ fun RecordSessionSheet(
                     modifier = Modifier.padding(14.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    val unitLabel = habit.unitCode?.takeIf { it.isNotBlank() } ?: "units"
+                    val unitLabel = effectiveUnitCode?.takeIf { it.isNotBlank() }
+                        ?: if (effectiveMode == TrackingMode.DURATION) "min" else "units"
                     Text(
                         text = if (effectiveMode in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION)) {
                             "Amount ($unitLabel)"
@@ -502,31 +565,38 @@ fun RecordSessionSheet(
                         )
 
                         if (effectiveMode in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION)) {
-                            val quarter = (dailyTarget / 4).coerceAtLeast(1)
-                            val half = (dailyTarget / 2).coerceAtLeast(1)
-                            val full = dailyTarget
-                            val extra = ((dailyTarget * 5) / 4).coerceAtLeast(full + 1)
+                            val quarter = if (isWeeklySessionCount) 1 else (dailyTarget / 4).coerceAtLeast(1)
+                            val half = if (isWeeklySessionCount) 1 else (dailyTarget / 2).coerceAtLeast(1)
+                            val full = if (isWeeklySessionCount) 1 else dailyTarget
+                            val extra = if (isWeeklySessionCount) 2 else ((dailyTarget * 5) / 4).coerceAtLeast(full + 1)
 
-                            FilterChip(
-                                selected = previewValueUnits == quarter,
-                                onClick = { valueText = quarter.toString() },
-                                label = { Text("+$quarter $unitLabel") },
-                                modifier = Modifier
-                                    .heightIn(min = 48.dp)
-                                    .testTag("preset_quarter_chip")
-                            )
-                            FilterChip(
-                                selected = previewValueUnits == half,
-                                onClick = { valueText = half.toString() },
-                                label = { Text("+$half $unitLabel") },
-                                modifier = Modifier
-                                    .heightIn(min = 48.dp)
-                                    .testTag("preset_half_chip")
-                            )
+                            if (!isWeeklySessionCount) {
+                                FilterChip(
+                                    selected = previewValueUnits == quarter,
+                                    onClick = { valueText = quarter.toString() },
+                                    label = { Text("+$quarter $unitLabel") },
+                                    modifier = Modifier
+                                        .heightIn(min = 48.dp)
+                                        .testTag("preset_quarter_chip")
+                                )
+                                FilterChip(
+                                    selected = previewValueUnits == half,
+                                    onClick = { valueText = half.toString() },
+                                    label = { Text("+$half $unitLabel") },
+                                    modifier = Modifier
+                                        .heightIn(min = 48.dp)
+                                        .testTag("preset_half_chip")
+                                )
+                            }
                             FilterChip(
                                 selected = previewValueUnits == full,
                                 onClick = { valueText = full.toString() },
-                                label = { Text("$full $unitLabel (Target)") },
+                                label = {
+                                    Text(
+                                        if (isWeeklySessionCount) "1 session"
+                                        else "$full $unitLabel (Target)"
+                                    )
+                                },
                                 modifier = Modifier
                                     .heightIn(min = 48.dp)
                                     .testTag("preset_full_chip")
@@ -534,7 +604,12 @@ fun RecordSessionSheet(
                             FilterChip(
                                 selected = previewValueUnits == extra,
                                 onClick = { valueText = extra.toString() },
-                                label = { Text("$extra $unitLabel (Extra)") },
+                                label = {
+                                    Text(
+                                        if (isWeeklySessionCount) "2 (Extra)"
+                                        else "$extra $unitLabel (Extra)"
+                                    )
+                                },
                                 modifier = Modifier
                                     .heightIn(min = 48.dp)
                                     .testTag("preset_extra_chip")
@@ -696,6 +771,18 @@ fun RecordSessionSheet(
                             return@Button
                         }
 
+                        val governedHabit = habit.copy(
+                            currentVersion = governingVersion,
+                            name = governingVersion.name,
+                            trackingMode = governingVersion.trackingMode,
+                            unitCode = governingVersion.unitCode,
+                            targetPeriod = governingVersion.targetPeriod,
+                            targetValue = governingVersion.targetValue,
+                            scheduleKind = governingVersion.scheduleKind,
+                            scheduledWeekdaysMask = governingVersion.scheduledWeekdaysMask,
+                            preferredWeekdaysMask = governingVersion.preferredWeekdaysMask
+                        )
+
                         if (isEditing && existingEntry != null) {
                             viewModel.updateHabitEntry(
                                 entryId = existingEntry.entryId,
@@ -705,7 +792,7 @@ fun RecordSessionSheet(
                         } else {
                             if (effectiveMode in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION)) {
                                 viewModel.logHabitQuantityOrDuration(
-                                    habit = habit,
+                                    habit = governedHabit,
                                     valueUnits = units,
                                     date = parsedDate,
                                     entryNote = noteText.trim().ifBlank { null }
@@ -713,14 +800,14 @@ fun RecordSessionSheet(
                             } else {
                                 if (units == 0) {
                                     viewModel.logHabitQuantityOrDuration(
-                                        habit = habit,
+                                        habit = governedHabit,
                                         valueUnits = 0,
                                         date = parsedDate,
                                         entryNote = noteText.trim().ifBlank { null }
                                     )
                                 } else {
                                     viewModel.logHabit(
-                                        habit = habit,
+                                        habit = governedHabit,
                                         date = parsedDate,
                                         outcome = DailyOutcome.COMPLETED,
                                         effortLevel = selectedEffort,

@@ -395,7 +395,37 @@ data class HabitVersion(
     val colorHex: String = "#286143",
     val sortOrder: Int = 0,
     val createdAtUtcMs: Long = 0L
-)
+) {
+    fun formatTargetAndPeriodSummary(): String {
+        val mode = trackingMode.canonical()
+        val periodSuffix = if (targetPeriod == TargetPeriod.WEEK) "week" else "day"
+        return when (mode) {
+            TrackingMode.QUANTITY, TrackingMode.DURATION -> {
+                val target = (targetValue ?: 1).coerceAtLeast(1)
+                val unit = unitCode?.ifBlank { if (mode == TrackingMode.DURATION) "min" else "units" }
+                    ?: if (mode == TrackingMode.DURATION) "min" else "units"
+                "$target $unit / $periodSuffix"
+            }
+            TrackingMode.COMPLETION_ONLY -> {
+                if (targetPeriod == TargetPeriod.WEEK) {
+                    val target = (targetValue ?: 1).coerceIn(1, 7)
+                    val unitWord = if (target == 1) "day" else "days"
+                    "$target $unitWord / week"
+                } else {
+                    "1 check-off / day"
+                }
+            }
+            TrackingMode.EFFORT_AWARE, TrackingMode.EFFORT_LEVELS -> {
+                if (targetPeriod == TargetPeriod.WEEK) {
+                    val target = (targetValue ?: 1).coerceAtLeast(1)
+                    "$target days / week (Effort)"
+                } else {
+                    "Tiny • Usual • Extra / day"
+                }
+            }
+        }
+    }
+}
 
 data class Habit(
     val habitId: String,

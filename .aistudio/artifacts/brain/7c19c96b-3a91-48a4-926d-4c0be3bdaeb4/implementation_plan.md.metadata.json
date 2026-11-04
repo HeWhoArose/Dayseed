@@ -1,6 +1,6 @@
 {
-  "summary": "Revised Phase 2 Correction Plan fixing the 4 remaining issues: (1) WeekdayMask.contains(prefMask, today.dayOfWeek) with null/0 handling in Correction D, (2) actual NavTab/selectedTab/currentSecondaryRoute navigation properties and _currentSecondaryRoute synchronization on deletion in Correction A, (3) three separate Apply Tomorrow / U-12 test cases in Correction B, and (4) frozen weekly schedule semantics separated from per-day lifecycle state plus exact ProgressBand enum names (HALFWAY, ALMOST_THERE, GOAL_MET, EXTRA, HUGE) in Correction C.",
-  "updatedAt": "2026-11-03T19:15:09.568228609Z",
+  "summary": "Updated Phase 2 Final Remediation Plan specifying standalone atomic deleteHabitPermanentlySync() (without calling deleteHabitWithUndoSync() or generating a HABIT_DELETION UndoToken), selective invalidation of active UndoTokens belonging to the deleted habit while preserving unrelated habits' UndoTokens, updated ViewModel/dialog messages without Undo promises, and full regression test coverage.",
+  "updatedAt": "2026-11-04T14:29:34.298139051Z",
   "requestFeedback": true,
   "userFacing": true
 }

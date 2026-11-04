@@ -50,7 +50,14 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.dayseed.DayseedViewModel
+import com.example.dayseed.data.Habit
+import com.example.dayseed.data.HabitDateException
+import com.example.dayseed.data.HabitDateExceptionKind
+import com.example.dayseed.data.HabitDayOutcome
+import com.example.dayseed.data.HabitEntry
 import com.example.dayseed.data.HabitLifecycleState
+import com.example.dayseed.data.HabitSummary
+import com.example.dayseed.data.TargetPeriod
 import com.example.dayseed.ui.components.CollectedMomentsSummaryCard
 import com.example.dayseed.ui.components.ComebackCard
 import com.example.dayseed.ui.components.DaypartArtwork
@@ -67,6 +74,43 @@ import com.example.dayseed.ui.theme.resolveDayseedArtworkBlend
 import kotlinx.coroutines.delay
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+
+fun isScheduledHabitTendedToday(
+    habit: Habit,
+    summary: HabitSummary?,
+    todayOutcomes: List<HabitDayOutcome>,
+    todayEntries: List<HabitEntry>,
+    todayExceptions: List<HabitDateException>
+): Boolean {
+    val weekSatisfied = summary != null &&
+        summary.effectiveVersion.targetPeriod == TargetPeriod.WEEK &&
+        summary.weekTotalUnits >= summary.weekTargetUnits
+    val hasRestDayToday = todayExceptions.any {
+        it.habitId == habit.habitId && it.exceptionKind == HabitDateExceptionKind.REST_DAY
+    }
+    return todayOutcomes.any { it.habitId == habit.habitId } ||
+        todayEntries.any { it.habitId == habit.habitId && it.valueUnits > 0 } ||
+        hasRestDayToday ||
+        weekSatisfied
+}
+
+fun computeTendedTodayCount(
+    scheduledTodayHabits: List<Habit>,
+    habitSummaries: Map<String, HabitSummary>,
+    todayOutcomes: List<HabitDayOutcome>,
+    todayEntries: List<HabitEntry>,
+    todayExceptions: List<HabitDateException>
+): Int {
+    return scheduledTodayHabits.count { h ->
+        isScheduledHabitTendedToday(
+            habit = h,
+            summary = habitSummaries[h.habitId],
+            todayOutcomes = todayOutcomes,
+            todayEntries = todayEntries,
+            todayExceptions = todayExceptions
+        )
+    }
+}
 
 @Composable
 fun TodayScreen(
@@ -366,16 +410,13 @@ fun TodayScreen(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground
                         )
-                        val tendedToday = scheduledTodayHabits.count { h ->
-                            val summary = habitSummaries[h.habitId]
-                            val weekSatisfied = summary != null &&
-                                summary.effectiveVersion.targetPeriod == com.example.dayseed.data.TargetPeriod.WEEK &&
-                                summary.weekTotalUnits >= summary.weekTargetUnits
-                            todayOutcomes.any { it.habitId == h.habitId } ||
-                                todayEntries.any { it.habitId == h.habitId && it.valueUnits > 0 } ||
-                                todayExceptions.any { it.habitId == h.habitId } ||
-                                weekSatisfied
-                        }
+                        val tendedToday = computeTendedTodayCount(
+                            scheduledTodayHabits = scheduledTodayHabits,
+                            habitSummaries = habitSummaries,
+                            todayOutcomes = todayOutcomes,
+                            todayEntries = todayEntries,
+                            todayExceptions = todayExceptions
+                        )
                         Text(
                             text = "$tendedToday of ${scheduledTodayHabits.size} tended",
                             style = MaterialTheme.typography.labelLarge,
@@ -394,7 +435,9 @@ fun TodayScreen(
                         val outcome = todayOutcomes.find { it.habitId == habit.habitId }
                         val habitEntriesForToday = todayEntries.filter { it.habitId == habit.habitId }
                         val dateNote = todayDateNotes.find { it.habitId == habit.habitId }
-                        val restDayException = todayExceptions.find { it.habitId == habit.habitId }
+                        val restDayException = todayExceptions.find {
+                            it.habitId == habit.habitId && it.exceptionKind == HabitDateExceptionKind.REST_DAY
+                        }
                         val summary = habitSummaries[habit.habitId]
                         val retrospectiveEligible = remember(habit.habitId, outcomes, entries, appSettings) {
                             viewModel.repository.isHabitEligibleForRetrospectivePrompt(habit.habitId, today)
@@ -420,12 +463,6 @@ fun TodayScreen(
                             onLogQuantityOrDuration = { units, note ->
                                 viewModel.logHabitQuantityOrDuration(habit, units, today, note)
                             },
-                            onDeleteEntry = { entryId ->
-                                viewModel.deleteHabitEntry(entryId)
-                            },
-                            onSaveDateNote = { body ->
-                                viewModel.saveHabitDateNote(habit.habitId, today, body)
-                            },
                             onTakeRestDayToday = {
                                 viewModel.takeRestDayToday(habit)
                             },
@@ -445,15 +482,6 @@ fun TodayScreen(
                             },
                             onResetRecord = {
                                 viewModel.removeRecord(habit.habitId, today)
-                            },
-                            onEditHabit = {
-                                viewModel.openEditHabit(habit)
-                            },
-                            onArchiveHabit = {
-                                viewModel.toggleHabitArchive(habit.habitId, !habit.isArchived)
-                            },
-                            onPauseResumeHabit = { newState ->
-                                viewModel.updateHabitLifecycle(habit.habitId, newState)
                             }
                         )
                     }
@@ -512,7 +540,9 @@ fun TodayScreen(
                             val outcome = todayOutcomes.find { it.habitId == habit.habitId }
                             val habitEntriesForToday = todayEntries.filter { it.habitId == habit.habitId }
                             val dateNote = todayDateNotes.find { it.habitId == habit.habitId }
-                            val restDayException = todayExceptions.find { it.habitId == habit.habitId }
+                            val restDayException = todayExceptions.find {
+                                it.habitId == habit.habitId && it.exceptionKind == HabitDateExceptionKind.REST_DAY
+                            }
                             val summary = habitSummaries[habit.habitId]
 
                             HabitCard(
@@ -535,23 +565,8 @@ fun TodayScreen(
                                 onLogQuantityOrDuration = { units, note ->
                                     viewModel.logHabitQuantityOrDuration(habit, units, today, note)
                                 },
-                                onDeleteEntry = { entryId ->
-                                    viewModel.deleteHabitEntry(entryId)
-                                },
-                                onSaveDateNote = { body ->
-                                    viewModel.saveHabitDateNote(habit.habitId, today, body)
-                                },
                                 onResetRecord = {
                                     viewModel.removeRecord(habit.habitId, today)
-                                },
-                                onEditHabit = {
-                                    viewModel.openEditHabit(habit)
-                                },
-                                onArchiveHabit = {
-                                    viewModel.toggleHabitArchive(habit.habitId, !habit.isArchived)
-                                },
-                                onPauseResumeHabit = { newState ->
-                                    viewModel.updateHabitLifecycle(habit.habitId, newState)
                                 }
                             )
                         }

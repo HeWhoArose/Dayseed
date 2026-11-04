@@ -475,7 +475,8 @@ class DayseedViewModel @JvmOverloads constructor(
         note: String = "",
         idempotencyKey: String? = null
     ) {
-        val mode = habit.trackingMode.canonical()
+        val effVer = repository.getEffectiveHabitVersion(habit.habitId, date)
+        val mode = (effVer?.trackingMode ?: habit.trackingMode).canonical()
         val nowMs = repository.clock.nowUtcMs()
         val sig = "OUTCOME:${habit.habitId}:$date:${outcome.name}:${effortLevel.name}:$note"
         val resolvedKey = if (idempotencyKey != null) {
@@ -701,7 +702,7 @@ class DayseedViewModel @JvmOverloads constructor(
             _isAddHabitOpen.value = false
         }
         _lastSaveError.value = null
-        _userMessage.value = "Habit permanently deleted (8s undo available)"
+        _userMessage.value = "Habit permanently deleted"
     }
 
     // =========================================================================

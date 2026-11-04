@@ -346,7 +346,10 @@ fun CreateEditHabitFormContent(
 
                 OutlinedTextField(
                     value = description,
-                    onValueChange = { description = it },
+                    onValueChange = {
+                        description = it
+                        onClearSaveError()
+                    },
                     label = { Text("Purpose or note (optional)") },
                     placeholder = { Text("e.g. For peace of mind and clarity") },
                     modifier = Modifier
@@ -357,7 +360,10 @@ fun CreateEditHabitFormContent(
 
                 OutlinedTextField(
                     value = category,
-                    onValueChange = { category = it },
+                    onValueChange = {
+                        category = it
+                        onClearSaveError()
+                    },
                     label = { Text("Category (optional)") },
                     placeholder = { Text("e.g. Mindfulness, Movement, Reading") },
                     modifier = Modifier
@@ -375,6 +381,7 @@ fun CreateEditHabitFormContent(
                             selected = category.equals(cat, ignoreCase = true),
                             onClick = {
                                 category = if (category.equals(cat, ignoreCase = true)) "" else cat
+                                onClearSaveError()
                             },
                             label = { Text(cat) }
                         )
@@ -386,6 +393,7 @@ fun CreateEditHabitFormContent(
                     onValueChange = {
                         lifetimeGoalText = it.filter { ch -> ch.isDigit() }
                         lifetimeGoalError = null
+                        onClearSaveError()
                     },
                     label = { Text("Lifetime goal active days (optional, 1–36500)") },
                     placeholder = { Text("e.g. 90 or 365") },
@@ -424,7 +432,10 @@ fun CreateEditHabitFormContent(
                                 .size(36.dp)
                                 .clip(CircleShape)
                                 .background(c)
-                                .clickable { selectedColor = hex }
+                                .clickable {
+                                    selectedColor = hex
+                                    onClearSaveError()
+                                }
                                 .then(
                                     if (isPicked) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
                                     else Modifier
@@ -486,6 +497,8 @@ fun CreateEditHabitFormContent(
                                     val currentVal = targetValueText.toIntOrNull() ?: 3
                                     if (currentVal !in 1..7) targetValueText = "3"
                                 }
+                                targetValueError = null
+                                onClearSaveError()
                             }
                             .testTag("mode_option_${m.name.lowercase()}"),
                         verticalAlignment = Alignment.CenterVertically
@@ -502,6 +515,8 @@ fun CreateEditHabitFormContent(
                                     val currentVal = targetValueText.toIntOrNull() ?: 3
                                     if (currentVal !in 1..7) targetValueText = "3"
                                 }
+                                targetValueError = null
+                                onClearSaveError()
                             }
                         )
                         Spacer(modifier = Modifier.width(4.dp))
@@ -568,7 +583,10 @@ fun CreateEditHabitFormContent(
                     )
                     OutlinedTextField(
                         value = tinyDesc,
-                        onValueChange = { tinyDesc = it },
+                        onValueChange = {
+                            tinyDesc = it
+                            onClearSaveError()
+                        },
                         label = { Text("🌱 Tiny effort (bare minimum that counts)") },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -577,7 +595,10 @@ fun CreateEditHabitFormContent(
                     )
                     OutlinedTextField(
                         value = usualDesc,
-                        onValueChange = { usualDesc = it },
+                        onValueChange = {
+                            usualDesc = it
+                            onClearSaveError()
+                        },
                         label = { Text("🌿 Usual effort (intended ordinary action)") },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -586,7 +607,10 @@ fun CreateEditHabitFormContent(
                     )
                     OutlinedTextField(
                         value = extraDesc,
-                        onValueChange = { extraDesc = it },
+                        onValueChange = {
+                            extraDesc = it
+                            onClearSaveError()
+                        },
                         label = { Text("🌳 Extra effort (optional stretch)") },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1128,7 +1152,7 @@ fun CreateEditHabitFormContent(
                         tinyDescription = tinyDesc.trim(),
                         usualDescription = usualDesc.trim(),
                         extraDescription = extraDesc.trim(),
-                        scheduleDays = if (effectiveScheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET && selectedDays.isEmpty()) {
+                        scheduleDays = if (effectiveScheduleKind == ScheduleKind.DAILY) {
                             DayOfWeek.values().toSet()
                         } else {
                             selectedDays
@@ -1165,7 +1189,7 @@ fun CreateEditHabitFormContent(
                 Text(
                     "This removes this habit, its configuration versions, and all logged sessions/outcomes. " +
                         "Any linked journal reflections will be kept safely on your device without the habit link. " +
-                        "You will have an 8-second Undo window immediately after deleting."
+                        "This action is permanent and cannot be undone."
                 )
             },
             confirmButton = {

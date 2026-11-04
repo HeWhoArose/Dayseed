@@ -1086,7 +1086,7 @@ fun HabitDetailScreen(
                 Text(
                     "This removes the habit, its logged sessions, and its streak runs. " +
                         "Any journal reflections linked to this habit will be preserved safely. " +
-                        "You will have 8 seconds to Undo after confirming."
+                        "This action is permanent and cannot be undone."
                 )
             },
             confirmButton = {

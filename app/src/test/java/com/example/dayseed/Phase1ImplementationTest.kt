@@ -1053,7 +1053,7 @@ class Phase1ImplementationTest {
 
         // Delete the habit -> returns HABIT_DELETION UndoToken
         testClock.advanceMillis(1_000L)
-        val undoToken = repository.deleteHabitPermanentlySync("h_del_undo")
+        val undoToken = repository.deleteHabitWithUndoSync("h_del_undo")
         assertNotNull(undoToken)
         assertEquals(UndoEntityType.HABIT_DELETION, undoToken!!.entityType)
         assertFalse(repository.habits.value.any { it.habitId == "h_del_undo" })

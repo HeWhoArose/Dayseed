@@ -342,15 +342,9 @@ private fun DailyLogView(
                     onLogQuantityOrDuration = { units, note ->
                         onLogQuantityOrDuration(habit, units, note)
                     },
-                    onDeleteEntry = onDeleteEntry,
-                    onSaveDateNote = { body ->
-                        onSaveDateNote(habit.habitId, body)
-                    },
                     onResetRecord = {
                         onResetRecord(habit.habitId)
                     },
-                    onEditHabit = { onEditHabit(habit) },
-                    onArchiveHabit = { onArchiveHabit(habit) },
                     onOpenHabitDetail = { viewModel.openHabitDetail(habit.habitId, selectedDate) },
                     onOpenRecordSession = { entryId ->
                         viewModel.openRecordSession(habit.habitId, selectedDate, entryId)
