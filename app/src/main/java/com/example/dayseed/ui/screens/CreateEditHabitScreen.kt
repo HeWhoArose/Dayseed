@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -43,6 +44,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -67,6 +69,18 @@ import com.example.dayseed.data.TrackingMode
 import com.example.dayseed.data.WeekdayMask
 import java.time.DayOfWeek
 import java.util.UUID
+
+fun weeklyTargetSemanticsExplanation(trackingMode: TrackingMode, unitCode: String?): String {
+    val canonicalMode = trackingMode.canonical()
+    return when {
+        canonicalMode == TrackingMode.COMPLETION_ONLY || canonicalMode == TrackingMode.EFFORT_AWARE ->
+            "Days/week counts distinct qualifying calendar dates (at most 1 day per date, 1–7 days/week)."
+        canonicalMode == TrackingMode.QUANTITY && unitCode?.trim().equals("sessions", ignoreCase = true) ->
+            "Sessions/week counts each logged session (value > 0) toward your weekly goal — multiple sessions on the same day count separately (unlike days/week)."
+        else ->
+            "Weekly target progress accumulates across all sessions logged during your configured week."
+    }
+}
 
 @Composable
 fun CreateEditHabitScreen(
@@ -184,7 +198,19 @@ fun CreateEditHabitFormContent(
         mutableStateOf(initialHabit?.extraDescription ?: "Optional stretch action")
     }
     var selectedDays by remember(initialHabit) {
-        mutableStateOf(initialHabit?.scheduleDays ?: DayOfWeek.values().toSet())
+        val initDays = when {
+            initialHabit == null -> DayOfWeek.values().toSet()
+            initialHabit.scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET -> {
+                val prefMask = initialHabit.preferredWeekdaysMask
+                if (prefMask == null || prefMask == 0 || prefMask == WeekdayMask.ALL_DAYS_MASK) {
+                    emptySet()
+                } else {
+                    WeekdayMask.fromMask(prefMask)
+                }
+            }
+            else -> initialHabit.scheduleDays
+        }
+        mutableStateOf(initDays)
     }
     var selectedColor by remember(initialHabit) {
         mutableStateOf(initialHabit?.colorHex ?: "#286143")
@@ -202,6 +228,8 @@ fun CreateEditHabitFormContent(
     var nameError by remember { mutableStateOf<String?>(null) }
     var targetValueError by remember { mutableStateOf<String?>(null) }
     var lifetimeGoalError by remember { mutableStateOf<String?>(null) }
+    var reminderTimeError by remember { mutableStateOf<String?>(null) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
     val colorOptions = listOf("#286143", "#3B6955", "#4A7C59", "#708D81", "#8D6B94", "#C08552")
     val categorySuggestions = listOf("Mindfulness", "Movement", "Reading", "Health", "Focus")
@@ -298,6 +326,7 @@ fun CreateEditHabitFormContent(
                     onValueChange = {
                         name = it
                         if (it.isNotBlank()) nameError = null
+                        onClearSaveError()
                     },
                     label = { Text("Habit name *") },
                     placeholder = { Text("e.g. Read, Gentle Stretch, Hydrate") },
@@ -493,7 +522,10 @@ fun CreateEditHabitFormContent(
                         for (u in DurationNormalizer.supportedDurationUnits) {
                             FilterChip(
                                 selected = unitCode == u,
-                                onClick = { unitCode = u },
+                                onClick = {
+                                    unitCode = u
+                                    onClearSaveError()
+                                },
                                 label = { Text(u) },
                                 modifier = Modifier.testTag("unit_preset_$u")
                             )
@@ -502,7 +534,10 @@ fun CreateEditHabitFormContent(
                 } else if (trackingMode == TrackingMode.QUANTITY) {
                     OutlinedTextField(
                         value = unitCode,
-                        onValueChange = { unitCode = it },
+                        onValueChange = {
+                            unitCode = it
+                            onClearSaveError()
+                        },
                         label = { Text("Unit") },
                         singleLine = true,
                         modifier = Modifier
@@ -516,7 +551,10 @@ fun CreateEditHabitFormContent(
                         for (preset in quantityUnitPresets) {
                             FilterChip(
                                 selected = unitCode.equals(preset, ignoreCase = true),
-                                onClick = { unitCode = preset },
+                                onClick = {
+                                    unitCode = preset
+                                    onClearSaveError()
+                                },
                                 label = { Text(preset) },
                                 modifier = Modifier.testTag("unit_preset_$preset")
                             )
@@ -584,8 +622,12 @@ fun CreateEditHabitFormContent(
                             targetPeriod = TargetPeriod.DAY
                             if (scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET) {
                                 scheduleKind = ScheduleKind.DAILY
+                                if (selectedDays.isEmpty()) {
+                                    selectedDays = DayOfWeek.values().toSet()
+                                }
                             }
                             targetValueError = null
+                            onClearSaveError()
                         },
                         label = { Text("Per Day") },
                         modifier = Modifier
@@ -597,11 +639,15 @@ fun CreateEditHabitFormContent(
                         onClick = {
                             targetPeriod = TargetPeriod.WEEK
                             scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET
+                            if (selectedDays.size == 7) {
+                                selectedDays = emptySet()
+                            }
                             if (trackingMode == TrackingMode.COMPLETION_ONLY) {
                                 val v = targetValueText.toIntOrNull() ?: 3
                                 if (v !in 1..7) targetValueText = "3"
                             }
                             targetValueError = null
+                            onClearSaveError()
                         },
                         label = { Text("Per Week") },
                         modifier = Modifier
@@ -628,6 +674,7 @@ fun CreateEditHabitFormContent(
                         onValueChange = {
                             targetValueText = it.filter { ch -> ch.isDigit() }
                             targetValueError = null
+                            onClearSaveError()
                         },
                         label = { Text(targetFieldLabel) },
                         isError = targetValueError != null,
@@ -639,7 +686,10 @@ fun CreateEditHabitFormContent(
                                     modifier = Modifier.testTag("habit_target_value_error")
                                 )
                             } else if (targetPeriod == TargetPeriod.WEEK) {
-                                Text("Weekly target progress accumulates across your configured week.")
+                                Text(
+                                    text = weeklyTargetSemanticsExplanation(trackingMode, unitCode),
+                                    modifier = Modifier.testTag("weekly_target_semantics_helper")
+                                )
                             }
                         },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -677,6 +727,7 @@ fun CreateEditHabitFormContent(
                             scheduleKind = ScheduleKind.DAILY
                             targetPeriod = TargetPeriod.DAY
                             selectedDays = DayOfWeek.values().toSet()
+                            onClearSaveError()
                         },
                         label = { Text("Daily") },
                         modifier = Modifier
@@ -688,6 +739,10 @@ fun CreateEditHabitFormContent(
                         onClick = {
                             scheduleKind = ScheduleKind.SELECTED_WEEKDAYS
                             targetPeriod = TargetPeriod.DAY
+                            if (selectedDays.isEmpty()) {
+                                selectedDays = DayOfWeek.values().toSet()
+                            }
+                            onClearSaveError()
                         },
                         label = { Text("Weekdays") },
                         modifier = Modifier
@@ -699,10 +754,14 @@ fun CreateEditHabitFormContent(
                         onClick = {
                             scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET
                             targetPeriod = TargetPeriod.WEEK
+                            if (selectedDays.size == 7) {
+                                selectedDays = emptySet()
+                            }
                             if (trackingMode == TrackingMode.COMPLETION_ONLY) {
                                 val v = targetValueText.toIntOrNull() ?: 3
                                 if (v !in 1..7) targetValueText = "3"
                             }
+                            onClearSaveError()
                         },
                         label = { Text("Flexible Week") },
                         modifier = Modifier
@@ -712,15 +771,33 @@ fun CreateEditHabitFormContent(
                 }
 
                 if (scheduleKind != ScheduleKind.DAILY) {
-                    Text(
-                        text = if (scheduleKind == ScheduleKind.SELECTED_WEEKDAYS) {
-                            "Select scheduled weekdays (unselected days are neutral rest days):"
-                        } else {
-                            "Preferred days (optional — any day counts toward your weekly goal):"
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (scheduleKind == ScheduleKind.SELECTED_WEEKDAYS) {
+                                "Select scheduled weekdays (unselected days are neutral rest days):"
+                            } else {
+                                "Preferred days (optional — leave all unselected for any day of the week):"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET && selectedDays.isNotEmpty()) {
+                            TextButton(
+                                onClick = {
+                                    selectedDays = emptySet()
+                                    onClearSaveError()
+                                },
+                                modifier = Modifier.testTag("clear_preferred_days_btn")
+                            ) {
+                                Text("Clear", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -740,10 +817,15 @@ fun CreateEditHabitFormContent(
                                 selected = isSelected,
                                 onClick = {
                                     selectedDays = if (isSelected) {
-                                        if (selectedDays.size > 1) selectedDays - d else selectedDays
+                                        if (scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET || selectedDays.size > 1) {
+                                            selectedDays - d
+                                        } else {
+                                            selectedDays
+                                        }
                                     } else {
                                         selectedDays + d
                                     }
+                                    onClearSaveError()
                                 },
                                 label = { Text(label) },
                                 modifier = Modifier
@@ -795,7 +877,11 @@ fun CreateEditHabitFormContent(
                     }
                     Switch(
                         checked = reminderEnabled,
-                        onCheckedChange = { reminderEnabled = it },
+                        onCheckedChange = {
+                            reminderEnabled = it
+                            if (!it) reminderTimeError = null
+                            onClearSaveError()
+                        },
                         modifier = Modifier.testTag("habit_reminder_switch")
                     )
                 }
@@ -803,8 +889,24 @@ fun CreateEditHabitFormContent(
                 if (reminderEnabled) {
                     OutlinedTextField(
                         value = reminderTimeLocal,
-                        onValueChange = { reminderTimeLocal = it },
+                        onValueChange = {
+                            reminderTimeLocal = it
+                            reminderTimeError = null
+                            onClearSaveError()
+                        },
                         label = { Text("Reminder Time (HH:mm)") },
+                        isError = reminderTimeError != null,
+                        supportingText = {
+                            if (reminderTimeError != null) {
+                                Text(
+                                    text = reminderTimeError!!,
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.testTag("habit_reminder_time_error")
+                                )
+                            } else {
+                                Text("24-hour local time, e.g. 08:30 or 19:00")
+                            }
+                        },
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -906,7 +1008,7 @@ fun CreateEditHabitFormContent(
         ) {
             if (initialHabit != null && onDelete != null) {
                 IconButton(
-                    onClick = { onDelete(initialHabit.id) },
+                    onClick = { showDeleteConfirmDialog = true },
                     modifier = Modifier
                         .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                         .testTag("delete_habit_btn")
@@ -948,6 +1050,17 @@ fun CreateEditHabitFormContent(
                         goal
                     }
 
+                    val normalizedReminderTime = if (reminderEnabled) {
+                        val parsedTime = SettingsSupport.parseQuietHours(reminderTimeLocal)
+                        if (parsedTime == null) {
+                            reminderTimeError = "Enter a valid 24-hour time in HH:mm format (00:00–23:59)."
+                            return@Button
+                        }
+                        SettingsSupport.formatQuietHours(parsedTime)
+                    } else {
+                        null
+                    }
+
                     val effectiveTargetPeriod = if (scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET) {
                         TargetPeriod.WEEK
                     } else {
@@ -982,6 +1095,15 @@ fun CreateEditHabitFormContent(
                     }
 
                     val mask = WeekdayMask.toMask(selectedDays)
+                    val preferredMask = if (
+                        effectiveScheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET &&
+                        selectedDays.isNotEmpty() &&
+                        selectedDays.size < 7
+                    ) {
+                        mask
+                    } else {
+                        null
+                    }
                     val habit = Habit(
                         habitId = initialHabit?.habitId ?: UUID.randomUUID().toString(),
                         name = trimmedName,
@@ -997,16 +1119,20 @@ fun CreateEditHabitFormContent(
                         targetValue = targetVal,
                         scheduleKind = effectiveScheduleKind,
                         scheduledWeekdaysMask = if (effectiveScheduleKind == ScheduleKind.SELECTED_WEEKDAYS) mask else null,
-                        preferredWeekdaysMask = if (effectiveScheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET) mask else null,
+                        preferredWeekdaysMask = preferredMask,
                         lifecycleState = initialHabit?.lifecycleState ?: HabitLifecycleState.ACTIVE,
                         lifetimeGoalDays = parsedLifetimeGoal,
                         sortOrder = initialHabit?.sortOrder ?: 0,
                         reminderMode = if (reminderEnabled) "AT_TIME" else "OFF",
-                        reminderTimeLocal = if (reminderEnabled) reminderTimeLocal.trim() else null,
+                        reminderTimeLocal = normalizedReminderTime,
                         tinyDescription = tinyDesc.trim(),
                         usualDescription = usualDesc.trim(),
                         extraDescription = extraDesc.trim(),
-                        scheduleDays = selectedDays,
+                        scheduleDays = if (effectiveScheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET && selectedDays.isEmpty()) {
+                            DayOfWeek.values().toSet()
+                        } else {
+                            selectedDays
+                        },
                         colorHex = selectedColor,
                         createdAtUtcMs = initialHabit?.createdAtUtcMs ?: System.currentTimeMillis()
                     )
@@ -1024,5 +1150,48 @@ fun CreateEditHabitFormContent(
                 Text("Save")
             }
         }
+    }
+
+    if (showDeleteConfirmDialog && initialHabit != null && onDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            title = {
+                Text(
+                    text = "Delete \"${initialHabit.name}\" permanently?",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    "This removes this habit, its configuration versions, and all logged sessions/outcomes. " +
+                        "Any linked journal reflections will be kept safely on your device without the habit link. " +
+                        "You will have an 8-second Undo window immediately after deleting."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirmDialog = false
+                        onDelete(initialHabit.id)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    ),
+                    modifier = Modifier.testTag("confirm_delete_habit_btn")
+                ) {
+                    Text("Delete Permanently")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteConfirmDialog = false },
+                    modifier = Modifier.testTag("cancel_delete_habit_btn")
+                ) {
+                    Text("Cancel")
+                }
+            },
+            modifier = Modifier.testTag("create_edit_delete_confirm_dialog")
+        )
     }
 }

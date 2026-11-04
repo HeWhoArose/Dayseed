@@ -66,6 +66,46 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
+fun defaultRecordSessionValueText(
+    existingEntry: HabitEntry?,
+    effectiveMode: TrackingMode,
+    effectiveTargetPeriod: TargetPeriod,
+    effectiveUnitCode: String?,
+    effectiveTargetValue: Int?
+): String {
+    val isWeeklySessionCount = StreakAndGroveEngine.isWeeklySessionCountHabit(
+        trackingMode = effectiveMode.canonical(),
+        targetPeriod = effectiveTargetPeriod,
+        unitCode = effectiveUnitCode
+    )
+    return when {
+        existingEntry != null -> existingEntry.valueUnits.toString()
+        effectiveMode.canonical() == TrackingMode.COMPLETION_ONLY ||
+            effectiveMode.canonical() == TrackingMode.EFFORT_AWARE -> "1"
+        isWeeklySessionCount -> "1"
+        else -> (effectiveTargetValue ?: 10).toString()
+    }
+}
+
+fun computeRecordSessionDailyPreviewTotal(
+    existingEntriesOnDate: List<HabitEntry>,
+    previewValueUnits: Int,
+    effectiveMode: TrackingMode,
+    effectiveTargetPeriod: TargetPeriod,
+    effectiveUnitCode: String?
+): Int {
+    val isWeeklySessionCount = StreakAndGroveEngine.isWeeklySessionCountHabit(
+        trackingMode = effectiveMode.canonical(),
+        targetPeriod = effectiveTargetPeriod,
+        unitCode = effectiveUnitCode
+    )
+    return if (isWeeklySessionCount) {
+        existingEntriesOnDate.count { it.valueUnits > 0 } + (if (previewValueUnits > 0) 1 else 0)
+    } else {
+        existingEntriesOnDate.sumOf { it.valueUnits } + previewValueUnits
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RecordSessionSheet(
@@ -140,15 +180,29 @@ fun RecordSessionSheet(
     }
 
     val effectiveDate = parsedDate?.takeIf { dateValidationError == null } ?: today
-    val effectiveMode = habit.trackingMode.canonical()
+    val effectiveVersion = remember(habit.habitId, effectiveDate, versionsForHabit) {
+        viewModel.repository.getEffectiveHabitVersion(habit.habitId, effectiveDate)
+    }
+    val effectiveMode = (effectiveVersion?.trackingMode ?: habit.trackingMode).canonical()
+    val effectiveTargetPeriod = effectiveVersion?.targetPeriod ?: habit.targetPeriod
+    val effectiveUnitCode = effectiveVersion?.unitCode ?: habit.unitCode
+    val effectiveTargetValue = effectiveVersion?.targetValue ?: habit.targetValue
+    val isWeeklyHabit = effectiveTargetPeriod == TargetPeriod.WEEK
+    val isWeeklySessionCount = StreakAndGroveEngine.isWeeklySessionCountHabit(
+        trackingMode = effectiveMode,
+        targetPeriod = effectiveTargetPeriod,
+        unitCode = effectiveUnitCode
+    )
 
-    var valueText by remember(existingEntry, habit.habitId) {
+    var valueText by remember(existingEntry, habit.habitId, isWeeklySessionCount, effectiveMode, effectiveTargetValue) {
         mutableStateOf(
-            when {
-                existingEntry != null -> existingEntry.valueUnits.toString()
-                effectiveMode == TrackingMode.COMPLETION_ONLY || effectiveMode == TrackingMode.EFFORT_AWARE -> "1"
-                else -> (habit.targetValue ?: 10).toString()
-            }
+            defaultRecordSessionValueText(
+                existingEntry = existingEntry,
+                effectiveMode = effectiveMode,
+                effectiveTargetPeriod = effectiveTargetPeriod,
+                effectiveUnitCode = effectiveUnitCode,
+                effectiveTargetValue = effectiveTargetValue
+            )
         )
     }
     var selectedEffort by remember {
@@ -170,10 +224,15 @@ fun RecordSessionSheet(
                 it.entryId != existingEntry?.entryId
         }
     }
-    val projectedDailyTotal = existingEntriesOnDate.sumOf { it.valueUnits } + previewValueUnits
-    val dailyTarget = (habit.targetValue ?: 1).coerceAtLeast(1)
+    val projectedDailyTotal = computeRecordSessionDailyPreviewTotal(
+        existingEntriesOnDate = existingEntriesOnDate,
+        previewValueUnits = previewValueUnits,
+        effectiveMode = effectiveMode,
+        effectiveTargetPeriod = effectiveTargetPeriod,
+        effectiveUnitCode = effectiveUnitCode
+    )
+    val dailyTarget = (effectiveTargetValue ?: 1).coerceAtLeast(1)
 
-    val isWeeklyHabit = habit.targetPeriod == TargetPeriod.WEEK
     val projectedWeeklySnapshot = remember(
         habit,
         versionsForHabit,
@@ -187,7 +246,7 @@ fun RecordSessionSheet(
         if (!isWeeklyHabit) {
             null
         } else {
-            val fallbackVer = habit.currentVersion ?: HabitVersion(
+            val fallbackVer = effectiveVersion ?: habit.currentVersion ?: HabitVersion(
                 versionId = "fallback_${habit.habitId}",
                 habitId = habit.habitId,
                 effectiveFromLocalDate = earliestEffectiveDate.toString(),
@@ -568,7 +627,7 @@ fun RecordSessionSheet(
                         }
                     }
 
-                    val unitSuffix = habit.unitCode?.let { " $it" } ?: ""
+                    val unitSuffix = effectiveUnitCode?.let { " $it" } ?: ""
                     Text(
                         text = "Resulting daily total on $effectiveDate: $projectedDailyTotal$unitSuffix",
                         style = MaterialTheme.typography.bodyMedium,

@@ -34,9 +34,25 @@ object StreakAndGroveEngine {
      * `TargetPeriod.WEEK`, and `unitCode == "sessions"`, case-insensitive).
      */
     fun isWeeklySessionCountHabit(version: HabitVersion): Boolean {
-        return version.trackingMode.canonical() == TrackingMode.QUANTITY &&
-            version.targetPeriod == TargetPeriod.WEEK &&
-            version.unitCode?.trim()?.equals("sessions", ignoreCase = true) == true
+        return isWeeklySessionCountHabit(
+            trackingMode = version.trackingMode,
+            targetPeriod = version.targetPeriod,
+            unitCode = version.unitCode
+        )
+    }
+
+    /**
+     * Returns true when the given tracking parameters represent a weekly session-count habit
+     * (`TrackingMode.QUANTITY`, `TargetPeriod.WEEK`, and `unitCode == "sessions"`, case-insensitive).
+     */
+    fun isWeeklySessionCountHabit(
+        trackingMode: TrackingMode,
+        targetPeriod: TargetPeriod,
+        unitCode: String?
+    ): Boolean {
+        return trackingMode.canonical() == TrackingMode.QUANTITY &&
+            targetPeriod == TargetPeriod.WEEK &&
+            unitCode?.trim()?.equals("sessions", ignoreCase = true) == true
     }
 
     /**

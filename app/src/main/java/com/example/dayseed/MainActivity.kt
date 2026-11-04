@@ -36,7 +36,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import com.example.dayseed.ui.components.CollectedMomentsDetailSheet
 import com.example.dayseed.ui.components.LivingGroveScreen
-import com.example.dayseed.ui.screens.AddEditHabitDialog
 import com.example.dayseed.ui.screens.CreateEditHabitScreen
 import com.example.dayseed.ui.screens.HabitDetailScreen
 import com.example.dayseed.ui.screens.HabitsScreen
@@ -268,30 +267,6 @@ fun DayseedApp(viewModel: DayseedViewModel) {
                 }
             }
         }
-    }
-
-    if (isAddHabitOpen && currentSecondaryRoute !is SecondaryRoute.CreateEditHabit) {
-        val today = viewModel.repository.clock.todayLocal()
-        val alreadyLogged = editingHabit?.let {
-            viewModel.repository.hasQualifyingActivityOnDate(it.habitId, today)
-        } ?: false
-        val suggestedReminder = editingHabit?.let {
-            viewModel.repository.getSuggestedReminderTimeForHabit(it.habitId)
-        }
-
-        AddEditHabitDialog(
-            initialHabit = editingHabit,
-            alreadyLoggedToday = alreadyLogged,
-            suggestedReminderTime = suggestedReminder,
-            onDismiss = { viewModel.closeAddEditHabit() },
-            onSave = { habit, applyTodayWhenLogged ->
-                viewModel.saveHabit(habit, applyTodayWhenLogged)
-            },
-            onDelete = { habitId ->
-                viewModel.deleteHabit(habitId)
-                viewModel.closeAddEditHabit()
-            }
-        )
     }
 
     if (isJournalOpen) {

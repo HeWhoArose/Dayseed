@@ -76,7 +76,7 @@ fun TodayLongestStreakIndicator(
     modifier: Modifier = Modifier
 ) {
     val desc = if (longestSelection != null) {
-        "Longest active streak: ${longestSelection.formatIndicatorText()}"
+        "Longest active streak: ${longestSelection.formatIndicatorText()}. Tap to view all individual streaks."
     } else {
         "Longest active streak: No active streak yet. Every small step plants a seed."
     }
@@ -87,11 +87,7 @@ fun TodayLongestStreakIndicator(
             .testTag("today_main_streak_indicator")
             .semantics { contentDescription = desc }
             .clickable {
-                if (longestSelection != null) {
-                    onOpenHabitDetail(longestSelection.habit.habitId)
-                } else {
-                    onOpenLivingGrove(null)
-                }
+                onOpenLivingGrove(null)
             },
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
@@ -147,13 +143,25 @@ fun TodayLongestStreakIndicator(
                 }
             }
 
-            TextButton(
-                onClick = { onOpenLivingGrove(longestSelection?.habit?.habitId) },
-                modifier = Modifier
-                    .heightIn(min = 48.dp)
-                    .testTag("today_open_grove_btn")
-            ) {
-                Text("Grove", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (longestSelection != null) {
+                    TextButton(
+                        onClick = { onOpenHabitDetail(longestSelection.habit.habitId) },
+                        modifier = Modifier
+                            .heightIn(min = 48.dp)
+                            .testTag("today_longest_streak_habit_btn")
+                    ) {
+                        Text("Habit", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+                TextButton(
+                    onClick = { onOpenLivingGrove(null) },
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .testTag("today_open_grove_btn")
+                ) {
+                    Text("Grove", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                }
             }
         }
     }

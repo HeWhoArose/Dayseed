@@ -10,6 +10,7 @@ import com.example.dayseed.data.GroveTreeState
 import com.example.dayseed.data.Habit
 import com.example.dayseed.data.HabitConfigEffectivePolicy
 import com.example.dayseed.data.HabitConfigurationLockedTodayException
+import com.example.dayseed.data.HabitEntry
 import com.example.dayseed.data.HabitLifecycleState
 import com.example.dayseed.data.JournalEntry
 import com.example.dayseed.data.ProgressBand
@@ -18,6 +19,10 @@ import com.example.dayseed.data.TargetPeriod
 import com.example.dayseed.data.TestDayseedClock
 import com.example.dayseed.data.TrackingMode
 import com.example.dayseed.data.WeekdayMask
+import com.example.dayseed.ui.screens.SettingsSupport
+import com.example.dayseed.ui.screens.computeRecordSessionDailyPreviewTotal
+import com.example.dayseed.ui.screens.defaultRecordSessionValueText
+import com.example.dayseed.ui.screens.weeklyTargetSemanticsExplanation
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -1352,5 +1357,120 @@ class Phase2ImplementationTest {
         assertTrue(repository.loadHabitSummariesSync()[dailyHabit.habitId]!!.isScheduledToday)
         assertTrue(repository.loadHabitSummariesSync()[selectedWeekdaysHabit.habitId]!!.isScheduledToday)
     }
+
+    @Test
+    fun t2_c05_auditPolishF01ToF06AndDuplicateScreenRemoval() {
+        // 1. Duplicate AddEditHabitDialog screen class is removed from the codebase
+        try {
+            Class.forName("com.example.dayseed.ui.screens.AddEditHabitDialogKt")
+            fail("Duplicate AddEditHabitDialogKt should have been removed")
+        } catch (_: ClassNotFoundException) {
+            // Expected
+        }
+
+        // 2. F-03: RecordSessionSheet default value & daily preview total for weekly session-count habits
+        assertEquals(
+            "1",
+            defaultRecordSessionValueText(
+                existingEntry = null,
+                effectiveMode = TrackingMode.QUANTITY,
+                effectiveTargetPeriod = TargetPeriod.WEEK,
+                effectiveUnitCode = "sessions",
+                effectiveTargetValue = 3
+            )
+        )
+        assertEquals(
+            "25",
+            defaultRecordSessionValueText(
+                existingEntry = null,
+                effectiveMode = TrackingMode.QUANTITY,
+                effectiveTargetPeriod = TargetPeriod.WEEK,
+                effectiveUnitCode = "pages",
+                effectiveTargetValue = 25
+            )
+        )
+
+        val existingSessionsToday = listOf(
+            HabitEntry(
+                entryId = "e_s1",
+                habitId = "h_sess",
+                localDate = "2026-03-18",
+                valueUnits = 1,
+                entryNote = "Morning session",
+                createdAtUtcMs = 1000L,
+                updatedAtUtcMs = 1000L,
+                idempotencyKey = "k_s1"
+            ),
+            HabitEntry(
+                entryId = "e_s2",
+                habitId = "h_sess",
+                localDate = "2026-03-18",
+                valueUnits = 5,
+                entryNote = "Afternoon session with higher numeric input",
+                createdAtUtcMs = 2000L,
+                updatedAtUtcMs = 2000L,
+                idempotencyKey = "k_s2"
+            )
+        )
+        // New positive session adds 1 session to the 2 existing sessions -> 3 sessions today
+        assertEquals(
+            3,
+            computeRecordSessionDailyPreviewTotal(
+                existingEntriesOnDate = existingSessionsToday,
+                previewValueUnits = 1,
+                effectiveMode = TrackingMode.QUANTITY,
+                effectiveTargetPeriod = TargetPeriod.WEEK,
+                effectiveUnitCode = "sessions"
+            )
+        )
+        // Editing existing session e_s2 (so existingEntriesOnDate excludes e_s2) to 0 reduces session count from 2 to 1
+        assertEquals(
+            1,
+            computeRecordSessionDailyPreviewTotal(
+                existingEntriesOnDate = listOf(existingSessionsToday[0]),
+                previewValueUnits = 0,
+                effectiveMode = TrackingMode.QUANTITY,
+                effectiveTargetPeriod = TargetPeriod.WEEK,
+                effectiveUnitCode = "sessions"
+            )
+        )
+
+        // 3. F-04: Weekly target semantics explanation distinguishes days/week vs sessions/week vs cumulative units
+        val daysExplanation = weeklyTargetSemanticsExplanation(TrackingMode.COMPLETION_ONLY, null)
+        assertTrue(daysExplanation.contains("days/week", ignoreCase = true))
+        val sessionsExplanation = weeklyTargetSemanticsExplanation(TrackingMode.QUANTITY, "sessions")
+        assertTrue(sessionsExplanation.contains("sessions/week", ignoreCase = true))
+        val pagesExplanation = weeklyTargetSemanticsExplanation(TrackingMode.QUANTITY, "pages")
+        assertTrue(pagesExplanation.contains("Weekly target progress accumulates", ignoreCase = true))
+
+        // 4. F-05: Reminder time validation (HH:mm format) and clearSaveError()
+        assertEquals(LocalTime.of(8, 30), SettingsSupport.parseQuietHours("08:30"))
+        assertEquals("08:30", SettingsSupport.formatQuietHours(LocalTime.of(8, 30)))
+        assertNull(SettingsSupport.parseQuietHours("25:99"))
+        assertNull(SettingsSupport.parseQuietHours("8am"))
+
+        // Trigger a save error and verify clearSaveError resets both lastSaveError and lastErrorMessage
+        val failed = viewModel.saveHabit(
+            Habit(
+                habitId = "h_blank_err",
+                name = "   ",
+                trackingMode = TrackingMode.COMPLETION_ONLY
+            )
+        )
+        assertNull(failed)
+        assertNotNull(viewModel.lastSaveError.value)
+        assertNotNull(viewModel.lastErrorMessage.value)
+        viewModel.clearSaveError()
+        assertNull(viewModel.lastSaveError.value)
+        assertNull(viewModel.lastErrorMessage.value)
+
+        // 5. F-06: openLivingGrove(null) opens LivingGrove with null filter (showing all streaks)
+        viewModel.selectTab(NavTab.TODAY)
+        viewModel.openLivingGrove(null)
+        val groveRoute = viewModel.currentSecondaryRoute.value
+        assertTrue(groveRoute is SecondaryRoute.LivingGrove && groveRoute.selectedHabitId == null)
+        viewModel.navigateBack()
+    }
 }
+
 

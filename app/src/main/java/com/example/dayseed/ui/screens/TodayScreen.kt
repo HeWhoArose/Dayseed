@@ -367,13 +367,20 @@ fun TodayScreen(
                             color = MaterialTheme.colorScheme.onBackground
                         )
                         val tendedToday = scheduledTodayHabits.count { h ->
+                            val summary = habitSummaries[h.habitId]
+                            val weekSatisfied = summary != null &&
+                                summary.effectiveVersion.targetPeriod == com.example.dayseed.data.TargetPeriod.WEEK &&
+                                summary.weekTotalUnits >= summary.weekTargetUnits
                             todayOutcomes.any { it.habitId == h.habitId } ||
-                                todayEntries.any { it.habitId == h.habitId && it.valueUnits > 0 }
+                                todayEntries.any { it.habitId == h.habitId && it.valueUnits > 0 } ||
+                                todayExceptions.any { it.habitId == h.habitId } ||
+                                weekSatisfied
                         }
                         Text(
                             text = "$tendedToday of ${scheduledTodayHabits.size} tended",
                             style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag("today_tended_count_text")
                         )
                     }
                 }

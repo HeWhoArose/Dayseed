@@ -95,15 +95,12 @@ fun HabitCard(
     onClearRestDayToday: (() -> Unit)? = null,
     onOpenRetrospectiveJournal: (() -> Unit)? = null,
     onDismissRetrospectivePrompt: (() -> Unit)? = null,
-    onResetRecord: () -> Unit,
-    onEditHabit: () -> Unit,
-    onArchiveHabit: () -> Unit,
+    onResetRecord: () -> Unit = {},
+    onEditHabit: () -> Unit = {},
+    onArchiveHabit: () -> Unit = {},
     onPauseResumeHabit: ((HabitLifecycleState) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    var showMenu by remember { mutableStateOf(false) }
-    var showNoteEditor by remember { mutableStateOf(false) }
-    var noteDraft by remember(dateNote) { mutableStateOf(dateNote?.body ?: "") }
     val effVersion = summary?.effectiveVersion
     val mode = (effVersion?.trackingMode ?: habit.trackingMode).canonical()
     val isRecorded = outcome != null || entries.isNotEmpty() || restDayException != null
@@ -208,96 +205,17 @@ fun HabitCard(
                     }
                 }
 
-                Box {
-                    IconButton(
-                        onClick = { showMenu = true },
+                if (summary?.canTakeRestDayToday == true && onTakeRestDayToday != null && restDayException == null) {
+                    TextButton(
+                        onClick = onTakeRestDayToday,
                         modifier = Modifier
-                            .size(48.dp)
-                            .testTag("habit_menu_${habit.id}")
+                            .heightIn(min = 48.dp)
+                            .testTag("take_rest_day_btn_${habit.id}")
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "Habit options for ${habit.name}",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        if (onOpenHabitDetail != null) {
-                            DropdownMenuItem(
-                                text = { Text("Habit Details & History") },
-                                onClick = {
-                                    showMenu = false
-                                    onOpenHabitDetail()
-                                },
-                                modifier = Modifier.testTag("menu_open_detail_${habit.id}")
-                            )
-                        }
-                        if (onOpenRecordSession != null) {
-                            DropdownMenuItem(
-                                text = { Text("Record Session") },
-                                leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) },
-                                onClick = {
-                                    showMenu = false
-                                    onOpenRecordSession(null)
-                                },
-                                modifier = Modifier.testTag("menu_record_session_${habit.id}")
-                            )
-                        }
-                        DropdownMenuItem(
-                            text = { Text(if (dateNote != null) "Edit Date Note" else "Add Date Note") },
-                            leadingIcon = { Icon(Icons.Default.Notes, contentDescription = null) },
-                            onClick = {
-                                showMenu = false
-                                showNoteEditor = !showNoteEditor
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Edit Habit") },
-                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
-                            onClick = {
-                                showMenu = false
-                                onEditHabit()
-                            }
-                        )
-                        if (summary?.canTakeRestDayToday == true && onTakeRestDayToday != null) {
-                            DropdownMenuItem(
-                                text = { Text("Take a Rest Day (Hold Streak)") },
-                                onClick = {
-                                    showMenu = false
-                                    onTakeRestDayToday()
-                                },
-                                modifier = Modifier.testTag("take_rest_day_menu_${habit.id}")
-                            )
-                        }
-                        if (onPauseResumeHabit != null) {
-                            val isPaused = habit.lifecycleState == HabitLifecycleState.PAUSED
-                            DropdownMenuItem(
-                                text = { Text(if (isPaused) "Resume Habit" else "Pause Habit") },
-                                leadingIcon = {
-                                    Icon(
-                                        if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
-                                        contentDescription = null
-                                    )
-                                },
-                                onClick = {
-                                    showMenu = false
-                                    onPauseResumeHabit(
-                                        if (isPaused) HabitLifecycleState.ACTIVE else HabitLifecycleState.PAUSED
-                                    )
-                                }
-                            )
-                        }
-                        DropdownMenuItem(
-                            text = { Text(if (habit.isArchived) "Restore Habit" else "Archive Habit") },
-                            leadingIcon = { Icon(Icons.Default.Archive, contentDescription = null) },
-                            onClick = {
-                                showMenu = false
-                                onArchiveHabit()
-                            }
+                        Text(
+                            text = "Rest day",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -409,12 +327,14 @@ fun HabitCard(
                         if (outcome != null) {
                             RecordedOutcomeRow(
                                 outcome = outcome,
-                                onReset = onResetRecord
+                                onReset = onResetRecord,
+                                onOpenRecordSession = onOpenRecordSession
                             )
                         } else {
                             UnrecordedOutcomeActionRow(
                                 habit = habit,
-                                onLog = onLogOutcome
+                                onLog = onLogOutcome,
+                                onOpenRecordSession = onOpenRecordSession
                             )
                         }
                     }
@@ -423,8 +343,8 @@ fun HabitCard(
                 }
             }
 
-            // Optional per-habit-per-date note display or editor
-            if (dateNote != null && !showNoteEditor) {
+            // Read-only date note preview (editing lives in Habit Detail / Record Session)
+            if (dateNote != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Note: ${dateNote.body}",
@@ -432,43 +352,6 @@ fun HabitCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.testTag("habit_date_note_${habit.id}")
                 )
-            }
-
-            if (showNoteEditor && onSaveDateNote != null) {
-                Spacer(modifier = Modifier.height(10.dp))
-                OutlinedTextField(
-                    value = noteDraft,
-                    onValueChange = { noteDraft = it },
-                    label = { Text("Note for this date") },
-                    singleLine = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("habit_note_input_${habit.id}")
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(
-                        onClick = { showNoteEditor = false },
-                        modifier = Modifier.heightIn(min = 48.dp)
-                    ) {
-                        Text("Cancel")
-                    }
-                    TextButton(
-                        onClick = {
-                            if (noteDraft.isNotBlank()) {
-                                onSaveDateNote(noteDraft.trim())
-                            }
-                            showNoteEditor = false
-                        },
-                        modifier = Modifier
-                            .heightIn(min = 48.dp)
-                            .testTag("save_habit_note_btn_${habit.id}")
-                    ) {
-                        Text("Save Note")
-                    }
-                }
             }
 
             // D-042 Low-frequency retrospective journal prompt
@@ -658,41 +541,47 @@ private fun QuantityOrDurationSection(
             }
         }
 
-        // Quick-add buttons
-        val stepSmall = (target / 4).coerceAtLeast(1)
-        val stepHalf = (target / 2).coerceAtLeast(1)
+        // Separate Quick Complete / Quick Add actions and detailed Record action
+        val stepSmall = if (isSessionCountHabit) 1 else (target / 4).coerceAtLeast(1)
+        val stepHalf = if (isSessionCountHabit) 1 else (target / 2).coerceAtLeast(1)
 
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            OutlinedButton(
-                onClick = { onAddEntry(stepSmall, null) },
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 48.dp)
-                    .testTag("quick_add_small_${habit.id}"),
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                Text("+$stepSmall $unitLabel", fontSize = 12.sp)
-            }
-            if (stepHalf != stepSmall) {
+            if (!isSessionCountHabit) {
                 OutlinedButton(
-                    onClick = { onAddEntry(stepHalf, null) },
+                    onClick = { onAddEntry(stepSmall, null) },
                     modifier = Modifier
                         .weight(1f)
                         .heightIn(min = 48.dp)
-                        .testTag("quick_add_half_${habit.id}"),
+                        .testTag("quick_add_small_${habit.id}"),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("+$stepHalf $unitLabel", fontSize = 12.sp)
+                    Text("+$stepSmall $unitLabel", fontSize = 12.sp)
+                }
+                if (stepHalf != stepSmall) {
+                    OutlinedButton(
+                        onClick = { onAddEntry(stepHalf, null) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 48.dp)
+                            .testTag("quick_add_half_${habit.id}"),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("+$stepHalf $unitLabel", fontSize = 12.sp)
+                    }
                 }
             }
             Button(
                 onClick = {
-                    val remainingBig = targetBig.subtract(activeUnitsBig)
-                    val remaining = if (remainingBig <= BigInteger.ONE) 1 else remainingBig.min(BigInteger.valueOf(Int.MAX_VALUE.toLong())).toInt()
-                    onAddEntry(remaining, null)
+                    if (isSessionCountHabit) {
+                        onAddEntry(1, null)
+                    } else {
+                        val remainingBig = targetBig.subtract(activeUnitsBig)
+                        val remaining = if (remainingBig <= BigInteger.ONE) 1 else remainingBig.min(BigInteger.valueOf(Int.MAX_VALUE.toLong())).toInt()
+                        onAddEntry(remaining, null)
+                    }
                 },
                 modifier = Modifier
                     .weight(1f)
@@ -704,118 +593,64 @@ private fun QuantityOrDurationSection(
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
-                Text("Goal", fontSize = 12.sp)
+                Text(if (isSessionCountHabit) "+1 Session" else "Complete Goal", fontSize = 12.sp)
             }
-            OutlinedButton(
-                onClick = {
-                    if (onOpenRecordSession != null) {
-                        onOpenRecordSession(null)
-                    } else {
-                        showCustomInput = !showCustomInput
-                    }
-                },
-                modifier = Modifier
-                    .heightIn(min = 48.dp)
-                    .testTag("open_record_session_${habit.id}"),
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Record session for ${habit.name}", modifier = Modifier.size(16.dp))
-            }
-            OutlinedButton(
-                onClick = { showCustomInput = !showCustomInput },
-                modifier = Modifier
-                    .heightIn(min = 48.dp)
-                    .testTag("toggle_custom_entry_${habit.id}"),
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                Icon(Icons.Default.Edit, contentDescription = "Inline custom entry amount", modifier = Modifier.size(16.dp))
-            }
-        }
-
-        if (showCustomInput) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedTextField(
-                    value = customAmountText,
-                    onValueChange = { customAmountText = it.filter { ch -> ch.isDigit() } },
-                    label = { Text("Amount ($unitLabel, 0 allowed)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("custom_entry_input_${habit.id}")
-                )
-                Button(
-                    onClick = {
-                        val amt = customAmountText.toIntOrNull()
-                        if (amt != null && amt >= 0) {
-                            onAddEntry(amt, null)
-                            customAmountText = ""
-                            showCustomInput = false
-                        }
-                    },
+            if (onOpenRecordSession != null) {
+                OutlinedButton(
+                    onClick = { onOpenRecordSession(null) },
                     modifier = Modifier
                         .heightIn(min = 48.dp)
-                        .testTag("submit_custom_entry_${habit.id}")
+                        .testTag("open_record_session_${habit.id}"),
+                    shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Log")
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Record session for ${habit.name}",
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Record", fontSize = 12.sp)
                 }
             }
         }
 
-        // Individual entries list for today/selected date
+        // Compact session summary link (individual session editing/deletion lives in RecordSessionSheet & HabitDetailScreen)
         if (entries.isNotEmpty()) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                for (entry in entries) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                            .padding(horizontal = 10.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = if (entry.valueUnits == 0) "0 $unitLabel (Checked in)"
-                            else "+${entry.valueUnits} $unitLabel" + (entry.entryNote?.let { " • $it" } ?: ""),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (onOpenRecordSession != null) {
-                                IconButton(
-                                    onClick = { onOpenRecordSession(entry.entryId) },
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .testTag("edit_entry_${entry.entryId}")
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Edit,
-                                        contentDescription = "Edit session",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                            IconButton(
-                                onClick = { onDeleteEntry(entry.entryId) },
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .testTag("delete_entry_${entry.entryId}")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = "Delete entry",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
+            val sessionCountText = if (entries.size == 1) "1 session logged today" else "${entries.size} sessions logged today"
+            val latestEntry = entries.last()
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(
+                        if (onOpenRecordSession != null) {
+                            Modifier.clickable { onOpenRecordSession(latestEntry.entryId) }
+                        } else {
+                            Modifier
                         }
+                    )
+                    .testTag("habit_today_sessions_summary_${habit.id}")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = sessionCountText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (onOpenRecordSession != null) {
+                        Text(
+                            text = "Review / Edit",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             }
@@ -826,7 +661,8 @@ private fun QuantityOrDurationSection(
 @Composable
 private fun RecordedOutcomeRow(
     outcome: HabitDayOutcome,
-    onReset: () -> Unit
+    onReset: () -> Unit,
+    onOpenRecordSession: ((String?) -> Unit)? = null
 ) {
     val effort = when (outcome.effortLevel) {
         "TINY" -> EffortLevel.TINY
@@ -855,7 +691,10 @@ private fun RecordedOutcomeRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
             Text(text = symbol, fontSize = 16.sp)
             Spacer(modifier = Modifier.width(8.dp))
             Text(
@@ -866,16 +705,29 @@ private fun RecordedOutcomeRow(
             )
         }
 
-        OutlinedButton(
-            onClick = onReset,
-            shape = RoundedCornerShape(8.dp),
-            border = BorderStroke(1.dp, effColor.copy(alpha = 0.5f)),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = effColor),
-            modifier = Modifier
-                .heightIn(min = 48.dp)
-                .testTag("reset_outcome_btn_${outcome.habitId}")
-        ) {
-            Text(text = "Change", style = MaterialTheme.typography.labelMedium)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (onOpenRecordSession != null) {
+                OutlinedButton(
+                    onClick = { onOpenRecordSession(null) },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .testTag("open_record_session_${outcome.habitId}")
+                ) {
+                    Text(text = "Record", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+            OutlinedButton(
+                onClick = onReset,
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, effColor.copy(alpha = 0.5f)),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = effColor),
+                modifier = Modifier
+                    .heightIn(min = 48.dp)
+                    .testTag("reset_outcome_btn_${outcome.habitId}")
+            ) {
+                Text(text = "Change", style = MaterialTheme.typography.labelMedium)
+            }
         }
     }
 }
@@ -883,7 +735,8 @@ private fun RecordedOutcomeRow(
 @Composable
 private fun UnrecordedOutcomeActionRow(
     habit: Habit,
-    onLog: (outcome: DailyOutcome, effort: EffortLevel) -> Unit
+    onLog: (outcome: DailyOutcome, effort: EffortLevel) -> Unit,
+    onOpenRecordSession: ((String?) -> Unit)? = null
 ) {
     if (habit.trackingMode.canonical() == TrackingMode.EFFORT_AWARE) {
         Row(
@@ -916,21 +769,39 @@ private fun UnrecordedOutcomeActionRow(
             )
         }
     } else {
-        Button(
-            onClick = { onLog(DailyOutcome.COMPLETED, EffortLevel.STANDARD) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp)
-                .testTag("habit_done_btn_${habit.id}"),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ),
-            shape = RoundedCornerShape(12.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Complete for Today", style = MaterialTheme.typography.labelLarge)
+            Button(
+                onClick = { onLog(DailyOutcome.COMPLETED, EffortLevel.STANDARD) },
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 48.dp)
+                    .testTag("habit_done_btn_${habit.id}"),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Complete", style = MaterialTheme.typography.labelLarge)
+            }
+            if (onOpenRecordSession != null) {
+                OutlinedButton(
+                    onClick = { onOpenRecordSession(null) },
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .testTag("open_record_session_${habit.id}"),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Record", style = MaterialTheme.typography.labelLarge)
+                }
+            }
         }
     }
 }
