@@ -1,7 +1,14 @@
 package com.example.dayseed.ui.screens
 
+import com.example.dayseed.data.BackupAndExportManager
+import com.example.dayseed.data.BackupCryptoConfig
+import org.json.JSONObject
 import java.time.DayOfWeek
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
 /**
  * Pure settings-display and validation support for the four-section Settings hub (D-212 / D-213).
@@ -152,4 +159,87 @@ object SettingsSupport {
                 "JSON detected, but Dayseed backup fields were not found."
         }
     }
+
+    /**
+     * Pre-mutation backup metadata (date, format/schema version, per-category record counts)
+     * parsed from the plain (already-decrypted) backup JSON. Returns null when the payload is
+     * not parseable Dayseed backup content. Password-protected backups can be resolved by
+     * passing the entered password; a wrong password yields null rather than an exception.
+     */
+    fun inspectBackupMetadata(rawPayload: String, password: String? = null): BackupMetadata? {
+        val trimmed = rawPayload.trim()
+        if (trimmed.isEmpty()) return null
+        return try {
+            val plainJson = if (trimmed.contains("\"${BackupCryptoConfig.ENVELOPE_FORMAT}\"")) {
+                BackupAndExportManager.unwrapBackupPayload(trimmed, password)
+            } else {
+                trimmed
+            }
+            val root = JSONObject(plainJson)
+            if (root.optString("backup_kind") != "dayseed_portable_backup") return null
+
+            val counts = linkedMapOf<String, Int>()
+            for (key in BACKUP_COUNT_CATEGORIES) {
+                val arr = root.optJSONArray(key)
+                if (arr != null) counts[key] = arr.length()
+            }
+
+            val exportedUtcMs = if (root.has("exported_at_utc_ms")) root.getLong("exported_at_utc_ms") else null
+            val exportedReadable = exportedUtcMs?.let {
+                Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDateTime().format(
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+                )
+            }
+
+            BackupMetadata(
+                backupKind = root.optString("backup_kind"),
+                formatVersion = root.optInt("format_version", -1),
+                sourceSchemaVersion = root.optInt("source_schema_version", -1),
+                exportedAtUtcMs = exportedUtcMs,
+                exportedAtReadable = exportedReadable,
+                isPasswordProtected = rawPayload.trim().contains("\"${BackupCryptoConfig.ENVELOPE_FORMAT}\""),
+                categoryCounts = counts
+            )
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /**
+     * One-line readable rendering of [inspectBackupMetadata] for the pre-restore confirmation UI.
+     * Never mutates data — purely informational.
+     */
+    fun backupMetadataLine(metadata: BackupMetadata?): String? {
+        if (metadata == null) return null
+        val datePart = metadata.exportedAtReadable?.let { " • exported $it" } ?: ""
+        val versionPart = "format v${metadata.formatVersion} • schema v${metadata.sourceSchemaVersion}"
+        val countsPart = if (metadata.categoryCounts.isEmpty()) {
+            ""
+        } else {
+            " • " + metadata.categoryCounts.entries.joinToString(", ") { (k, v) -> "$v $k" }
+        }
+        val encryptionPart = if (metadata.isPasswordProtected) " • password-protected" else ""
+        return "$versionPart$datePart$countsPart$encryptionPart"
+    }
+    /** Categories counted by [inspectBackupMetadata]; order follows the portable-backup contract. */
+    val BACKUP_COUNT_CATEGORIES: List<String> = listOf(
+        "habits",
+        "habit_versions",
+        "habit_entries",
+        "habit_day_outcomes",
+        "habit_streak_runs",
+        "journal_entries",
+        "journal_drafts"
+    )
+
+    data class BackupMetadata(
+        val backupKind: String,
+        val formatVersion: Int,
+        val sourceSchemaVersion: Int,
+        val exportedAtUtcMs: Long?,
+        /** Local-time rendering of [exportedAtUtcMs], e.g. "2026-11-04 10:00"; null when absent. */
+        val exportedAtReadable: String?,
+        val isPasswordProtected: Boolean,
+        val categoryCounts: Map<String, Int>
+    )
 }

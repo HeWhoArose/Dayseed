@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.AlertDialog
@@ -42,6 +43,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.dayseed.DayseedViewModel
+import com.example.dayseed.NavTab
 import com.example.dayseed.data.HabitLifecycleState
 import com.example.dayseed.ui.components.SettingsGroupCard
 import com.example.dayseed.ui.components.SettingsRow
@@ -216,6 +218,18 @@ fun SettingsScreen(
             item {
                 SettingsGroupCard {
                     SettingsRow(
+                        label = "Notifications & reminders",
+                        summary = "Delivery not active yet (pending device verification) · " +
+                            SettingsSupport.quietHoursSummary(
+                                appSettings["quiet_hours_start"]?.valueText,
+                                appSettings["quiet_hours_end"]?.valueText
+                            ),
+                        icon = Icons.Default.NotificationsNone,
+                        onClick = { activeSheet = SettingsSheet.REMINDERS },
+                        testTag = "settings_row_reminders"
+                    )
+                    SettingsRowDivider()
+                    SettingsRow(
                         label = "Quiet hours & reminders",
                         summary = SettingsSupport.quietHoursSummary(
                             appSettings["quiet_hours_start"]?.valueText,
@@ -346,6 +360,15 @@ fun SettingsScreen(
                             initialStart = appSettings["quiet_hours_start"]?.valueText ?: "21:00",
                             initialEnd = appSettings["quiet_hours_end"]?.valueText ?: "08:00",
                             onSaved = { activeSheet = null }
+                        )
+                    SettingsSheet.REMINDERS ->
+                        RemindersPanel(
+                            viewModel = viewModel,
+                            onOpenQuietHours = { activeSheet = SettingsSheet.QUIET_HOURS },
+                            onNavigateToHabitEditors = {
+                                activeSheet = null
+                                viewModel.selectTab(NavTab.HABITS)
+                            }
                         )
                     SettingsSheet.JOURNAL_EXPORT ->
                         JournalExportPanel(

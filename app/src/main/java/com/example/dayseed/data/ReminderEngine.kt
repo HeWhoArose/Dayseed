@@ -139,8 +139,8 @@ object ReminderEngine {
                 "DELIVERED" to null
         }
 
-        val notifTag = "dayseed_habit_${habitVersion.habitId}"
-        val notifId = (habitVersion.habitId.hashCode() and 0x7FFFFFFF).coerceAtLeast(1)
+        val notifTag = platformTagFor(habitVersion.habitId)
+        val notifId = platformIdFor(habitVersion.habitId)
 
         val cv = ContentValues().apply {
             put("delivery_key", deliveryKey)
@@ -267,4 +267,13 @@ object ReminderEngine {
             null
         }
     }
+
+    /**
+     * Shared platform-notification identity so the evaluation ledger and the Android
+     * notification poster use one consistent (tag, id) pair per habit.
+     */
+    fun platformTagFor(habitId: String): String = "dayseed_habit_$habitId"
+
+    fun platformIdFor(habitId: String): Int =
+        (habitId.hashCode() and 0x7FFFFFFF).coerceAtLeast(1)
 }

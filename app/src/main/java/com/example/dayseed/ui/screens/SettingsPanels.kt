@@ -1,5 +1,7 @@
 package com.example.dayseed.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -43,12 +45,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -61,6 +65,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.example.dayseed.DayseedViewModel
 import com.example.dayseed.data.ConflictResolution
 import com.example.dayseed.data.Habit
@@ -73,10 +78,12 @@ import com.example.dayseed.ui.theme.DarkBrand
 import com.example.dayseed.ui.theme.DarkCanvas
 import com.example.dayseed.ui.theme.LightBrand
 import com.example.dayseed.ui.theme.LightCanvas
+import com.example.dayseed.ui.theme.NightGoldAccent
 import com.example.dayseed.ui.theme.SoftBotanicalThemeConfig
 import com.example.dayseed.ui.theme.ThemeModeOption
 import com.example.dayseed.ui.theme.resolveDayseedArtwork
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import java.time.DayOfWeek
 
 /**
@@ -85,7 +92,7 @@ import java.time.DayOfWeek
  * quick preferences and unifying Journal Export + Portable Backup into a cohesive Data sub-screen.
  */
 enum class SettingsSheet {
-    APPEARANCE, WEEK_START, QUIET_HOURS, JOURNAL_EXPORT, PRIVACY, REMOVED_HABITS, ABOUT
+    APPEARANCE, WEEK_START, QUIET_HOURS, REMINDERS, JOURNAL_EXPORT, PRIVACY, REMOVED_HABITS, ABOUT
 }
 
 enum class DataSubScreenSection {
@@ -123,13 +130,27 @@ fun InlineAppearanceSelector(
     modifier: Modifier = Modifier
 ) {
     val isSystemDark = isSystemInDarkTheme()
-    val nowLocal = remember { viewModel.repository.clock.nowLocalTime() }
+    // Live local-time source: refreshes on a 30-second tick so the Settings preview stays in
+    // sync with the Today screen's app clock and never freezes at composition time.
+    val nowLocal by produceState(
+        initialValue = viewModel.repository.clock.nowLocalTime(),
+        key1 = currentThemeMode
+    ) {
+        value = viewModel.repository.clock.nowLocalTime()
+        while (true) {
+            delay(30_000L)
+            value = viewModel.repository.clock.nowLocalTime()
+        }
+    }
     val previewArtwork = remember(currentThemeMode, isSystemDark, nowLocal) {
         resolveDayseedArtwork(currentThemeMode, isSystemDark, nowLocal)
     }
     val daypart = remember(currentThemeMode, nowLocal, isSystemDark) {
         when (currentThemeMode) {
             ThemeModeOption.SOFT_BOTANICAL_AUTO -> SoftBotanicalThemeConfig.resolveDaypart(nowLocal)
+            // Dark + Time-of-Day Artwork: palette is dark all day but the illustration
+            // still follows local time, so the preview shows the live daypart.
+            ThemeModeOption.DARK_DAYPART_ART -> SoftBotanicalThemeConfig.resolveDaypart(nowLocal)
             ThemeModeOption.LIGHT -> null
             ThemeModeOption.DARK -> BotanicalDaypart.NIGHT
             ThemeModeOption.SYSTEM -> if (isSystemDark) BotanicalDaypart.NIGHT else null
@@ -154,6 +175,10 @@ fun InlineAppearanceSelector(
                             DarkCanvas to DarkBrand
                         ThemeModeOption.SYSTEM ->
                             SoftBotanicalThemeConfig.EveningCanvas to LightBrand
+                        ThemeModeOption.DARK_DAYPART_ART ->
+                            // Dark canvas + golden-clay accent: dark colours all day with
+                            // illustrations that still change with the time of day.
+                            DarkCanvas to NightGoldAccent
                     }
                 }
                 Surface(
@@ -279,7 +304,9 @@ fun AppearancePanel(
 ) {
     PanelTitle(
         "Appearance",
-        "How Dayseed looks. Soft Botanical (Time of Day) shifts gradually across Morning, Day, Evening, and Night."
+        "How Dayseed looks. Soft Botanical (Time of Day) shifts palette and illustration gradually " +
+            "across Morning, Day, Evening, and Night. Dark + Time-of-Day Artwork keeps dark colours " +
+            "all day while the illustration still changes with the time of day."
     )
     Spacer(modifier = Modifier.height(12.dp))
     InlineAppearanceSelector(viewModel = viewModel, currentThemeMode = currentThemeMode)
@@ -457,6 +484,246 @@ fun QuietHoursPanel(
         Text("Save quiet hours")
     }
     Spacer(modifier = Modifier.height(20.dp))
+}
+
+/**
+ * Dedicated Notifications & reminders detail panel. Re-opens the deferred reminders surface
+ * (D-212) with an explicit owner ruling recorded for this phase:
+ *
+ * - Reminder **delivery is not active yet**: the built scheduling path has not passed an
+ *   end-to-end delivery test on a physical device, so every activation switch stays
+ *   disabled until that verification happens. This is deliberate — never present an
+ *   enabled switch backed by unverified delivery.
+ * - The panel still exposes the real Android notification permission state, a request
+ *   action, and a route to the system notification settings.
+ * - Habit reminders stay configured inside Create/Edit Habit (no duplicate reminder store).
+ * - Quiet-hours controls and the shared three-per-day cap keep the existing behaviour.
+ * - Weekly reflection reminders are documented here as not-yet-implemented rather than
+ *   shown as a control that does nothing.
+ * - Separate encouragement-tip controls are intentionally not exposed (feature unsupported).
+ */
+@Composable
+fun RemindersPanel(
+    viewModel: DayseedViewModel,
+    onOpenQuietHours: () -> Unit,
+    onNavigateToHabitEditors: () -> Unit
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val appSettings by viewModel.appSettings.collectAsState()
+
+    val remindersEnabledNow = appSettings["reminders_enabled"]?.valueText.equals("true", ignoreCase = true)
+    val quietSummary = SettingsSupport.quietHoursSummary(
+        appSettings["quiet_hours_start"]?.valueText,
+        appSettings["quiet_hours_end"]?.valueText
+    )
+    val canPostNow = remember {
+        ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.POST_NOTIFICATIONS
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+    var permissionState by remember { mutableStateOf(canPostNow) }
+    val requestPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> permissionState = granted }
+
+    PanelTitle(
+        "Notifications & reminders",
+        "Planned gentle prompts for habits and weekly reflections."
+    )
+    Spacer(modifier = Modifier.height(10.dp))
+
+    // ---- Honest delivery status ----
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.NotificationsNone,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = "Reminder delivery is not active yet. Dayseed's reminder scheduling is " +
+                    "being verified on a real device first; every switch here stays off until " +
+                    "then. Nothing can be enabled from this panel right now.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+    Spacer(modifier = Modifier.height(14.dp))
+
+    // ---- Area 1: Global notifications ----
+    SettingsGroupCard {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Global notifications",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Dayseed reminders", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        text = "Pending device verification",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = remindersEnabledNow,
+                    onCheckedChange = null,
+                    enabled = false,
+                    modifier = Modifier.testTag("reminders_global_switch")
+                )
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = if (permissionState) {
+                    "Android permission: allowed to show notifications."
+                } else {
+                    "Android permission: notifications are not allowed right now. Android " +
+                        "blocks all reminders from any app where this is off."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag("reminders_permission_state")
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (!permissionState) {
+                    OutlinedButton(
+                        onClick = {
+                            if (android.os.Build.VERSION.SDK_INT >= 33) {
+                                requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                try {
+                                    context.startActivity(
+                                        android.content.Intent(
+                                            "android.settings.APP_NOTIFICATION_SETTINGS"
+                                        ).putExtra(
+                                            "android.provider.extra.APP_PACKAGE",
+                                            context.packageName
+                                        )
+                                    )
+                                } catch (_: Exception) {
+                                    openSystemNotificationSettings(context)
+                                }
+                            }
+                        },
+                        modifier = Modifier.testTag("reminders_request_permission_btn")
+                    ) { Text("Allow notifications", style = MaterialTheme.typography.labelMedium) }
+                }
+                OutlinedButton(
+                    onClick = { openSystemNotificationSettings(context) },
+                    modifier = Modifier.testTag("reminders_open_system_settings_btn")
+                ) {
+                    Text("Android notification settings", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        }
+    }
+    Spacer(modifier = Modifier.height(14.dp))
+
+    // ---- Area 2: Habit reminders ----
+    SettingsGroupCard {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Habit reminders",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "Individual habit reminders are set inside each habit in Create/Edit Habit " +
+                    "(they default to 09:00 when turned on there). Dayseed keeps a single " +
+                    "reminder source of truth and does not duplicate it here.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            OutlinedButton(
+                onClick = onNavigateToHabitEditors,
+                modifier = Modifier.testTag("reminders_open_habit_editors_btn")
+            ) {
+                Text("Open your habits", style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+    Spacer(modifier = Modifier.height(14.dp))
+
+    // ---- Area 3: Quiet hours (existing controls preserved; editor opened on demand) ----
+    SettingsGroupCard {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Quiet hours",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "Reminders pause during $quietSummary. All reminders share a daily limit " +
+                    "of at most 3 per day across the whole app to keep Dayseed calm.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            OutlinedButton(
+                onClick = onOpenQuietHours,
+                modifier = Modifier.testTag("reminders_open_quiet_hours_btn")
+            ) {
+                Text("Edit quiet hours", style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+    Spacer(modifier = Modifier.height(14.dp))
+
+    // ---- Area 4: Weekly goal reminders (honest not-implemented state) ----
+    SettingsGroupCard {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Weekly reflection reminders",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "The weekly reflection runs at 09:00 device-local time when implemented. " +
+                    "That is the intended time, not a delivery guarantee — Android may delay " +
+                    "reminders slightly so they arrive close to the intended moment.\n\n" +
+                    "Weekly reflection reminder preferences are not implemented yet, so there " +
+                    "is no switch here.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+    // ---- Area 5: Optional encouragement tips are intentionally not exposed — the feature
+    //      is not supported yet, and unsupported controls must never appear switchable.
+    Spacer(modifier = Modifier.height(20.dp))
+}
+
+private fun openSystemNotificationSettings(context: android.content.Context) {
+    try {
+        context.startActivity(android.content.Intent("android.settings.APP_NOTIFICATION_SETTINGS").apply {
+            putExtra("android.provider.extra.APP_PACKAGE", context.packageName)
+        })
+    } catch (_: Exception) {
+        try {
+            context.startActivity(android.content.Intent(android.provider.Settings.ACTION_SETTINGS))
+        } catch (_: Exception) {
+            // No settings app reachable; nothing to do from here.
+        }
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -723,6 +990,85 @@ fun BackupRestorePanel(
     val payloadInspection = remember(restoreJsonInput) {
         SettingsSupport.inspectBackupPayloadSummary(restoreJsonInput)
     }
+    // Pre-mutation metadata (date, format/schema version, category counts) shown before restore;
+    // parsed from the selected backup without touching any stored data.
+    val restoreMetadata = remember(restoreJsonInput, backupPassword) {
+        SettingsSupport.backupMetadataLine(
+            SettingsSupport.inspectBackupMetadata(restoreJsonInput, backupPassword.takeIf { it.isNotBlank() })
+        )
+    }
+    var saveFileMessage by remember { mutableStateOf<String?>(null) }
+    var saveFileError by remember { mutableStateOf<String?>(null) }
+    var filePickerError by remember { mutableStateOf<String?>(null) }
+
+    // ---- Save a backup via the Android Storage Access Framework (user-selected destination) ----
+    // Writes the complete backup to the chosen document, then verifies the produced file can be
+    // read back identically. Success is never reported before the write and read-back finished.
+    val saveBackupLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri == null) {
+            filePickerError = "No destination chosen — nothing was saved."
+            return@rememberLauncherForActivityResult
+        }
+        filePickerError = null
+        saveFileError = null
+        saveFileMessage = null
+        coroutineScope.launch {
+            try {
+                val json = viewModel.repository.exportDataAsJson(
+                    password = backupPassword.takeIf { it.isNotBlank() }
+                )
+                val bytes = json.toByteArray(Charsets.UTF_8)
+                context.contentResolver.openOutputStream(uri, "wt")?.use { out ->
+                    out.write(bytes)
+                    out.flush()
+                } ?: throw IllegalStateException("Could not open the chosen destination for writing")
+
+                // Mandatory read-back verification: the document must be usable, not just writable.
+                val readBack = context.contentResolver.openInputStream(uri)?.use {
+                    it.readBytes().toString(Charsets.UTF_8)
+                } ?: throw IllegalStateException("Could not read the written backup back for verification")
+                if (readBack != json) {
+                    throw IllegalStateException("The saved backup could not be verified after writing")
+                }
+                saveFileMessage = "Backup saved and verified at the location you chose. " +
+                    "Dayseed does not track or update this file later."
+            } catch (e: Exception) {
+                saveFileError = "That backup could not be written or verified there. " +
+                    "Nothing was reported as saved. (${e.message ?: "storage error"})"
+            }
+        }
+    }
+
+    // ---- Restore a backup via the system document picker (user-selected source) ----
+    // Reads and validates the chosen document; the existing pre-restore inspection,
+    // password handling, Merge/Replace choice and safety backup stay unchanged.
+    val openBackupLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) {
+            filePickerError = "No backup selected — nothing was opened."
+            return@rememberLauncherForActivityResult
+        }
+        filePickerError = null
+        try {
+            val text = context.contentResolver.openInputStream(uri)?.use {
+                it.readBytes().toString(Charsets.UTF_8)
+            } ?: throw IllegalStateException("Could not read the selected backup")
+            if (text.isBlank()) throw IllegalStateException("The selected backup is empty")
+            val summary = SettingsSupport.inspectBackupPayloadSummary(text)
+            if (summary == null && !text.trimStart().startsWith("{")) {
+                throw IllegalStateException("Doesn't look like a Dayseed backup file")
+            }
+            restoreError = null
+            restoreJsonInput = text
+            showRestoreDialog = true
+        } catch (e: Exception) {
+            filePickerError = "That file could not be read as a Dayseed backup. " +
+                "Nothing was changed. (${e.message ?: "could not open file"})"
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -851,6 +1197,44 @@ fun BackupRestorePanel(
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
+                if (saveFileMessage != null || saveFileError != null || filePickerError != null) {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (saveFileError != null) {
+                            MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f)
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = when {
+                                    saveFileError != null -> Icons.Default.VisibilityOff
+                                    saveFileMessage != null -> Icons.Default.CheckCircle
+                                    else -> Icons.Default.ContentPaste
+                                },
+                                contentDescription = null,
+                                tint = if (saveFileError != null) {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    MaterialTheme.colorScheme.primary
+                                },
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = saveFileError
+                                    ?: saveFileMessage
+                                    ?: filePickerError
+                                    ?: "",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = {
@@ -898,6 +1282,23 @@ fun BackupRestorePanel(
                         Text("Share")
                     }
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = {
+                        saveFileMessage = null
+                        saveFileError = null
+                        filePickerError = null
+                        saveBackupLauncher.launch("dayseed-backup-${java.time.LocalDate.now()}.dayseed.json")
+                    },
+                    enabled = passwordReady,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("save_backup_file_btn")
+                ) {
+                    Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Save backup to a file (choose location)")
+                }
             }
         }
 
@@ -914,13 +1315,37 @@ fun BackupRestorePanel(
                 OutlinedButton(
                     onClick = {
                         restoreError = null
+                        filePickerError = null
                         showRestoreDialog = true
                     },
                     modifier = Modifier.testTag("open_restore_dialog_btn")
                 ) {
                     Icon(Icons.Default.Restore, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Restore from a file")
+                    Text("Restore from pasted contents")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = {
+                        restoreError = null
+                        filePickerError = null
+                        openBackupLauncher.launch(arrayOf("*/*"))
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("open_backup_file_btn")
+                ) {
+                    Icon(Icons.Default.Restore, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Choose a backup file…")
+                }
+                if (filePickerError != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = filePickerError!!,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
 
                 // Merge conflicts (D-202)
@@ -1043,7 +1468,15 @@ fun BackupRestorePanel(
                         maxLines = 5,
                         supportingText = {
                             when {
-                                restoreError != null -> Text(restoreError!!, color = MaterialTheme.colorScheme.error)
+                                restoreError != null -> {
+                                    Text(
+                                        "That didn't restore. Check the file contents" +
+                                            (if (backupPassword.isNotBlank()) " and the password" else "") +
+                                            ".",
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                                restoreMetadata != null -> Text(restoreMetadata!!)
                                 payloadInspection != null -> Text(payloadInspection)
                             }
                         },

@@ -1,3 +1,5 @@
+import java.io.File
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -66,6 +68,22 @@ android {
                     "robolectric.dependency.repo.url",
                     "https://maven-central.storage-download.googleapis.com/maven2"
                 )
+                // Windows-only test-infrastructure fix (documented in docs/28; NOT product code):
+                // Robolectric sandbox directories embed "<ClassName>_<testMethodName>" under
+                // java.io.tmpdir. Long method names (e.g. t1_26_to_31_v2ToV3...) push the SQLite
+                // file path past the legacy Windows MAX_PATH limit of 260 characters, which
+                // surfaces as SQLiteCantOpenDatabaseException "check directory permissions".
+                // Redirect java.io.tmpdir to a short directory on Windows. Override the default
+                // with -ProbolectricTempDir=<path> (Gradle property) or the DAYSEED_ROBOLECTRIC_TMP
+                // environment variable.
+                if ((System.getProperty("os.name") ?: "").contains("windows", ignoreCase = true)) {
+                    val tmpDir = providers.gradleProperty("robolectricTempDir")
+                        .orElse(providers.environmentVariable("DAYSEED_ROBOLECTRIC_TMP")
+                            .orElse(providers.provider { "C:\\rt" }))
+                        .get()
+                    File(tmpDir).mkdirs()
+                    it.systemProperty("java.io.tmpdir", tmpDir)
+                }
             }
         }
     }
@@ -89,6 +107,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.work.runtime.ktx)
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)

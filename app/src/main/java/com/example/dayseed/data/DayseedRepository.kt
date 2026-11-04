@@ -90,6 +90,14 @@ class DayseedRepository(
         refreshAllSync()
         processCancelOutboxSync()
         evaluateComebackSync()
+        try {
+            // (Re)align the reminder alarm schedule with current settings/habits (no-op when
+            // reminders are not opted in). Repairs scheduling after app start, restores, and
+            // settings changes; never throws out of construction.
+            ReminderScheduler.scheduleAll(appContext, this)
+        } catch (_: Exception) {
+            // Scheduling repairs are best-effort; the periodic reconcile worker covers gaps.
+        }
     }
 
     suspend fun refreshAll() = withContext(Dispatchers.IO) {
@@ -133,6 +141,37 @@ class DayseedRepository(
                 notifManager?.cancel(tag, id)
                 true
             }
+        )
+    }
+
+    /** Ledger status for a delivery key ("DELIVERED", "SUPPRESSED", ...), null when never evaluated. */
+    fun getReminderDeliveryStatus(deliveryKey: String): String? {
+        val db = dbHelper.writableDatabase
+        db.rawQuery(
+            "SELECT delivery_status FROM ${DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES} WHERE delivery_key = ?",
+            arrayOf(deliveryKey)
+        ).use { c ->
+            return if (c.moveToFirst()) c.getString(0) else null
+        }
+    }
+
+    /**
+     * Corrects the ledger when a reminder was evaluated as deliverable but the Android
+     * notification post itself failed, so delivery records always match reality.
+     */
+    fun markReminderDeliveryNotDelivered(deliveryKey: String, suppressionReason: String, nowUtcMs: Long) {
+        val db = dbHelper.writableDatabase
+        val cv = ContentValues().apply {
+            put("delivery_status", "SUPPRESSED")
+            putNull("delivered_at_utc_ms")
+            put("suppression_reason", suppressionReason)
+            put("attempted_at_utc_ms", nowUtcMs)
+        }
+        db.update(
+            DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES,
+            cv,
+            "delivery_key = ?",
+            arrayOf(deliveryKey)
         )
     }
 
