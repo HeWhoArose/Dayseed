@@ -39,7 +39,8 @@ enum class ThemeModeOption(val settingValue: String, val label: String) {
     SYSTEM("SYSTEM", "System Default"),
     LIGHT("LIGHT", "Light (Botanical Day)"),
     DARK("DARK", "Dark (Quiet Night)"),
-    SOFT_BOTANICAL_AUTO("SOFT_BOTANICAL_AUTO", "Soft Botanical (Time of Day)");
+    SOFT_BOTANICAL_AUTO("SOFT_BOTANICAL_AUTO", "Soft Botanical (Time of Day)"),
+    DARK_DAYPART_ART("DARK_DAYPART_ART", "Dark + Time-of-Day Artwork");
 
     companion object {
         fun fromSetting(value: String?): ThemeModeOption {

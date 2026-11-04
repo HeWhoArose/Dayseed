@@ -41,6 +41,11 @@ fun resolveDayseedArtwork(
         ThemeModeOption.SOFT_BOTANICAL_AUTO -> artworkForDaypart(
             SoftBotanicalThemeConfig.resolveDaypart(localTime)
         )
+        // Dark + Time-of-Day Artwork keeps the dark palette but cycles all four
+        // illustrations with local time, exactly like Soft Botanical's artwork axis.
+        ThemeModeOption.DARK_DAYPART_ART -> artworkForDaypart(
+            SoftBotanicalThemeConfig.resolveDaypart(localTime)
+        )
     }
 }
 
@@ -61,6 +66,18 @@ fun resolveDayseedArtworkBlend(
             DayseedArtworkBlend(art)
         }
         ThemeModeOption.SOFT_BOTANICAL_AUTO -> {
+            val blend = SoftBotanicalThemeConfig.resolveDaypartBlend(localTime)
+            val fromArt = artworkForDaypart(blend.from)
+            val toArt = artworkForDaypart(blend.to)
+            DayseedArtworkBlend(
+                primaryArtwork = fromArt,
+                secondaryArtwork = toArt,
+                blendFraction = if (fromArt == toArt) 0f else blend.fraction
+            )
+        }
+        // Dark + Time-of-Day Artwork blends gradually across the same four boundaries
+        // while its palette remains fixed dark (resolveDayseedColorScheme handles that).
+        ThemeModeOption.DARK_DAYPART_ART -> {
             val blend = SoftBotanicalThemeConfig.resolveDaypartBlend(localTime)
             val fromArt = artworkForDaypart(blend.from)
             val toArt = artworkForDaypart(blend.to)

@@ -154,6 +154,9 @@ fun resolveDayseedColorScheme(
             val effectiveDaypart = if (blend.fraction >= 0.5f) blend.to else blend.from
             resolvedScheme to effectiveDaypart.isDark
         }
+        // Dark + Time-of-Day Artwork: the palette stays the canonical dark scheme all day;
+        // only the artwork axis follows local time (see resolveDayseedArtworkBlend).
+        ThemeModeOption.DARK_DAYPART_ART -> DarkColorScheme to true
     }
 }
 

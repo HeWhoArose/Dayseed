@@ -2,6 +2,8 @@ package com.example.dayseed
 
 import com.example.dayseed.ui.theme.BotanicalDaypart
 import com.example.dayseed.ui.theme.DayseedArtwork
+import com.example.dayseed.ui.theme.DarkBrand
+import com.example.dayseed.ui.theme.DarkCanvas
 import com.example.dayseed.ui.theme.LightBrand
 import com.example.dayseed.ui.theme.SoftBotanicalThemeConfig
 import com.example.dayseed.ui.theme.ThemeModeOption
@@ -127,5 +129,92 @@ class DayseedVisualResolutionTest {
         assertEquals("Good afternoon", greetingFor(BotanicalDaypart.DAY))
         assertEquals("Good evening", greetingFor(BotanicalDaypart.EVENING))
         assertEquals("Good night", greetingFor(BotanicalDaypart.NIGHT))
+    }
+
+    // --- Dark + Time-of-Day Artwork: dark palette all day, artwork follows local time (owner decision D-220) ---
+
+    @Test
+    fun darkDaypartArtKeepsDarkPaletteAtEveryDaypart() {
+        for (hour in intArrayOf(7, 14, 19, 23)) {
+            val (scheme, isDark) = resolveDayseedColorScheme(ThemeModeOption.DARK_DAYPART_ART, false, t(hour))
+            assertTrue("hour=$hour must resolve dark", isDark)
+            // Fixed dark scheme: same canonical Night Garden canvas and brand at all hours,
+            // deliberately not interpolating toward Morning/Evening light palettes.
+            assertEquals("hours=$hour canvas", DarkCanvas, scheme.background)
+            assertEquals("hour=$hour brand", DarkBrand, scheme.primary)
+        }
+    }
+
+    @Test
+    fun darkDaypartArtKeepsDarkPaletteEvenWhenSystemIsLight() {
+        val (_, isDark) = resolveDayseedColorScheme(ThemeModeOption.DARK_DAYPART_ART, false, t(14))
+        assertTrue(isDark)
+    }
+
+    @Test
+    fun darkDaypartArtCyclesAllFourIllustrationsByLocalTime() {
+        assertEquals(DayseedArtwork.MORNING_LEAF, resolveDayseedArtwork(ThemeModeOption.DARK_DAYPART_ART, false, t(6)))
+        assertEquals(DayseedArtwork.DAY_BRANCH, resolveDayseedArtwork(ThemeModeOption.DARK_DAYPART_ART, false, t(14)))
+        assertEquals(DayseedArtwork.EVENING_HILLS, resolveDayseedArtwork(ThemeModeOption.DARK_DAYPART_ART, false, t(19)))
+        assertEquals(DayseedArtwork.NIGHT_MOON, resolveDayseedArtwork(ThemeModeOption.DARK_DAYPART_ART, false, t(23)))
+        assertEquals(DayseedArtwork.NIGHT_MOON, resolveDayseedArtwork(ThemeModeOption.DARK_DAYPART_ART, false, t(3)))
+    }
+
+    @Test
+    fun darkDaypartArtDiffersFromFixedDarkOutsideNight() {
+        // The gap this option closes: fixed Dark locks artwork to NIGHT_MOON all day,
+        // while Dark + Time-of-Day Artwork follows the four illustrations.
+        assertEquals(DayseedArtwork.NIGHT_MOON, resolveDayseedArtwork(ThemeModeOption.DARK, true, t(6)))
+        assertEquals(DayseedArtwork.MORNING_LEAF, resolveDayseedArtwork(ThemeModeOption.DARK_DAYPART_ART, true, t(6)))
+        assertEquals(DayseedArtwork.NIGHT_MOON, resolveDayseedArtwork(ThemeModeOption.DARK, true, t(14)))
+        assertEquals(DayseedArtwork.DAY_BRANCH, resolveDayseedArtwork(ThemeModeOption.DARK_DAYPART_ART, true, t(14)))
+    }
+
+    @Test
+    fun darkDaypartArtArtworkAxisMatchesSoftBotanicalAtEveryProbe() {
+        for (minuteIndex in 0..47) {
+            // Probe every 30 minutes over a full day; artwork must never depend on the palette axis.
+            val time = t(stepHour(minuteIndex), stepMinute(minuteIndex))
+            assertEquals(
+                "time=$time",
+                resolveDayseedArtwork(ThemeModeOption.SOFT_BOTANICAL_AUTO, false, time),
+                resolveDayseedArtwork(ThemeModeOption.DARK_DAYPART_ART, false, time)
+            )
+        }
+    }
+
+    private fun stepHour(index: Int): Int = index / 2
+    private fun stepMinute(index: Int): Int = if (index % 2 == 0) 0 else 30
+
+    @Test
+    fun darkDaypartArtBlendsGraduallyAcrossBoundaries() {
+        // Dusk boundary (16:15 -> 17:45): DAY_BRANCH -> EVENING_HILLS cross-dissolve,
+        // identical to the Soft Botanical artwork axis (existing transitions preserved).
+        val blend = resolveDayseedArtworkBlend(ThemeModeOption.DARK_DAYPART_ART, false, t(17, 0))
+        assertEquals(DayseedArtwork.DAY_BRANCH, blend.primaryArtwork)
+        assertEquals(DayseedArtwork.EVENING_HILLS, blend.secondaryArtwork)
+        assertEquals(0.5f, blend.blendFraction, 0.01f)
+
+        // Steady state outside transition windows resolves a single artwork.
+        val steady = resolveDayseedArtworkBlend(ThemeModeOption.DARK_DAYPART_ART, false, t(18, 30))
+        assertEquals(DayseedArtwork.EVENING_HILLS, steady.primaryArtwork)
+        assertEquals(DayseedArtwork.EVENING_HILLS, steady.secondaryArtwork)
+        assertEquals(0f, steady.blendFraction, 0.001f)
+    }
+
+    @Test
+    fun themeModeSettingValuesRoundTripIncludingNewOption() {
+        for (mode in ThemeModeOption.entries) {
+            assertEquals(mode, ThemeModeOption.fromSetting(mode.settingValue))
+        }
+        // Backward compatibility: previously persisted values keep resolving unchanged.
+        assertEquals(ThemeModeOption.SYSTEM, ThemeModeOption.fromSetting("SYSTEM"))
+        assertEquals(ThemeModeOption.LIGHT, ThemeModeOption.fromSetting("light"))
+        assertEquals(ThemeModeOption.DARK, ThemeModeOption.fromSetting("Dark"))
+        assertEquals(ThemeModeOption.SOFT_BOTANICAL_AUTO, ThemeModeOption.fromSetting("SOFT_BOTANICAL_AUTO"))
+        assertEquals(ThemeModeOption.DARK_DAYPART_ART, ThemeModeOption.fromSetting("dark_daypart_art"))
+        // Unknown value keeps falling back to SYSTEM.
+        assertEquals(ThemeModeOption.SYSTEM, ThemeModeOption.fromSetting("NIGHT_SHIFT"))
+        assertEquals(ThemeModeOption.SYSTEM, ThemeModeOption.fromSetting(null))
     }
 }
