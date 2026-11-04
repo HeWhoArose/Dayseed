@@ -428,3 +428,46 @@ The following nine human/device validation cases cover the Phase 2 targeted reme
 
 
 
+
+
+## 8. Phase 2.5 human-intervention cases (appearance, reminders & backup file workflows)
+
+Added 2026-11-04 (Phase 2.5, decisions D-220–D-224). All cases **NOT RUN**; they require a physical device or owner observation and are added to the consolidated human-validation session.
+
+### P25-H01 — Verify the fifth appearance option on device
+
+**Procedure:** Select "Dark + Time-of-Day Artwork" in Settings → Appearance & rhythm; observe the app across the four daypart boundaries (or by changing system time on a test device): the palette stays dark all day, the Morning sprig / Day branch / Evening hills / Night moon each appear in their local-time windows, and transitions remain gradual; relaunch the app and confirm the selection persists; confirm `SOFT_BOTANICAL_AUTO`, `SYSTEM`, `LIGHT`, and fixed `DARK` behave exactly as before; observe the Appearance preview updating over time without leaving Settings.
+**Expected:** Dark palette + time-cycling artwork simultaneously; no illustration is locked to the Night moon; preview tracks the Today screen's clock; no duplicate Today screen ever rendered.
+**Dependencies:** Physical device or emulator; ability to advance device time.
+
+### P25-H02 — Measure illustration contrast on the dark canvas
+
+**Procedure:** On the `DARK_DAYPART_ART` theme, render each of the four illustrations against the dark canvas on a physical screen; compare visual legibility with the native `SOFT_BOTANICAL_AUTO` night leg; check text over the artwork stays readable; confirm reduced-motion behaviour of theme colour shifts.
+**Expected:** All four illustrations remain clearly visible without weakening text readability.
+**Dependencies:** Owner visual judgment on a real display.
+
+### P25-H03 — Reminder delivery end-to-end on a physical device (gating check)
+
+**Procedure:** On a device, build a debug APK with at least one active habit reminder due within a few minutes, Android notification channel available; grant `POST_NOTIFICATIONS`; wait for the intended window (± the inexact delivery window); observe the delivered notification; inspect `reminder_deliveries` for the fresh `DELIVERED` record; fire/repeat the same window to confirm no duplicate notification; then revoke permission and repeat (expect no notification and no ledger delivery record).
+**Expected:** Exactly one notification per due reminder; idempotency holds across restart/reschedule; quiet hours and the 3/day cap hold on device.
+**Rules:** The Settings activation switch may only be enabled after this case **PASSES**. Until then switches stay disabled.
+
+### P25-H04 — Reboot / time-change / Doze reminder recovery
+
+**Procedure:** Schedule a reminder, reboot the device (and separately change system time/timezone), verify the reminder still rings at the intended time within the inexact window; with battery optimisation/Doze active, observe any delay is bounded and copy never promised an exact minute.
+**Expected:** Reminders re-registered automatically by the system-event receiver + reconcile worker; delayed-but-delivered outcome is acceptable and never reported as exact-time delivery.
+
+### P25-H05 — Permission-denied UI honesty
+
+**Procedure:** Deny notifications for Dayseed in system settings; open Settings → Notifications & reminders; confirm the panel shows the real denied state, request/route buttons work, and global switches remain disabled with the "delivery not yet available" copy; confirm core app use (habit creation, logging, Journal) is unaffected.
+**Expected:** No control implies delivery works while permission is denied.
+
+### P25-H06 — SAF backup save with read-back verification on device
+
+**Procedure:** Settings → Back up or restore → "Save backup to a file (choose location)" with and without a password; pick a Files/Drive/USB document provider; verify the file appears in the chosen location and can be re-opened; attempt a failing destination (write-protected) and confirm honest failure copy without a success claim.
+**Expected:** Success only after verified read-back; failure copy accurate; repository backup format unchanged (`dayseed_portable_backup`, format v2).
+
+### P25-H07 — SAF backup restore with metadata on device
+
+**Procedure:** "Choose a backup file…" → select the saved file → confirm the pre-restore metadata line (date, format/schema version, category counts, password flag) matches the file; restore Merge and Replace on a disposable installation; try wrong password, corrupt file, non-Dayseed JSON, and an empty file.
+**Expected:** Correct metadata before any mutation; safety backup created before restore; Merge/Replace + conflicts unchanged; unsupported/corrupt files never mutate data and the source stays untouched.

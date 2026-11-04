@@ -298,3 +298,31 @@ All affected screens must implement the following state distinctions:
    - **`F-06` (Open Complete Living Grove from `Today`):** `TodayLongestStreakIndicator` opens `SecondaryRoute.LivingGrove(selectedHabitId = null)` (all habits) from the card (`today_main_streak_indicator`) and primary `Grove` button (`today_open_grove_btn`), and provides a separate secondary `Habit` button (`today_longest_streak_habit_btn`) opening `SecondaryRoute.HabitDetail(leadHabitId)`.
 
 
+
+
+## 7. Phase 2.5 Implemented Appearance, Reminders & Backup Contracts (2026-11-04, Stage B — D-220…D-224)
+
+Implemented at the Phase 2.5 commit on `main` (post-`e4ed178`); automated unit/Robolectric evidence in docs 12/09; on-device items remain NOT RUN (docs 38/12).
+
+### 7.1 Appearance & rhythm (D-220)
+
+- Five persisted appearance options via `theme_mode` (`app_settings`, `ENUM`): `SYSTEM`, `LIGHT`, `DARK`, `SOFT_BOTANICAL_AUTO`, `DARK_DAYPART_ART`. Unknown/blank values fall back to `SYSTEM`; historical saved values keep resolving unchanged (case-insensitive).
+- `DARK_DAYPART_ART` resolves the canonical dark `ColorScheme` for the whole day and resolves artwork/blend exclusively through the shared `SoftBotanicalThemeConfig` daypart clock (`MORNING_LEAF`/`DAY_BRANCH`/`EVENING_HILLS`/`NIGHT_MOON`, boundaries 05/11/17/21 local, ±45-min gradual blends). `SOFT_BOTANICAL_AUTO` remains palette+artwork automatic; `SYSTEM`/`LIGHT`/`DARK` behaviour unchanged.
+- Settings Appearance preview uses a live 30-second local-time `produceState` tick (same source pattern as `TodayScreen`), a fifth swatch chip (`theme_chip_dark_daypart_art`) and explicit copy for the new option. Reduced-motion continues through the existing theme colour-animation guard.
+- Today route uniqueness recorded: `MainActivity -> NavTab.TODAY -> TodayScreen` is the sole production Today route at `MainActivity.kt:261`; `DaypartArtwork` and `DaypartBackgroundLayer` are complementary layers of that single screen; `docs/prototypes/` assets are not production screens.
+
+### 7.2 Notifications & reminders (D-221/D-222)
+
+- Hub row `settings_row_reminders` opens the `RemindersPanel` (consistent title "Notifications & reminders") covering: global notifications, habit reminders, quiet hours, weekly goal reminders, and deliberately no encouragement-tip controls (unsupported features never render switchable controls).
+- **Honesty gate (owner ruling):** every activation switch is disabled until physical-device delivery verification passes; panel copy states "Reminder delivery is not active yet …". Request-permission and "open Android notification settings" actions are provided; the current `POST_NOTIFICATIONS` permission state is shown.
+- Scheduling per D-222: `ReminderScheduler` registers inexact `AlarmManager.setWindow` triggers (10-minute window; no `SCHEDULE_EXACT_ALARM`/`USE_EXACT_ALARM`/`setExact*`); `ReminderReconcileWorker` (WorkManager, 15-minute periodic) drains the notification-cancel outbox and re-registers schedules; `ReminderSystemEventReceiver` re-registers after boot, time/timezone change and app update (manifest: `.data.ReminderAlarmReceiver`, `.data.ReminderSystemEventReceiver`, `RECEIVE_BOOT_COMPLETED`).
+- Delivery pipeline in `ReminderAlarmReceiver`: global opt-in (`reminders_enabled` setting) → Android permission → `ReminderEngine.evaluateHabitReminder` via `evaluateTodayRemindersSync` (quiet hours, lifecycle state, already-logged, idempotency, shared 3/day cap) → Android post only for a fresh `DELIVERED` evaluation → `POST_FAILED` ledger correction (`DayseedRepository.markReminderDeliveryNotDelivered`) on post failure. Ledger statuses and delivery keys are unchanged from `ReminderEngine` (`HABIT_DAILY:<habitId>:<date>`).
+- Copy rule (binding): reminders are described as scheduled and possibly slightly delayed; 09:00 (habit default) and the weekly reflection are intended times, not delivery guarantees. Weekly reflection reminder preferences are not implemented (no weekly-reflection settings keys exist) and the panel says so.
+- Device-dependent validation (delivery rendering, reboot recovery, Doze/battery behaviour, permission flows): NOT RUN.
+
+### 7.3 Backup & restore file workflows (D-223/D-224)
+
+- Save: `ActivityResultContracts.CreateDocument` with user-chosen destination/name; write completes before any success claim; mandatory read-back byte comparison verifies the produced document; failures report honestly (never claim success).
+- Restore: `ActivityResultContracts.OpenDocument` (`*/*`, no silent type filtering); the selected document is read and validated, then the pre-existing restore flow is shown with a pre-mutation metadata line (`SettingsSupport.inspectBackupMetadata`/`backupMetadataLine`: backup kind, format/schema version, local export date, category counts, password-protection flag). Wrong-password/corrupt/non-Dayseed payloads result in null metadata, honest copy and zero mutation.
+- Merge/Replace chips, conflict resolution (`D-202`), pre-restore safety backup, clipboard copy/paste routes and the repository backup format (envelope `dayseed_encrypted_backup_v1`, `BACKUP_FORMAT_VERSION = 2`) are unchanged.
+- Automatic file backup is DEFERRED (D-223): no periodic backup scheduling, history, destination management or retention code exists in this build. Android platform Auto Backup remains excluded (`allowBackup="false"`) and is described separately in privacy copy.
