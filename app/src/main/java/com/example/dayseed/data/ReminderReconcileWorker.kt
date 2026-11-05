@@ -25,6 +25,9 @@ class ReminderReconcileWorker(
             try {
                 // Cancellation retries (D-192/D-203 pipeline) first.
                 repository.processCancelOutboxSync()
+                // Crash-recovery for incomplete delivery reservations (Phase 1 remediation):
+                // stale SCHEDULED reservations are re-posted while still eligible, or honestly corrected.
+                repository.reconcilePendingReminderPostsSync()
                 // Then bring the alarm schedule back in line with current settings/habits.
                 ReminderScheduler.scheduleAll(applicationContext, repository)
             } finally {

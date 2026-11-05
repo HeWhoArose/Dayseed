@@ -125,8 +125,10 @@ class DayseedReminderAndBackupTest {
         val target = results.firstOrNull { it.habitId == "h_rem" }
         assertNotNull(target)
         // 09:00 is outside quiet hours (21:00–08:00), habit logged nothing, cap not reached.
-        assertEquals("DELIVERED", target!!.deliveryStatus)
-        assertEquals("DELIVERED", repository.getReminderDeliveryStatus(deliveryKey))
+        // A fresh decision reserves the slot as SCHEDULED; only a confirmed Android post
+        // promotes the row to DELIVERED ("SCHEDULED" is not a delivery claim).
+        assertEquals("SCHEDULED", target!!.deliveryStatus)
+        assertEquals("SCHEDULED", repository.getReminderDeliveryStatus(deliveryKey))
 
         // Simulate a failed Android notification post: the ledger must reflect reality.
         repository.markReminderDeliveryNotDelivered(

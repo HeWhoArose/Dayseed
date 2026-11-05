@@ -595,9 +595,11 @@ class DayseedAcceptanceTest {
         val evals = repository.evaluateTodayRemindersSync(today).associateBy { it.habitId }
         assertEquals("SUPPRESSED", evals["h_quiet"]?.deliveryStatus)
         assertEquals("QUIET_HOURS", evals["h_quiet"]?.suppressionReason)
-        assertEquals("DELIVERED", evals["h_1"]?.deliveryStatus)
-        assertEquals("DELIVERED", evals["h_2"]?.deliveryStatus)
-        assertEquals("DELIVERED", evals["h_3"]?.deliveryStatus)
+        // Fresh decisions reserve slots as SCHEDULED; the receiver promotes them to DELIVERED
+        // only after NotificationManager accepted the post.
+        assertEquals("SCHEDULED", evals["h_1"]?.deliveryStatus)
+        assertEquals("SCHEDULED", evals["h_2"]?.deliveryStatus)
+        assertEquals("SCHEDULED", evals["h_3"]?.deliveryStatus)
         assertEquals("SUPPRESSED", evals["h_4"]?.deliveryStatus)
         assertEquals("DAILY_CAP_REACHED", evals["h_4"]?.suppressionReason)
 

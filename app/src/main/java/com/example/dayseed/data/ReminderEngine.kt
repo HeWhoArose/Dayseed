@@ -76,6 +76,22 @@ object ReminderEngine {
         }
     }
 
+    /**
+     * Atomic daily-cap reservation and idempotent delivery decision for one habit occurrence.
+     *
+     * Callers must run this inside a serialised write transaction (the repository wraps the
+     * whole day's evaluation in `beginTransactionNonExclusive`): the ledger read, the shared
+     * daily-cap count (DELIVERED + SCHEDULED) and the row write must be one atomic step even
+     * when two receivers hold separate SQLite connections.
+     *
+     * Ledger contract for this row:
+     * - `SUPPRESSED` (with a reason) — no notification should be posted; replays stay suppressed.
+     * - `SCHEDULED` (the ledger's existing reservation status) — a fresh deliverable slot was
+     *   reserved; the pipeline must promote it to `DELIVERED` only after `NotificationManager.notify`
+     *   succeeded, or correct it to `SUPPRESSED`/`POST_FAILED` when the post fails. SCHEDULED
+     *   rows older than the recovery window are finalised by the reconcile worker.
+     * - `DELIVERED` — Android accepted an actual post for this occurrence.
+     */
     fun evaluateHabitReminder(
         db: SQLiteDatabase,
         habitVersion: HabitVersion,
@@ -98,7 +114,12 @@ object ReminderEngine {
             if (c.moveToFirst()) {
                 val existingStatus = c.getString(0)
                 val existingReason = if (c.isNull(1)) null else c.getString(1)
-                if (existingStatus == "DELIVERED" || existingStatus == "SUPPRESSED") {
+                if (existingStatus == "DELIVERED" || existingStatus == "SUPPRESSED" ||
+                    existingStatus == "SCHEDULED"
+                ) {
+                    // SCHEDULED replays return the reservation untouched: a reserved slot
+                    // must not count against itself, and only the posting pipeline (receiver,
+                    // reconciler) may promote it to DELIVERED or correct it to SUPPRESSED.
                     return ReminderEvaluationResult(
                         deliveryKey = deliveryKey,
                         habitId = habitVersion.habitId,
@@ -112,17 +133,20 @@ object ReminderEngine {
             }
         }
 
-        // Count already delivered notifications on targetDate
-        var deliveredCountToday = 0
+        // Cap must be consumed by *both* confirmed deliverables and outstanding reservations
+        // (SCHEDULED, an existing status of the closed-world ledger enum): a reserved slot
+        // that is about to post is already spent. Rows are unique per (habit, date) via the
+        // delivery_key primary key.
+        var consumedCountToday = 0
         db.rawQuery(
             """
             SELECT COUNT(*) FROM ${DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES}
-            WHERE target_period_key = ? AND delivery_status = 'DELIVERED'
+            WHERE target_period_key = ? AND delivery_status IN ('DELIVERED', 'SCHEDULED')
             """.trimIndent(),
             arrayOf(periodKey)
         ).use { c ->
             if (c.moveToFirst()) {
-                deliveredCountToday = c.getInt(0)
+                consumedCountToday = c.getInt(0)
             }
         }
 
@@ -133,10 +157,15 @@ object ReminderEngine {
                 "SUPPRESSED" to "ALREADY_LOGGED"
             isWithinQuietHours(scheduledLocal, quietStartLocal, quietEndLocal) ->
                 "SUPPRESSED" to "QUIET_HOURS"
-            deliveredCountToday >= dailyCap ->
+            consumedCountToday >= dailyCap ->
                 "SUPPRESSED" to "DAILY_CAP_REACHED"
             else ->
-                "DELIVERED" to null
+                // Fresh deliverable: reserve the slot as SCHEDULED (the ledger's existing
+                // reservation status). Only the immediate poster promotes this row to
+                // DELIVERED after NotificationManager.notify succeeded (or corrects it to
+                // SUPPRESSED/POST_FAILED if the post fails). A row must never claim
+                // DELIVERED merely because it was inserted.
+                "SCHEDULED" to null
         }
 
         val notifTag = platformTagFor(habitVersion.habitId)

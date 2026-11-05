@@ -4,12 +4,14 @@ import android.app.NotificationManager
 import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteDatabaseLockedException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -156,8 +158,30 @@ class DayseedRepository(
     }
 
     /**
+     * Confirms an actual Android notification post: promotes the reservation row to DELIVERED
+     * only when `NotificationManager.notify` succeeded, so the ledger never claims delivery
+     * just because a decision row was inserted.
+     */
+    fun markReminderDeliveryDelivered(deliveryKey: String, nowUtcMs: Long) {
+        val db = dbHelper.writableDatabase
+        val cv = ContentValues().apply {
+            put("delivery_status", "DELIVERED")
+            put("delivered_at_utc_ms", nowUtcMs)
+            putNull("suppression_reason")
+            put("attempted_at_utc_ms", nowUtcMs)
+        }
+        db.update(
+            DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES,
+            cv,
+            "delivery_key = ?",
+            arrayOf(deliveryKey)
+        )
+    }
+
+    /**
      * Corrects the ledger when a reminder was evaluated as deliverable but the Android
-     * notification post itself failed, so delivery records always match reality.
+     * notification post itself failed (or a SCHEDULED reservation is abandoned), so delivery
+     * records always match reality.
      */
     fun markReminderDeliveryNotDelivered(deliveryKey: String, suppressionReason: String, nowUtcMs: Long) {
         val db = dbHelper.writableDatabase
@@ -173,6 +197,92 @@ class DayseedRepository(
             "delivery_key = ?",
             arrayOf(deliveryKey)
         )
+    }
+
+    /**
+     * Crash-recovery for incomplete delivery reservations (Phase 1 remediation).
+     *
+     * Database reservation and `NotificationManager` posting are separate steps, so a process
+     * death between them can leave a `SCHEDULED` reservation row that never became `DELIVERED`.
+     * This sweep finalises every stale reservation exactly once:
+     * - if the reservation is fresh (no older than [maxPendingAgeMs]) the receiver's own
+     *   in-flight post is still responsible for it — nothing is done here;
+     * - if it is stale, it is re-posted only when it is still fully eligible at recovery time
+     *   (global opt-in, Android permission, habit still active with a reminder, same target
+     *   date, user not already logged, outside quiet hours, cap slot still valid), and the row
+     *   becomes `DELIVERED` only after the real post succeeded;
+     * - otherwise it is honestly corrected to `SUPPRESSED`/`PENDING_EXPIRED` — a stale
+     *   reservation must never linger forever and never silently claims delivery.
+     */
+    fun reconcilePendingReminderPostsSync(maxPendingAgeMs: Long = 30L * 60L * 1000L) {
+        val db = dbHelper.writableDatabase
+        val rows = mutableListOf<Triple<String, Long, Long>>()
+        db.rawQuery(
+            "SELECT delivery_key, scheduled_at_utc_ms, attempted_at_utc_ms FROM " +
+                DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES +
+                " WHERE delivery_status = 'SCHEDULED'",
+            null
+        ).use { c ->
+            while (c.moveToNext()) {
+                val key = c.getString(0)
+                val scheduledMs = if (c.isNull(1)) 0L else c.getLong(1)
+                val attemptedMs = if (c.isNull(2)) 0L else c.getLong(2)
+                rows.add(Triple(key, scheduledMs, attemptedMs))
+            }
+        }
+        if (rows.isEmpty()) return
+
+        val nowMs = clock.nowUtcMs()
+        val today = clock.todayLocal()
+        val timeNow = clock.nowLocalTime().let { String.format("%02d:%02d", it.hour, it.minute) }
+        val quietStart = getSettingString("quiet_hours_start", ReminderEngine.DEFAULT_QUIET_START)
+        val quietEnd = getSettingString("quiet_hours_end", ReminderEngine.DEFAULT_QUIET_END)
+
+        for ((deliveryKey, scheduledMs, attemptedMs) in rows) {
+            val parts = deliveryKey.split(":", limit = 3)
+            if (parts.size != 3 || parts[0] != "HABIT_DAILY") {
+                markReminderDeliveryNotDelivered(deliveryKey, "PENDING_EXPIRED", nowMs)
+                continue
+            }
+            val habitId = parts[1]
+            val targetDate = try { LocalDate.parse(parts[2]) } catch (_: Exception) { null }
+
+            val isFresh = nowMs - maxOf(attemptedMs, scheduledMs) < maxPendingAgeMs
+            val eligibleHabit = getEffectiveHabitVersion(habitId, today)
+            val alreadyLogged = hasQualifyingActivityOnDate(habitId, today) ||
+                getExceptionForHabitOnDate(habitId, today) != null
+            val androidAllowsPost = ContextCompat.checkSelfPermission(
+                appContext, android.Manifest.permission.POST_NOTIFICATIONS
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            val globallyEnabled = ReminderScheduler.isGlobalRemindersEnabled(this)
+
+            val canDeliver = !isFresh &&
+                targetDate == today &&
+                globallyEnabled &&
+                androidAllowsPost &&
+                eligibleHabit != null &&
+                eligibleHabit.lifecycleState == HabitLifecycleState.ACTIVE &&
+                eligibleHabit.reminderMode != "OFF" &&
+                !alreadyLogged &&
+                !ReminderEngine.isWithinQuietHours(timeNow, quietStart, quietEnd)
+
+            if (canDeliver) {
+                val habitName = _habits.value.firstOrNull { it.habitId == habitId }?.name ?: "your habit"
+                val posted = ReminderNotifier.postHabitReminder(
+                    appContext,
+                    ReminderEngine.platformTagFor(habitId),
+                    ReminderEngine.platformIdFor(habitId),
+                    habitName
+                )
+                if (posted) {
+                    markReminderDeliveryDelivered(deliveryKey, clock.nowUtcMs())
+                } else {
+                    markReminderDeliveryNotDelivered(deliveryKey, "POST_FAILED", clock.nowUtcMs())
+                }
+            } else if (!isFresh) {
+                markReminderDeliveryNotDelivered(deliveryKey, "PENDING_EXPIRED", nowMs)
+            }
+        }
     }
 
     // =========================================================================
@@ -1062,7 +1172,17 @@ class DayseedRepository(
         }
 
         refreshAllSync()
+        rescheduleReminderAlarms()
         return savedVersion!!
+    }
+
+    /** Best-effort alarm realignment after any mutation that can change reminder eligibility. */
+    private fun rescheduleReminderAlarms() {
+        try {
+            ReminderScheduler.scheduleAll(appContext, this)
+        } catch (_: Exception) {
+            // Scheduling repairs are best-effort; the periodic reconcile worker covers gaps.
+        }
     }
 
     suspend fun saveHabit(
@@ -3072,31 +3192,66 @@ class DayseedRepository(
     // =========================================================================
 
     fun evaluateTodayRemindersSync(targetDate: LocalDate = clock.todayLocal()): List<ReminderEvaluationResult> {
-        val db = dbHelper.writableDatabase
+        // One serialised write transaction for the entire day's evaluation: the ledger reads,
+        // the shared 3/day cap count (DELIVERED + SCHEDULED) and the reservation writes become a
+        // single atomic step even across separate database connections (two alarms firing in
+        // parallel). Contention is retried a few times before failing honestly.
         val quietStart = getSettingString("quiet_hours_start", ReminderEngine.DEFAULT_QUIET_START)
         val quietEnd = getSettingString("quiet_hours_end", ReminderEngine.DEFAULT_QUIET_END)
         val dailyCap = getSettingInt("daily_reminder_cap", ReminderEngine.DEFAULT_DAILY_CAP)
         val nowMs = clock.nowUtcMs()
 
-        val results = mutableListOf<ReminderEvaluationResult>()
-        for (h in _habits.value) {
-            val eff = getEffectiveHabitVersion(h.habitId, targetDate) ?: continue
-            val logged = hasQualifyingActivityOnDate(h.habitId, targetDate) ||
-                getExceptionForHabitOnDate(h.habitId, targetDate) != null
-            results.add(
-                ReminderEngine.evaluateHabitReminder(
-                    db = db,
-                    habitVersion = eff,
-                    targetDate = targetDate,
-                    alreadyLoggedToday = logged,
-                    quietStartLocal = quietStart,
-                    quietEndLocal = quietEnd,
-                    dailyCap = dailyCap,
-                    nowUtcMs = nowMs
+        return withImmediateTransaction {
+            val results = mutableListOf<ReminderEvaluationResult>()
+            for (h in _habits.value) {
+                val eff = getEffectiveHabitVersion(h.habitId, targetDate) ?: continue
+                val logged = hasQualifyingActivityOnDate(h.habitId, targetDate) ||
+                    getExceptionForHabitOnDate(h.habitId, targetDate) != null
+                results.add(
+                    ReminderEngine.evaluateHabitReminder(
+                        db = dbHelper.writableDatabase,
+                        habitVersion = eff,
+                        targetDate = targetDate,
+                        alreadyLoggedToday = logged,
+                        quietStartLocal = quietStart,
+                        quietEndLocal = quietEnd,
+                        dailyCap = dailyCap,
+                        nowUtcMs = nowMs
+                    )
                 )
-            )
+            }
+            results
         }
-        return results
+    }
+
+    /**
+     * Runs [block] inside a serialised database write transaction (BEGIN IMMEDIATE-eligible),
+     * retrying on transient `SQLiteDatabaseLockedException` contention from other connections
+     * or processes. Never relies on an in-memory mutex alone: the SQLite file-level write lock
+     * is the cross-connection protection.
+     */
+    private fun <T> withImmediateTransaction(block: () -> T): T {
+        val db = dbHelper.writableDatabase
+        var attempt = 0
+        while (true) {
+            attempt++
+            try {
+                db.beginTransactionNonExclusive()
+                try {
+                    val out = block()
+                    db.setTransactionSuccessful()
+                    return out
+                } finally {
+                    db.endTransaction()
+                }
+            } catch (e: Exception) {
+                val locked = e is SQLiteDatabaseLockedException ||
+                    e.cause is SQLiteDatabaseLockedException ||
+                    e.message?.lowercase()?.contains("locked") == true
+                if (!locked || attempt >= 5) throw e
+                Thread.sleep(20L * attempt)
+            }
+        }
     }
 
     fun getSuggestedReminderTimeForHabit(habitId: String, lookbackDays: Int = 28): String? {
@@ -3335,6 +3490,7 @@ class DayseedRepository(
         }
 
         refreshAllSync()
+        rescheduleReminderAlarms()
         return RestoreSession(
             restoreSessionId = sessionId,
             restoreMode = restoreMode,
@@ -4403,6 +4559,7 @@ class DayseedRepository(
 
         processCancelOutboxSync()
         refreshAllSync()
+        rescheduleReminderAlarms()
         return true
     }
 
