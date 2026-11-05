@@ -7,6 +7,7 @@ import android.content.Intent
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import org.json.JSONArray
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
@@ -28,15 +29,33 @@ import java.util.concurrent.TimeUnit
  *   NOT requested: Android treats exact alarms as special access and Dayseed's gentle nudge
  *   does not need precise timing.
  *
- * Delivery remains gated end-to-end by the receiver's re-checks (global opt-in, Android
- * notification permission, ledger/idempotency via [ReminderEngine]); the switches in
- * Settings stay disabled until delivery passes physical-device verification.
+ * Delivery remains gated end-to-end by the receiver's re-checks (global opt-in, current
+ * persisted reminder configuration, Android notification permission, ledger idempotency via
+ * [ReminderEngine]); the switches in Settings stay disabled until delivery passes
+ * physical-device verification.
  */
 object ReminderScheduler {
 
     const val ALARM_ACTION = "com.example.dayseed.action.REMINDER_ALARM"
     const val EXTRA_HABIT_ID = "habit_id"
     const val EXTRA_DELIVERY_DATE = "delivery_date"
+
+    /**
+     * Reminder time the alarm was scheduled for ("HH:mm"). The receiver compares it with the
+     * current persisted configuration (Phase 3 stale-config protection): an alarm produced by
+     * an obsolete reminder time or configuration is rejected, while an alarm recorded for
+     * the *current* configuration may still be legitimately delayed by Android.
+     */
+    const val EXTRA_REMINDER_TIME_LOCAL = "reminder_time_local"
+
+    /**
+     * How long after its intended fire time an alarm is still trusted as a "delayed but valid"
+     * delivery of the current configuration. This is intentionally far above the inexact
+     * delivery window and plausible Doze/battery deferrals, yet far below a whole day: a ring
+     * older than this (or for a past delivery date) is stale configuration, not a delayed
+     * notification.
+     */
+    const val STALE_ALARM_GRACE_MS: Long = 6L * 60L * 60L * 1000L
 
     /** Inexact delivery window around the intended local time (10 minutes). */
     const val DELIVERY_WINDOW_MS: Long = 10L * 60L * 1000L
@@ -48,53 +67,73 @@ object ReminderScheduler {
     const val SETTING_REMINDERS_ENABLED = "reminders_enabled"
 
     /**
-     * (Re)registers every due inexact alarm from current repository state, cancels alarms for
-     * habits that no longer have an active reminder, and ensures the periodic reconcile worker
-     * exists. Safe to call any time; only registered when schedule inputs are present.
+     * Persisted registry (app setting, JSON array) of the habit ids for which a pending alarm
+     * was registered by the last successful [scheduleAll] run. It lets a later run cancel
+     * alarms for habits that fell out of eligibility (deleted, paused, archived, reminder off,
+     * global opt-in off, backup restore replacing the set, ...).
+     */
+    const val SETTING_SCHEDULED_ALARM_IDS = "reminder_scheduled_alarm_ids"
+
+    /**
+     * (Re)registers every due inexact alarm from current repository state and cancels pending
+     * alarms for habits that no longer have an eligible reminder, then ensures the periodic
+     * reconcile worker exists.
+     *
+     * - Cancel-and-replace for reminder time or configuration edits: re-registering with the
+     *   same deterministic PendingIntent identity (request code + component + action; extra
+     *   values do NOT participate in identity) and [PendingIntent.FLAG_UPDATE_CURRENT] simply
+     *   moves the existing pending alarm to the new trigger.
+     * - Cancellation: habit ids found in the persisted registry that are not eligible any more
+     *   are cancelled via [cancelAlarm] before new alarms are registered.
+     * - Idempotent/repeat-safe: every run recomputes from current repository state and writes
+     *   the registry as a whole; running it repeatedly produces the same pending-alarm set.
+     *   Concurrent runs could transiently cancel an alarm another connection just registered,
+     *   but every caller registers from current state and each trigger re-registers, so the
+     *   schedule self-heals.
      */
     fun scheduleAll(context: Context, repository: DayseedRepository) {
         val appContext = context.applicationContext
 
-        if (!isGlobalRemindersEnabled(repository)) {
-            // Delivery not opted in yet: nothing to trigger, but keep the durable reconcile
-            // worker alive so a later opt-in is picked up without waiting for an app restart.
-            ensurePeriodicReconcile(appContext)
-            return
-        }
+        ensurePeriodicReconcile(appContext)
 
         val zone = repository.clock.zoneId()
         val today = repository.clock.todayLocal()
         val now = LocalDateTime.of(today, repository.clock.nowLocalTime())
 
         val alarmManager = appContext.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
-        if (alarmManager == null) {
-            ensurePeriodicReconcile(appContext)
-            return
+
+        val eligibleIds = LinkedHashSet<String>()
+        if (isGlobalRemindersEnabled(repository) && alarmManager != null) {
+            for (habit in repository.habits.value) {
+                val effective = repository.getEffectiveHabitVersion(habit.habitId, today) ?: continue
+                if (effective.lifecycleState != HabitLifecycleState.ACTIVE) continue
+                if (effective.reminderMode == "OFF") continue
+
+                val timeLocal = effective.reminderTimeLocal ?: "09:00"
+                val trigger = nextTriggerFor(timeLocal, zone, now) ?: continue
+                val pendingIntent = buildAlarmPendingIntent(
+                    appContext,
+                    habitId = habit.habitId,
+                    deliveryDate = trigger.toLocalDate().toString(),
+                    reminderTimeLocal = timeLocal
+                )
+                alarmManager.setWindow(
+                    AlarmManager.RTC_WAKEUP,
+                    trigger.atZone(zone).toInstant().toEpochMilli(),
+                    DELIVERY_WINDOW_MS,
+                    pendingIntent
+                )
+                eligibleIds.add(habit.habitId)
+            }
         }
 
-        var scheduledCount = 0
-        for (habit in repository.habits.value) {
-            val effective = repository.getEffectiveHabitVersion(habit.habitId, today) ?: continue
-            if (effective.lifecycleState != HabitLifecycleState.ACTIVE) continue
-            if (effective.reminderMode == "OFF") continue
-
-            val timeLocal = effective.reminderTimeLocal ?: "09:00"
-            val trigger = nextTriggerFor(timeLocal, zone, now) ?: continue
-            val pendingIntent = buildAlarmPendingIntent(
-                appContext,
-                habitId = habit.habitId,
-                deliveryDate = trigger.toLocalDate().toString()
-            )
-            alarmManager.setWindow(
-                AlarmManager.RTC_WAKEUP,
-                trigger.atZone(zone).toInstant().toEpochMilli(),
-                DELIVERY_WINDOW_MS,
-                pendingIntent
-            )
-            scheduledCount++
+        // Cancel pending alarms for habits that fell out of eligibility since the previous
+        // successful run (including the globally-disabled case: everything must be cancelled).
+        val previousIds = readScheduledAlarmIds(repository)
+        if (alarmManager != null) {
+            (previousIds - eligibleIds).forEach { cancelAlarm(appContext, it) }
+            writeScheduledAlarmIds(repository, eligibleIds)
         }
-
-        ensurePeriodicReconcile(appContext)
     }
 
     /** Intended next trigger for a daily local reminder time, tomorrow's if today's already passed.
@@ -120,12 +159,14 @@ object ReminderScheduler {
     fun buildAlarmPendingIntent(
         context: Context,
         habitId: String,
-        deliveryDate: String
+        deliveryDate: String,
+        reminderTimeLocal: String
     ): PendingIntent {
         val intent = Intent(context, ReminderAlarmReceiver::class.java).apply {
             action = ALARM_ACTION
             putExtra(EXTRA_HABIT_ID, habitId)
             putExtra(EXTRA_DELIVERY_DATE, deliveryDate)
+            putExtra(EXTRA_REMINDER_TIME_LOCAL, reminderTimeLocal)
         }
         return PendingIntent.getBroadcast(
             context,
@@ -138,11 +179,38 @@ object ReminderScheduler {
     fun requestIdFor(habitId: String): Int =
         ("reminder_" + habitId).hashCode() and 0x7FFFFFFF
 
+    /**
+     * Cancels a pending alarm by habit id. PendingIntent matching ignores extra values
+     * (`filterEquals` compares only the action, data, type, component and categories), so the
+     * extras recorded here never change the alarm's identity and never defeat cancellation.
+     */
     fun cancelAlarm(context: Context, habitId: String) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
         alarmManager.cancel(
-            buildAlarmPendingIntent(context, habitId, deliveryDate = "")
+            buildAlarmPendingIntent(context, habitId, deliveryDate = "", reminderTimeLocal = "")
         )
+    }
+
+    private fun readScheduledAlarmIds(repository: DayseedRepository): Set<String> {
+        val text = repository.getSettingString(SETTING_SCHEDULED_ALARM_IDS, "")
+        if (text.isBlank()) return emptySet()
+        return try {
+            val arr = JSONArray(text)
+            (0 until arr.length()).map { arr.getString(it) }.toSet()
+        } catch (_: Exception) {
+            // Corrupt registry values are treated as empty state; each trigger re-registers.
+            emptySet()
+        }
+    }
+
+    private fun writeScheduledAlarmIds(repository: DayseedRepository, ids: Set<String>) {
+        val json = JSONArray().apply { ids.sorted().forEach { put(it) } }.toString()
+        try {
+            repository.setSettingSync(SETTING_SCHEDULED_ALARM_IDS, "JSON", json)
+        } catch (_: Exception) {
+            // Best-effort persistence: the reconcile worker re-derives alarms from habits, so
+            // a failed registry write only delays cancellation, never duplicates reminders.
+        }
     }
 
     fun isGlobalRemindersEnabled(repository: DayseedRepository): Boolean =
@@ -150,7 +218,8 @@ object ReminderScheduler {
 
     /**
      * Registers the durable periodic reconciliation work. WorkManager is used only for
-     * deferrable maintenance — never for a user-facing clock-time trigger (owner decision).
+     * deferrable maintenance (alarm re-registration, cancellation outbox draining, pending
+     * reservation recovery) — never for a user-facing clock-time trigger (owner decision).
      * Registration failures in non-Android test environments are swallowed: alarms alone
      * already re-register after each trigger, and receivers keep the schedule repaired.
      */

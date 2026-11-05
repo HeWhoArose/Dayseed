@@ -7,6 +7,11 @@ import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.time.Duration
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.ZoneId
 
 /**
  * Fires when an inexact AlarmManager ring reaches one habit's intended reminder time.
@@ -16,17 +21,25 @@ import kotlinx.coroutines.launch
  * 1. Global opt-in (`reminders_enabled` setting, disabled in Settings pending device
  *    verification) and the real Android `POST_NOTIFICATIONS` permission are checked first;
  *    a failure here performs **no ledger writes at all**.
- * 2. [ReminderEngine.evaluateHabitReminder] runs through [DayseedRepository.evaluateTodayRemindersSync]
+ * 2. Phase 3 staleness validation (no ledger writes): the alarm's recorded reminder time must
+ *    still match the current persisted configuration, and the recorded delivery date must
+ *    still describe a plausible delivery of the *current* configuration. Obsolete alarms from
+ *    an edited reminder time, a past delivery date, or a deferral longer than
+ *    [ReminderScheduler.STALE_ALARM_GRACE_MS] are rejected; rings more than the inexact window
+ *    before the intended time are not delivered either. Permitted platform delivery delays
+ *    ([ReminderScheduler.DELIVERY_WINDOW_MS], Doze/battery) stay inside the grace and are not
+ *    rejected.
+ * 3. [ReminderEngine.evaluateHabitReminder] runs through [DayseedRepository.evaluateTodayRemindersSync]
  *    (one serialised transaction) applying quiet hours, habit state, already-logged state,
  *    idempotency and the shared 3-per-day cap (counting DELIVERED + SCHEDULED), then writes the
  *    outcome to `reminder_deliveries`. A fresh deliverable is stored as **SCHEDULED** — a
  *    reservation, not a delivery claim.
- * 3. Only a *pending or fresh reservation owned by this invocation* is actually posted —
+ * 4. Only a *pending or fresh reservation owned by this invocation* is actually posted —
  *    never a replay of an already-DELIVERED record. On posting success the reservation row
  *    is promoted to `DELIVERED`; if posting fails it is corrected back to `SUPPRESSED`/
  *    `POST_FAILED`, so the ledger always matches reality. Stale reservations (process died
  *    between reservation and post) are recovered by the reconcile worker.
- * 4. The next day's alarm is re-registered either way so the schedule self-heals.
+ * 5. The next day's alarm is re-registered either way so the schedule self-heals.
  */
 class ReminderAlarmReceiver : BroadcastReceiver() {
 
@@ -39,10 +52,12 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
             try {
                 val appContext = context.applicationContext
                 repository = DayseedRepository(appContext)
-                handleAlarm(
+                processAlarmSync(
                     appContext,
                     repository,
-                    intent.getStringExtra(ReminderScheduler.EXTRA_HABIT_ID)
+                    habitIdRaw = intent.getStringExtra(ReminderScheduler.EXTRA_HABIT_ID),
+                    deliveryDateRaw = intent.getStringExtra(ReminderScheduler.EXTRA_DELIVERY_DATE),
+                    reminderTimeRaw = intent.getStringExtra(ReminderScheduler.EXTRA_REMINDER_TIME_LOCAL)
                 )
             } catch (_: Exception) {
                 // Never crash the system from a reminder; the reconcile worker repairs state.
@@ -61,51 +76,137 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
         }
     }
 
-    private fun handleAlarm(
-        context: Context,
-        repository: DayseedRepository,
-        habitIdRaw: String?
-    ) {
-        val habitId = habitIdRaw ?: return
-
-        if (!ReminderScheduler.isGlobalRemindersEnabled(repository)) return
-        val permissionGranted = ContextCompat.checkSelfPermission(
-            context, android.Manifest.permission.POST_NOTIFICATIONS
-        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-        if (!permissionGranted) return
-
-        val targetDate = repository.clock.todayLocal()
-        val alreadyRecorded = repository.getReminderDeliveryStatus("HABIT_DAILY:$habitId:$targetDate")
-
-        val evaluations = repository.evaluateTodayRemindersSync(targetDate)
-        val target = evaluations.firstOrNull { it.habitId == habitId } ?: return
-
-        val freshReservation = alreadyRecorded == null && target.deliveryStatus == "SCHEDULED"
-        val retryPending = alreadyRecorded == "SCHEDULED" && target.deliveryStatus == "SCHEDULED"
-        // Already-DELIVERED replays (two alarms at the same minute) must not post twice.
-        if (!freshReservation && !retryPending) return
-
-        val posted = ReminderNotifier.postHabitReminder(
-            context,
-            ReminderEngine.platformTagFor(habitId),
-            ReminderEngine.platformIdFor(habitId),
-            repository.habits.value.firstOrNull { it.habitId == habitId }?.name ?: "your habit"
-        )
-        if (posted) {
-            repository.markReminderDeliveryDelivered(
-                deliveryKey = "HABIT_DAILY:$habitId:$targetDate",
-                nowUtcMs = repository.clock.nowUtcMs()
-            )
-        } else {
-            repository.markReminderDeliveryNotDelivered(
-                deliveryKey = "HABIT_DAILY:$habitId:$targetDate",
-                suppressionReason = "POST_FAILED",
-                nowUtcMs = repository.clock.nowUtcMs()
-            )
-        }
-    }
-
     companion object {
+
         const val CHANNEL_ID = ReminderNotifier.CHANNEL_ID
+
+        // Process-level decisions, exposed for test visibility (physical-device diagnosis and
+        // Robolectric tests assert exactly which gate fired).
+        const val DECISION_POSTED = "POSTED"
+        const val DECISION_POST_FAILED = "POST_FAILED"
+        const val DECISION_ALREADY_DELIVERED = "SKIPPED_ALREADY_DELIVERED"
+        const val DECISION_SUPPRESSED = "SUPPRESSED"
+        const val DECISION_NO_HABIT_ID = "SKIPPED_NO_HABIT_ID"
+        const val DECISION_UNVERIFIABLE_INTENT = "SKIPPED_UNVERIFIABLE_INTENT"
+        const val DECISION_INELIGIBLE_HABIT = "SKIPPED_INELIGIBLE_HABIT"
+        const val DECISION_STALE_CONFIG = "SKIPPED_STALE_CONFIG"
+        const val DECISION_STALE_TOO_LATE = "SKIPPED_STALE_TOO_LATE"
+        const val DECISION_TOO_EARLY = "SKIPPED_TOO_EARLY"
+        const val DECISION_GLOBALLY_DISABLED = "SKIPPED_GLOBALLY_DISABLED"
+        const val DECISION_NO_PERMISSION = "SKIPPED_NO_PERMISSION"
+        const val DECISION_NO_EVALUATION = "SKIPPED_NO_EVALUATION"
+
+        /**
+         * Fire-time validation + atomic reservation + posting for one alarm, fully synchronised
+         * so callers (receiver and Robolectric tests) can drive it deterministically.
+         *
+         * Returns one of the [DECISION_*] constants describing exactly which step succeeded or
+         * failed. Stale/unverifiable alarms return before any ledger interaction: they never
+         * write a `reminder_deliveries` row and never post a notification.
+         */
+        fun processAlarmSync(
+            context: Context,
+            repository: DayseedRepository,
+            habitIdRaw: String?,
+            deliveryDateRaw: String?,
+            reminderTimeRaw: String?
+        ): String {
+            val habitId = habitIdRaw ?: return DECISION_NO_HABIT_ID
+
+            val zone: ZoneId = repository.clock.zoneId()
+            val targetDate = repository.clock.todayLocal()
+            val now: LocalDateTime = LocalDateTime.of(targetDate, repository.clock.nowLocalTime())
+
+            // ---- Phase 3: verify this alarm still belongs to the current configuration ----
+            val deliveryDate = deliveryDateRaw?.let {
+                try { LocalDate.parse(it) } catch (_: Exception) { null }
+            } ?: return DECISION_UNVERIFIABLE_INTENT
+            val intendedTime = reminderTimeRaw?.let {
+                try { LocalTime.parse(it) } catch (_: Exception) { null }
+            } ?: return DECISION_UNVERIFIABLE_INTENT
+
+            val effective = repository.getEffectiveHabitVersion(habitId, targetDate)
+            if (effective == null ||
+                effective.lifecycleState != HabitLifecycleState.ACTIVE ||
+                effective.reminderMode == "OFF"
+            ) {
+                return DECISION_INELIGIBLE_HABIT
+            }
+
+            val configuredTime = effective.reminderTimeLocal ?: "09:00"
+            // A stale alarm (scheduled before the user changed the reminder time) must never
+            // reach the user, even though Android would happily ring it on schedule.
+            if (LocalTime.parse(configuredTime) != intendedTime) {
+                return DECISION_STALE_CONFIG
+            }
+
+            // Separate obsolete-alarm protection from permitted inexact delivery delays:
+            // the intended fire moment is (delivery date + recorded reminder time) in the
+            // device zone. Delays within [STALE_ALARM_GRACE_MS] remain a valid ring.
+            val intendedFireInstant = intendedTime.atDate(deliveryDate).atZone(zone).toInstant()
+            val delayMs = Duration.between(
+                intendedFireInstant,
+                now.atZone(zone).toInstant()
+            ).toMillis()
+            if (deliveryDate.isBefore(targetDate) || delayMs > ReminderScheduler.STALE_ALARM_GRACE_MS) {
+                return DECISION_STALE_TOO_LATE
+            }
+            if (deliveryDate.isAfter(targetDate) ||
+                delayMs < -ReminderScheduler.DELIVERY_WINDOW_MS
+            ) {
+                return DECISION_TOO_EARLY
+            }
+
+            // ---- Hard gates before any ledger interaction ----
+            if (!ReminderScheduler.isGlobalRemindersEnabled(repository)) {
+                return DECISION_GLOBALLY_DISABLED
+            }
+            val permissionGranted = ContextCompat.checkSelfPermission(
+                context, android.Manifest.permission.POST_NOTIFICATIONS
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            if (!permissionGranted) return DECISION_NO_PERMISSION
+
+            // ---- Idempotent evaluation (atomic reservation in the ledger) ----
+            val deliveryKey = "HABIT_DAILY:$habitId:$targetDate"
+            val alreadyRecorded = repository.getReminderDeliveryStatus(deliveryKey)
+            // Duplicate execution protection: this occurrence already delivered for real.
+            if (alreadyRecorded == "DELIVERED") {
+                return DECISION_ALREADY_DELIVERED
+            }
+
+            val evaluations = repository.evaluateTodayRemindersSync(targetDate)
+            val target = evaluations.firstOrNull { it.habitId == habitId } ?: return DECISION_NO_EVALUATION
+
+            if (target.deliveryStatus != "SCHEDULED") {
+                // SUPPRESSED results carry their reason in the ledger row itself.
+                return DECISION_SUPPRESSED
+            }
+            // Any other already-recorded terminal state (CANCELLED/DISMISSED/ACTED) must not post.
+            if (alreadyRecorded != null) {
+                return DECISION_ALREADY_DELIVERED
+            }
+
+            // ---- Real NotificationManager post; promote/correct the reservation honestly ----
+            val posted = ReminderNotifier.postHabitReminder(
+                context,
+                ReminderEngine.platformTagFor(habitId),
+                ReminderEngine.platformIdFor(habitId),
+                repository.habits.value.firstOrNull { it.habitId == habitId }?.name ?: "your habit"
+            )
+            return if (posted) {
+                repository.markReminderDeliveryDelivered(
+                    deliveryKey = deliveryKey,
+                    nowUtcMs = repository.clock.nowUtcMs()
+                )
+                DECISION_POSTED
+            } else {
+                repository.markReminderDeliveryNotDelivered(
+                    deliveryKey = deliveryKey,
+                    suppressionReason = "POST_FAILED",
+                    nowUtcMs = repository.clock.nowUtcMs()
+                )
+                DECISION_POST_FAILED
+            }
+        }
     }
 }
