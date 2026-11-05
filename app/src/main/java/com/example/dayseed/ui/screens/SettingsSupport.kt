@@ -1,5 +1,8 @@
 package com.example.dayseed.ui.screens
 
+import android.content.ContentResolver
+import android.net.Uri
+import android.provider.OpenableColumns
 import com.example.dayseed.data.BackupAndExportManager
 import com.example.dayseed.data.BackupCryptoConfig
 import org.json.JSONObject
@@ -15,6 +18,43 @@ import java.time.format.DateTimeFormatter
  * No Compose types here: every function is deterministic, unit-testable JVM logic.
  */
 object SettingsSupport {
+
+    /**
+     * Resolves the actual display name of an SAF document (Android 4.x+ Storage Access
+     * Framework) from [ContentResolver.query] on [OpenableColumns.DISPLAY_NAME].
+     *
+     * Returns null when the provider does not answer, has no such column, or names the
+     * document blank — providers are explicitly NOT assumed to behave identically, so every
+     * caller must handle null as "name unknown" (the backup/restore flow already validates
+     * file content independently of the name).
+     */
+    fun resolveDocumentDisplayName(contentResolver: ContentResolver, uri: Uri): String? {
+        return try {
+            contentResolver.query(
+                uri,
+                arrayOf(OpenableColumns.DISPLAY_NAME),
+                null,
+                null,
+                null
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (index >= 0) {
+                        val name = cursor.getString(index)
+                        name?.takeIf { it.isNotBlank() }
+                    } else {
+                        null
+                    }
+                } else {
+                    null
+                }
+            }
+        } catch (_: Exception) {
+            // Any provider failure means the display name is unknown, not that the document
+            // is invalid; content-level validation happens separately.
+            null
+        }
+    }
 
     data class QuietHoursPreset(
         val id: String,

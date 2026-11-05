@@ -1085,6 +1085,10 @@ fun BackupRestorePanel(
     var saveFileMessage by remember { mutableStateOf<String?>(null) }
     var saveFileError by remember { mutableStateOf<String?>(null) }
     var filePickerError by remember { mutableStateOf<String?>(null) }
+    // Actual SAF document names are resolved via ContentResolver/OpenableColumns and shown to
+    // the user, because Android may rename the created document (numbered duplicate).
+    var saveFileName by remember { mutableStateOf<String?>(null) }
+    var restoreFileName by remember { mutableStateOf<String?>(null) }
 
     // ---- Save a backup via the Android Storage Access Framework (user-selected destination) ----
     // Writes the complete backup to the chosen document, then verifies the produced file can be
@@ -1099,6 +1103,10 @@ fun BackupRestorePanel(
         filePickerError = null
         saveFileError = null
         saveFileMessage = null
+        // Ask the provider for the real document name: Android may adjust the requested name
+        // (e.g. a numbered duplicate like "dayseed-backup-2026-01-01 (1).dayseed.json") instead
+        // of overwriting an existing document, so the user should see what was actually created.
+        saveFileName = SettingsSupport.resolveDocumentDisplayName(context.contentResolver, uri)
         coroutineScope.launch {
             try {
                 val json = viewModel.repository.exportDataAsJson(
@@ -1117,7 +1125,11 @@ fun BackupRestorePanel(
                 if (readBack != json) {
                     throw IllegalStateException("The saved backup could not be verified after writing")
                 }
-                saveFileMessage = "Backup saved and verified at the location you chose. " +
+                saveFileMessage = "Backup saved and verified as " +
+                    (saveFileName ?: "the document you chose") + ". " +
+                    "If an existing file had the same name, Android may have created a numbered " +
+                    "copy such as \"" + (saveFileName?.substringBeforeLast(".") ?: "file") + " (1)…" +
+                    "\" instead of overwriting it — the newest document is the one just written. " +
                     "Dayseed does not track or update this file later."
             } catch (e: Exception) {
                 saveFileError = "That backup could not be written or verified there. " +
@@ -1137,6 +1149,8 @@ fun BackupRestorePanel(
             return@rememberLauncherForActivityResult
         }
         filePickerError = null
+        // Show the real selected filename in the restore dialog where it matters.
+        restoreFileName = SettingsSupport.resolveDocumentDisplayName(context.contentResolver, uri)
         try {
             val text = context.contentResolver.openInputStream(uri)?.use {
                 it.readBytes().toString(Charsets.UTF_8)
@@ -1401,6 +1415,7 @@ fun BackupRestorePanel(
                     onClick = {
                         restoreError = null
                         filePickerError = null
+                        restoreFileName = null
                         showRestoreDialog = true
                     },
                     modifier = Modifier.testTag("open_restore_dialog_btn")
@@ -1514,6 +1529,12 @@ fun BackupRestorePanel(
                     modifier = Modifier.imePadding(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    if (restoreFileName != null) {
+                        Text(
+                            text = "Selected file: $restoreFileName",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                     Text(
                         "An automatic safety backup is created and verified before anything is imported.",
                         style = MaterialTheme.typography.bodySmall
@@ -1584,6 +1605,7 @@ fun BackupRestorePanel(
                                 )
                                 showRestoreDialog = false
                                 restoreJsonInput = ""
+                                restoreFileName = null
                             } catch (_: Exception) {
                                 restoreError = "That didn't restore. Check the file contents" +
                                     (if (backupPassword.isNotBlank()) " and the password" else "") + "."
