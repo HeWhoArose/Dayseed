@@ -3226,9 +3226,9 @@ class DayseedRepository(
 
     /**
      * Runs [block] inside a serialised database write transaction (BEGIN IMMEDIATE-eligible),
-     * retrying on transient `SQLiteDatabaseLockedException` contention from other connections
-     * or processes. Never relies on an in-memory mutex alone: the SQLite file-level write lock
-     * is the cross-connection protection.
+     * retrying on transient `SQLiteDatabaseLockedException`/SQLITE_BUSY contention from other
+     * connections or processes. Never relies on an in-memory mutex alone: the SQLite file-level
+     * write lock is the cross-connection protection.
      */
     private fun <T> withImmediateTransaction(block: () -> T): T {
         val db = dbHelper.writableDatabase
@@ -3247,9 +3247,10 @@ class DayseedRepository(
             } catch (e: Exception) {
                 val locked = e is SQLiteDatabaseLockedException ||
                     e.cause is SQLiteDatabaseLockedException ||
-                    e.message?.lowercase()?.contains("locked") == true
-                if (!locked || attempt >= 5) throw e
-                Thread.sleep(20L * attempt)
+                    e.message?.lowercase()?.contains("locked") == true ||
+                    e.message?.contains("SQLITE_BUSY") == true
+                if (!locked || attempt >= 8) throw e
+                Thread.sleep(40L * attempt)
             }
         }
     }

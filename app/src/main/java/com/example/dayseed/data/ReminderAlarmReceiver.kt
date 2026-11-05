@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.ContextCompat
+import com.example.dayseed.BuildConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -44,13 +45,21 @@ import java.time.ZoneId
 class ReminderAlarmReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != ReminderScheduler.ALARM_ACTION) return
+        val isProbe = intent.action == ReminderDebugProbe.PROBE_ACTION
+        if (intent.action != ReminderScheduler.ALARM_ACTION &&
+            !(isProbe && BuildConfig.DEBUG)
+        ) return
 
         val result = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             var repository: DayseedRepository? = null
             try {
                 val appContext = context.applicationContext
+                if (isProbe) {
+                    // Debug-only delivery verification: real alarm path, real post, auto-cancel.
+                    ReminderDebugProbe.onProbeAlarm(appContext)
+                    return@launch
+                }
                 repository = DayseedRepository(appContext)
                 processAlarmSync(
                     appContext,

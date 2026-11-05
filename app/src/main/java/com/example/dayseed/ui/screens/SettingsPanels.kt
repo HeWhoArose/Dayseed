@@ -709,7 +709,92 @@ fun RemindersPanel(
     }
     // ---- Area 5: Optional encouragement tips are intentionally not exposed — the feature
     //      is not supported yet, and unsupported controls must never appear switchable.
+
+    // ---- Debug only: real delivery verification (never shown in release builds) ----
+    if (com.example.dayseed.BuildConfig.DEBUG) {
+        Spacer(modifier = Modifier.height(14.dp))
+        ReminderDebugVerificationSection()
+    }
     Spacer(modifier = Modifier.height(20.dp))
+}
+
+/**
+ * Debug-only end-to-end verification (Phase 4 remediation): schedules a REAL inexact alarm
+ * through the production receiver, posts a REAL notification on the `dayseed_reminders`
+ * channel, and auto-cancels it — while reporting the four independent gates separately
+ * (preference / runtime permission / app-level enablement / channel).
+ *
+ * It writes no reminder preference, inserts no ledger rows, and touches no habit data.
+ * Release builds never compose this section (`BuildConfig.DEBUG` guard), so the debug
+ * controls and receiver action do not exist in shipping behaviour.
+ */
+@Composable
+private fun ReminderDebugVerificationSection() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val probeState by com.example.dayseed.data.ReminderDebugProbe.state.collectAsState()
+
+    SettingsGroupCard {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Debug: delivery verification",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "Visible in debug builds only. Runs a real AlarmManager alarm through the " +
+                    "notification receiver, posts a real test notification on the " +
+                    "dayseed_reminders channel, and cancels it automatically after ~5 seconds. " +
+                    "This does not change the reminder preference, habit data, or the delivery " +
+                    "ledger.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            OutlinedButton(
+                onClick = { com.example.dayseed.data.ReminderDebugProbe.startProbe(context) },
+                modifier = Modifier.testTag("debug_probe_run_btn")
+            ) {
+                Text("Run delivery verification", style = MaterialTheme.typography.labelMedium)
+            }
+            probeState?.let { state ->
+                Spacer(modifier = Modifier.height(10.dp))
+                state.steps.forEach { step ->
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = if (step.ok) "✓" else "✗",
+                            color = if (step.ok) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.error
+                            },
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = step.name, style = MaterialTheme.typography.bodySmall)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = step.detail,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+                if (!state.finished) {
+                    Text(
+                        text = if (state.alarmFired) {
+                            "Alarm received — auto-cancel pending…"
+                        } else {
+                            "Waiting for the probe alarm…"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
 }
 
 private fun openSystemNotificationSettings(context: android.content.Context) {

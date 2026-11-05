@@ -66,4 +66,33 @@ internal object ReminderNotifier {
         (context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager)
             ?.cancel(tag, id)
     }
+
+    /**
+     * Posts the debug-only probe notification ([ReminderDebugProbe.PROBE_TAG]) on the same
+     * production channel. Returns true only when `notify` did not throw; the probe records
+     * failure instead of claiming success.
+     */
+    fun postDebugProbeReminder(context: Context): Boolean {
+        val notificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return false
+        ensureReminderChannel(context)
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.star_on)
+            .setContentTitle("Debug verification")
+            .setContentText("Real notification test. It will be removed automatically.")
+            .setAutoCancel(true)
+            .build()
+
+        return try {
+            notificationManager.notify(
+                com.example.dayseed.data.ReminderDebugProbe.PROBE_TAG,
+                com.example.dayseed.data.ReminderDebugProbe.PROBE_NOTIFICATION_ID,
+                notification
+            )
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
 }
