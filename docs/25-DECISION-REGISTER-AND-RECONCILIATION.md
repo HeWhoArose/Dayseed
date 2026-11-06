@@ -499,4 +499,60 @@ The decision log and register now contain 212 unique decision IDs through D-218 
 
 The decision log and register now contain 213 unique decision IDs through D-219 (gaps preserved).
 
+---
+
+## D-220 — Fifth appearance option: Dark + Time-of-Day Artwork (2026-11-04)
+
+| D-220 | Fifth appearance option `DARK_DAYPART_ART` ("Dark + Time-of-Day Artwork") | **Owner instruction — Stage B Phase 2.5 implementation step executed (2026-11-04); Stage C validation and Stage D acceptance remain open** | Separates palette axis (System / Light / Dark / automatic) from artwork axis (fixed / automatic). Implemented: new `ThemeModeOption.DARK_DAYPART_ART` enum, `resolveDayseedColorScheme` branch resolving to `DarkColorScheme` at every hour, `DaypartVisuals` artwork resolution unchanged, Settings Appearance preview uses canonical 30-second tick, fifth swatch chip added. | Reconciled: docs 26/28/12/38. Automated coverage: `DayseedVisualResolutionTest` extended, `DayseedAppearanceSettingsTest` added. Physical-device contrast/accessibility remain NOT RUN (Stage C). |
+
+---
+
+## D-221 — Reminders surface reopened with delivery-active-gating honesty policy (2026-11-04)
+
+| D-221 | Notifications & reminders panel (re-opens the D-212 reminders deferral) | **Owner instruction — Stage B Phase 2.5 implementation step executed (2026-11-04); Stage C validation and Stage D acceptance remain open** | New `RemindersPanel` with five areas: Global notifications (status banner, disabled switch, real permission state, request-permission action, system settings route); Habit reminders (configured in Create/Edit Habit, no duplicate DB); Quiet hours (existing defaults/presets/steppers, shared 3/day cap); Weekly goal reminders (documented not-yet-implemented, 09:00 intended not guaranteed); encouragement tips not exposed. All switches disabled until device verification passes. | Reconciled: docs 26/28/12/38. Switches enable only after documented on-device delivery test. |
+
+---
+
+## D-222 — Reminder scheduling architecture: inexact AlarmManager, WorkManager reconciliation, no exact alarms (2026-11-04)
+
+| D-222 | Reminder scheduling architecture (owner-directed division of responsibilities) | **Owner decision — recorded (2026-11-04)** | AlarmManager (inexact `setWindow`, 10-min window) triggers reminders; WorkManager (15-min periodic `ReminderReconcileWorker`) handles reconciliation/cancel-outbox only; no `SCHEDULE_EXACT_ALARM`/`USE_EXACT_ALARM`/`setExact*`. Copy rule: 09:00 reminder described as "scheduled, may be slightly delayed". Implemented: `ReminderScheduler`, `ReminderAlarmReceiver`, `ReminderSystemEventReceiver`. | On-device scheduling, reboot, Doze, notification rendering, permission flow remain NOT RUN (Stage C). |
+
+---
+
+## D-223 — Automatic file backup deferred (2026-11-04)
+
+| D-223 | Automatic file backup (user-selected destination/interval) | **Owner decision — DEFERRED (2026-11-04)** | Scope limited to manual SAF save/restore + clipboard; automatic backup recorded as separate proposal. | No automatic-backup code in this phase. |
+
+---
+
+## D-224 — Manual backup/restore with SAF completed (2026-11-04)
+
+| D-224 | Manual portable backup save/restore via system file picker | **Owner instruction — Stage B Phase 2.5 implementation step executed (2026-11-04); Stage C validation and Stage D acceptance remain open** | Save via `CreateDocument` with mandatory read-back verification; Restore via `OpenDocument` with pre-restore metadata inspection; Merge/Replace/safety backup unchanged; clipboard routes retained. | Automated: `DayseedReminderAndBackupTest` verifies metadata parsing. On-device SAF save/restore NOT RUN (Stage C). Backup envelope/format unchanged. |
+
+---
+
+## D-225 — Atomic delivery reservation with SCHEDULED ledger state (2026-11-05)
+
+| D-225 | Atomic daily-cap reservation with SCHEDULED ledger state | **Owner decision — Stage B remediation implementation (2026-11-05); Stage C validation and Stage D acceptance remain open** | Fresh deliverables reserve slot as `SCHEDULED` (existing schema enum, no migration); cap counts `DELIVERED + SCHEDULED`; only confirmed `NotificationManager.notify` promotes to `DELIVERED`; failure corrects to `SUPPRESSED`/`POST_FAILED`. `evaluateTodayRemindersSync` runs in `withImmediateTransaction` (BEGIN IMMEDIATE + retry). New `ReminderNotifier` centralises posting. Crash-recovery sweep `reconcilePendingReminderPostsSync` re-posts stale (>30 min) `SCHEDULED` rows when eligible, else corrects to `SUPPRESSED`/`PENDING_EXPIRED`. Contract tests expect `SCHEDULED`. New `DayseedReminderConcurrencyTest` (6 tests) proves cap, idempotence, recovery. | All 141 unit tests pass. Stage C independent validation and Stage D not open. |
+
+---
+
+## D-226 — Real pending-alarm cancellation, rescheduling, stale-alarm fire-time validation (2026-11-05)
+
+| D-226 | Real pending AlarmManager cancellation and stale-config protection | **Owner decision — Stage B remediation implementation (2026-11-05); Stage C validation and Stage D acceptance remain open** | Persisted registry `reminder_scheduled_alarm_ids` (JSON) records last scheduled habit ids; `scheduleAll` cancels `previousIds - eligibleIds` before registering new. Time/config edits keep same PendingIntent identity (request code + component + action; extras ignored) via `FLAG_UPDATE_CURRENT`. Reschedule hooks after save/pause/resume/delete/restore. Stale protection: alarm intents carry `EXTRA_REMINDER_TIME_LOCAL`; receiver validates recorded time matches current config, delivery date not past, ring not >6 h beyond intended fire time. Obsolete/ineligible alarms return `SKIPPED_*` with zero ledger writes. New `DayseedReminderAlarmLifecycleTest` (13 tests). | All 141 unit tests pass. Stage C and Stage D not open. |
+
+---
+
+## D-227 — Debug-only end-to-end notification delivery verification (2026-11-05)
+
+| D-227 | Debug-only delivery verification with four-gate state report | **Owner decision — Stage B remediation implementation (2026-11-05); Stage C validation and Stage D acceptance remain open** | `BuildConfig.DEBUG`-gated `ReminderDebugProbe` panel schedules real inexact alarm, real receiver, real `NotificationManager` post on `dayseed_reminders`, auto-cancel after ~5 s. Reports four gates separately: Dayseed preference (report), POST_NOTIFICATIONS permission, `areNotificationsEnabled()`, channel importance/blocked. Failing gates stop before scheduling. Probe never writes `reminders_enabled`, never touches ledger/habits/journal. Release builds strip probe (R8, verified absent from release APK). New `DayseedReminderDebugProbeTest` (5 tests). Transaction retry budget widened (5→8 attempts, 40ms*attempt). | All 141 unit tests pass. Debug/Release builds pass. Stage C and Stage D not open. |
+
+---
+
+## D-228 — SAF document filename feedback with duplicate-numbering explanation (2026-11-05)
+
+| D-228 | SAF filename display and Android duplicate-numbering explanation | **Owner decision — Stage B remediation implementation (2026-11-05); Stage C validation and Stage D acceptance remain open** | `SettingsSupport.resolveDocumentDisplayName` queries `OpenableColumns.DISPLAY_NAME` (null-safe: blank, null, missing column, empty cursor, throwing providers). Save confirmation shows real filename + numbered-duplicate explanation; restore dialog shows `Selected file: <name>`. Backup envelope/encryption/safety/rollback unchanged. New `DayseedSafFilenameFeedbackTest` (7 tests) with MatrixCursor registry providers. | All 141 unit tests pass. Stage C and Stage D not open. |
+
+The decision log and register now contain 222 unique decision IDs through D-228 (gaps preserved).
+
 
