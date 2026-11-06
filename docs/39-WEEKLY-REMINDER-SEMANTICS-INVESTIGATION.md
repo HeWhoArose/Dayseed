@@ -145,9 +145,21 @@ The existing documentation **does not provide an unambiguous answer** that would
 
 ---
 
-## 7. Recommendation
+## 7. Recommendation (historical, pre-decision)
 
 **Defer implementation changes.** The approved remediation phases (1–5) may proceed independently. The scheduled-day/weekly semantics questions should be batched for owner decision under D-196 before any behaviour change. Current behaviour (daily evaluation for all active reminder-enabled habits) is safe and documented as the pre-verification state.
+
+## 8. Resolution addendum (2026-11-06)
+
+The owner resolved every question in this report on 2026-11-06 as decision **D-229** (see `docs/09-DECISION-LOG.md` and `docs/25`):
+
+- **R-WR-01 (scheduled-day gate): ACCEPTED** — implemented in `ReminderEngine` (reason `NOT_SCHEDULED`).
+- **R-WR-02 (weekly-target-met suppression): ACCEPTED with owner modification** — per-habit suppression once the weekly target is met; other habits with reminders on the same/other days are unaffected; implemented as reason `WEEKLY_TARGET_MET`.
+- **R-WR-03 (frequency): ACCEPTED** — one ordinary reminder per calendar date, now scoped to scheduled days.
+- **R-WR-04 (flexible preferred weekdays): ACCEPTED** — `preferredWeekdaysMask` drives reminder days as in the streak domain.
+- **R-WR-05 (REST_DAY / effort-aware TINY): NO suppression** — logging affordances only.
+
+The behaviour described in §2.2 ("no gate — every calendar day evaluated") was the pre-D-229 state and is now superseded by the D-229 implementation (commit after `5f8a92f`; see docs/12 for the exact SHA). Section 7's "defer implementation changes" recommendation is closed by the owner decision.
 
 ---
 

@@ -555,4 +555,12 @@ The decision log and register now contain 213 unique decision IDs through D-219 
 
 The decision log and register now contain 222 unique decision IDs through D-228 (gaps preserved).
 
+---
+
+## D-229 — Scheduled-day reminder gating, per-habit weekly-target-met suppression, schedule-aware alarm arming (2026-11-06)
+
+| D-229 | Owner decision batch R-WR-01..05 (docs/39 investigation) resolved | **Owner decision — ACCEPTED with one owner modification (2026-11-06); Stage B implementation executed the same day; Stage C validation and Stage D acceptance remain open** | Resolves every question raised in `docs/39-WEEKLY-REMINDER-SEMANTICS-INVESTIGATION.md`: (1) habit reminders are gated by the canonical scheduled-opportunity domain; (2) a met weekly target suppresses the rest of that progress week's reminders **for that habit only** — other habits with reminders are unaffected (owner modification, per-habit interpretation recorded verbatim in docs/09); (3) one ordinary reminder per calendar date (existing `HABIT_DAILY` key) combined with the scheduled-day gate; (4) `preferredWeekdaysMask` drives flexible habits' reminder days (none set → daily); (5) `REST_DAY`/effort-aware `TINY` add no schedule gate. Implemented in `ReminderEngine` (gates `NOT_SCHEDULED`, `WEEKLY_TARGET_MET` in the evaluation order), the repository sweep (schedule/met precomputation via `computeWeeklyProgressSnapshot` semantics) and `ReminderScheduler.nextScheduledTriggerFor` (alarms armed for the next scheduled day; unscheduled alarms cancelled via the D-226 registry). New `DayseedReminderSemanticsTest` (11 tests); full suite **152/152 PASSED**. | Reconciled: docs 09/25/26/28/12/38/39. On-device reminder delivery stays NOT RUN; production switches stay disabled. |
+
+The decision log and register now contain 223 unique decision IDs through D-229 (gaps preserved).
+
 

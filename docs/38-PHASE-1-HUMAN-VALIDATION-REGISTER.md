@@ -502,3 +502,9 @@ Added 2026-11-05 for the reminder/backup remediation. Automation already covers 
 
 **Procedure:** With a reminder that has just been reserved (ledger `SCHEDULED`) and before the post completes, force-stop the process (developer options → running app); relaunch and wait for the next reconcile cycle (≤15 min or app start).
 **Expected:** No notification-less `DELIVERED` row is left permanently; the sweep re-posts when still eligible or records an honest `SUPPRESSED`/`PENDING_EXPIRED` outcome; subsequent days deliver normally.
+
+### RM-H06 — Scheduled-day and weekly-target reminder semantics on device (D-229)
+
+**Procedure:** On a device, create (a) a daily habit with a reminder, (b) a weekday habit scheduled only for a weekday that is *not* today, (c) a flexible "3 sessions per week" habit with preferred weekdays that excludes today, and (d) a flexible weekly habit whose target is already met earlier this week. Allow the reminder time to pass with global reminders enabled.
+**Expected:** (a) delivers; (b) and (c) produce **no** notification on the unscheduled/preferred-excluded day, and deliver on their next scheduled/preferred day; (d) produces no notification for the rest of the week and resumes the following week. Inspect the ledger (debug): unscheduled days show `SUPPRESSED`/`NOT_SCHEDULED`, met-target days show `SUPPRESSED`/`WEEKLY_TARGET_MET`, and an unrelated reminder-enabled habit on the same day still delivered (per-habit gate, shared cap intact).
+**Dependencies:** Physical device; debug build; device date control for week-boundary checks.
