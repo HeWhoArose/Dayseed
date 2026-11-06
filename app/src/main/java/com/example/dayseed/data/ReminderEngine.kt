@@ -91,11 +91,20 @@ object ReminderEngine {
      *   succeeded, or correct it to `SUPPRESSED`/`POST_FAILED` when the post fails. SCHEDULED
      *   rows older than the recovery window are finalised by the reconcile worker.
      * - `DELIVERED` — Android accepted an actual post for this occurrence.
+     *
+     * Schedule gates (D-229, owner batch 2026-11-06): evaluation first consults the canonical
+     * schedule domain (`isScheduledOpportunityOnDate`) so weekday-masked/flexible habits never
+     * reserve on unscheduled days (`NOT_SCHEDULED`), and suppresses the rest of a week's
+     * reminders once the habit's weekly target is met (`WEEKLY_TARGET_MET`, per-habit; other
+     * habits and the shared cap are unaffected). No `REPLACE` rewrite occurs while a
+     * `DELIVERED`/`SUPPRESSED`/`SCHEDULED` row already exists (idempotent replay).
      */
     fun evaluateHabitReminder(
         db: SQLiteDatabase,
         habitVersion: HabitVersion,
         targetDate: LocalDate,
+        isScheduledOpportunity: Boolean,
+        weeklyTargetMet: Boolean,
         alreadyLoggedToday: Boolean,
         quietStartLocal: String,
         quietEndLocal: String,
@@ -153,8 +162,20 @@ object ReminderEngine {
         val (status, reason) = when {
             habitVersion.lifecycleState != HabitLifecycleState.ACTIVE || habitVersion.reminderMode == "OFF" ->
                 "SUPPRESSED" to "REMINDER_OFF_OR_INACTIVE"
+            // D-229 R-WR-01/03: reminder eligibility follows the canonical schedule domain used
+            // by the streak/grove engine — weekday-masked and flexible habits never reserve or
+            // post on days that are not scheduled opportunities for the habit.
+            !isScheduledOpportunity ->
+                "SUPPRESSED" to "NOT_SCHEDULED"
             alreadyLoggedToday ->
                 "SUPPRESSED" to "ALREADY_LOGGED"
+            // D-229 R-WR-02 (owner-modified): once the habit's weekly target is met for the
+            // week containing the delivery date, this habit's remaining reminders are
+            // suppressed for the rest of that week. Other habits with reminders on those
+            // days are unaffected: the gate is per-habit and the shared daily cap remains
+            // shared among the remaining reminder-enabled habits.
+            weeklyTargetMet ->
+                "SUPPRESSED" to "WEEKLY_TARGET_MET"
             isWithinQuietHours(scheduledLocal, quietStartLocal, quietEndLocal) ->
                 "SUPPRESSED" to "QUIET_HOURS"
             consumedCountToday >= dailyCap ->

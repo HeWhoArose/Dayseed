@@ -8,6 +8,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import org.json.JSONArray
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
@@ -109,8 +110,12 @@ object ReminderScheduler {
                 if (effective.lifecycleState != HabitLifecycleState.ACTIVE) continue
                 if (effective.reminderMode == "OFF") continue
 
+                // D-229 R-WR-01/03: alarms are registered for the next *scheduled* day of the
+                // habit (today only when today is a scheduled opportunity and the time is
+                // still ahead of the caller clock), so weekday-masked/flexible habits no
+                // longer arm alarms that can only be skipped at fire time.
                 val timeLocal = effective.reminderTimeLocal ?: "09:00"
-                val trigger = nextTriggerFor(timeLocal, zone, now) ?: continue
+                val trigger = nextScheduledTriggerFor(effective, timeLocal, zone, now) ?: continue
                 val pendingIntent = buildAlarmPendingIntent(
                     appContext,
                     habitId = habit.habitId,
@@ -154,6 +159,37 @@ object ReminderScheduler {
             candidate = candidate.plusDays(1)
         }
         return candidate
+    }
+
+    /**
+     * Schedule-aware next trigger (D-229 R-WR-01/03): the next day that is a scheduled
+     * opportunity for [version] — today when today qualifies and the reminder time is still
+     * ahead of [now], otherwise the first matching day within the next 7 calendar days.
+     * Returns `null` only for an unparseable time. As a defensive fallback for a corrupt
+     * weekday mask (no scheduled day found within a week), the legacy daily trigger is kept;
+     * the receiver's evaluation still rejects any alarm on an unscheduled day with zero
+     * ledger writes, so the fallback can never cause an unscheduled delivery.
+     */
+    fun nextScheduledTriggerFor(
+        version: HabitVersion,
+        timeLocal: String,
+        zone: ZoneId,
+        now: LocalDateTime
+    ): LocalDateTime? {
+        val time = try {
+            LocalTime.parse(timeLocal)
+        } catch (_: Exception) {
+            return null
+        }
+        val today = now.atZone(zone).toLocalDate()
+        val isScheduledOn = { day: LocalDate -> StreakAndGroveEngine.isScheduledOpportunityOnDate(version, day) }
+        val todayTrigger = LocalDateTime.of(today, time)
+        if (isScheduledOn(today) && todayTrigger.isAfter(now)) return todayTrigger
+        for (offset in 1..7L) {
+            val day = today.plusDays(offset)
+            if (isScheduledOn(day)) return LocalDateTime.of(day, time)
+        }
+        return if (todayTrigger.isAfter(now)) todayTrigger else LocalDateTime.of(today.plusDays(1), time)
     }
 
     fun buildAlarmPendingIntent(

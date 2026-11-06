@@ -3212,11 +3212,30 @@ class DayseedRepository(
                 val eff = getEffectiveHabitVersion(h.habitId, targetDate) ?: continue
                 val logged = hasQualifyingActivityOnDate(h.habitId, targetDate) ||
                     getExceptionForHabitOnDate(h.habitId, targetDate) != null
+                // D-229 gates, computed from the same canonical schedule domain the streak
+                // engine uses (R-WR-01/04) and the same weekly-progress semantics the Today
+                // snapshot uses (R-WR-02 modified). REST_DAY/effort-aware TINY are logging
+                // affordances, not schedule modifiers (R-WR-05): they feed neither gate.
+                val scheduledOpportunity = StreakAndGroveEngine.isScheduledOpportunityOnDate(eff, targetDate)
+                var weeklyTargetMet = false
+                if (scheduledOpportunity && eff.targetPeriod == TargetPeriod.WEEK) {
+                    val weeklySnapshot = StreakAndGroveEngine.computeWeeklyProgressSnapshot(
+                        versions = _habitVersions.value.filter { it.habitId == h.habitId },
+                        entries = _habitEntries.value.filter { it.habitId == h.habitId },
+                        outcomes = _habitDayOutcomes.value.filter { it.habitId == h.habitId },
+                        weekStartHistory = _weekStartHistory.value,
+                        evaluationDate = targetDate,
+                        fallbackVersion = eff
+                    )
+                    weeklyTargetMet = weeklySnapshot.weekTotalUnits >= weeklySnapshot.weekTargetUnits
+                }
                 results.add(
                     ReminderEngine.evaluateHabitReminder(
                         db = dbHelper.writableDatabase,
                         habitVersion = eff,
                         targetDate = targetDate,
+                        isScheduledOpportunity = scheduledOpportunity,
+                        weeklyTargetMet = weeklyTargetMet,
                         alreadyLoggedToday = logged,
                         quietStartLocal = quietStart,
                         quietEndLocal = quietEnd,
