@@ -2181,6 +2181,11 @@ class DayseedRepository(
         }
         if (undone) {
             refreshAllSync()
+            // Re-arm the restored habit's alarm immediately instead of waiting for the periodic
+            // reconcile worker (same hook discipline as save/delete-permanent/restore, D-226).
+            if (token.entityType == UndoEntityType.HABIT_DELETION) {
+                rescheduleReminderAlarms()
+            }
         }
         return undone
     }
@@ -3225,10 +3230,15 @@ class DayseedRepository(
     }
 
     /**
-     * Runs [block] inside a serialised database write transaction (BEGIN IMMEDIATE-eligible),
-     * retrying on transient `SQLiteDatabaseLockedException`/SQLITE_BUSY contention from other
-     * connections or processes. Never relies on an in-memory mutex alone: the SQLite file-level
-     * write lock is the cross-connection protection.
+     * Runs [block] inside a serialised database write transaction, retrying on transient
+     * `SQLiteDatabaseLockedException`/SQLITE_BUSY contention from other connections or
+     * processes. Never relies on an in-memory mutex alone: the SQLite file-level write lock
+     * is the cross-connection protection.
+     *
+     * Transaction mode: `SQLiteDatabase.beginTransactionNonExclusive()` issues SQLite's
+     * `BEGIN IMMEDIATE` (Android framework contract; `beginTransaction()` issues
+     * `BEGIN EXCLUSIVE`), so the write lock is acquired upfront and the ledger read,
+     * daily-cap count and reservation below are one serialised step across connections.
      */
     private fun <T> withImmediateTransaction(block: () -> T): T {
         val db = dbHelper.writableDatabase
