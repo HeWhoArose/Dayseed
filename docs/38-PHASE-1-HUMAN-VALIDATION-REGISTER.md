@@ -472,14 +472,14 @@ Added 2026-11-04 (Phase 2.5, decisions D-220–D-224). All cases **NOT RUN**; th
 **Procedure:** "Choose a backup file…" → select the saved file → confirm the pre-restore metadata line (date, format/schema version, category counts, password flag) matches the file; restore Merge and Replace on a disposable installation; try wrong password, corrupt file, non-Dayseed JSON, and an empty file.
 **Expected:** Correct metadata before any mutation; safety backup created before restore; Merge/Replace + conflicts unchanged; unsupported/corrupt files never mutate data and the source stays untouched.
 
-## 9. Phase 1–5 remediation human-intervention cases (2026-11-05, decisions D-225–D-228)
+## 9. Phase 1–5 remediation human-intervention cases (2026-11-05..2026-11-08, decisions D-225–D-231)
 
-Added 2026-11-05 for the reminder/backup remediation. Automation already covers the concurrency, lifecycle, probe-store-safety and filename-parsing behaviour at unit level (141/141 unit tests); these device cases cover what only a real device can prove. All cases **NOT RUN**.
+Added 2026-11-05 (and extended through D-231 on 2026-11-08) for the reminder/backup remediation. Automation covers the cross-connection daily cap, atomic posting-ownership claim (`POSTING_CLAIM:<uuid>`), receiver-vs-sweep lease coordination, failed-post `POST_FAILED` release, lifecycle, schedule/weekly-met semantics, availability gating, probe-store-safety and filename-parsing behaviour at unit/Robolectric level (**165/165 PASSED** across 12 test classes); these device cases cover what only a real device can prove. All cases remain **`NOT RUN`**.
 
-### RM-H01 — Atomic cap and idempotent delivery on a real device (extends P25-H03)
+### RM-H01 — Atomic cap, posting ownership, and idempotent delivery on a real device (extends P25-H03; D-225, D-231)
 
 **Procedure:** Configure three active habits with reminders due within a few minutes of each other on a device; ensure quiet hours/comparisons do not interfere; grant `POST_NOTIFICATIONS`; let all alarms fire (inexact window); inspect notifications received and Settings → debug probe ledger view (or `reminder_deliveries` via a debug tool).
-**Expected:** At most 3 notifications on the local date under the shared cap; exactly one notification per habit occurrence even if the inexact alarm fires twice or the app is force-stopped and relaunched mid-window; ledger shows `SCHEDULED` promoted to `DELIVERED` for posted occurrences; no `DELIVERED` row exists without the user-observational notification.
+**Expected:** At most 3 notifications on the local date under the shared cap; exactly one notification per habit occurrence even if the inexact alarm fires twice concurrently or the app is force-stopped and relaunched mid-window (`evaluateAndClaimHabitReminderForPostingSync` grants posting ownership to at most one active poster); ledger shows `SCHEDULED` promoted to `DELIVERED` (with `suppression_reason` cleared to `NULL`) only for posted occurrences; no `DELIVERED` row exists without the user-observable notification.
 **Dependencies:** Physical device; debug build.
 
 ### RM-H02 — Alarm cancellation and stale protection on config change
@@ -498,10 +498,10 @@ Added 2026-11-05 for the reminder/backup remediation. Automation already covers 
 **Procedure:** Save a backup twice to the same folder choosing the same suggested name with (a) the system Files/Downloads provider, (b) a different provider if available (USB/Drive); then restore and check the "Selected file:" line with a file whose name Android renumbers.
 **Expected:** The panel shows the **actual** provider filename (e.g. `dayseed-backup-2026-11-05 (1)`) rather than the requested name, plus the duplicate-numbering explanation; restore shows the real selected name; behaviour degrades gracefully (no crash) if a provider reports no name.
 
-### RM-H05 — Force-stop crash recovery sweep
+### RM-H05 — Force-stop crash recovery sweep and lease expiry (D-225, D-231)
 
-**Procedure:** With a reminder that has just been reserved (ledger `SCHEDULED`) and before the post completes, force-stop the process (developer options → running app); relaunch and wait for the next reconcile cycle (≤15 min or app start).
-**Expected:** No notification-less `DELIVERED` row is left permanently; the sweep re-posts when still eligible or records an honest `SUPPRESSED`/`PENDING_EXPIRED` outcome; subsequent days deliver normally.
+**Procedure:** With a reminder that has just been reserved/claimed (ledger `SCHEDULED`) and before the post completes, force-stop the process (developer options → running app); relaunch before and after the 30-minute pending lease window (`DEFAULT_MAX_PENDING_AGE_MS`) or wait for the next reconcile cycle after lease expiry.
+**Expected:** While a claim lease is fresh (<30 min), the sweep does not steal or double-post it; once stale (≥30 min), no notification-less `DELIVERED` row is left permanently — the sweep atomically claims and re-posts when still eligible or records an honest `SUPPRESSED` outcome (`NOT_SCHEDULED`, `WEEKLY_TARGET_MET`, `NOTIFICATIONS_BLOCKED`, `DAILY_CAP_REACHED`, or `PENDING_EXPIRED`); subsequent days deliver normally.
 
 ### RM-H06 — Scheduled-day and weekly-target reminder semantics on device (D-229)
 

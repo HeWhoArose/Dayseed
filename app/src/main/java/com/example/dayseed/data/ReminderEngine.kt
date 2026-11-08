@@ -24,6 +24,13 @@ object ReminderEngine {
     const val DEFAULT_QUIET_START = "21:00"
     const val DEFAULT_QUIET_END = "08:00"
     const val DEFAULT_DAILY_CAP = 3
+    const val DEFAULT_MAX_PENDING_AGE_MS = 30L * 60L * 1000L
+    const val POSTING_CLAIM_PREFIX = "POSTING_CLAIM:"
+
+    fun newPostingClaimToken(): String = "$POSTING_CLAIM_PREFIX${UUID.randomUUID()}"
+
+    fun isPostingClaimToken(reason: String?): Boolean =
+        reason != null && reason.startsWith(POSTING_CLAIM_PREFIX)
 
     private val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
@@ -136,6 +143,14 @@ object ReminderEngine {
                     // SCHEDULED replays return the reservation untouched: a reserved slot
                     // must not count against itself, and only the posting pipeline (receiver,
                     // reconciler) may promote it to DELIVERED or correct it to SUPPRESSED.
+                    // D-231: while a SCHEDULED row is actively claimed for posting, its
+                    // internal POSTING_CLAIM:<uuid> token in suppression_reason is masked from
+                    // evaluation callers so SCHEDULED rows continue to report null reason.
+                    val exposedReason = if (existingStatus == "SCHEDULED" && isPostingClaimToken(existingReason)) {
+                        null
+                    } else {
+                        existingReason
+                    }
                     return ReminderEvaluationResult(
                         deliveryKey = deliveryKey,
                         habitId = habitVersion.habitId,
@@ -143,7 +158,7 @@ object ReminderEngine {
                         targetPeriodKey = periodKey,
                         deliveryStatus = existingStatus,
                         scheduledTimeLocal = scheduledLocal,
-                        suppressionReason = existingReason
+                        suppressionReason = exposedReason
                     )
                 }
             }

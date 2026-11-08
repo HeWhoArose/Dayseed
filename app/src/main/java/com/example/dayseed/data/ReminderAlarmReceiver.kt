@@ -109,19 +109,29 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
         const val DECISION_NO_EVALUATION = "SKIPPED_NO_EVALUATION"
 
         /**
-         * Fire-time validation + atomic reservation + posting for one alarm, fully synchronised
-         * so callers (receiver and Robolectric tests) can drive it deterministically.
+         * Fire-time validation + atomic reservation + posting ownership + posting for one alarm,
+         * fully synchronised so callers (receiver and Robolectric tests) can drive it
+         * deterministically.
          *
          * Returns one of the [DECISION_*] constants describing exactly which step succeeded or
          * failed. Stale/unverifiable alarms return before any ledger interaction: they never
          * write a `reminder_deliveries` row and never post a notification.
+         *
+         * D-231: Ledger evaluation, shared daily-cap reservation, and exclusive posting-claim
+         * acquisition (`POSTING_CLAIM:<uuid>`) execute inside one atomic `BEGIN IMMEDIATE`
+         * transaction via [DayseedRepository.evaluateAndClaimHabitReminderForPostingSync]. At
+         * most one active poster across all SQLite connections can obtain `CLAIMED` and invoke
+         * [poster]; any concurrent duplicate receiver observes the active claim or finalized row
+         * inside the serialized transaction and returns [DECISION_ALREADY_DELIVERED] without
+         * calling [poster].
          */
         fun processAlarmSync(
             context: Context,
             repository: DayseedRepository,
             habitIdRaw: String?,
             deliveryDateRaw: String?,
-            reminderTimeRaw: String?
+            reminderTimeRaw: String?,
+            poster: (Context, String, Int, String) -> Boolean = ReminderNotifier::postHabitReminder
         ): String {
             val habitId = habitIdRaw ?: return DECISION_NO_HABIT_ID
 
@@ -178,52 +188,46 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
             ) == android.content.pm.PackageManager.PERMISSION_GRANTED
             if (!permissionGranted) return DECISION_NO_PERMISSION
 
-            // ---- Idempotent evaluation (atomic reservation in the ledger) ----
+            // ---- D-230 + D-231: Atomic per-habit evaluation + exclusive posting-ownership claim ----
             val deliveryKey = "HABIT_DAILY:$habitId:$targetDate"
-            val alreadyRecorded = repository.getReminderDeliveryStatus(deliveryKey)
-            // Duplicate execution protection: this occurrence already delivered for real.
-            if (alreadyRecorded == "DELIVERED") {
-                return DECISION_ALREADY_DELIVERED
+            val claimOutcome = repository.evaluateAndClaimHabitReminderForPostingSync(habitId, targetDate)
+            when (claimOutcome.status) {
+                DayseedRepository.ReminderPostingClaimStatus.NO_EVALUATION ->
+                    return DECISION_NO_EVALUATION
+                DayseedRepository.ReminderPostingClaimStatus.SUPPRESSED ->
+                    return DECISION_SUPPRESSED
+                DayseedRepository.ReminderPostingClaimStatus.ALREADY_CLAIMED_OR_DELIVERED ->
+                    return DECISION_ALREADY_DELIVERED
+                DayseedRepository.ReminderPostingClaimStatus.CLAIMED -> Unit
             }
 
-            // D-230 (2026-11-08 owner review): evaluate ONLY the habit whose alarm fired.
-            // The whole-day evaluation used to reserve every eligible habit's slot inside one
-            // transaction, which let a 09:00 alarm consume the shared cap on behalf of an
-            // 18:00 habit and then leave that habit's own 18:00 run skipping its real post
-            // because a SCHEDULED row already existed. The shared 3/day-cap read remains
-            // atomic across all habits (same transaction, same SQL count), but the
-            // reservation and this run's posting concern just this habit.
-            val target = repository.evaluateHabitReminderForDateSync(habitId, targetDate)
-                ?: return DECISION_NO_EVALUATION
-
-            if (target.deliveryStatus != "SCHEDULED") {
-                // SUPPRESSED results carry their reason in the ledger row itself (including
-                // the D-230 environment gate NOTIFICATIONS_BLOCKED).
-                return DECISION_SUPPRESSED
-            }
-            // Any other already-recorded terminal state (CANCELLED/DISMISSED/ACTED) must not post.
-            if (alreadyRecorded != null) {
-                return DECISION_ALREADY_DELIVERED
-            }
+            val claimToken = claimOutcome.claimToken ?: return DECISION_ALREADY_DELIVERED
 
             // ---- Real NotificationManager post; promote/correct the reservation honestly ----
-            val posted = ReminderNotifier.postHabitReminder(
-                context,
-                ReminderEngine.platformTagFor(habitId),
-                ReminderEngine.platformIdFor(habitId),
-                repository.habits.value.firstOrNull { it.habitId == habitId }?.name ?: "your habit"
-            )
+            val habitName = repository.habits.value.firstOrNull { it.habitId == habitId }?.name ?: "your habit"
+            val posted = try {
+                poster(
+                    context,
+                    ReminderEngine.platformTagFor(habitId),
+                    ReminderEngine.platformIdFor(habitId),
+                    habitName
+                )
+            } catch (_: Exception) {
+                false
+            }
             return if (posted) {
                 repository.markReminderDeliveryDelivered(
                     deliveryKey = deliveryKey,
-                    nowUtcMs = repository.clock.nowUtcMs()
+                    nowUtcMs = repository.clock.nowUtcMs(),
+                    claimToken = claimToken
                 )
                 DECISION_POSTED
             } else {
                 repository.markReminderDeliveryNotDelivered(
                     deliveryKey = deliveryKey,
                     suppressionReason = "POST_FAILED",
-                    nowUtcMs = repository.clock.nowUtcMs()
+                    nowUtcMs = repository.clock.nowUtcMs(),
+                    claimToken = claimToken
                 )
                 DECISION_POST_FAILED
             }

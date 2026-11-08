@@ -157,154 +157,327 @@ class DayseedRepository(
     }
 
     /**
+     * Returns the active posting-claim token (`POSTING_CLAIM:<uuid>`) for [deliveryKey] when the
+     * row is currently `SCHEDULED` and claimed by a poster, or `null` when unclaimed / finalized.
+     */
+    fun getReminderPostingClaimToken(deliveryKey: String): String? {
+        val db = dbHelper.writableDatabase
+        db.rawQuery(
+            "SELECT delivery_status, suppression_reason FROM ${DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES} WHERE delivery_key = ?",
+            arrayOf(deliveryKey)
+        ).use { c ->
+            if (!c.moveToFirst()) return null
+            val status = c.getString(0)
+            val reason = if (c.isNull(1)) null else c.getString(1)
+            return if (status == "SCHEDULED" && ReminderEngine.isPostingClaimToken(reason)) reason else null
+        }
+    }
+
+    /**
      * Confirms an actual Android notification post: promotes the reservation row to DELIVERED
      * only when `NotificationManager.notify` succeeded, so the ledger never claims delivery
      * just because a decision row was inserted.
+     *
+     * D-231: when [claimToken] is provided, only the active owner holding that exact claim token
+     * on a `SCHEDULED` row may promote the occurrence to `DELIVERED`. A superseded or non-owner
+     * caller cannot overwrite a row that another owner has claimed or finalized.
      */
-    fun markReminderDeliveryDelivered(deliveryKey: String, nowUtcMs: Long) {
-        val db = dbHelper.writableDatabase
-        val cv = ContentValues().apply {
-            put("delivery_status", "DELIVERED")
-            put("delivered_at_utc_ms", nowUtcMs)
-            putNull("suppression_reason")
-            put("attempted_at_utc_ms", nowUtcMs)
+    fun markReminderDeliveryDelivered(
+        deliveryKey: String,
+        nowUtcMs: Long,
+        claimToken: String? = null
+    ): Boolean {
+        return withImmediateTransaction {
+            val db = dbHelper.writableDatabase
+            val cv = ContentValues().apply {
+                put("delivery_status", "DELIVERED")
+                put("delivered_at_utc_ms", nowUtcMs)
+                putNull("suppression_reason")
+                put("attempted_at_utc_ms", nowUtcMs)
+            }
+            val updated = if (claimToken != null) {
+                db.update(
+                    DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES,
+                    cv,
+                    "delivery_key = ? AND delivery_status = 'SCHEDULED' AND suppression_reason = ?",
+                    arrayOf(deliveryKey, claimToken)
+                )
+            } else {
+                db.update(
+                    DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES,
+                    cv,
+                    "delivery_key = ? AND delivery_status = 'SCHEDULED' AND (suppression_reason IS NULL OR suppression_reason LIKE '${ReminderEngine.POSTING_CLAIM_PREFIX}%')",
+                    arrayOf(deliveryKey)
+                )
+            }
+            updated == 1
         }
-        db.update(
-            DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES,
-            cv,
-            "delivery_key = ?",
-            arrayOf(deliveryKey)
-        )
     }
 
     /**
      * Corrects the ledger when a reminder was evaluated as deliverable but the Android
      * notification post itself failed (or a SCHEDULED reservation is abandoned), so delivery
      * records always match reality.
+     *
+     * D-231: when [claimToken] is provided, only the active owner holding that exact claim token
+     * on a `SCHEDULED` row may transition the occurrence to `SUPPRESSED`.
      */
-    fun markReminderDeliveryNotDelivered(deliveryKey: String, suppressionReason: String, nowUtcMs: Long) {
-        val db = dbHelper.writableDatabase
-        val cv = ContentValues().apply {
-            put("delivery_status", "SUPPRESSED")
-            putNull("delivered_at_utc_ms")
-            put("suppression_reason", suppressionReason)
-            put("attempted_at_utc_ms", nowUtcMs)
+    fun markReminderDeliveryNotDelivered(
+        deliveryKey: String,
+        suppressionReason: String,
+        nowUtcMs: Long,
+        claimToken: String? = null
+    ): Boolean {
+        return withImmediateTransaction {
+            val db = dbHelper.writableDatabase
+            val cv = ContentValues().apply {
+                put("delivery_status", "SUPPRESSED")
+                putNull("delivered_at_utc_ms")
+                put("suppression_reason", suppressionReason)
+                put("attempted_at_utc_ms", nowUtcMs)
+            }
+            val updated = if (claimToken != null) {
+                db.update(
+                    DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES,
+                    cv,
+                    "delivery_key = ? AND delivery_status = 'SCHEDULED' AND suppression_reason = ?",
+                    arrayOf(deliveryKey, claimToken)
+                )
+            } else {
+                db.update(
+                    DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES,
+                    cv,
+                    "delivery_key = ? AND delivery_status = 'SCHEDULED'",
+                    arrayOf(deliveryKey)
+                )
+            }
+            updated == 1
         }
-        db.update(
-            DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES,
-            cv,
-            "delivery_key = ?",
-            arrayOf(deliveryKey)
-        )
     }
 
+    private data class RecoveryPostingClaim(
+        val deliveryKey: String,
+        val habitId: String,
+        val habitName: String,
+        val claimToken: String
+    )
+
     /**
-     * Crash-recovery for incomplete delivery reservations (Phase 1 remediation).
+     * Crash-recovery for incomplete delivery reservations (Phase 1 remediation + D-231 ownership).
      *
      * Database reservation and `NotificationManager` posting are separate steps, so a process
      * death between them can leave a `SCHEDULED` reservation row that never became `DELIVERED`.
      * This sweep finalises every stale reservation exactly once:
-     * - if the reservation is fresh (no older than [maxPendingAgeMs]) the receiver's own
-     *   in-flight post is still responsible for it — nothing is done here;
-     * - if it is stale, it is re-posted only when it is still fully eligible at recovery time
-     *   (global opt-in, Android permission, habit still active with a reminder, same target
-     *   date, the D-229 reminder gates still open — the day is still a scheduled opportunity
-     *   and the weekly target, if any, is not yet met — user not already logged, outside
-     *   quiet hours, cap slot still valid), and the row becomes `DELIVERED` only after the
-     *   real post succeeded; a stale reservation whose D-229 gate is now closed is honestly
-     *   corrected to `SUPPRESSED`/`NOT_SCHEDULED` or `SUPPRESSED`/`WEEKLY_TARGET_MET`;
-     * - otherwise it is honestly corrected to `SUPPRESSED`/`PENDING_EXPIRED` — a stale
-     *   reservation must never linger forever and never silently claims delivery.
+     * - if the reservation or its active `POSTING_CLAIM:<uuid>` lease is fresh (no older than
+     *   [maxPendingAgeMs]) the receiver's own in-flight post is still responsible for it —
+     *   nothing is done here and the active claim is never stolen;
+     * - if it is stale, recovery eligibility and a new `POSTING_CLAIM:<uuid>` lease are
+     *   evaluated and acquired atomically inside [withImmediateTransaction], so concurrent
+     *   receivers or sweeps across separate SQLite connections cannot double-claim or double-post;
+     * - when still fully eligible at recovery time (global opt-in, Android permission +
+     *   notification availability, habit still active with a reminder, same target date, the
+     *   D-229 reminder gates still open, user not already logged, outside quiet hours, shared
+     *   daily cap still respected), the notification is posted and the row becomes `DELIVERED`
+     *   only after the real post succeeded (verified by matching [claimToken]);
+     * - a stale reservation whose D-229/D-230 gate is now closed is honestly corrected to
+     *   `SUPPRESSED`/`NOT_SCHEDULED`, `SUPPRESSED`/`WEEKLY_TARGET_MET`, or
+     *   `SUPPRESSED`/`NOTIFICATIONS_BLOCKED`; otherwise it is corrected to
+     *   `SUPPRESSED`/`PENDING_EXPIRED`.
+     *
+     * Process-crash boundary note: Android's `NotificationManager` and SQLite do not share a
+     * two-phase commit. If the app process dies in the narrow window after the OS accepted
+     * `NotificationManager.notify()` but before SQLite committed `DELIVERED`, the claim lease
+     * prevents any duplicate post during [maxPendingAgeMs], and if later recovered after lease
+     * expiry, the deterministic `(platformTagFor(habitId), platformIdFor(habitId))` identity
+     * updates the same notification slot in place rather than stacking a second notification.
      */
-    fun reconcilePendingReminderPostsSync(maxPendingAgeMs: Long = 30L * 60L * 1000L) {
+    fun reconcilePendingReminderPostsSync(
+        maxPendingAgeMs: Long = ReminderEngine.DEFAULT_MAX_PENDING_AGE_MS,
+        poster: (Context, String, Int, String) -> Boolean = ReminderNotifier::postHabitReminder
+    ) {
         val db = dbHelper.writableDatabase
-        val rows = mutableListOf<Triple<String, Long, Long>>()
+        val candidateKeys = mutableListOf<String>()
         db.rawQuery(
-            "SELECT delivery_key, scheduled_at_utc_ms, attempted_at_utc_ms FROM " +
-                DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES +
-                " WHERE delivery_status = 'SCHEDULED'",
+            "SELECT delivery_key FROM ${DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES} WHERE delivery_status = 'SCHEDULED'",
             null
         ).use { c ->
             while (c.moveToNext()) {
-                val key = c.getString(0)
-                val scheduledMs = if (c.isNull(1)) 0L else c.getLong(1)
-                val attemptedMs = if (c.isNull(2)) 0L else c.getLong(2)
-                rows.add(Triple(key, scheduledMs, attemptedMs))
+                candidateKeys.add(c.getString(0))
             }
         }
-        if (rows.isEmpty()) return
+        if (candidateKeys.isEmpty()) return
 
-        val nowMs = clock.nowUtcMs()
-        val today = clock.todayLocal()
-        val timeNow = clock.nowLocalTime().let { String.format("%02d:%02d", it.hour, it.minute) }
-        val quietStart = getSettingString("quiet_hours_start", ReminderEngine.DEFAULT_QUIET_START)
-        val quietEnd = getSettingString("quiet_hours_end", ReminderEngine.DEFAULT_QUIET_END)
+        for (deliveryKey in candidateKeys) {
+            val recoveryClaim: RecoveryPostingClaim? = withImmediateTransaction {
+                var currentStatus: String? = null
+                var scheduledMs = 0L
+                var attemptedMs = 0L
+                db.rawQuery(
+                    """
+                    SELECT delivery_status, scheduled_at_utc_ms, attempted_at_utc_ms
+                    FROM ${DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES}
+                    WHERE delivery_key = ?
+                    """.trimIndent(),
+                    arrayOf(deliveryKey)
+                ).use { c ->
+                    if (c.moveToFirst()) {
+                        currentStatus = c.getString(0)
+                        scheduledMs = if (c.isNull(1)) 0L else c.getLong(1)
+                        attemptedMs = if (c.isNull(2)) 0L else c.getLong(2)
+                    }
+                }
+                if (currentStatus != "SCHEDULED") {
+                    return@withImmediateTransaction null
+                }
 
-        for ((deliveryKey, scheduledMs, attemptedMs) in rows) {
-            val parts = deliveryKey.split(":", limit = 3)
-            if (parts.size != 3 || parts[0] != "HABIT_DAILY") {
-                markReminderDeliveryNotDelivered(deliveryKey, "PENDING_EXPIRED", nowMs)
-                continue
-            }
-            val habitId = parts[1]
-            val targetDate = try { LocalDate.parse(parts[2]) } catch (_: Exception) { null }
+                val nowMs = clock.nowUtcMs()
+                val lastActivityMs = maxOf(attemptedMs, scheduledMs)
+                val isFresh = nowMs - lastActivityMs < maxPendingAgeMs
+                if (isFresh) {
+                    // Fresh reservation or active posting claim lease: leave untouched for the
+                    // active poster.
+                    return@withImmediateTransaction null
+                }
 
-            val isFresh = nowMs - maxOf(attemptedMs, scheduledMs) < maxPendingAgeMs
-            val eligibleHabit = getEffectiveHabitVersion(habitId, today)
-            val alreadyLogged = hasQualifyingActivityOnDate(habitId, today) ||
-                getExceptionForHabitOnDate(habitId, today) != null
-            // D-230: the full production delivery-availability gate (runtime permission,
-            // app-level enablement and channel importance), mirroring the receiver path.
-            val notificationsAllowed = ReminderNotifier.isNotificationDeliveryAvailable(appContext)
-            val globallyEnabled = ReminderScheduler.isGlobalRemindersEnabled(this)
+                val parts = deliveryKey.split(":", limit = 3)
+                if (parts.size != 3 || parts[0] != "HABIT_DAILY") {
+                    val expiredCv = ContentValues().apply {
+                        put("delivery_status", "SUPPRESSED")
+                        putNull("delivered_at_utc_ms")
+                        put("suppression_reason", "PENDING_EXPIRED")
+                        put("attempted_at_utc_ms", nowMs)
+                    }
+                    db.update(
+                        DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES,
+                        expiredCv,
+                        "delivery_key = ? AND delivery_status = 'SCHEDULED'",
+                        arrayOf(deliveryKey)
+                    )
+                    return@withImmediateTransaction null
+                }
 
-            // D-229: recompute the reminder gates at recovery time — a stale reservation must
-            // never be re-posted on a day that is no longer a scheduled opportunity for the
-            // habit (e.g. the schedule was edited after reservation) or after the habit's
-            // weekly target became met. Same semantics and helper as the fresh evaluation.
-            var scheduledOpportunity = false
-            var weeklyTargetMet = false
-            if (eligibleHabit != null) {
-                val (opportunity, met) = computeScheduledOpportunityAndWeeklyMet(eligibleHabit, today)
-                scheduledOpportunity = opportunity
-                weeklyTargetMet = met
-            }
+                val habitId = parts[1]
+                val targetDate = try { LocalDate.parse(parts[2]) } catch (_: Exception) { null }
+                val today = clock.todayLocal()
+                val timeNow = clock.nowLocalTime().let { String.format("%02d:%02d", it.hour, it.minute) }
+                val quietStart = getSettingString("quiet_hours_start", ReminderEngine.DEFAULT_QUIET_START)
+                val quietEnd = getSettingString("quiet_hours_end", ReminderEngine.DEFAULT_QUIET_END)
+                val dailyCap = getSettingInt("daily_reminder_cap", ReminderEngine.DEFAULT_DAILY_CAP)
 
-            val canDeliver = !isFresh &&
-                targetDate == today &&
-                globallyEnabled &&
-                notificationsAllowed &&
-                eligibleHabit != null &&
-                eligibleHabit.lifecycleState == HabitLifecycleState.ACTIVE &&
-                eligibleHabit.reminderMode != "OFF" &&
-                scheduledOpportunity &&
-                !weeklyTargetMet &&
-                !alreadyLogged &&
-                !ReminderEngine.isWithinQuietHours(timeNow, quietStart, quietEnd)
+                val eligibleHabit = getEffectiveHabitVersion(habitId, today)
+                val alreadyLogged = hasQualifyingActivityOnDate(habitId, today) ||
+                    getExceptionForHabitOnDate(habitId, today) != null
+                val notificationsAllowed = ReminderNotifier.isNotificationDeliveryAvailable(appContext)
+                val globallyEnabled = ReminderScheduler.isGlobalRemindersEnabled(this)
 
-            if (canDeliver) {
-                val habitName = _habits.value.firstOrNull { it.habitId == habitId }?.name ?: "your habit"
-                val posted = ReminderNotifier.postHabitReminder(
-                    appContext,
-                    ReminderEngine.platformTagFor(habitId),
-                    ReminderEngine.platformIdFor(habitId),
-                    habitName
+                var scheduledOpportunity = false
+                var weeklyTargetMet = false
+                if (eligibleHabit != null) {
+                    val (opportunity, met) = computeScheduledOpportunityAndWeeklyMet(eligibleHabit, today)
+                    scheduledOpportunity = opportunity
+                    weeklyTargetMet = met
+                }
+
+                var otherConsumedToday = 0
+                db.rawQuery(
+                    """
+                    SELECT COUNT(*) FROM ${DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES}
+                    WHERE target_period_key = ?
+                      AND delivery_key != ?
+                      AND delivery_status IN ('DELIVERED', 'SCHEDULED')
+                    """.trimIndent(),
+                    arrayOf(today.toString(), deliveryKey)
+                ).use { c ->
+                    if (c.moveToFirst()) {
+                        otherConsumedToday = c.getInt(0)
+                    }
+                }
+
+                val canDeliver = targetDate == today &&
+                    globallyEnabled &&
+                    notificationsAllowed &&
+                    eligibleHabit != null &&
+                    eligibleHabit.lifecycleState == HabitLifecycleState.ACTIVE &&
+                    eligibleHabit.reminderMode != "OFF" &&
+                    scheduledOpportunity &&
+                    !weeklyTargetMet &&
+                    !alreadyLogged &&
+                    !ReminderEngine.isWithinQuietHours(timeNow, quietStart, quietEnd) &&
+                    otherConsumedToday < dailyCap
+
+                if (!canDeliver) {
+                    val reason = when {
+                        !scheduledOpportunity -> "NOT_SCHEDULED"
+                        weeklyTargetMet -> "WEEKLY_TARGET_MET"
+                        !notificationsAllowed -> "NOTIFICATIONS_BLOCKED"
+                        otherConsumedToday >= dailyCap -> "DAILY_CAP_REACHED"
+                        else -> "PENDING_EXPIRED"
+                    }
+                    val suppressCv = ContentValues().apply {
+                        put("delivery_status", "SUPPRESSED")
+                        putNull("delivered_at_utc_ms")
+                        put("suppression_reason", reason)
+                        put("attempted_at_utc_ms", nowMs)
+                    }
+                    db.update(
+                        DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES,
+                        suppressCv,
+                        "delivery_key = ? AND delivery_status = 'SCHEDULED'",
+                        arrayOf(deliveryKey)
+                    )
+                    return@withImmediateTransaction null
+                }
+
+                val claimToken = ReminderEngine.newPostingClaimToken()
+                val claimCv = ContentValues().apply {
+                    put("suppression_reason", claimToken)
+                    put("attempted_at_utc_ms", nowMs)
+                }
+                val claimed = db.update(
+                    DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES,
+                    claimCv,
+                    "delivery_key = ? AND delivery_status = 'SCHEDULED' AND " +
+                        "(CAST(? AS INTEGER) - MAX(COALESCE(attempted_at_utc_ms, 0), COALESCE(scheduled_at_utc_ms, 0))) >= CAST(? AS INTEGER)",
+                    arrayOf(deliveryKey, nowMs.toString(), maxPendingAgeMs.toString())
                 )
-                if (posted) {
-                    markReminderDeliveryDelivered(deliveryKey, clock.nowUtcMs())
+                if (claimed == 1) {
+                    val habitName = _habits.value.firstOrNull { it.habitId == habitId }?.name ?: "your habit"
+                    RecoveryPostingClaim(
+                        deliveryKey = deliveryKey,
+                        habitId = habitId,
+                        habitName = habitName,
+                        claimToken = claimToken
+                    )
                 } else {
-                    markReminderDeliveryNotDelivered(deliveryKey, "POST_FAILED", clock.nowUtcMs())
+                    null
                 }
-            } else if (!isFresh) {
-                // Honest, specific correction for the D-229/D-230 gates; everything else keeps
-                // the pre-existing stale-outcome label. Suppressed rows never consume the cap.
-                val reason = when {
-                    !scheduledOpportunity -> "NOT_SCHEDULED"
-                    weeklyTargetMet -> "WEEKLY_TARGET_MET"
-                    !notificationsAllowed -> "NOTIFICATIONS_BLOCKED"
-                    else -> "PENDING_EXPIRED"
+            }
+
+            if (recoveryClaim != null) {
+                val posted = try {
+                    poster(
+                        appContext,
+                        ReminderEngine.platformTagFor(recoveryClaim.habitId),
+                        ReminderEngine.platformIdFor(recoveryClaim.habitId),
+                        recoveryClaim.habitName
+                    )
+                } catch (_: Exception) {
+                    false
                 }
-                markReminderDeliveryNotDelivered(deliveryKey, reason, nowMs)
+                if (posted) {
+                    markReminderDeliveryDelivered(
+                        deliveryKey = recoveryClaim.deliveryKey,
+                        nowUtcMs = clock.nowUtcMs(),
+                        claimToken = recoveryClaim.claimToken
+                    )
+                } else {
+                    markReminderDeliveryNotDelivered(
+                        deliveryKey = recoveryClaim.deliveryKey,
+                        suppressionReason = "POST_FAILED",
+                        nowUtcMs = clock.nowUtcMs(),
+                        claimToken = recoveryClaim.claimToken
+                    )
+                }
             }
         }
     }
@@ -3249,13 +3422,24 @@ class DayseedRepository(
         }
     }
 
+    enum class ReminderPostingClaimStatus {
+        CLAIMED,
+        SUPPRESSED,
+        ALREADY_CLAIMED_OR_DELIVERED,
+        NO_EVALUATION
+    }
+
+    data class ReminderPostingClaimResult(
+        val status: ReminderPostingClaimStatus,
+        val evaluation: ReminderEvaluationResult? = null,
+        val claimToken: String? = null
+    )
+
     /**
-     * D-230 (2026-11-08 owner review): production alarm-fire path. Evaluates ONLY the habit
-     * whose alarm fired, inside the same atomic serialised write transaction. The shared
-     * daily-cap read (`DELIVERED + SCHEDULED` for the date across all habits) and the ledger
-     * write remain one serialised step, but other habits are untouched — an alarm firing at
-     * 09:00 no longer reserves a habit whose reminder is at 18:00 before that reminder's own
-     * receiver run.
+     * D-230 (2026-11-08 owner review): single-habit evaluation inside the same atomic serialised
+     * write transaction (`BEGIN IMMEDIATE`). Retained for direct evaluation callers; production
+     * alarm posting uses [evaluateAndClaimHabitReminderForPostingSync] so evaluation, cap check,
+     * and posting-ownership claim happen in one atomic transaction.
      */
     fun evaluateHabitReminderForDateSync(
         habitId: String,
@@ -3271,6 +3455,251 @@ class DayseedRepository(
             val logged = hasQualifyingActivityOnDate(habitId, targetDate) ||
                 getExceptionForHabitOnDate(habitId, targetDate) != null
             evaluateSingleHabitReminder(eff, targetDate, logged, quietStart, quietEnd, dailyCap, nowMs)
+        }
+    }
+
+    /**
+     * D-231: Atomic evaluation, daily-cap reservation, and exclusive posting-ownership claim for
+     * one reminder occurrence (`HABIT_DAILY:<habitId>:<targetDate>`).
+     *
+     * Runs inside a single [withImmediateTransaction] (`BEGIN IMMEDIATE` file-level write lock)
+     * so two concurrent receivers on separate SQLite connections cannot both observe a
+     * non-delivered row and both obtain posting permission:
+     * - If no row exists yet and all gates + the 3/day cap pass, inserts `SCHEDULED` and
+     *   immediately stamps a unique `POSTING_CLAIM:<uuid>` token into `suppression_reason` with
+     *   lease timestamp `attempted_at_utc_ms = nowMs` in the same transaction, returning
+     *   [ReminderPostingClaimStatus.CLAIMED].
+     * - If a `SCHEDULED` row already exists with an active, non-expired `POSTING_CLAIM:<uuid>`
+     *   lease (`nowMs - max(attempted_at_utc_ms, scheduled_at_utc_ms) < maxPendingAgeMs`), or if
+     *   the row is already in a terminal delivered/cancelled/dismissed/acted state, returns
+     *   [ReminderPostingClaimStatus.ALREADY_CLAIMED_OR_DELIVERED] with `claimToken = null`.
+     * - If an existing `SCHEDULED` row is unclaimed (`suppression_reason IS NULL`) or its prior
+     *   claim lease expired (`>= maxPendingAgeMs`), re-verifies all eligibility gates and cap
+     *   inside the transaction and either suppresses it honestly or claims it with a fresh
+     *   `POSTING_CLAIM:<uuid>` token.
+     */
+    fun evaluateAndClaimHabitReminderForPostingSync(
+        habitId: String,
+        targetDate: LocalDate = clock.todayLocal(),
+        maxPendingAgeMs: Long = ReminderEngine.DEFAULT_MAX_PENDING_AGE_MS
+    ): ReminderPostingClaimResult {
+        val quietStart = getSettingString("quiet_hours_start", ReminderEngine.DEFAULT_QUIET_START)
+        val quietEnd = getSettingString("quiet_hours_end", ReminderEngine.DEFAULT_QUIET_END)
+        val dailyCap = getSettingInt("daily_reminder_cap", ReminderEngine.DEFAULT_DAILY_CAP)
+
+        return withImmediateTransaction {
+            val eff = getEffectiveHabitVersion(habitId, targetDate)
+                ?: return@withImmediateTransaction ReminderPostingClaimResult(ReminderPostingClaimStatus.NO_EVALUATION)
+            val db = dbHelper.writableDatabase
+            val periodKey = targetDate.toString()
+            val deliveryKey = "HABIT_DAILY:$habitId:$periodKey"
+            val scheduledLocal = eff.reminderTimeLocal ?: "09:00"
+            val nowMs = clock.nowUtcMs()
+
+            var existingStatus: String? = null
+            var existingReason: String? = null
+            var existingAttemptedMs = 0L
+            var existingScheduledMs = 0L
+            db.rawQuery(
+                """
+                SELECT delivery_status, suppression_reason, attempted_at_utc_ms, scheduled_at_utc_ms
+                FROM ${DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES}
+                WHERE delivery_key = ?
+                """.trimIndent(),
+                arrayOf(deliveryKey)
+            ).use { c ->
+                if (c.moveToFirst()) {
+                    existingStatus = c.getString(0)
+                    existingReason = if (c.isNull(1)) null else c.getString(1)
+                    existingAttemptedMs = if (c.isNull(2)) 0L else c.getLong(2)
+                    existingScheduledMs = if (c.isNull(3)) 0L else c.getLong(3)
+                }
+            }
+
+            if (existingStatus == "SUPPRESSED") {
+                return@withImmediateTransaction ReminderPostingClaimResult(
+                    status = ReminderPostingClaimStatus.SUPPRESSED,
+                    evaluation = ReminderEvaluationResult(
+                        deliveryKey = deliveryKey,
+                        habitId = habitId,
+                        reminderType = "HABIT_DAILY",
+                        targetPeriodKey = periodKey,
+                        deliveryStatus = "SUPPRESSED",
+                        scheduledTimeLocal = scheduledLocal,
+                        suppressionReason = existingReason
+                    )
+                )
+            }
+
+            if (existingStatus != null && existingStatus != "SCHEDULED") {
+                return@withImmediateTransaction ReminderPostingClaimResult(
+                    status = ReminderPostingClaimStatus.ALREADY_CLAIMED_OR_DELIVERED,
+                    evaluation = ReminderEvaluationResult(
+                        deliveryKey = deliveryKey,
+                        habitId = habitId,
+                        reminderType = "HABIT_DAILY",
+                        targetPeriodKey = periodKey,
+                        deliveryStatus = existingStatus!!,
+                        scheduledTimeLocal = scheduledLocal,
+                        suppressionReason = existingReason
+                    )
+                )
+            }
+
+            val logged = hasQualifyingActivityOnDate(habitId, targetDate) ||
+                getExceptionForHabitOnDate(habitId, targetDate) != null
+
+            if (existingStatus == "SCHEDULED") {
+                val lastActivityMs = maxOf(existingAttemptedMs, existingScheduledMs)
+                val hasActiveClaim = ReminderEngine.isPostingClaimToken(existingReason) &&
+                    (nowMs - lastActivityMs < maxPendingAgeMs)
+                if (hasActiveClaim) {
+                    return@withImmediateTransaction ReminderPostingClaimResult(
+                        status = ReminderPostingClaimStatus.ALREADY_CLAIMED_OR_DELIVERED,
+                        evaluation = ReminderEvaluationResult(
+                            deliveryKey = deliveryKey,
+                            habitId = habitId,
+                            reminderType = "HABIT_DAILY",
+                            targetPeriodKey = periodKey,
+                            deliveryStatus = "SCHEDULED",
+                            scheduledTimeLocal = scheduledLocal,
+                            suppressionReason = null
+                        )
+                    )
+                }
+
+                // Unclaimed pre-seeded SCHEDULED reservation or expired claim lease: re-verify
+                // current eligibility before allowing a poster to claim it.
+                val (scheduledOpportunity, weeklyTargetMet) = computeScheduledOpportunityAndWeeklyMet(eff, targetDate)
+                val notificationsAvailable = ReminderNotifier.isNotificationDeliveryAvailable(appContext)
+                val inQuietHours = ReminderEngine.isWithinQuietHours(scheduledLocal, quietStart, quietEnd)
+                var otherConsumedToday = 0
+                db.rawQuery(
+                    """
+                    SELECT COUNT(*) FROM ${DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES}
+                    WHERE target_period_key = ?
+                      AND delivery_key != ?
+                      AND delivery_status IN ('DELIVERED', 'SCHEDULED')
+                    """.trimIndent(),
+                    arrayOf(periodKey, deliveryKey)
+                ).use { c ->
+                    if (c.moveToFirst()) {
+                        otherConsumedToday = c.getInt(0)
+                    }
+                }
+
+                val failureReason: String? = when {
+                    eff.lifecycleState != HabitLifecycleState.ACTIVE || eff.reminderMode == "OFF" ->
+                        "REMINDER_OFF_OR_INACTIVE"
+                    !scheduledOpportunity ->
+                        "NOT_SCHEDULED"
+                    logged ->
+                        "ALREADY_LOGGED"
+                    weeklyTargetMet ->
+                        "WEEKLY_TARGET_MET"
+                    inQuietHours ->
+                        "QUIET_HOURS"
+                    !notificationsAvailable ->
+                        "NOTIFICATIONS_BLOCKED"
+                    otherConsumedToday >= dailyCap ->
+                        "DAILY_CAP_REACHED"
+                    else -> null
+                }
+
+                if (failureReason != null) {
+                    val suppressCv = ContentValues().apply {
+                        put("delivery_status", "SUPPRESSED")
+                        putNull("delivered_at_utc_ms")
+                        put("suppression_reason", failureReason)
+                        put("attempted_at_utc_ms", nowMs)
+                    }
+                    db.update(
+                        DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES,
+                        suppressCv,
+                        "delivery_key = ? AND delivery_status = 'SCHEDULED'",
+                        arrayOf(deliveryKey)
+                    )
+                    return@withImmediateTransaction ReminderPostingClaimResult(
+                        status = ReminderPostingClaimStatus.SUPPRESSED,
+                        evaluation = ReminderEvaluationResult(
+                            deliveryKey = deliveryKey,
+                            habitId = habitId,
+                            reminderType = "HABIT_DAILY",
+                            targetPeriodKey = periodKey,
+                            deliveryStatus = "SUPPRESSED",
+                            scheduledTimeLocal = scheduledLocal,
+                            suppressionReason = failureReason
+                        )
+                    )
+                }
+
+                val claimToken = ReminderEngine.newPostingClaimToken()
+                val claimCv = ContentValues().apply {
+                    put("suppression_reason", claimToken)
+                    put("attempted_at_utc_ms", nowMs)
+                }
+                val claimed = db.update(
+                    DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES,
+                    claimCv,
+                    "delivery_key = ? AND delivery_status = 'SCHEDULED' AND " +
+                        "(suppression_reason IS NULL OR (suppression_reason LIKE '${ReminderEngine.POSTING_CLAIM_PREFIX}%' AND (CAST(? AS INTEGER) - MAX(COALESCE(attempted_at_utc_ms, 0), COALESCE(scheduled_at_utc_ms, 0))) >= CAST(? AS INTEGER)))",
+                    arrayOf(deliveryKey, nowMs.toString(), maxPendingAgeMs.toString())
+                )
+                val eval = ReminderEvaluationResult(
+                    deliveryKey = deliveryKey,
+                    habitId = habitId,
+                    reminderType = "HABIT_DAILY",
+                    targetPeriodKey = periodKey,
+                    deliveryStatus = "SCHEDULED",
+                    scheduledTimeLocal = scheduledLocal,
+                    suppressionReason = null
+                )
+                return@withImmediateTransaction if (claimed == 1) {
+                    ReminderPostingClaimResult(
+                        status = ReminderPostingClaimStatus.CLAIMED,
+                        evaluation = eval,
+                        claimToken = claimToken
+                    )
+                } else {
+                    ReminderPostingClaimResult(
+                        status = ReminderPostingClaimStatus.ALREADY_CLAIMED_OR_DELIVERED,
+                        evaluation = eval
+                    )
+                }
+            }
+
+            // Fresh evaluation: no row existed at the start of this transaction.
+            val eval = evaluateSingleHabitReminder(eff, targetDate, logged, quietStart, quietEnd, dailyCap, nowMs)
+            if (eval.deliveryStatus != "SCHEDULED") {
+                return@withImmediateTransaction ReminderPostingClaimResult(
+                    status = ReminderPostingClaimStatus.SUPPRESSED,
+                    evaluation = eval
+                )
+            }
+
+            val claimToken = ReminderEngine.newPostingClaimToken()
+            val claimCv = ContentValues().apply {
+                put("suppression_reason", claimToken)
+                put("attempted_at_utc_ms", nowMs)
+            }
+            val claimed = db.update(
+                DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES,
+                claimCv,
+                "delivery_key = ? AND delivery_status = 'SCHEDULED' AND suppression_reason IS NULL",
+                arrayOf(deliveryKey)
+            )
+            if (claimed == 1) {
+                ReminderPostingClaimResult(
+                    status = ReminderPostingClaimStatus.CLAIMED,
+                    evaluation = eval,
+                    claimToken = claimToken
+                )
+            } else {
+                ReminderPostingClaimResult(
+                    status = ReminderPostingClaimStatus.ALREADY_CLAIMED_OR_DELIVERED,
+                    evaluation = eval
+                )
+            }
         }
     }
 
