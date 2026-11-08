@@ -209,8 +209,11 @@ class DayseedRepository(
      *   in-flight post is still responsible for it — nothing is done here;
      * - if it is stale, it is re-posted only when it is still fully eligible at recovery time
      *   (global opt-in, Android permission, habit still active with a reminder, same target
-     *   date, user not already logged, outside quiet hours, cap slot still valid), and the row
-     *   becomes `DELIVERED` only after the real post succeeded;
+     *   date, the D-229 reminder gates still open — the day is still a scheduled opportunity
+     *   and the weekly target, if any, is not yet met — user not already logged, outside
+     *   quiet hours, cap slot still valid), and the row becomes `DELIVERED` only after the
+     *   real post succeeded; a stale reservation whose D-229 gate is now closed is honestly
+     *   corrected to `SUPPRESSED`/`NOT_SCHEDULED` or `SUPPRESSED`/`WEEKLY_TARGET_MET`;
      * - otherwise it is honestly corrected to `SUPPRESSED`/`PENDING_EXPIRED` — a stale
      *   reservation must never linger forever and never silently claims delivery.
      */
@@ -256,6 +259,18 @@ class DayseedRepository(
             ) == android.content.pm.PackageManager.PERMISSION_GRANTED
             val globallyEnabled = ReminderScheduler.isGlobalRemindersEnabled(this)
 
+            // D-229: recompute the reminder gates at recovery time — a stale reservation must
+            // never be re-posted on a day that is no longer a scheduled opportunity for the
+            // habit (e.g. the schedule was edited after reservation) or after the habit's
+            // weekly target became met. Same semantics and helper as the fresh evaluation.
+            var scheduledOpportunity = false
+            var weeklyTargetMet = false
+            if (eligibleHabit != null) {
+                val (opportunity, met) = computeScheduledOpportunityAndWeeklyMet(eligibleHabit, today)
+                scheduledOpportunity = opportunity
+                weeklyTargetMet = met
+            }
+
             val canDeliver = !isFresh &&
                 targetDate == today &&
                 globallyEnabled &&
@@ -263,6 +278,8 @@ class DayseedRepository(
                 eligibleHabit != null &&
                 eligibleHabit.lifecycleState == HabitLifecycleState.ACTIVE &&
                 eligibleHabit.reminderMode != "OFF" &&
+                scheduledOpportunity &&
+                !weeklyTargetMet &&
                 !alreadyLogged &&
                 !ReminderEngine.isWithinQuietHours(timeNow, quietStart, quietEnd)
 
@@ -280,7 +297,14 @@ class DayseedRepository(
                     markReminderDeliveryNotDelivered(deliveryKey, "POST_FAILED", clock.nowUtcMs())
                 }
             } else if (!isFresh) {
-                markReminderDeliveryNotDelivered(deliveryKey, "PENDING_EXPIRED", nowMs)
+                // Honest, specific correction for the D-229 gates; everything else keeps the
+                // pre-existing stale-outcome label. Suppressed rows never consume the daily cap.
+                val reason = when {
+                    !scheduledOpportunity -> "NOT_SCHEDULED"
+                    weeklyTargetMet -> "WEEKLY_TARGET_MET"
+                    else -> "PENDING_EXPIRED"
+                }
+                markReminderDeliveryNotDelivered(deliveryKey, reason, nowMs)
             }
         }
     }
@@ -3212,23 +3236,8 @@ class DayseedRepository(
                 val eff = getEffectiveHabitVersion(h.habitId, targetDate) ?: continue
                 val logged = hasQualifyingActivityOnDate(h.habitId, targetDate) ||
                     getExceptionForHabitOnDate(h.habitId, targetDate) != null
-                // D-229 gates, computed from the same canonical schedule domain the streak
-                // engine uses (R-WR-01/04) and the same weekly-progress semantics the Today
-                // snapshot uses (R-WR-02 modified). REST_DAY/effort-aware TINY are logging
-                // affordances, not schedule modifiers (R-WR-05): they feed neither gate.
-                val scheduledOpportunity = StreakAndGroveEngine.isScheduledOpportunityOnDate(eff, targetDate)
-                var weeklyTargetMet = false
-                if (scheduledOpportunity && eff.targetPeriod == TargetPeriod.WEEK) {
-                    val weeklySnapshot = StreakAndGroveEngine.computeWeeklyProgressSnapshot(
-                        versions = _habitVersions.value.filter { it.habitId == h.habitId },
-                        entries = _habitEntries.value.filter { it.habitId == h.habitId },
-                        outcomes = _habitDayOutcomes.value.filter { it.habitId == h.habitId },
-                        weekStartHistory = _weekStartHistory.value,
-                        evaluationDate = targetDate,
-                        fallbackVersion = eff
-                    )
-                    weeklyTargetMet = weeklySnapshot.weekTotalUnits >= weeklySnapshot.weekTargetUnits
-                }
+                val (scheduledOpportunity, weeklyTargetMet) =
+                    computeScheduledOpportunityAndWeeklyMet(eff, targetDate)
                 results.add(
                     ReminderEngine.evaluateHabitReminder(
                         db = dbHelper.writableDatabase,
@@ -3246,6 +3255,33 @@ class DayseedRepository(
             }
             results
         }
+    }
+
+    /**
+     * D-229 precomputation, shared by [evaluateTodayRemindersSync] and the
+     * [reconcilePendingReminderPostsSync] crash-recovery sweep so both use identical semantics:
+     * the canonical schedule domain the streak engine uses (R-WR-01/04) and the weekly-progress
+     * semantics the Today snapshot uses (R-WR-02 modified). REST_DAY/effort-aware TINY are
+     * logging affordances, not schedule modifiers (R-WR-05): they feed neither gate.
+     */
+    internal fun computeScheduledOpportunityAndWeeklyMet(
+        eff: HabitVersion,
+        date: LocalDate
+    ): Pair<Boolean, Boolean> {
+        val scheduledOpportunity = StreakAndGroveEngine.isScheduledOpportunityOnDate(eff, date)
+        var weeklyTargetMet = false
+        if (scheduledOpportunity && eff.targetPeriod == TargetPeriod.WEEK) {
+            val weeklySnapshot = StreakAndGroveEngine.computeWeeklyProgressSnapshot(
+                versions = _habitVersions.value.filter { it.habitId == eff.habitId },
+                entries = _habitEntries.value.filter { it.habitId == eff.habitId },
+                outcomes = _habitDayOutcomes.value.filter { it.habitId == eff.habitId },
+                weekStartHistory = _weekStartHistory.value,
+                evaluationDate = date,
+                fallbackVersion = eff
+            )
+            weeklyTargetMet = weeklySnapshot.weekTotalUnits >= weeklySnapshot.weekTargetUnits
+        }
+        return scheduledOpportunity to weeklyTargetMet
     }
 
     /**

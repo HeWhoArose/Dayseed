@@ -23,7 +23,9 @@ import kotlinx.coroutines.flow.update
  * which posts a real notification via [ReminderNotifier] and cancels it again automatically.
  *
  * Guarantees:
- * - compiled in and reachable only when [BuildConfig.DEBUG]; release builds expose nothing;
+ * - compiled in and reachable only when [BuildConfig.DEBUG]; the release build does not
+ *   minify (`isMinifyEnabled = false`), so the class symbols remain in the release dex but
+ *   every probe entry point is a runtime no-op without DEBUG (verified 2026-11-08);
  * - never enables, writes or toggles the production `reminders_enabled` preference;
  * - never inserts or edits `reminder_deliveries` rows (no fake "delivered" records);
  * - never modifies habit or journal data.
