@@ -110,7 +110,7 @@ fun SharedMonthCalendar(
                     onClick = onPreviousMonth,
                     modifier = Modifier
                         .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
-                        .testTag("${testTagPrefix}_prev_month")
+                        .testTag("${testTagPrefix}_prev_month_btn")
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
@@ -129,7 +129,7 @@ fun SharedMonthCalendar(
                     if (displayedMonth != YearMonth.from(referenceToday) || selectedDate != referenceToday) {
                         TextButton(
                             onClick = onJumpToToday,
-                            modifier = Modifier.testTag("${testTagPrefix}_jump_today")
+                            modifier = Modifier.testTag("${testTagPrefix}_jump_today_btn")
                         ) {
                             Text(
                                 text = "Jump to Today",
@@ -144,7 +144,7 @@ fun SharedMonthCalendar(
                     onClick = onNextMonth,
                     modifier = Modifier
                         .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
-                        .testTag("${testTagPrefix}_next_month")
+                        .testTag("${testTagPrefix}_next_month_btn")
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -224,7 +224,7 @@ fun SharedMonthCalendar(
                             Spacer(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(52.dp)
+                                    .height(54.dp)
                             )
                         } else {
                             val date = displayedMonth.atDay(dayOfMonth)
@@ -235,26 +235,63 @@ fun SharedMonthCalendar(
                                 ?.primaryMoodCode
                                 ?.let { MoodCatalog.findByCode(it) }
 
-                            val aggregatedState = resolveCalendarCellHonestState(
-                                date = date,
-                                referenceToday = referenceToday,
-                                habitsForMonth = habitsForMonth,
-                                selectedHabitFilterId = selectedHabitFilterId,
-                                evaluateDateStateForHabit = evaluateDateStateForHabit
-                            )
+                            val isSingleHabitMode = selectedHabitFilterId != null
+                            val perHabitStates = if (date.isAfter(referenceToday)) {
+                                emptyList()
+                            } else if (isSingleHabitMode) {
+                                listOf(evaluateDateStateForHabit(selectedHabitFilterId!!, date))
+                            } else {
+                                habitsForMonth.map { evaluateDateStateForHabit(it.habitId, date) }
+                            }
+
+                            val singleHabitState = if (date.isAfter(referenceToday)) {
+                                HonestCalendarDateState.FUTURE_DATE
+                            } else if (isSingleHabitMode) {
+                                perHabitStates.firstOrNull() ?: HonestCalendarDateState.UNSCHEDULED_DATE
+                            } else {
+                                resolveCalendarCellHonestState(
+                                    date = date,
+                                    referenceToday = referenceToday,
+                                    habitsForMonth = habitsForMonth,
+                                    selectedHabitFilterId = null,
+                                    evaluateDateStateForHabit = evaluateDateStateForHabit
+                                )
+                            }
 
                             val isSelected = date == selectedDate
                             val isToday = date == referenceToday
-                            val (bgColor, textColor, borderColor) = calendarColorsForState(
-                                state = aggregatedState,
-                                isSelected = isSelected,
-                                isToday = isToday
-                            )
+                            // In All-Habits Mode, keep the cell container background neutral instead of
+                            // painting the whole cell green when only one habit is completed (Plan 2.B1).
+                            val (bgColor, textColor, borderColor) = if (isSingleHabitMode) {
+                                calendarColorsForState(
+                                    state = singleHabitState,
+                                    isSelected = isSelected,
+                                    isToday = isToday
+                                )
+                            } else {
+                                val scheme = MaterialTheme.colorScheme
+                                val neutralBg = if (isSelected) {
+                                    scheme.primaryContainer.copy(alpha = 0.25f)
+                                } else {
+                                    scheme.surface
+                                }
+                                val neutralFg = if (date.isAfter(referenceToday)) {
+                                    scheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                } else {
+                                    scheme.onSurface
+                                }
+                                val neutralBorder = when {
+                                    isSelected -> scheme.primary
+                                    isToday -> scheme.secondary
+                                    else -> scheme.outlineVariant.copy(alpha = 0.5f)
+                                }
+                                Triple(neutralBg, neutralFg, neutralBorder)
+                            }
 
                             val a11yDescription = buildString {
                                 append(date.toString())
                                 if (isToday) append(", Today")
-                                append(", ${aggregatedState.displayLabel}")
+                                append(", ${singleHabitState.displayLabel}")
                                 if (latestMood != null) append(", Mood ${latestMood.label}")
                                 if (dayJournals.isNotEmpty()) {
                                     append(", ${dayJournals.size} journal ${if (dayJournals.size == 1) "entry" else "entries"}")
@@ -264,7 +301,7 @@ fun SharedMonthCalendar(
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .defaultMinSize(minWidth = 44.dp, minHeight = 52.dp)
+                                    .defaultMinSize(minWidth = 44.dp, minHeight = 54.dp)
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(bgColor)
                                     .border(
@@ -288,28 +325,51 @@ fun SharedMonthCalendar(
                                         fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Medium,
                                         color = textColor
                                     )
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(2.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
+                                    // Habit non-colour status indicators (All-Habits compact per-habit marks vs Single-Habit mark)
+                                    if (isSingleHabitMode) {
                                         Text(
-                                            text = aggregatedState.nonColorIndicator,
+                                            text = singleHabitState.nonColorIndicator,
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = textColor
                                         )
-                                        if (latestMood != null) {
-                                            Text(
-                                                text = latestMood.symbol,
-                                                fontSize = 9.sp
-                                            )
-                                        } else if (dayJournals.isNotEmpty()) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(5.dp)
-                                                    .clip(CircleShape)
-                                                    .background(MaterialTheme.colorScheme.tertiary)
-                                            )
+                                    } else {
+                                        val compactMarks = perHabitStates
+                                            .filter {
+                                                it != HonestCalendarDateState.UNSCHEDULED_DATE &&
+                                                    it != HonestCalendarDateState.FUTURE_DATE
+                                            }
+                                            .take(4)
+                                            .joinToString("") { it.nonColorIndicator }
+                                            .ifEmpty { "·" }
+                                        Text(
+                                            text = compactMarks,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = textColor,
+                                            maxLines = 1
+                                        )
+                                    }
+                                    // Independent Mood + Journal indicators (Workstream D)
+                                    if (latestMood != null || dayJournals.isNotEmpty()) {
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            if (latestMood != null) {
+                                                Text(
+                                                    text = latestMood.symbol,
+                                                    fontSize = 8.sp
+                                                )
+                                            }
+                                            if (dayJournals.isNotEmpty()) {
+                                                val jBadgeText = if (dayJournals.size > 1) "✍️${dayJournals.size}" else "✍️"
+                                                Text(
+                                                    text = jBadgeText,
+                                                    fontSize = 8.sp,
+                                                    modifier = Modifier.testTag("${testTagPrefix}_journal_badge_$date")
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -469,7 +529,7 @@ fun WeeklyHabitBoard(
                     onClick = onPreviousWeek,
                     modifier = Modifier
                         .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
-                        .testTag("weekly_board_prev_week")
+                        .testTag("weekly_board_prev_btn")
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
@@ -492,7 +552,7 @@ fun WeeklyHabitBoard(
                     if (referenceToday !in boardModel.weekStartDate..boardModel.weekEndDate) {
                         TextButton(
                             onClick = onJumpToCurrentWeek,
-                            modifier = Modifier.testTag("weekly_board_this_week")
+                            modifier = Modifier.testTag("weekly_board_jump_current_btn")
                         ) {
                             Text("Current Week")
                         }
@@ -503,7 +563,7 @@ fun WeeklyHabitBoard(
                     onClick = onNextWeek,
                     modifier = Modifier
                         .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
-                        .testTag("weekly_board_next_week")
+                        .testTag("weekly_board_next_btn")
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -544,10 +604,21 @@ fun WeeklyHabitBoard(
                             fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
                             color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                         )
-                        if (mood != null) {
-                            Text(text = mood.symbol, fontSize = 10.sp)
-                        } else if (jCount > 0) {
-                            Text(text = "✍️", fontSize = 9.sp)
+                        if (mood != null || jCount > 0) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (mood != null) {
+                                    Text(text = mood.symbol, fontSize = 9.sp)
+                                }
+                                if (jCount > 0) {
+                                    Text(
+                                        text = if (jCount > 1) "✍️$jCount" else "✍️",
+                                        fontSize = 8.sp
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -594,6 +665,7 @@ fun WeeklyHabitBoard(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 val badgeColor = when (row.periodStatus) {
+                                    WeeklyPeriodStatus.ABOVE_TARGET,
                                     WeeklyPeriodStatus.MET -> MaterialTheme.colorScheme.primaryContainer
                                     WeeklyPeriodStatus.IN_PROGRESS -> MaterialTheme.colorScheme.secondaryContainer
                                     WeeklyPeriodStatus.MISSED -> MaterialTheme.colorScheme.errorContainer
@@ -656,7 +728,7 @@ fun WeeklyHabitBoard(
                                                     modifier = Modifier
                                                         .size(4.dp)
                                                         .clip(CircleShape)
-                                                        .background( cellFg.copy(alpha = 0.7f) )
+                                                        .background(cellFg.copy(alpha = 0.7f))
                                                 )
                                             }
                                         }

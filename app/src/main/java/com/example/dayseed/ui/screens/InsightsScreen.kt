@@ -369,6 +369,7 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
                         )
 
                         val detailedBands = listOf(
+                            ProgressBand.ZERO,
                             ProgressBand.TINY_STEP,
                             ProgressBand.GETTING_STARTED,
                             ProgressBand.HALFWAY,
@@ -404,15 +405,12 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
 
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                        val totalEfforts = (growthMetrics.tinyCount + growthMetrics.usualCount + growthMetrics.extraCount)
-                            .coerceAtLeast(1)
                         Text(
-                            text = "Effort Summary: Tiny ${growthMetrics.tinyCount} • Usual ${growthMetrics.usualCount} • Extra ${growthMetrics.extraCount}",
+                            text = "Legacy Effort Outcomes: Tiny ${growthMetrics.tinyCount} • Usual ${growthMetrics.usualCount} • Extra ${growthMetrics.extraCount}",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.testTag("insights_effort_summary_text")
                         )
-                        val _unusedRatio = totalEfforts // keep deterministic
                     }
                 }
             }

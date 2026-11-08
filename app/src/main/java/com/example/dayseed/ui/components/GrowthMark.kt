@@ -70,18 +70,20 @@ import kotlin.math.sin
 @Composable
 fun CollectedMomentsSummaryCard(
     metrics: GrowthMetrics,
+    referenceDate: LocalDate,
     modifier: Modifier = Modifier,
-    referenceDate: LocalDate = LocalDate.of(2026, 1, 1),
     reducedMotion: Boolean = false,
     onOpenDetail: () -> Unit = {},
+    onRetryLoad: () -> Unit = {},
     onInfoClick: (() -> Unit)? = null
 ) {
     GrowthMarkSummaryCard(
         metrics = metrics,
-        modifier = modifier,
         currentMonth = YearMonth.from(referenceDate),
+        modifier = modifier,
         reducedMotion = reducedMotion,
         onOpenDetail = onOpenDetail,
+        onRetryLoad = onRetryLoad,
         onInfoClick = onInfoClick
     )
 }
@@ -89,10 +91,11 @@ fun CollectedMomentsSummaryCard(
 @Composable
 fun GrowthMarkSummaryCard(
     metrics: GrowthMetrics,
+    currentMonth: YearMonth,
     modifier: Modifier = Modifier,
-    currentMonth: YearMonth = YearMonth.of(2026, 1),
     reducedMotion: Boolean = false,
     onOpenDetail: () -> Unit = {},
+    onRetryLoad: () -> Unit = {},
     onInfoClick: (() -> Unit)? = null
 ) {
     val monthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())
@@ -109,7 +112,13 @@ fun GrowthMarkSummaryCard(
             .fillMaxWidth()
             .defaultMinSize(minHeight = 88.dp)
             .clip(RoundedCornerShape(24.dp))
-            .clickable(onClick = onOpenDetail)
+            .clickable {
+                if (!metrics.loadError.isNullOrBlank()) {
+                    onRetryLoad()
+                } else {
+                    onOpenDetail()
+                }
+            }
             .semantics(mergeDescendants = true) {
                 role = Role.Button
                 contentDescription = "Collected moments summary: ${metrics.habitActiveDatesCount} active days tended, " +
@@ -138,7 +147,7 @@ fun GrowthMarkSummaryCard(
                     .testTag("growth_mark_error_state")
             ) {
                 Text(
-                    text = metrics.loadError,
+                    text = "Unable to load — tap to retry",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error
                 )
@@ -274,6 +283,7 @@ private fun GrowthMetricPill(label: String, value: String) {
 fun CollectedMomentsDetailSheet(
     metrics: GrowthMetrics,
     yearMonth: YearMonth,
+    referenceToday: LocalDate,
     selectedDate: LocalDate?,
     monthDetail: CollectedMomentsMonthDetail? = null,
     onSelectMonth: (YearMonth, LocalDate?) -> Unit = { _, _ -> },
@@ -335,12 +345,20 @@ fun CollectedMomentsDetailSheet(
                     }
                 }
 
-                Row {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (yearMonth != YearMonth.from(referenceToday)) {
+                        TextButton(
+                            onClick = { onSelectMonth(YearMonth.from(referenceToday), null) },
+                            modifier = Modifier.testTag("g3_jump_current_month_btn")
+                        ) {
+                            Text("Current Month")
+                        }
+                    }
                     IconButton(
                         onClick = { onSelectMonth(yearMonth.minusMonths(1), null) },
                         modifier = Modifier
                             .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
-                            .testTag("collected_moments_prev_month")
+                            .testTag("g3_prev_month_btn")
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
@@ -351,7 +369,7 @@ fun CollectedMomentsDetailSheet(
                         onClick = { onSelectMonth(yearMonth.plusMonths(1), null) },
                         modifier = Modifier
                             .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
-                            .testTag("collected_moments_next_month")
+                            .testTag("g3_next_month_btn")
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,

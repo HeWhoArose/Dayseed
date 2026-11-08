@@ -259,6 +259,7 @@ fun DayseedApp(viewModel: DayseedViewModel) {
                     CollectedMomentsDetailSheet(
                         metrics = growthMetrics,
                         yearMonth = route.yearMonth,
+                        referenceToday = viewModel.repository.clock.todayLocal(),
                         selectedDate = route.selectedDate,
                         monthDetail = monthDetail,
                         onSelectMonth = { newMonth, newDate ->

@@ -846,23 +846,34 @@ class DayseedViewModel @JvmOverloads constructor(
         _lastJournalSaveError.value = null
         return try {
             if (!sourceDraftId.isNullOrBlank() && _editingJournalEntry.value == null) {
-                val promoted = repository.promoteDraftToJournalEntrySync(sourceDraftId)
-                    ?: repository.saveJournalEntrySync(entry, sourceDraftIdToRemove = sourceDraftId)
-                // If date/title/mood/body were modified right on Save, ensure the saved entry matches `entry`
-                if (promoted.localDate != entry.localDate ||
-                    promoted.body != entry.body.trim() ||
-                    promoted.title != entry.title?.trim()?.takeIf { it.isNotEmpty() } ||
-                    promoted.primaryMoodCode != entry.primaryMoodCode ||
-                    promoted.secondaryMoodCode != entry.secondaryMoodCode ||
-                    promoted.linkedHabitId != entry.linkedHabitId
-                ) {
-                    repository.saveJournalEntrySync(
-                        entry.copy(
-                            journalEntryId = promoted.journalEntryId,
-                            createdAtUtcMs = promoted.createdAtUtcMs
-                        )
+                val existingDraft = repository.journalDrafts.value.find { it.draftId == sourceDraftId }
+                if (existingDraft != null && existingDraft.intendedJournalEntryId == null) {
+                    repository.saveJournalDraftSync(
+                        draftId = sourceDraftId,
+                        localDate = entry.date,
+                        title = entry.title?.trim()?.ifBlank { null },
+                        body = entry.body.trim(),
+                        primaryMoodCode = entry.primaryMoodCode,
+                        secondaryMoodCode = entry.secondaryMoodCode,
+                        promptId = entry.promptId,
+                        linkedHabitId = entry.linkedHabitId,
+                        sourceContext = existingDraft.sourceContext
+                    )
+                } else if (existingDraft == null && !repository.wasDraftRecentlyPromoted(sourceDraftId)) {
+                    repository.saveJournalDraftSync(
+                        draftId = sourceDraftId,
+                        localDate = entry.date,
+                        title = entry.title?.trim()?.ifBlank { null },
+                        body = entry.body.trim(),
+                        primaryMoodCode = entry.primaryMoodCode,
+                        secondaryMoodCode = entry.secondaryMoodCode,
+                        promptId = entry.promptId,
+                        linkedHabitId = entry.linkedHabitId,
+                        sourceContext = "JOURNAL_COMPOSER"
                     )
                 }
+                repository.promoteDraftToJournalEntrySync(sourceDraftId)
+                    ?: throw IllegalStateException("Unable to save entry — your draft is safely preserved. Tap Save to retry.")
             } else {
                 repository.saveJournalEntrySync(entry, sourceDraftIdToRemove = sourceDraftId)
             }
@@ -870,7 +881,7 @@ class DayseedViewModel @JvmOverloads constructor(
             _userMessage.value = "Daily reflection saved ✍️"
             true
         } catch (e: Throwable) {
-            val msg = e.message ?: "Unable to save journal entry. Your draft is safely preserved."
+            val msg = e.message ?: "Unable to save entry — your draft is safely preserved. Tap Save to retry."
             _lastJournalSaveError.value = msg
             false
         }

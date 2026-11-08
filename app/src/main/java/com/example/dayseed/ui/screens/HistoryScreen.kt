@@ -110,7 +110,7 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp)
-            .testTag("journal_archive_screen"),
+            .testTag("journal_screen"),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
@@ -139,7 +139,7 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
                         onClick = { isDateJumpExpanded = !isDateJumpExpanded },
                         modifier = Modifier
                             .defaultMinSize(minHeight = 48.dp)
-                            .testTag("journal_toggle_date_jump_calendar")
+                            .testTag("journal_date_jump_toggle")
                     ) {
                         Icon(imageVector = Icons.Default.DateRange, contentDescription = "Toggle date jump calendar")
                         Spacer(modifier = Modifier.width(6.dp))
@@ -153,7 +153,7 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
                         },
                         modifier = Modifier
                             .defaultMinSize(minHeight = 48.dp)
-                            .testTag("journal_new_entry_button")
+                            .testTag("journal_add_entry_fab")
                     ) {
                         Icon(imageVector = Icons.Default.Add, contentDescription = null)
                         Spacer(modifier = Modifier.width(6.dp))
@@ -166,7 +166,10 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
         // Collapsible Date Jump Calendar (A2)
         item {
             AnimatedVisibility(visible = isDateJumpExpanded) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier.testTag("journal_date_jump_calendar"),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     SharedMonthCalendar(
                         displayedMonth = displayedMonth,
                         selectedDate = selectedDate,
@@ -223,7 +226,7 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .testTag("journal_unsaved_drafts_section"),
+                        .testTag("journal_drafts_section"),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
@@ -378,9 +381,9 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
                                 viewModel.setJournalMoodFilter(null)
                                 isDateFilterActive = false
                             },
-                            modifier = Modifier.testTag("journal_clear_filters_button")
+                            modifier = Modifier.testTag("journal_clear_filters_btn")
                         ) {
-                            Text("Clear Filters")
+                            Text("Clear search")
                         }
                     }
                 }
@@ -407,7 +410,7 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Text(
-                            text = "Your Journal Archive is quiet",
+                            text = "No journal entries yet",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -418,9 +421,9 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
                         )
                         Button(
                             onClick = { viewModel.openJournalEditor(entry = null, forDate = referenceToday) },
-                            modifier = Modifier.testTag("journal_empty_write_button")
+                            modifier = Modifier.testTag("journal_empty_write_first_btn")
                         ) {
-                            Text("Write First Reflection")
+                            Text("Write your first entry")
                         }
                     }
                 }
@@ -443,8 +446,13 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
+                        val noResultsTitle = if (searchQuery.isNotBlank()) {
+                            "No entries found for '${searchQuery.trim()}'"
+                        } else {
+                            "No entries found for the selected filter"
+                        }
                         Text(
-                            text = "No matching reflections found",
+                            text = noResultsTitle,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -458,9 +466,10 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
                                 viewModel.setJournalSearchQuery("")
                                 viewModel.setJournalMoodFilter(null)
                                 isDateFilterActive = false
-                            }
+                            },
+                            modifier = Modifier.testTag("journal_no_results_clear_btn")
                         ) {
-                            Text("Reset All Filters")
+                            Text("Clear search")
                         }
                     }
                 }
@@ -492,9 +501,10 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
         val targetDraft = draftPendingDiscard!!
         AlertDialog(
             onDismissRequest = { draftPendingDiscard = null },
+            modifier = Modifier.testTag("confirm_discard_draft_dialog"),
             title = { Text("Discard Unsaved Draft?") },
             text = {
-                Text("This will permanently remove your unsaved draft for ${targetDraft.localDate}. Saved reflections will not be affected.")
+                Text("Discard unsaved draft? This cannot be undone.")
             },
             confirmButton = {
                 Button(
@@ -502,7 +512,7 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
                         viewModel.discardJournalDraft(targetDraft.draftId)
                         draftPendingDiscard = null
                     },
-                    modifier = Modifier.testTag("journal_confirm_discard_draft_button")
+                    modifier = Modifier.testTag("confirm_discard_draft_btn")
                 ) {
                     Text("Discard Draft")
                 }
@@ -532,7 +542,7 @@ private fun JournalArchiveCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .testTag("journal_entry_card_${entry.journalEntryId}"),
+            .testTag("journal_card_${entry.journalEntryId}"),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)

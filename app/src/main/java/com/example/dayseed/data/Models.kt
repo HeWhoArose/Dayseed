@@ -919,7 +919,7 @@ data class JournalEntry(
         get() = try {
             LocalDateValidator.parseStrict(localDate)
         } catch (_: Exception) {
-            LocalDate.now()
+            LocalDate.of(1970, 1, 1)
         }
     val prompt: String get() = DailyPrompts.promptTextForId(promptId)
 }
@@ -1346,10 +1346,11 @@ data class DayDetailSummary(
 )
 
 enum class WeeklyPeriodStatus(val label: String) {
-    MET("Target Met"),
-    IN_PROGRESS("Week in Progress"),
-    MISSED("Not Met"),
-    PAUSED("Paused"),
+    ABOVE_TARGET("🔥 Above Target"),
+    MET("✓ Target Met"),
+    IN_PROGRESS("⟳ Week in Progress"),
+    MISSED("○ Not Met"),
+    PAUSED("⏸ Paused"),
     INACTIVE("Not Active")
 }
 

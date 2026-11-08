@@ -39,6 +39,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,7 +72,7 @@ fun JournalEditorDialog(
     initialPromptId: String? = null,
     initialCursorSelection: Pair<Int, Int>? = null,
     saveErrorMessage: String? = null,
-    clockNowMs: () -> Long = { System.currentTimeMillis() },
+    clockNowMs: () -> Long,
     onClearSaveError: () -> Unit = {},
     onAutosaveDraft: (
         draftId: String,
@@ -114,11 +115,15 @@ fun JournalEditorDialog(
     val initialSecondaryMood = initialEntry?.secondaryMoodCode ?: initialDraft?.secondaryMoodCode
     val initialHabitLink = initialEntry?.linkedHabitId ?: initialDraft?.linkedHabitId ?: initialLinkedHabitId
 
-    var title by remember(initialEntry?.journalEntryId, initialDraft?.draftId) {
+    var title by rememberSaveable(initialEntry?.journalEntryId, initialDraft?.draftId) {
         mutableStateOf(initialTitleText)
     }
 
-    var bodyFieldValue by remember(initialEntry?.journalEntryId, initialDraft?.draftId) {
+    var bodyFieldValue by rememberSaveable(
+        initialEntry?.journalEntryId,
+        initialDraft?.draftId,
+        stateSaver = TextFieldValue.Saver
+    ) {
         val len = initialBodyText.length
         val selStart = (initialCursorSelection?.first ?: len).coerceIn(0, len)
         val selEnd = (initialCursorSelection?.second ?: selStart).coerceIn(0, len)
@@ -130,16 +135,17 @@ fun JournalEditorDialog(
         )
     }
 
-    var primaryMoodCode by remember(initialEntry?.journalEntryId, initialDraft?.draftId) {
+    var primaryMoodCode by rememberSaveable(initialEntry?.journalEntryId, initialDraft?.draftId) {
         mutableStateOf(initialPrimaryMood)
     }
-    var secondaryMoodCode by remember(initialEntry?.journalEntryId, initialDraft?.draftId) {
+    var secondaryMoodCode by rememberSaveable(initialEntry?.journalEntryId, initialDraft?.draftId) {
         mutableStateOf(initialSecondaryMood)
     }
-    var linkedHabitId by remember(initialEntry?.journalEntryId, initialDraft?.draftId) {
+    var linkedHabitId by rememberSaveable(initialEntry?.journalEntryId, initialDraft?.draftId) {
         mutableStateOf(initialHabitLink)
     }
 
+    var contentError by remember { mutableStateOf(false) }
     var showDeleteEntryConfirm by remember { mutableStateOf(false) }
     var showDiscardDraftConfirm by remember { mutableStateOf(false) }
     var showUnsavedEditsCloseConfirm by remember { mutableStateOf(false) }
@@ -367,7 +373,13 @@ fun JournalEditorDialog(
                 // Body Input with Cursor Restoration
                 OutlinedTextField(
                     value = bodyFieldValue,
-                    onValueChange = { bodyFieldValue = it },
+                    onValueChange = {
+                        bodyFieldValue = it
+                        if (it.text.isNotBlank()) {
+                            contentError = false
+                        }
+                    },
+                    isError = contentError,
                     label = { Text("Your Reflection") },
                     placeholder = {
                         Text("Write freely — even a single sentence is worth keeping...")
@@ -377,8 +389,17 @@ fun JournalEditorDialog(
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .testTag("journal_body_input")
+                        .testTag("journal_content_input")
                 )
+
+                if (contentError) {
+                    Text(
+                        text = "Reflection body cannot be empty. Enter at least one non-whitespace character to save.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.testTag("journal_body_error_text")
+                    )
+                }
 
                 // Primary Mood Selector (D-096)
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -505,7 +526,7 @@ fun JournalEditorDialog(
                             colors = ButtonDefaults.textButtonColors(
                                 contentColor = MaterialTheme.colorScheme.error
                             ),
-                            modifier = Modifier.testTag("journal_discard_draft_button")
+                            modifier = Modifier.testTag("discard_journal_draft_btn")
                         ) {
                             Icon(imageVector = Icons.Default.Delete, contentDescription = null)
                             Spacer(modifier = Modifier.width(6.dp))
@@ -524,6 +545,11 @@ fun JournalEditorDialog(
                         }
                         Button(
                             onClick = {
+                                if (bodyText.isBlank()) {
+                                    contentError = true
+                                    return@Button
+                                }
+                                contentError = false
                                 val nowMs = clockNowMs()
                                 if (initialEntry == null && activeDraftId != null) {
                                     // Ensure latest draft content is flushed before promotion
@@ -554,7 +580,6 @@ fun JournalEditorDialog(
                                 )
                                 onSave(entry, activeDraftId)
                             },
-                            enabled = bodyText.isNotBlank(),
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.testTag("journal_save_button")
                         ) {
@@ -569,9 +594,10 @@ fun JournalEditorDialog(
     if (showDeleteEntryConfirm && initialEntry != null) {
         AlertDialog(
             onDismissRequest = { showDeleteEntryConfirm = false },
+            modifier = Modifier.testTag("confirm_delete_journal_dialog"),
             title = { Text("Delete Reflection?") },
             text = {
-                Text("This reflection for ${initialEntry.localDate} will be permanently deleted. This action cannot be undone.")
+                Text("Delete this entry? This cannot be undone.")
             },
             confirmButton = {
                 Button(
@@ -582,7 +608,7 @@ fun JournalEditorDialog(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error
                     ),
-                    modifier = Modifier.testTag("journal_confirm_delete_entry_button")
+                    modifier = Modifier.testTag("confirm_delete_journal_btn")
                 ) {
                     Text("Delete Permanently")
                 }
@@ -598,9 +624,10 @@ fun JournalEditorDialog(
     if (showDiscardDraftConfirm && activeDraftId != null) {
         AlertDialog(
             onDismissRequest = { showDiscardDraftConfirm = false },
+            modifier = Modifier.testTag("confirm_discard_draft_dialog"),
             title = { Text("Discard Draft?") },
             text = {
-                Text("This unsaved draft will be permanently discarded. Saved reflections will not be affected.")
+                Text("Discard unsaved draft? This cannot be undone.")
             },
             confirmButton = {
                 Button(
@@ -611,7 +638,7 @@ fun JournalEditorDialog(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error
                     ),
-                    modifier = Modifier.testTag("journal_confirm_discard_draft_button")
+                    modifier = Modifier.testTag("confirm_discard_draft_btn")
                 ) {
                     Text("Discard Draft")
                 }

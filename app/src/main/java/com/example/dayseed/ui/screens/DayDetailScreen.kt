@@ -392,6 +392,14 @@ private fun DayDetailHabitCard(
                 }
             }
 
+            val unitLabel = item.effectiveVersion.unitCode ?: "sessions"
+            Text(
+                text = "${item.totalUnits} / ${item.targetUnits} $unitLabel • ${item.progressBand.displayName} (${item.progressBand.rangeLabel})",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag("day_detail_habit_band_${item.habit.habitId}")
+            )
+
             if (item.weekProgressSummary != null) {
                 Text(
                     text = item.weekProgressSummary,

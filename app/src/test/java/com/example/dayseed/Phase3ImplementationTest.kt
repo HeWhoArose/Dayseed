@@ -735,4 +735,114 @@ class Phase3ImplementationTest {
         assertEquals(3, metTodayMetrics.habitDaysMetCount)
         assertEquals(5, metTodayMetrics.scheduledDailyOpportunitiesCount)
     }
+
+    @Test
+    fun p3_12_postPreparationViewModelSaveConcurrencyAndWeeklyBoardCellContributionAndExplicitZeroBands() {
+        val today = LocalDate.of(2026, 10, 14) // Wednesday
+        testClock.currentLocalDate = today
+
+        // 1. Two-caller post-preparation concurrency via ViewModel.saveJournalEntry:
+        // Caller 1 and Caller 2 both hold draftId "draft_vm_race". Caller 1 promotes first,
+        // then Caller 2 invokes viewModel.saveJournalEntry with a stale/different payload.
+        repository.saveJournalDraftSync(
+            draftId = "draft_vm_race",
+            localDate = today,
+            title = "Canonical Title",
+            body = "Canonical body saved by Caller 1.",
+            primaryMoodCode = "CALM"
+        )
+        val preparedId = repository.prepareDraftForSaveSync("draft_vm_race")
+        assertNotNull(preparedId)
+
+        // Caller 1 promotes the draft
+        val promotedByCaller1 = repository.promoteDraftToJournalEntrySync("draft_vm_race")
+        assertNotNull(promotedByCaller1)
+        assertEquals(preparedId, promotedByCaller1!!.journalEntryId)
+
+        // Caller 2 (late/concurrent) invokes viewModel.saveJournalEntry with stale/mutated text for the same sourceDraftId
+        testClock.currentUtcMs += 10_000L
+        val staleCaller2Entry = JournalEntry(
+            journalEntryId = UUID.randomUUID().toString(),
+            localDate = today.minusDays(2).toString(),
+            title = "Stale Overwrite Title",
+            body = "Stale body that must NOT overwrite Caller 1!",
+            primaryMoodCode = "STRESSED"
+        )
+        val caller2Result = viewModel.saveJournalEntry(staleCaller2Entry, sourceDraftId = "draft_vm_race")
+        assertTrue(caller2Result)
+
+        // Verify only 1 entry exists, with Caller 1's exact ID, body, title, mood, and timestamps preserved!
+        assertEquals(1, repository.journalEntries.value.size)
+        val persistedEntry = repository.journalEntries.value.single()
+        assertEquals(preparedId, persistedEntry.journalEntryId)
+        assertEquals("Canonical Title", persistedEntry.title)
+        assertEquals("Canonical body saved by Caller 1.", persistedEntry.body)
+        assertEquals("CALM", persistedEntry.primaryMoodCode)
+        assertEquals(promotedByCaller1.createdAtUtcMs, persistedEntry.createdAtUtcMs)
+        assertEquals(promotedByCaller1.updatedAtUtcMs, persistedEntry.updatedAtUtcMs)
+
+        // 2. Weekly Board TargetPeriod.WEEK cell contributions & non-missed unlogged days:
+        val weeklyPagesHabit = Habit(
+            habitId = "h_weekly_pages",
+            name = "Weekly Reading Goal",
+            trackingMode = TrackingMode.QUANTITY,
+            unitCode = "pages",
+            targetPeriod = TargetPeriod.WEEK,
+            targetValue = 50,
+            scheduleKind = ScheduleKind.SELECTED_WEEKDAYS,
+            scheduledWeekdaysMask = WeekdayMask.toMask(
+                setOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY)
+            )
+        )
+        repository.saveHabitSync(weeklyPagesHabit, effectiveDateOverride = LocalDate.of(2026, 10, 1))
+        // Log 15 pages on Monday (2026-10-12), nothing on Tuesday (2026-10-13), explicit 0 on Wednesday (2026-10-14)
+        repository.logHabitEntrySync("h_weekly_pages", LocalDate.of(2026, 10, 12), 15)
+        repository.logHabitEntrySync("h_weekly_pages", LocalDate.of(2026, 10, 14), 0)
+
+        val board = repository.computeWeeklyBoard(today, filterHabitId = "h_weekly_pages", referenceToday = today)
+        val row = board.rows.single()
+        val monCell = row.cells.first { it.date == LocalDate.of(2026, 10, 12) }
+        val tueCell = row.cells.first { it.date == LocalDate.of(2026, 10, 13) }
+        val wedCell = row.cells.first { it.date == LocalDate.of(2026, 10, 14) }
+
+        // Individual date cells show daily contribution (+15p, ·, 0) and do NOT classify individual days against 50p weekly target
+        assertEquals("+15p", monCell.cellLabel)
+        assertEquals(ProgressBand.ZERO, monCell.progressBand)
+        // Unlogged Tuesday in a weekly-target habit must NEVER be marked MISSED_SCHEDULED_DATE
+        assertEquals(HonestCalendarDateState.FLEXIBLE_WEEKLY_IN_PROGRESS, tueCell.honestState)
+        assertEquals("·", tueCell.cellLabel)
+        // Explicit 0 on Wednesday shows "0" and EXPLICIT_ZERO_NOT_DONE
+        assertEquals("0", wedCell.cellLabel)
+        assertEquals(HonestCalendarDateState.EXPLICIT_ZERO_NOT_DONE, wedCell.honestState)
+        // The weekly D-040 band is evaluated once on the week row (15 / 50 = 30% -> GETTING_STARTED)
+        assertEquals(ProgressBand.GETTING_STARTED, row.weekProgressBand)
+
+        // 3. Explicit-zero ProgressBand.ZERO counting in dailyProgressBandCounts and weeklyProgressBandCounts:
+        val dailyZeroHabit = Habit(
+            habitId = "h_daily_zero",
+            name = "Evening Stretch",
+            trackingMode = TrackingMode.DURATION,
+            unitCode = "min",
+            targetPeriod = TargetPeriod.DAY,
+            targetValue = 15
+        )
+        repository.saveHabitSync(dailyZeroHabit, effectiveDateOverride = LocalDate.of(2026, 10, 12))
+        repository.logHabitEntrySync("h_daily_zero", LocalDate.of(2026, 10, 12), 0)
+
+        val weeklyZeroHabit = Habit(
+            habitId = "h_weekly_zero",
+            name = "Weekly Run",
+            trackingMode = TrackingMode.QUANTITY,
+            unitCode = "km",
+            targetPeriod = TargetPeriod.WEEK,
+            targetValue = 10,
+            scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET
+        )
+        repository.saveHabitSync(weeklyZeroHabit, effectiveDateOverride = LocalDate.of(2026, 10, 12))
+        repository.logHabitEntrySync("h_weekly_zero", LocalDate.of(2026, 10, 12), 0)
+
+        val gm = repository.growthMetrics.value
+        assertEquals(1, gm.dailyProgressBandCounts[ProgressBand.ZERO])
+        assertEquals(1, gm.weeklyProgressBandCounts[ProgressBand.ZERO])
+    }
 }
