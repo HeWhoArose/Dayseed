@@ -382,4 +382,81 @@ class DayseedReminderSemanticsTest {
         assertEquals("SUPPRESSED", fresh.deliveryStatus)
         assertEquals("WEEKLY_TARGET_MET", fresh.suppressionReason)
     }
+
+    // ---- D-230: crash-recovery sweep honours the notification-availability gate ----
+
+    @Test
+    fun sweepCorrectsStaleReservationsToNotificationsBlockedWhenAppNotificationsAreOff() {
+        repository.setSettingSync(ReminderScheduler.SETTING_REMINDERS_ENABLED, "ENUM", "true")
+        testClock.currentLocalDate = LocalDate.of(2026, 3, 16)
+        testClock.currentUtcMs = 1_773_568_800_000L + 86_400_000L
+        repository.saveHabitSync(dailyReminderHabit("h_sweep_blocked"))
+        val deliveryKey = "HABIT_DAILY:h_sweep_blocked:${repository.clock.todayLocal()}"
+        assertEquals(
+            "SCHEDULED",
+            repository.evaluateTodayRemindersSync(repository.clock.todayLocal())
+                .first { it.habitId == "h_sweep_blocked" }.deliveryStatus
+        )
+        makeActiveReservationStale("h_sweep_blocked")
+
+        // The user turns the app's notifications off (app-level) before the sweep recovers.
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        shadowOf(nm).setNotificationsEnabled(false)
+
+        testClock.currentLocalTime = LocalTime.of(11, 0)
+        testClock.currentUtcMs += 3_600_000L
+        repository.reconcilePendingReminderPostsSync()
+
+        assertEquals("SUPPRESSED", repository.getReminderDeliveryStatus(deliveryKey))
+        assertEquals("NOTIFICATIONS_BLOCKED", suppressionReasonFor(deliveryKey))
+        assertFalse(notificationsCurrentlyVisible())
+    }
+
+    // ---- D-230: met weekly targets are not armed until the next progress-week boundary ----
+
+    @Test
+    fun scheduleAllSkipsArmingMetWeeklyHabitsUntilTheNextProgressWeekBoundary() {
+        repository.setSettingSync(ReminderScheduler.SETTING_REMINDERS_ENABLED, "ENUM", "true")
+        // Sunday 2026-03-15 with week start SUNDAY: Sun 03-15 and Mon 03-16 share a progress
+        // week; the habit reaches its target on Sunday and stays met through Saturday 03-21.
+        testClock.currentLocalDate = LocalDate.of(2026, 3, 15)
+        repository.setSettingSync("week_start", "STRING", "SUNDAY")
+        repository.saveHabitSync(flexibleWeeklyHabit("h_met_arm", targetValue = 1))
+        repository.logHabitEntrySync("h_met_arm", LocalDate.of(2026, 3, 15), 1)
+
+        // Monday 03-16 10:00: met → the alarm must not be armed anywhere inside this week.
+        testClock.currentLocalDate = LocalDate.of(2026, 3, 16)
+        testClock.currentUtcMs = 1_773_568_800_000L + 86_400_000L
+        ReminderScheduler.scheduleAll(context, repository)
+        val alarmsMetWeek = alarmManagerShadows().scheduledAlarms
+        assertEquals(1, alarmsMetWeek.size)
+        // The next progress week starts Sunday 2026-03-22: first scheduled day of the new
+        // week (flexible habit with no preferred days → every day is scheduled).
+        assertEquals(
+            LocalDateTime.of(2026, 3, 22, 9, 0).toEpochSecond(ZoneOffset.UTC) * 1000L,
+            alarmsMetWeek.first().triggerAtTime
+        )
+    }
+
+    @Test
+    fun metWeeklyArmingResumesOnTheFirstScheduledDayOfTheNextWeek() {
+        repository.setSettingSync(ReminderScheduler.SETTING_REMINDERS_ENABLED, "ENUM", "true")
+        testClock.currentLocalDate = LocalDate.of(2026, 3, 15)
+        repository.setSettingSync("week_start", "STRING", "SUNDAY")
+        repository.saveHabitSync(flexibleWeeklyHabit("h_resume_arm", targetValue = 1))
+        repository.logHabitEntrySync("h_resume_arm", LocalDate.of(2026, 3, 15), 1)
+
+        // Cross into the next progress week (Sunday 2026-03-22): met state resets at the
+        // boundary, and arming reverts to normal semantics — today's 09:00 has already
+        // passed at 10:00, so the next scheduled day is tomorrow.
+        testClock.currentLocalDate = LocalDate.of(2026, 3, 22)
+        testClock.currentUtcMs = 1_773_568_800_000L + 86_400_000L + 6 * 86_400_000L
+        ReminderScheduler.scheduleAll(context, repository)
+        val alarms = alarmManagerShadows().scheduledAlarms
+        assertEquals(1, alarms.size)
+        assertEquals(
+            LocalDateTime.of(2026, 3, 23, 9, 0).toEpochSecond(ZoneOffset.UTC) * 1000L,
+            alarms.first().triggerAtTime
+        )
+    }
 }

@@ -140,7 +140,9 @@ internal object ReminderDebugProbe {
                     Step(
                         "AlarmManager.setWindow (real alarm)",
                         true,
-                        "probe alarm pending (inexact, ~$SCHEDULE_DELAY_MS ms ahead)"
+                        "probe alarm pending (inexact, ~$SCHEDULE_DELAY_MS ms ahead). " +
+                            "Android 12+ may hold a short inexact window for up to ~10 minutes — " +
+                            "a delayed fire is a permitted platform delay, not a failed probe."
                     )
                 )
             }

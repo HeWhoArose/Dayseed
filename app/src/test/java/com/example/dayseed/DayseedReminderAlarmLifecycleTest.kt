@@ -208,6 +208,22 @@ class DayseedReminderAlarmLifecycleTest {
     private fun ledgerStatus(habitId: String): String? =
         repository.getReminderDeliveryStatus("HABIT_DAILY:$habitId:${repository.clock.todayLocal()}")
 
+    private fun suppressionReasonFor(deliveryKey: String): String? {
+        var reason: String? = null
+        repository.dbHelper.readableDatabase.rawQuery(
+            "SELECT suppression_reason FROM reminder_deliveries WHERE delivery_key = ?",
+            arrayOf(deliveryKey)
+        ).use { c ->
+            if (c.moveToFirst() && !c.isNull(0)) reason = c.getString(0)
+        }
+        return reason
+    }
+
+    private fun notificationsCurrentlyVisible(): Int {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        return shadowOf(nm).activeNotifications.size
+    }
+
     @Test
     fun alarmScheduledWithObsoleteReminderTimeIsRejectedWithNoLedgerWrite() {
         enableReminders()
@@ -347,6 +363,77 @@ class DayseedReminderAlarmLifecycleTest {
             processAlarm("h_off", repository.clock.todayLocal().toString(), "09:00")
         )
         assertNull(ledgerStatus("h_off"))
+    }
+
+    // ---- D-230 (2026-11-08 owner review): sequential multi-habit delivery + availability gates ----
+
+    @Test
+    fun sequentialRemindersAtDifferentTimesEachDeliverAtTheirOwnAlarm() {
+        enableReminders()
+        repository.saveHabitSync(reminderHabit("h_morning", time = "09:00"))
+        repository.saveHabitSync(reminderHabit("h_evening", time = "18:00"))
+        val today = repository.clock.todayLocal()
+
+        // 09:00 alarm: the morning habit posts; the evening habit's slot must NOT be
+        // reserved (or its cap slot consumed) by this alarm's evaluation.
+        testClock.currentLocalTime = LocalTime.of(9, 0)
+        testClock.currentUtcMs = today.atTime(9, 0).toInstant(ZoneOffset.UTC).toEpochMilli()
+        assertEquals(ReminderAlarmReceiver.DECISION_POSTED, processAlarm("h_morning", today.toString(), "09:00"))
+        assertEquals("DELIVERED", ledgerStatus("h_morning"))
+        assertNull("D-230: a 09:00 alarm must not reserve the 18:00 habit's ledger row early",
+            ledgerStatus("h_evening"))
+
+        // 18:00 alarm: the evening habit now evaluates for its own habit and posts for real.
+        testClock.currentLocalTime = LocalTime.of(18, 0)
+        testClock.currentUtcMs = today.atTime(18, 0).toInstant(ZoneOffset.UTC).toEpochMilli()
+        assertEquals(ReminderAlarmReceiver.DECISION_POSTED, processAlarm("h_evening", today.toString(), "18:00"))
+        assertEquals("DELIVERED", ledgerStatus("h_evening"))
+
+        // Both notifications are really visible (different tag/id identities).
+        assertEquals(2, notificationsCurrentlyVisible())
+    }
+
+    @Test
+    fun appLevelBlockedNotificationsAreSuppressedNotRecordedAsDelivered() {
+        enableReminders()
+        repository.saveHabitSync(reminderHabit("h_app_block"))
+        val today = repository.clock.todayLocal()
+        testClock.currentUtcMs = today.atTime(9, 0).toInstant(ZoneOffset.UTC).toEpochMilli()
+
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        shadowOf(nm).setNotificationsEnabled(false)
+
+        val key = "HABIT_DAILY:h_app_block:${repository.clock.todayLocal()}"
+        assertEquals(ReminderAlarmReceiver.DECISION_SUPPRESSED, processAlarm("h_app_block", today.toString(), "09:00"))
+        assertEquals("SUPPRESSED", ledgerStatus("h_app_block"))
+        assertEquals("NOTIFICATIONS_BLOCKED", suppressionReasonFor(key))
+        assertEquals(0, notificationsCurrentlyVisible())
+    }
+
+    @Test
+    fun importanceNoneChannelIsSuppressedNotRecordedAsDelivered() {
+        enableReminders()
+        repository.saveHabitSync(reminderHabit("h_chan_block"))
+        val today = repository.clock.todayLocal()
+        testClock.currentUtcMs = today.atTime(9, 0).toInstant(ZoneOffset.UTC).toEpochMilli()
+
+        // The user blocked the reminder channel: importance NONE. Recreate the channel at
+        // importance NONE (the gate's ensure-then-check must read the user-blocked state).
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        nm.deleteNotificationChannel(ReminderNotifier.CHANNEL_ID)
+        nm.createNotificationChannel(
+            android.app.NotificationChannel(
+                ReminderNotifier.CHANNEL_ID,
+                "Gentle reminders",
+                android.app.NotificationManager.IMPORTANCE_NONE
+            )
+        )
+
+        val key = "HABIT_DAILY:h_chan_block:${repository.clock.todayLocal()}"
+        assertEquals(ReminderAlarmReceiver.DECISION_SUPPRESSED, processAlarm("h_chan_block", today.toString(), "09:00"))
+        assertEquals("SUPPRESSED", ledgerStatus("h_chan_block"))
+        assertEquals("NOTIFICATIONS_BLOCKED", suppressionReasonFor(key))
+        assertEquals(0, notificationsCurrentlyVisible())
     }
 
     // ---- helpers ----

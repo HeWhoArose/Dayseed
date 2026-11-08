@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
-import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -254,9 +253,9 @@ class DayseedRepository(
             val eligibleHabit = getEffectiveHabitVersion(habitId, today)
             val alreadyLogged = hasQualifyingActivityOnDate(habitId, today) ||
                 getExceptionForHabitOnDate(habitId, today) != null
-            val androidAllowsPost = ContextCompat.checkSelfPermission(
-                appContext, android.Manifest.permission.POST_NOTIFICATIONS
-            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            // D-230: the full production delivery-availability gate (runtime permission,
+            // app-level enablement and channel importance), mirroring the receiver path.
+            val notificationsAllowed = ReminderNotifier.isNotificationDeliveryAvailable(appContext)
             val globallyEnabled = ReminderScheduler.isGlobalRemindersEnabled(this)
 
             // D-229: recompute the reminder gates at recovery time — a stale reservation must
@@ -274,7 +273,7 @@ class DayseedRepository(
             val canDeliver = !isFresh &&
                 targetDate == today &&
                 globallyEnabled &&
-                androidAllowsPost &&
+                notificationsAllowed &&
                 eligibleHabit != null &&
                 eligibleHabit.lifecycleState == HabitLifecycleState.ACTIVE &&
                 eligibleHabit.reminderMode != "OFF" &&
@@ -297,11 +296,12 @@ class DayseedRepository(
                     markReminderDeliveryNotDelivered(deliveryKey, "POST_FAILED", clock.nowUtcMs())
                 }
             } else if (!isFresh) {
-                // Honest, specific correction for the D-229 gates; everything else keeps the
-                // pre-existing stale-outcome label. Suppressed rows never consume the daily cap.
+                // Honest, specific correction for the D-229/D-230 gates; everything else keeps
+                // the pre-existing stale-outcome label. Suppressed rows never consume the cap.
                 val reason = when {
                     !scheduledOpportunity -> "NOT_SCHEDULED"
                     weeklyTargetMet -> "WEEKLY_TARGET_MET"
+                    !notificationsAllowed -> "NOTIFICATIONS_BLOCKED"
                     else -> "PENDING_EXPIRED"
                 }
                 markReminderDeliveryNotDelivered(deliveryKey, reason, nowMs)
@@ -3220,6 +3220,13 @@ class DayseedRepository(
     // REMINDERS & TIMING SUGGESTIONS (D-068..D-095, D-192)
     // =========================================================================
 
+    /**
+     * Whole-day evaluation used for tests/seeding/debug oversight: evaluates every habit for
+     * [targetDate] in a single atomic transaction (unlike the receiver's production path —
+     * D-230 — which evaluates only [evaluateHabitReminderForDateSync] for the alarm's own
+     * habit, so one habit's alarm can no longer reserve another habit's future slot before
+     * its own fire time).
+     */
     fun evaluateTodayRemindersSync(targetDate: LocalDate = clock.todayLocal()): List<ReminderEvaluationResult> {
         // One serialised write transaction for the entire day's evaluation: the ledger reads,
         // the shared 3/day cap count (DELIVERED + SCHEDULED) and the reservation writes become a
@@ -3236,25 +3243,60 @@ class DayseedRepository(
                 val eff = getEffectiveHabitVersion(h.habitId, targetDate) ?: continue
                 val logged = hasQualifyingActivityOnDate(h.habitId, targetDate) ||
                     getExceptionForHabitOnDate(h.habitId, targetDate) != null
-                val (scheduledOpportunity, weeklyTargetMet) =
-                    computeScheduledOpportunityAndWeeklyMet(eff, targetDate)
-                results.add(
-                    ReminderEngine.evaluateHabitReminder(
-                        db = dbHelper.writableDatabase,
-                        habitVersion = eff,
-                        targetDate = targetDate,
-                        isScheduledOpportunity = scheduledOpportunity,
-                        weeklyTargetMet = weeklyTargetMet,
-                        alreadyLoggedToday = logged,
-                        quietStartLocal = quietStart,
-                        quietEndLocal = quietEnd,
-                        dailyCap = dailyCap,
-                        nowUtcMs = nowMs
-                    )
-                )
+                results.add(evaluateSingleHabitReminder(eff, targetDate, logged, quietStart, quietEnd, dailyCap, nowMs))
             }
             results
         }
+    }
+
+    /**
+     * D-230 (2026-11-08 owner review): production alarm-fire path. Evaluates ONLY the habit
+     * whose alarm fired, inside the same atomic serialised write transaction. The shared
+     * daily-cap read (`DELIVERED + SCHEDULED` for the date across all habits) and the ledger
+     * write remain one serialised step, but other habits are untouched — an alarm firing at
+     * 09:00 no longer reserves a habit whose reminder is at 18:00 before that reminder's own
+     * receiver run.
+     */
+    fun evaluateHabitReminderForDateSync(
+        habitId: String,
+        targetDate: LocalDate = clock.todayLocal()
+    ): ReminderEvaluationResult? {
+        val quietStart = getSettingString("quiet_hours_start", ReminderEngine.DEFAULT_QUIET_START)
+        val quietEnd = getSettingString("quiet_hours_end", ReminderEngine.DEFAULT_QUIET_END)
+        val dailyCap = getSettingInt("daily_reminder_cap", ReminderEngine.DEFAULT_DAILY_CAP)
+        val nowMs = clock.nowUtcMs()
+
+        return withImmediateTransaction {
+            val eff = getEffectiveHabitVersion(habitId, targetDate) ?: return@withImmediateTransaction null
+            val logged = hasQualifyingActivityOnDate(habitId, targetDate) ||
+                getExceptionForHabitOnDate(habitId, targetDate) != null
+            evaluateSingleHabitReminder(eff, targetDate, logged, quietStart, quietEnd, dailyCap, nowMs)
+        }
+    }
+
+    private fun evaluateSingleHabitReminder(
+        eff: HabitVersion,
+        targetDate: LocalDate,
+        logged: Boolean,
+        quietStart: String,
+        quietEnd: String,
+        dailyCap: Int,
+        nowMs: Long
+    ): ReminderEvaluationResult {
+        val (scheduledOpportunity, weeklyTargetMet) = computeScheduledOpportunityAndWeeklyMet(eff, targetDate)
+        return ReminderEngine.evaluateHabitReminder(
+            db = dbHelper.writableDatabase,
+            habitVersion = eff,
+            targetDate = targetDate,
+            isScheduledOpportunity = scheduledOpportunity,
+            weeklyTargetMet = weeklyTargetMet,
+            notificationsAvailable = ReminderNotifier.isNotificationDeliveryAvailable(appContext),
+            alreadyLoggedToday = logged,
+            quietStartLocal = quietStart,
+            quietEndLocal = quietEnd,
+            dailyCap = dailyCap,
+            nowUtcMs = nowMs
+        )
     }
 
     /**
@@ -3282,6 +3324,30 @@ class DayseedRepository(
             weeklyTargetMet = weeklySnapshot.weekTotalUnits >= weeklySnapshot.weekTargetUnits
         }
         return scheduledOpportunity to weeklyTargetMet
+    }
+
+    /**
+     * D-230 (2026-11-08 owner review R-FA-03): alarm-arming support. For a WEEK-target habit
+     * whose weekly target is already met, [ReminderScheduler.scheduleAll] must not arm a
+     * reminder inside the current progress week — the receiver would only suppress it. The
+     * arming scan restarts at the next progress-week boundary ([WeeklyReminderGateState]
+     * records that boundary); met state naturally resets at the boundary (U-12 frozen
+     * start-of-week version), so reminders resume on the first scheduled day of the new week.
+     */
+    internal data class WeeklyReminderGateState(
+        val isScheduledOpportunity: Boolean,
+        val weeklyTargetMet: Boolean,
+        val currentWeekEndLocalDate: LocalDate
+    )
+
+    internal fun computeWeeklyReminderGateState(
+        eff: HabitVersion,
+        date: LocalDate
+    ): WeeklyReminderGateState {
+        val (opportunity, met) = computeScheduledOpportunityAndWeeklyMet(eff, date)
+        val weekStartDay = getWeekStartDay(date)
+        val (_, weekEnd) = WeekBoundaryHelper.weekBounds(date, weekStartDay)
+        return WeeklyReminderGateState(opportunity, met, weekEnd)
     }
 
     /**

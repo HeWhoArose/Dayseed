@@ -31,6 +31,32 @@ internal object ReminderNotifier {
     }
 
     /**
+     * D-230 (2026-11-08 owner review): the single production delivery-availability gate,
+     * mirroring the four checks the D-227 debug probe reports. Returns false whenever Android
+     * would not visibly display a post on the reminder channel — no runtime permission
+     * (Android 13+), app-level notifications disabled, or the reminder channel missing or
+     * blocked at importance `NONE`. Callers must not reserve or post a delivery that could
+     * then be recorded as delivered while the user never sees anything.
+     */
+    fun isNotificationDeliveryAvailable(context: Context): Boolean {
+        val notificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return false
+        if (androidx.core.content.ContextCompat.checkSelfPermission(
+                context, android.Manifest.permission.POST_NOTIFICATIONS
+            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            return false
+        }
+        // App-level enablement (covers pre-13 app-blocking and summary states).
+        if (!notificationManager.areNotificationsEnabled()) return false
+        // Channel existence/importance: create-if-missing matches the post path's behaviour
+        // (channels can only be renamed after creation — a user-blocked channel stays blocked).
+        ensureReminderChannel(context)
+        val channel = notificationManager.getNotificationChannel(CHANNEL_ID)
+        return channel != null && channel.importance != NotificationManager.IMPORTANCE_NONE
+    }
+
+    /**
      * Posts the habit reminder notification. Returns true only when `notify` did not throw —
      * the caller must treat false as "not delivered" and correct the ledger accordingly.
      */

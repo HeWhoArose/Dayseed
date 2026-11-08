@@ -98,6 +98,12 @@ object ReminderEngine {
      * reminders once the habit's weekly target is met (`WEEKLY_TARGET_MET`, per-habit; other
      * habits and the shared cap are unaffected). No `REPLACE` rewrite occurs while a
      * `DELIVERED`/`SUPPRESSED`/`SCHEDULED` row already exists (idempotent replay).
+     *
+     * D-230 (2026-11-08 owner review): a required [notificationsAvailable] gate covers the
+     * production delivery environment — runtime permission, app-level notification enablement
+     * and the reminder channel's importance (the same checks the D-227 debug probe reports).
+     * A blocked environment can never reserve a slot that a later `DELIVERED` status would
+     * claim: the row records `SUPPRESSED`/`NOTIFICATIONS_BLOCKED` instead (zero cap use).
      */
     fun evaluateHabitReminder(
         db: SQLiteDatabase,
@@ -105,6 +111,7 @@ object ReminderEngine {
         targetDate: LocalDate,
         isScheduledOpportunity: Boolean,
         weeklyTargetMet: Boolean,
+        notificationsAvailable: Boolean,
         alreadyLoggedToday: Boolean,
         quietStartLocal: String,
         quietEndLocal: String,
@@ -178,6 +185,10 @@ object ReminderEngine {
                 "SUPPRESSED" to "WEEKLY_TARGET_MET"
             isWithinQuietHours(scheduledLocal, quietStartLocal, quietEndLocal) ->
                 "SUPPRESSED" to "QUIET_HOURS"
+            // D-230: Android would not display anything (permission/app-level/channel) — the
+            // environment must be verified before anything can be reserved for a delivery.
+            !notificationsAvailable ->
+                "SUPPRESSED" to "NOTIFICATIONS_BLOCKED"
             consumedCountToday >= dailyCap ->
                 "SUPPRESSED" to "DAILY_CAP_REACHED"
             else ->

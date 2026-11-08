@@ -1,6 +1,7 @@
 package com.example.dayseed
 
 import android.content.Context
+import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import com.example.dayseed.data.BackupAndExportManager
 import com.example.dayseed.data.BackupCryptoConfig
@@ -21,6 +22,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -53,6 +55,11 @@ class DayseedReminderAndBackupTest {
             currentUtcMs = 1_773_568_800_000L
         )
         repository = DayseedRepository(context, clock = testClock, databaseName = null)
+        // D-230: reminder evaluation now gates on the production delivery environment; the
+        // fixtures here assume a visible-delivery environment (see
+        // DayseedReminderAlarmLifecycleTest for the receiver-flow equivalent).
+        shadowOf(context.applicationContext as Application)
+            .grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS)
     }
 
     @After

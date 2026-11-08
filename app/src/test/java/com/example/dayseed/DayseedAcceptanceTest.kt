@@ -2,6 +2,7 @@ package com.example.dayseed
 
 import android.content.ContentValues
 import android.content.Context
+import android.app.Application
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteException
 import android.database.sqlite.SQLiteOpenHelper
@@ -41,6 +42,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -65,6 +67,11 @@ class DayseedAcceptanceTest {
         )
         // Use in-memory database per test for complete isolation
         repository = DayseedRepository(context, clock = testClock, databaseName = null)
+        // D-230: reminder evaluation now gates on the production delivery environment; the
+        // fixtures here assume a visible-delivery environment (see
+        // DayseedReminderAlarmLifecycleTest for the receiver-flow equivalent).
+        shadowOf(context.applicationContext as Application)
+            .grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS)
     }
 
     @After

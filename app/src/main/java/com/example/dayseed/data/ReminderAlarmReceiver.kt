@@ -30,11 +30,14 @@ import java.time.ZoneId
  *    before the intended time are not delivered either. Permitted platform delivery delays
  *    ([ReminderScheduler.DELIVERY_WINDOW_MS], Doze/battery) stay inside the grace and are not
  *    rejected.
- * 3. [ReminderEngine.evaluateHabitReminder] runs through [DayseedRepository.evaluateTodayRemindersSync]
- *    (one serialised transaction) applying quiet hours, habit state, already-logged state,
- *    idempotency and the shared 3-per-day cap (counting DELIVERED + SCHEDULED), then writes the
- *    outcome to `reminder_deliveries`. A fresh deliverable is stored as **SCHEDULED** — a
- *    reservation, not a delivery claim.
+ * 3. [ReminderEngine.evaluateHabitReminder] runs through
+ *    [DayseedRepository.evaluateHabitReminderForDateSync] (one serialised transaction, and
+ *    since D-230 scoped to THIS alarm's habit only) applying the canonical schedule gates
+ *    (D-229), the notification-availability gate (D-230: runtime permission, app-level
+ *    enablement, channel importance), already-logged state, idempotency and the shared
+ *    3-per-day cap (counting DELIVERED + SCHEDULED), then writes the outcome to
+ *    `reminder_deliveries`. A fresh deliverable is stored as **SCHEDULED** — a reservation,
+ *    not a delivery claim.
  * 4. Only a *pending or fresh reservation owned by this invocation* is actually posted —
  *    never a replay of an already-DELIVERED record. On posting success the reservation row
  *    is promoted to `DELIVERED`; if posting fails it is corrected back to `SUPPRESSED`/
@@ -183,11 +186,19 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
                 return DECISION_ALREADY_DELIVERED
             }
 
-            val evaluations = repository.evaluateTodayRemindersSync(targetDate)
-            val target = evaluations.firstOrNull { it.habitId == habitId } ?: return DECISION_NO_EVALUATION
+            // D-230 (2026-11-08 owner review): evaluate ONLY the habit whose alarm fired.
+            // The whole-day evaluation used to reserve every eligible habit's slot inside one
+            // transaction, which let a 09:00 alarm consume the shared cap on behalf of an
+            // 18:00 habit and then leave that habit's own 18:00 run skipping its real post
+            // because a SCHEDULED row already existed. The shared 3/day-cap read remains
+            // atomic across all habits (same transaction, same SQL count), but the
+            // reservation and this run's posting concern just this habit.
+            val target = repository.evaluateHabitReminderForDateSync(habitId, targetDate)
+                ?: return DECISION_NO_EVALUATION
 
             if (target.deliveryStatus != "SCHEDULED") {
-                // SUPPRESSED results carry their reason in the ledger row itself.
+                // SUPPRESSED results carry their reason in the ledger row itself (including
+                // the D-230 environment gate NOTIFICATIONS_BLOCKED).
                 return DECISION_SUPPRESSED
             }
             // Any other already-recorded terminal state (CANCELLED/DISMISSED/ACTED) must not post.

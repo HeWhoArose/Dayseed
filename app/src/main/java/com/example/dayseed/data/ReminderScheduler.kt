@@ -114,8 +114,18 @@ object ReminderScheduler {
                 // habit (today only when today is a scheduled opportunity and the time is
                 // still ahead of the caller clock), so weekday-masked/flexible habits no
                 // longer arm alarms that can only be skipped at fire time.
+                // D-230 R-FA-03: a WEEK-target habit whose weekly target is already met skips
+                // arming entirely until the next progress-week boundary, where met state
+                // naturally resets (U-12 frozen start-of-week version) and reminders resume.
                 val timeLocal = effective.reminderTimeLocal ?: "09:00"
-                val trigger = nextScheduledTriggerFor(effective, timeLocal, zone, now) ?: continue
+                var notBefore: LocalDate? = null
+                if (effective.targetPeriod == TargetPeriod.WEEK) {
+                    val weeklyState = repository.computeWeeklyReminderGateState(effective, today)
+                    if (weeklyState.weeklyTargetMet) {
+                        notBefore = weeklyState.currentWeekEndLocalDate.plusDays(1)
+                    }
+                }
+                val trigger = nextScheduledTriggerFor(effective, timeLocal, zone, now, notBefore) ?: continue
                 val pendingIntent = buildAlarmPendingIntent(
                     appContext,
                     habitId = habit.habitId,
@@ -174,7 +184,8 @@ object ReminderScheduler {
         version: HabitVersion,
         timeLocal: String,
         zone: ZoneId,
-        now: LocalDateTime
+        now: LocalDateTime,
+        notBefore: LocalDate? = null
     ): LocalDateTime? {
         val time = try {
             LocalTime.parse(timeLocal)
@@ -183,6 +194,16 @@ object ReminderScheduler {
         }
         val today = now.atZone(zone).toLocalDate()
         val isScheduledOn = { day: LocalDate -> StreakAndGroveEngine.isScheduledOpportunityOnDate(version, day) }
+        val scanStart = notBefore ?: today
+        if (scanStart.isAfter(today)) {
+            // D-230: met-weekly suppression restarts scanning at the next progress-week
+            // boundary; the missing mask's defensive fallback also anchors there.
+            for (offset in 0..7L) {
+                val day = scanStart.plusDays(offset)
+                if (isScheduledOn(day)) return LocalDateTime.of(day, time)
+            }
+            return LocalDateTime.of(scanStart, time)
+        }
         val todayTrigger = LocalDateTime.of(today, time)
         if (isScheduledOn(today) && todayTrigger.isAfter(now)) return todayTrigger
         for (offset in 1..7L) {
