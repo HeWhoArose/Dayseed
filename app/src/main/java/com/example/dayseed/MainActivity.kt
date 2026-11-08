@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.testTag
 import com.example.dayseed.ui.components.CollectedMomentsDetailSheet
 import com.example.dayseed.ui.components.LivingGroveScreen
 import com.example.dayseed.ui.screens.CreateEditHabitScreen
+import com.example.dayseed.ui.screens.DayDetailScreen
 import com.example.dayseed.ui.screens.HabitDetailScreen
 import com.example.dayseed.ui.screens.HabitsScreen
 import com.example.dayseed.ui.screens.HistoryScreen
@@ -85,10 +86,14 @@ fun DayseedApp(viewModel: DayseedViewModel) {
     val editingHabit by viewModel.editingHabit.collectAsState()
     val isJournalOpen by viewModel.isJournalEditorOpen.collectAsState()
     val editingJournal by viewModel.editingJournalEntry.collectAsState()
+    val editingDraftId by viewModel.editingJournalDraftId.collectAsState()
     val journalEditorDate by viewModel.journalEditorDate.collectAsState()
     val journalInitialLinkedHabitId by viewModel.journalInitialLinkedHabitId.collectAsState()
     val journalInitialPromptId by viewModel.journalInitialPromptId.collectAsState()
+    val lastJournalSaveError by viewModel.lastJournalSaveError.collectAsState()
     val habits by viewModel.habits.collectAsState()
+    val habitEntries by viewModel.habitEntries.collectAsState()
+    val habitVersions by viewModel.habitVersions.collectAsState()
     val streakRuns by viewModel.streakRuns.collectAsState()
     val growthMetrics by viewModel.growthMetrics.collectAsState()
     val drafts by viewModel.journalDrafts.collectAsState()
@@ -248,10 +253,31 @@ fun DayseedApp(viewModel: DayseedViewModel) {
                 }
 
                 is SecondaryRoute.CollectedMomentsDetail -> {
+                    val monthDetail = remember(route.yearMonth, habits, habitVersions, habitEntries) {
+                        viewModel.repository.computeCollectedMomentsMonthDetail(route.yearMonth)
+                    }
                     CollectedMomentsDetailSheet(
                         metrics = growthMetrics,
                         yearMonth = route.yearMonth,
                         selectedDate = route.selectedDate,
+                        monthDetail = monthDetail,
+                        onSelectMonth = { newMonth, newDate ->
+                            viewModel.selectCollectedMomentsMonth(newMonth, newDate)
+                        },
+                        onEditSession = { hId, date, entryId ->
+                            viewModel.openRecordSession(hId, date, entryId)
+                        },
+                        onInspectDayDetail = { date ->
+                            viewModel.openDayDetail(date)
+                        },
+                        onBack = { viewModel.navigateBack() }
+                    )
+                }
+
+                is SecondaryRoute.DayDetail -> {
+                    DayDetailScreen(
+                        date = route.date,
+                        viewModel = viewModel,
                         onBack = { viewModel.navigateBack() }
                     )
                 }
@@ -270,8 +296,17 @@ fun DayseedApp(viewModel: DayseedViewModel) {
     }
 
     if (isJournalOpen) {
-        val activeDraft = drafts.find {
-            it.localDate == journalEditorDate.toString() && it.sourceContext == "JOURNAL_COMPOSER"
+        val activeDraft = remember(drafts, editingDraftId, journalEditorDate) {
+            if (!editingDraftId.isNullOrBlank()) {
+                drafts.find { it.draftId == editingDraftId }
+            } else {
+                drafts.find {
+                    it.localDate == journalEditorDate.toString() && it.sourceContext == "JOURNAL_COMPOSER"
+                }
+            }
+        }
+        val initialCursor = remember(activeDraft?.draftId) {
+            activeDraft?.draftId?.let { viewModel.repository.getJournalDraftCursorSync(it) }
         }
         JournalEditorDialog(
             initialEntry = editingJournal,
@@ -280,9 +315,13 @@ fun DayseedApp(viewModel: DayseedViewModel) {
             habits = habits,
             initialLinkedHabitId = journalInitialLinkedHabitId,
             initialPromptId = journalInitialPromptId,
-            onAutosaveDraft = { title, body, primaryMood, secondaryMood, promptId, linkedHabitId, date ->
+            initialCursorSelection = initialCursor,
+            saveErrorMessage = lastJournalSaveError,
+            clockNowMs = { viewModel.repository.clock.nowUtcMs() },
+            onClearSaveError = { viewModel.clearJournalSaveError() },
+            onAutosaveDraft = { draftId, title, body, primaryMood, secondaryMood, promptId, linkedHabitId, date ->
                 viewModel.repository.saveJournalDraftSync(
-                    draftId = "active_draft_$date",
+                    draftId = draftId,
                     localDate = date,
                     title = title,
                     body = body,
@@ -290,11 +329,17 @@ fun DayseedApp(viewModel: DayseedViewModel) {
                     secondaryMoodCode = secondaryMood,
                     promptId = promptId,
                     linkedHabitId = linkedHabitId,
-                    sourceContext = "JOURNAL_COMPOSER"
+                    sourceContext = activeDraft?.sourceContext ?: "JOURNAL_COMPOSER"
                 )
             },
+            onSaveDraftCursor = { draftId, start, end ->
+                viewModel.repository.saveJournalDraftCursorSync(draftId, start, end)
+            },
+            onDiscardDraft = { draftId ->
+                viewModel.discardJournalDraft(draftId)
+            },
             onDismiss = { viewModel.closeJournalEditor() },
-            onSave = { entry -> viewModel.saveJournalEntry(entry) },
+            onSave = { entry, sourceDraftId -> viewModel.saveJournalEntry(entry, sourceDraftId) },
             onDelete = { id -> viewModel.deleteJournalEntry(id) }
         )
     }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material3.Button
@@ -23,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,7 +41,9 @@ import com.example.dayseed.data.MoodCatalog
 fun ReflectionCard(
     entry: JournalEntry?,
     draft: JournalDraft? = null,
+    entriesCountForDate: Int = if (entry != null) 1 else 0,
     onOpenEditor: () -> Unit,
+    onWriteAnother: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -76,17 +80,46 @@ fun ReflectionCard(
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
+                    if (entriesCountForDate > 1) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.secondaryContainer
+                        ) {
+                            Text(
+                                text = "$entriesCountForDate today",
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    .testTag("reflection_card_count_badge")
+                            )
+                        }
+                    }
                 }
 
                 if (entry != null) {
-                    OutlinedButton(
-                        onClick = onOpenEditor,
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier
-                            .height(34.dp)
-                            .testTag("edit_reflection_btn")
-                    ) {
-                        Text("Edit", style = MaterialTheme.typography.labelMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (onWriteAnother != null) {
+                            TextButton(
+                                onClick = onWriteAnother,
+                                modifier = Modifier
+                                    .height(34.dp)
+                                    .testTag("write_another_reflection_btn")
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("New", style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                        OutlinedButton(
+                            onClick = onOpenEditor,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier
+                                .height(34.dp)
+                                .testTag("edit_reflection_btn")
+                        ) {
+                            Text("Edit", style = MaterialTheme.typography.labelMedium)
+                        }
                     }
                 }
             }

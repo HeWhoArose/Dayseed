@@ -1,5 +1,6 @@
 package com.example.dayseed.ui.screens
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -8,29 +9,33 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,9 +43,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.dayseed.data.DailyPrompts
@@ -50,357 +57,596 @@ import com.example.dayseed.data.JournalEntry
 import com.example.dayseed.data.MoodCatalog
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import java.util.UUID
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun JournalEditorDialog(
     initialEntry: JournalEntry?,
     initialDraft: JournalDraft? = null,
-    selectedDate: LocalDate = LocalDate.now(),
-    habits: List<Habit> = emptyList(),
+    selectedDate: LocalDate,
+    habits: List<Habit>,
     initialLinkedHabitId: String? = null,
     initialPromptId: String? = null,
-    onAutosaveDraft: ((title: String?, body: String, primaryMood: String?, secondaryMood: String?, promptId: String?, linkedHabitId: String?, date: LocalDate) -> Unit)? = null,
+    initialCursorSelection: Pair<Int, Int>? = null,
+    saveErrorMessage: String? = null,
+    clockNowMs: () -> Long = { System.currentTimeMillis() },
+    onClearSaveError: () -> Unit = {},
+    onAutosaveDraft: (
+        draftId: String,
+        title: String?,
+        body: String,
+        primaryMood: String?,
+        secondaryMood: String?,
+        promptId: String?,
+        linkedHabitId: String?,
+        date: LocalDate
+    ) -> Unit = { _, _, _, _, _, _, _, _ -> },
+    onSaveDraftCursor: (draftId: String, start: Int, end: Int) -> Unit = { _, _, _ -> },
+    onDiscardDraft: (draftId: String) -> Unit = {},
     onDismiss: () -> Unit,
-    onSave: (JournalEntry) -> Unit,
-    onDelete: ((String) -> Unit)? = null
+    onSave: (JournalEntry, String?) -> Unit,
+    onDelete: (String) -> Unit
 ) {
-    val isEditing = initialEntry != null
-    var targetDateText by remember {
-        mutableStateOf((initialEntry?.date ?: selectedDate).toString())
-    }
-    var title by remember {
-        mutableStateOf(initialEntry?.title ?: initialDraft?.title ?: "")
-    }
-    var promptId by remember {
+    var entryDate by remember(initialEntry, initialDraft, selectedDate) {
         mutableStateOf(
-            initialEntry?.promptId
-                ?: initialDraft?.promptId
-                ?: initialPromptId
-                ?: DailyPrompts.promptForDate(selectedDate).first
+            initialEntry?.date
+                ?: initialDraft?.let { runCatching { LocalDate.parse(it.localDate) }.getOrNull() }
+                ?: selectedDate
         )
     }
-    var content by remember {
-        mutableStateOf(initialEntry?.body ?: initialDraft?.body ?: "")
-    }
-    var primaryMoodCode by remember {
-        mutableStateOf(initialEntry?.primaryMoodCode ?: initialDraft?.primaryMoodCode)
-    }
-    var secondaryMoodCode by remember {
-        mutableStateOf(initialEntry?.secondaryMoodCode ?: initialDraft?.secondaryMoodCode)
-    }
-    var linkedHabitId by remember {
-        mutableStateOf(initialEntry?.linkedHabitId ?: initialDraft?.linkedHabitId ?: initialLinkedHabitId)
-    }
-    var showExpandedMoods by remember { mutableStateOf(false) }
-    var contentError by remember { mutableStateOf(false) }
 
-    val activeDate = remember(targetDateText) {
-        try {
-            LocalDate.parse(targetDateText)
-        } catch (_: Exception) {
-            selectedDate
-        }
+    val activeDraftId = remember(initialEntry, initialDraft, entryDate) {
+        if (initialEntry != null) null else (initialDraft?.draftId ?: "active_draft_$entryDate")
     }
 
-    fun triggerAutosave(
-        newTitle: String = title,
-        newBody: String = content,
-        newPrimary: String? = primaryMoodCode,
-        newSecondary: String? = secondaryMoodCode,
-        newPromptId: String? = promptId,
-        newLinkedHabit: String? = linkedHabitId
-    ) {
-        if (!isEditing && onAutosaveDraft != null) {
-            onAutosaveDraft(
-                newTitle.takeIf { it.isNotBlank() },
-                newBody,
-                newPrimary,
-                newSecondary,
-                newPromptId,
-                newLinkedHabit,
-                activeDate
+    val defaultPromptPair = remember(entryDate) { DailyPrompts.promptForDate(entryDate) }
+    val resolvedPromptId = initialEntry?.promptId ?: initialDraft?.promptId ?: initialPromptId ?: defaultPromptPair.first
+    val resolvedPromptText = remember(resolvedPromptId, defaultPromptPair) {
+        val text = DailyPrompts.promptTextForId(resolvedPromptId)
+        if (text.isNotBlank()) text else defaultPromptPair.second
+    }
+
+    val initialTitleText = initialEntry?.title ?: initialDraft?.title ?: ""
+    val initialBodyText = initialEntry?.body ?: initialDraft?.body ?: ""
+    val initialPrimaryMood = initialEntry?.primaryMoodCode ?: initialDraft?.primaryMoodCode
+    val initialSecondaryMood = initialEntry?.secondaryMoodCode ?: initialDraft?.secondaryMoodCode
+    val initialHabitLink = initialEntry?.linkedHabitId ?: initialDraft?.linkedHabitId ?: initialLinkedHabitId
+
+    var title by remember(initialEntry?.journalEntryId, initialDraft?.draftId) {
+        mutableStateOf(initialTitleText)
+    }
+
+    var bodyFieldValue by remember(initialEntry?.journalEntryId, initialDraft?.draftId) {
+        val len = initialBodyText.length
+        val selStart = (initialCursorSelection?.first ?: len).coerceIn(0, len)
+        val selEnd = (initialCursorSelection?.second ?: selStart).coerceIn(0, len)
+        mutableStateOf(
+            TextFieldValue(
+                text = initialBodyText,
+                selection = TextRange(selStart, selEnd)
             )
+        )
+    }
+
+    var primaryMoodCode by remember(initialEntry?.journalEntryId, initialDraft?.draftId) {
+        mutableStateOf(initialPrimaryMood)
+    }
+    var secondaryMoodCode by remember(initialEntry?.journalEntryId, initialDraft?.draftId) {
+        mutableStateOf(initialSecondaryMood)
+    }
+    var linkedHabitId by remember(initialEntry?.journalEntryId, initialDraft?.draftId) {
+        mutableStateOf(initialHabitLink)
+    }
+
+    var showDeleteEntryConfirm by remember { mutableStateOf(false) }
+    var showDiscardDraftConfirm by remember { mutableStateOf(false) }
+    var showUnsavedEditsCloseConfirm by remember { mutableStateOf(false) }
+
+    val bodyText = bodyFieldValue.text
+
+    // Autosave draft & cursor position whenever creating/editing a draft (not a saved entry)
+    LaunchedEffect(
+        title,
+        bodyFieldValue.text,
+        bodyFieldValue.selection.start,
+        bodyFieldValue.selection.end,
+        primaryMoodCode,
+        secondaryMoodCode,
+        linkedHabitId,
+        entryDate
+    ) {
+        if (initialEntry == null && activeDraftId != null) {
+            if (bodyText.isNotBlank() || title.isNotBlank() || primaryMoodCode != null) {
+                onAutosaveDraft(
+                    activeDraftId,
+                    title.ifBlank { null },
+                    bodyText,
+                    primaryMoodCode,
+                    secondaryMoodCode,
+                    resolvedPromptId,
+                    linkedHabitId,
+                    entryDate
+                )
+                onSaveDraftCursor(
+                    activeDraftId,
+                    bodyFieldValue.selection.start,
+                    bodyFieldValue.selection.end
+                )
+            }
         }
     }
+
+    val hasUnsavedSavedEntryEdits = initialEntry != null && (
+        title != (initialEntry.title ?: "") ||
+            bodyText != initialEntry.body ||
+            primaryMoodCode != initialEntry.primaryMoodCode ||
+            secondaryMoodCode != initialEntry.secondaryMoodCode ||
+            linkedHabitId != initialEntry.linkedHabitId ||
+            entryDate.toString() != initialEntry.localDate
+        )
+
+    val handleRequestClose: () -> Unit = {
+        if (hasUnsavedSavedEntryEdits) {
+            showUnsavedEditsCloseConfirm = true
+        } else {
+            onDismiss()
+        }
+    }
+
+    val dateFormatter = DateTimeFormatter.ofPattern("EEE, MMM d, yyyy", Locale.getDefault())
 
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = handleRequestClose,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Card(
             modifier = Modifier
-                .fillMaxWidth(0.92f)
+                .fillMaxWidth()
+                .padding(16.dp)
+                .heightIn(max = 700.dp)
                 .testTag("journal_editor_dialog"),
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface
-            )
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(20.dp)
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Header
+                // Header Row + Status Badge
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Text(
-                            text = if (isEditing) "Edit Reflection" else "Daily Reflection",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = activeDate.format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy")),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = if (initialEntry == null) "Daily Reflection" else "Edit Reflection",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (initialEntry != null) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.secondaryContainer
+                                }
+                            ) {
+                                Text(
+                                    text = if (initialEntry != null) "Saved Entry" else "Draft",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                        .testTag("journal_editor_status_badge")
+                                )
+                            }
+                        }
+
+                        // Editable Date Selector (D-191)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            IconButton(
+                                onClick = { entryDate = entryDate.minusDays(1) },
+                                modifier = Modifier.testTag("journal_date_prev_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                    contentDescription = "Previous date"
+                                )
+                            }
+                            Text(
+                                text = entryDate.format(dateFormatter),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.testTag("journal_date_label")
+                            )
+                            IconButton(
+                                onClick = { entryDate = entryDate.plusDays(1) },
+                                modifier = Modifier.testTag("journal_date_next_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = "Next date"
+                                )
+                            }
+                        }
                     }
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close editor")
+
+                    IconButton(
+                        onClick = handleRequestClose,
+                        modifier = Modifier.testTag("journal_close_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close"
+                        )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                // Save Error Banner (Review 1 Amendment 1 & Section 4.1)
+                if (!saveErrorMessage.isNullOrBlank()) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("journal_save_error_banner"),
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.errorContainer
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = saveErrorMessage,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(onClick = onClearSaveError) {
+                                Text("Dismiss")
+                            }
+                        }
+                    }
+                }
 
-                // Date field (allows date correction without mutating other records)
-                OutlinedTextField(
-                    value = targetDateText,
-                    onValueChange = { targetDateText = it },
-                    label = { Text("Entry Date (YYYY-MM-DD)") },
-                    singleLine = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("journal_date_input")
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
+                // Gentle Prompt Card
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Text(
+                            text = "GENTLE PROMPT",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = resolvedPromptText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontStyle = FontStyle.Italic,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                }
 
                 // Optional Title
                 OutlinedTextField(
                     value = title,
-                    onValueChange = {
-                        title = it
-                        triggerAutosave(newTitle = it)
-                    },
-                    label = { Text("Title (optional)") },
-                    placeholder = { Text("A headline for today's reflection") },
+                    onValueChange = { title = it },
+                    label = { Text("Title (Optional)") },
+                    placeholder = { Text("Give this moment a short title...") },
                     singleLine = true,
+                    shape = RoundedCornerShape(14.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("journal_title_input")
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                // Body Input with Cursor Restoration
+                OutlinedTextField(
+                    value = bodyFieldValue,
+                    onValueChange = { bodyFieldValue = it },
+                    label = { Text("Your Reflection") },
+                    placeholder = {
+                        Text("Write freely — even a single sentence is worth keeping...")
+                    },
+                    minLines = 4,
+                    maxLines = 8,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("journal_body_input")
+                )
 
-                // Mood Selection (Primary + Optional Secondary)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                // Primary Mood Selector (D-096)
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = "Mood (Primary & Optional Secondary)",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    SuggestionChip(
-                        onClick = { showExpandedMoods = !showExpandedMoods },
-                        label = { Text(if (showExpandedMoods) "Starter 10" else "More Moods") }
-                    )
-                }
-
-                val moodsToShow = if (showExpandedMoods) MoodCatalog.allMoods else MoodCatalog.starterMoods
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    for (mood in moodsToShow) {
-                        val isPrimary = primaryMoodCode == mood.code
-                        val isSecondary = secondaryMoodCode == mood.code
-                        FilterChip(
-                            selected = isPrimary || isSecondary,
-                            onClick = {
-                                when {
-                                    isPrimary -> {
-                                        primaryMoodCode = secondaryMoodCode
-                                        secondaryMoodCode = null
-                                    }
-                                    isSecondary -> {
-                                        secondaryMoodCode = null
-                                    }
-                                    primaryMoodCode == null -> {
-                                        primaryMoodCode = mood.code
-                                    }
-                                    else -> {
-                                        secondaryMoodCode = mood.code
-                                    }
-                                }
-                                triggerAutosave(newPrimary = primaryMoodCode, newSecondary = secondaryMoodCode)
-                            },
-                            label = {
-                                val suffix = when {
-                                    isPrimary -> " (1st)"
-                                    isSecondary -> " (2nd)"
-                                    else -> ""
-                                }
-                                Text("${mood.symbol} ${mood.label}$suffix", fontSize = 12.sp)
-                            },
-                            modifier = Modifier.testTag("mood_chip_${mood.code.lowercase()}")
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Optional Linked Habit
-                if (habits.isNotEmpty()) {
-                    Text(
-                        text = "Link to Habit (optional)",
+                        text = "Primary Mood (Optional)",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        for (h in habits) {
-                            val isLinked = linkedHabitId == h.habitId
+                        MoodCatalog.allMoods.forEach { mood ->
+                            val isSelected = primaryMoodCode.equals(mood.code, ignoreCase = true)
                             FilterChip(
-                                selected = isLinked,
+                                selected = isSelected,
                                 onClick = {
-                                    linkedHabitId = if (isLinked) null else h.habitId
-                                    triggerAutosave(newLinkedHabit = linkedHabitId)
+                                    if (isSelected) {
+                                        primaryMoodCode = null
+                                        secondaryMoodCode = null
+                                    } else {
+                                        primaryMoodCode = mood.code
+                                        if (secondaryMoodCode.equals(mood.code, ignoreCase = true)) {
+                                            secondaryMoodCode = null
+                                        }
+                                    }
                                 },
-                                label = { Text(h.name, fontSize = 12.sp) },
-                                modifier = Modifier.testTag("link_habit_chip_${h.habitId}")
+                                label = { Text("${mood.symbol} ${mood.label}") },
+                                modifier = Modifier.testTag("primary_mood_${mood.code}")
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(10.dp))
                 }
 
-                // Prompt selection chips
-                Text(
-                    text = "Optional Reflection Prompt",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    for ((pId, pText) in DailyPrompts.prompts.take(4)) {
-                        SuggestionChip(
-                            onClick = {
-                                promptId = pId
-                                triggerAutosave(newPromptId = pId)
-                            },
-                            label = {
-                                Text(
-                                    text = pText,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontSize = 12.sp
-                                )
-                            },
-                            icon = {
-                                Icon(Icons.Default.Lightbulb, contentDescription = null, modifier = Modifier.size(14.dp))
-                            }
+                // Secondary Mood Selector (Only enabled when Primary Mood is selected)
+                if (primaryMoodCode != null) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = "Secondary Mood (Optional)",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            MoodCatalog.allMoods
+                                .filter { !it.code.equals(primaryMoodCode, ignoreCase = true) }
+                                .forEach { mood ->
+                                    val isSelected = secondaryMoodCode.equals(mood.code, ignoreCase = true)
+                                    FilterChip(
+                                        selected = isSelected,
+                                        onClick = {
+                                            secondaryMoodCode = if (isSelected) null else mood.code
+                                        },
+                                        label = { Text("${mood.symbol} ${mood.label}") },
+                                        modifier = Modifier.testTag("secondary_mood_${mood.code}")
+                                    )
+                                }
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                // Linked Habit Selector (Optional)
+                if (habits.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = "Linked Habit (Optional)",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            FilterChip(
+                                selected = linkedHabitId == null,
+                                onClick = { linkedHabitId = null },
+                                label = { Text("None") },
+                                modifier = Modifier.testTag("journal_linked_habit_NONE")
+                            )
+                            habits.filter { !it.isArchived }.forEach { h ->
+                                FilterChip(
+                                    selected = linkedHabitId == h.habitId,
+                                    onClick = {
+                                        linkedHabitId = if (linkedHabitId == h.habitId) null else h.habitId
+                                    },
+                                    label = { Text(h.name) },
+                                    modifier = Modifier.testTag("journal_linked_habit_${h.habitId}")
+                                )
+                            }
+                        }
+                    }
+                }
 
-                // Journal content
-                OutlinedTextField(
-                    value = content,
-                    onValueChange = {
-                        content = it
-                        if (it.isNotBlank()) contentError = false
-                        triggerAutosave(newBody = it)
-                    },
-                    label = { Text("Write your thoughts...") },
-                    placeholder = { Text("Even one sentence is meaningful. Drafts autosave locally.") },
-                    isError = contentError,
-                    supportingText = {
-                        val wordCount = if (content.isBlank()) 0 else content.trim().split("\\s+".toRegex()).size
-                        Text(if (contentError) "Please write something before saving" else "$wordCount words • Local autosave active")
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(150.dp)
-                        .testTag("journal_content_input")
-                )
-
-                Spacer(modifier = Modifier.height(18.dp))
-
-                // Actions
+                // Action Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (initialEntry != null && onDelete != null) {
-                        IconButton(
-                            onClick = { onDelete(initialEntry.id) },
-                            modifier = Modifier.testTag("delete_journal_btn")
+                    if (initialEntry != null) {
+                        TextButton(
+                            onClick = { showDeleteEntryConfirm = true },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            ),
+                            modifier = Modifier.testTag("journal_delete_entry_button")
                         ) {
-                            Icon(
-                                Icons.Default.Delete,
-                                contentDescription = "Delete reflection",
-                                tint = MaterialTheme.colorScheme.error
-                            )
+                            Icon(imageVector = Icons.Default.Delete, contentDescription = null)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Delete")
                         }
+                    } else if (activeDraftId != null && (initialDraft != null || bodyText.isNotBlank() || title.isNotBlank())) {
+                        TextButton(
+                            onClick = { showDiscardDraftConfirm = true },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            ),
+                            modifier = Modifier.testTag("journal_discard_draft_button")
+                        ) {
+                            Icon(imageVector = Icons.Default.Delete, contentDescription = null)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Discard Draft")
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.width(8.dp))
                     }
 
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Close")
-                    }
-
-                    Button(
-                        onClick = {
-                            if (content.isBlank()) {
-                                contentError = true
-                            } else {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(
+                            onClick = handleRequestClose,
+                            modifier = Modifier.testTag("journal_cancel_button")
+                        ) {
+                            Text("Close")
+                        }
+                        Button(
+                            onClick = {
+                                val nowMs = clockNowMs()
+                                if (initialEntry == null && activeDraftId != null) {
+                                    // Ensure latest draft content is flushed before promotion
+                                    onAutosaveDraft(
+                                        activeDraftId,
+                                        title.trim().ifBlank { null },
+                                        bodyText,
+                                        primaryMoodCode,
+                                        secondaryMoodCode,
+                                        resolvedPromptId,
+                                        linkedHabitId,
+                                        entryDate
+                                    )
+                                }
                                 val entry = JournalEntry(
-                                    journalEntryId = initialEntry?.journalEntryId ?: UUID.randomUUID().toString(),
-                                    localDate = activeDate.toString(),
-                                    body = content.trim(),
-                                    title = title.trim().takeIf { it.isNotEmpty() },
+                                    journalEntryId = initialEntry?.journalEntryId
+                                        ?: initialDraft?.intendedJournalEntryId
+                                        ?: UUID.randomUUID().toString(),
+                                    localDate = entryDate.toString(),
+                                    body = bodyText.trim(),
+                                    title = title.trim().ifBlank { null },
                                     primaryMoodCode = primaryMoodCode,
                                     secondaryMoodCode = if (primaryMoodCode != null && secondaryMoodCode != primaryMoodCode) secondaryMoodCode else null,
-                                    promptId = promptId,
+                                    promptId = resolvedPromptId,
                                     linkedHabitId = linkedHabitId,
-                                    createdAtUtcMs = initialEntry?.createdAtUtcMs ?: System.currentTimeMillis(),
-                                    updatedAtUtcMs = System.currentTimeMillis()
+                                    createdAtUtcMs = initialEntry?.createdAtUtcMs ?: nowMs,
+                                    updatedAtUtcMs = nowMs
                                 )
-                                onSave(entry)
-                            }
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("save_journal_btn"),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        )
-                    ) {
-                        Text("Save Reflection")
+                                onSave(entry, activeDraftId)
+                            },
+                            enabled = bodyText.isNotBlank(),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.testTag("journal_save_button")
+                        ) {
+                            Text("Save Reflection")
+                        }
                     }
                 }
             }
         }
+    }
+
+    if (showDeleteEntryConfirm && initialEntry != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteEntryConfirm = false },
+            title = { Text("Delete Reflection?") },
+            text = {
+                Text("This reflection for ${initialEntry.localDate} will be permanently deleted. This action cannot be undone.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteEntryConfirm = false
+                        onDelete(initialEntry.journalEntryId)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    ),
+                    modifier = Modifier.testTag("journal_confirm_delete_entry_button")
+                ) {
+                    Text("Delete Permanently")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteEntryConfirm = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showDiscardDraftConfirm && activeDraftId != null) {
+        AlertDialog(
+            onDismissRequest = { showDiscardDraftConfirm = false },
+            title = { Text("Discard Draft?") },
+            text = {
+                Text("This unsaved draft will be permanently discarded. Saved reflections will not be affected.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDiscardDraftConfirm = false
+                        onDiscardDraft(activeDraftId)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    ),
+                    modifier = Modifier.testTag("journal_confirm_discard_draft_button")
+                ) {
+                    Text("Discard Draft")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardDraftConfirm = false }) {
+                    Text("Keep Writing")
+                }
+            }
+        )
+    }
+
+    if (showUnsavedEditsCloseConfirm) {
+        AlertDialog(
+            onDismissRequest = { showUnsavedEditsCloseConfirm = false },
+            title = { Text("Discard Unsaved Edits?") },
+            text = {
+                Text("You have unsaved changes to this saved reflection. Closing now will keep the previously saved version unchanged.")
+            },
+            confirmButton = {
+                OutlinedButton(
+                    onClick = {
+                        showUnsavedEditsCloseConfirm = false
+                        onDismiss()
+                    },
+                    modifier = Modifier.testTag("journal_confirm_discard_edits_button")
+                ) {
+                    Text("Discard Changes")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { showUnsavedEditsCloseConfirm = false }) {
+                    Text("Keep Editing")
+                }
+            }
+        )
     }
 }

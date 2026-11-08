@@ -949,9 +949,7 @@ class DayseedRepository(
             ?: dateVersion
         return if (
             weekStartVersion.targetPeriod == TargetPeriod.WEEK ||
-            weekStartVersion.scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET ||
-            dateVersion.targetPeriod == TargetPeriod.WEEK ||
-            dateVersion.scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET
+            dateVersion.targetPeriod == TargetPeriod.WEEK
         ) {
             StreakAndGroveEngine.resolveFrozenWeekVersion(
                 sortedVersions = versions,
@@ -2681,9 +2679,7 @@ class DayseedRepository(
             fallbackVersion = version
         ) ?: version
         val isWeeklyPeriod = frozenWeekVersion.targetPeriod == TargetPeriod.WEEK ||
-            frozenWeekVersion.scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET ||
-            version.targetPeriod == TargetPeriod.WEEK ||
-            version.scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET
+            version.targetPeriod == TargetPeriod.WEEK
         // Keep per-day lifecycle state on `version` separate from frozen weekly measurement/schedule semantics
         val evalVersion = if (isWeeklyPeriod) frozenWeekVersion else version
 
@@ -2714,9 +2710,7 @@ class DayseedRepository(
                         return DerivedDayStatus.LOGGED_ZERO
                     }
                     val target = BigInteger.valueOf((evalVersion.targetValue ?: 1).coerceAtLeast(1).toLong())
-                    val comparisonTotal = if (evalVersion.targetPeriod == TargetPeriod.WEEK ||
-                        evalVersion.scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET
-                    ) {
+                    val comparisonTotal = if (evalVersion.targetPeriod == TargetPeriod.WEEK) {
                         val weekDates = (0..6).map { weekStartDate.plusDays(it.toLong()) }
                             .filter { !it.isBefore(firstDate) }
                         var weekTotal = BigInteger.ZERO
@@ -2799,83 +2793,326 @@ class DayseedRepository(
     }
 
     /**
-     * Computes the Growth Mark (G2 + G3) summary, Grove counts, and overall GrowthMetrics (D-032, D-201, D-217).
+     * Computes separated GrowthMetrics over an optional reporting period [startDate..endDate]
+     * anchored at [referenceToday] (D-032, D-040, D-191, D-201, D-216, D-217, Phase 3 E3/E4).
+     *
+     * Key invariants:
+     * 1. Habit active dates (`habitActiveDatesCount` / `totalActiveDates`) never include Journal-only dates.
+     * 2. `targetPeriod` (`DAY` vs `WEEK`) is the sole authoritative rule for daily vs weekly target evaluation.
+     * 3. Daily scheduled opportunities (`habitDaysMetCount` / `scheduledDailyOpportunitiesCount`):
+     *    - `local_date < referenceToday`: counted in denominator whether met or missed; in numerator if met.
+     *    - `local_date == referenceToday`: counted in numerator and denominator ONLY if daily target is met; otherwise excluded as still open.
+     *    - `local_date > referenceToday`: ALWAYS excluded from both numerator and denominator.
+     * 4. `D-040` progress bands are aggregated per `(habit_id, local_date)` for `TargetPeriod.DAY` and per
+     *    `(habit_id, weekStart)` for `TargetPeriod.WEEK`, never per raw `habit_entries` row.
      */
-    private fun computeGrowthMetricsSync() {
-        val today = clock.todayLocal()
+    fun computeGrowthMetricsForPeriodSync(
+        startDate: LocalDate? = null,
+        endDate: LocalDate? = null,
+        referenceToday: LocalDate = clock.todayLocal()
+    ): GrowthMetrics {
+        val today = referenceToday
         val currentMonth = YearMonth.from(today)
-        val activeDates = mutableSetOf<LocalDate>()
+        val inPeriod: (LocalDate) -> Boolean = { d ->
+            (startDate == null || !d.isBefore(startDate)) &&
+                (endDate == null || !d.isAfter(endDate))
+        }
 
-        var completedCount = 0
+        val habitActiveDates = mutableSetOf<LocalDate>()
+        val journalActiveDates = mutableSetOf<LocalDate>()
+        var journalEntriesInPeriod = 0
+        var numericDurationSessionsCount = 0
+        var completionOutcomesCount = 0
         var tinyCount = 0
         var usualCount = 0
         var extraCount = 0
+        val legacyEffortCounts = mutableMapOf("TINY" to 0, "USUAL" to 0, "EXTRA" to 0)
+
         var currentMonthDurationMinutes = 0L
+        var currentMonthDurationPositiveSessionsCount = 0
+        var currentMonthDurationZeroSessionsCount = 0
+        val currentMonthDurationDatesMinutes = mutableMapOf<LocalDate, Long>()
+        val currentMonthDurationDateSessionCounts = mutableMapOf<LocalDate, Int>()
         val currentMonthDateSessionCounts = mutableMapOf<LocalDate, Int>()
+        val currentMonthUnsupportedDurationUnits = mutableSetOf<String>()
 
         for (outcome in _habitDayOutcomes.value) {
             val d = try { LocalDateValidator.parseStrict(outcome.localDate) } catch (_: Exception) { continue }
-            activeDates.add(d)
-            completedCount++
-            when (outcome.effortLevel) {
-                "TINY" -> tinyCount++
-                "USUAL" -> usualCount++
-                "EXTRA" -> extraCount++
-                else -> usualCount++
-            }
             if (YearMonth.from(d) == currentMonth) {
                 currentMonthDateSessionCounts[d] = (currentMonthDateSessionCounts[d] ?: 0) + 1
+            }
+            if (!inPeriod(d)) continue
+            habitActiveDates.add(d)
+            completionOutcomesCount++
+            when (outcome.effortLevel) {
+                "TINY" -> {
+                    tinyCount++
+                    legacyEffortCounts["TINY"] = (legacyEffortCounts["TINY"] ?: 0) + 1
+                }
+                "EXTRA" -> {
+                    extraCount++
+                    legacyEffortCounts["EXTRA"] = (legacyEffortCounts["EXTRA"] ?: 0) + 1
+                }
+                else -> {
+                    usualCount++
+                    legacyEffortCounts["USUAL"] = (legacyEffortCounts["USUAL"] ?: 0) + 1
+                }
             }
         }
 
         for (entry in _habitEntries.value) {
             val d = try { LocalDateValidator.parseStrict(entry.localDate) } catch (_: Exception) { continue }
-            if (entry.valueUnits > 0) {
-                activeDates.add(d)
-                completedCount++
-                val version = getEffectiveHabitVersion(entry.habitId, d)
-                val target = version?.targetValue ?: 1
-                val band = ProgressBandClassifier.classify(entry.valueUnits, target)
-                when (band) {
-                    ProgressBand.TINY_STEP, ProgressBand.GETTING_STARTED -> tinyCount++
-                    ProgressBand.HALFWAY, ProgressBand.ALMOST_THERE, ProgressBand.GOAL_MET -> usualCount++
-                    ProgressBand.EXTRA, ProgressBand.HUGE -> extraCount++
-                    ProgressBand.ZERO -> {}
-                }
+            val version = getEffectiveHabitVersion(entry.habitId, d)
+                ?: _habitVersions.value.filter { it.habitId == entry.habitId }
+                    .minWithOrNull(compareBy<HabitVersion> { it.effectiveFromLocalDate }.thenBy { it.createdAtUtcMs })
 
-                if (YearMonth.from(d) == currentMonth) {
+            if (YearMonth.from(d) == currentMonth) {
+                if (entry.valueUnits > 0) {
                     currentMonthDateSessionCounts[d] = (currentMonthDateSessionCounts[d] ?: 0) + 1
-                    if (version?.trackingMode == TrackingMode.DURATION) {
-                        val unitCode = version.unitCode ?: "min"
-                        val mins = DurationNormalizer.toMinutes(entry.valueUnits, unitCode)
-                        if (mins != null) {
+                }
+                if (version?.trackingMode?.canonical() == TrackingMode.DURATION) {
+                    val unitCode = version.unitCode ?: "min"
+                    if (!DurationNormalizer.isSupportedDurationUnit(unitCode)) {
+                        currentMonthUnsupportedDurationUnits.add(unitCode)
+                    } else {
+                        val mins = DurationNormalizer.toMinutes(entry.valueUnits, unitCode) ?: 0L
+                        if (entry.valueUnits > 0) {
                             currentMonthDurationMinutes += mins
+                            currentMonthDurationPositiveSessionsCount++
+                            currentMonthDurationDatesMinutes[d] = (currentMonthDurationDatesMinutes[d] ?: 0L) + mins
+                            currentMonthDurationDateSessionCounts[d] = (currentMonthDurationDateSessionCounts[d] ?: 0) + 1
+                        } else if (entry.valueUnits == 0) {
+                            currentMonthDurationZeroSessionsCount++
                         }
                     }
                 }
+            }
+
+            if (!inPeriod(d)) continue
+            if (entry.valueUnits > 0) {
+                habitActiveDates.add(d)
+                numericDurationSessionsCount++
             }
         }
 
         for (j in _journalEntries.value) {
             val d = try { LocalDateValidator.parseStrict(j.localDate) } catch (_: Exception) { continue }
-            activeDates.add(d)
+            if (!inPeriod(d)) continue
+            journalEntriesInPeriod++
+            journalActiveDates.add(d)
         }
 
+        val plannedRestInPeriod = _habitDateExceptions.value.count { ex ->
+            val d = try { LocalDateValidator.parseStrict(ex.localDate) } catch (_: Exception) { null }
+            d != null && inPeriod(d) && ex.exceptionKind == HabitDateExceptionKind.REST_DAY
+        }
+
+        var habitDaysMetCount = 0
+        var scheduledDailyOpportunitiesCount = 0
+        val uniqueHabitsCompletedSet = mutableSetOf<String>()
+        val dailyProgressBandCounts = mutableMapOf<ProgressBand, Int>().apply {
+            ProgressBand.entries.forEach { put(it, 0) }
+        }
+        val weeklyProgressBandCounts = mutableMapOf<ProgressBand, Int>().apply {
+            ProgressBand.entries.forEach { put(it, 0) }
+        }
+
+        var flexibleWeeklyOpportunitiesMetCount = 0
+        var flexibleWeeklyOpportunitiesTotalCount = 0
+        var flexibleWeeklyInProgressCount = 0
+
+        val versionsByHabit = _habitVersions.value.groupBy { it.habitId }
+        val entriesByHabit = _habitEntries.value.groupBy { it.habitId }
+        val outcomesByHabit = _habitDayOutcomes.value.groupBy { it.habitId }
+        val exceptionsByHabit = _habitDateExceptions.value.groupBy { it.habitId }
+
+        for (h in _habits.value) {
+            val hId = h.habitId
+            val versions = versionsByHabit[hId].orEmpty()
+            if (versions.isEmpty()) continue
+            val entries = entriesByHabit[hId].orEmpty()
+            val outcomes = outcomesByHabit[hId].orEmpty()
+            val exceptions = exceptionsByHabit[hId].orEmpty()
+
+            val earliestVersionDate = versions.mapNotNull {
+                runCatching { LocalDateValidator.parseStrict(it.effectiveFromLocalDate) }.getOrNull()
+            }.minOrNull() ?: continue
+            val earliestEntryDate = entries.mapNotNull {
+                runCatching { LocalDateValidator.parseStrict(it.localDate) }.getOrNull()
+            }.minOrNull()
+            val earliestOutcomeDate = outcomes.mapNotNull {
+                runCatching { LocalDateValidator.parseStrict(it.localDate) }.getOrNull()
+            }.minOrNull()
+            val habitOriginDate = listOfNotNull(earliestVersionDate, earliestEntryDate, earliestOutcomeDate).minOrNull()
+                ?: earliestVersionDate
+
+            val rangeStart = if (startDate != null) maxOf(startDate, habitOriginDate) else habitOriginDate
+            val rangeEnd = endDate ?: today
+
+            val evaluatedWeeks = mutableSetOf<LocalDate>()
+            var d = rangeStart
+            while (!d.isAfter(rangeEnd)) {
+                // Rule 3: Future dates (local_date > referenceToday) are ALWAYS excluded from numerator and denominator.
+                if (d.isAfter(today)) {
+                    d = d.plusDays(1)
+                    continue
+                }
+
+                val eff = getEffectiveHabitVersion(hId, d)
+                    ?: versions.minWithOrNull(compareBy<HabitVersion> { it.effectiveFromLocalDate }.thenBy { it.createdAtUtcMs })
+                if (eff == null) {
+                    d = d.plusDays(1)
+                    continue
+                }
+
+                val dStr = d.toString()
+                val dayEntries = entries.filter { it.localDate == dStr }
+                val dayOutcome = outcomes.find { it.localDate == dStr }
+                val dayException = exceptions.find { it.localDate == dStr }
+
+                if (eff.targetPeriod == TargetPeriod.DAY) {
+                    val (dayState, dayBand) = StreakAndGroveEngine.evaluateDayRecordState(
+                        version = eff,
+                        date = d,
+                        dayEntries = dayEntries,
+                        dayOutcome = dayOutcome,
+                        dayException = dayException
+                    )
+
+                    // Aggregated D-040 progress band per (habit_id, local_date) for TargetPeriod.DAY
+                    val hasPositiveDayActivity = dayOutcome != null || dayEntries.any { it.valueUnits > 0 }
+                    if (hasPositiveDayActivity && dayBand != ProgressBand.ZERO) {
+                        dailyProgressBandCounts[dayBand] = (dailyProgressBandCounts[dayBand] ?: 0) + 1
+                        if (eff.trackingMode.canonical() in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION)) {
+                            when (dayBand) {
+                                ProgressBand.TINY_STEP, ProgressBand.GETTING_STARTED -> tinyCount++
+                                ProgressBand.HALFWAY, ProgressBand.ALMOST_THERE, ProgressBand.GOAL_MET -> usualCount++
+                                ProgressBand.EXTRA, ProgressBand.HUGE -> extraCount++
+                                ProgressBand.ZERO -> {}
+                            }
+                        }
+                    }
+
+                    // Daily Scheduled Opportunities evaluation
+                    val hasRestDay = dayException?.exceptionKind == HabitDateExceptionKind.REST_DAY
+                    val isScheduledDay = when (eff.scheduleKind) {
+                        ScheduleKind.DAILY -> true
+                        ScheduleKind.SELECTED_WEEKDAYS ->
+                            WeekdayMask.contains(eff.scheduledWeekdaysMask ?: WeekdayMask.ALL_DAYS_MASK, d.dayOfWeek)
+                        ScheduleKind.FLEXIBLE_WEEKLY_TARGET ->
+                            WeekdayMask.contains(eff.preferredWeekdaysMask ?: WeekdayMask.ALL_DAYS_MASK, d.dayOfWeek)
+                    }
+                    if (eff.lifecycleState == HabitLifecycleState.ACTIVE && !hasRestDay && isScheduledDay) {
+                        val targetMet = when (eff.trackingMode.canonical()) {
+                            TrackingMode.QUANTITY, TrackingMode.DURATION ->
+                                dayBand in setOf(ProgressBand.GOAL_MET, ProgressBand.EXTRA, ProgressBand.HUGE)
+                            TrackingMode.COMPLETION_ONLY, TrackingMode.EFFORT_AWARE, TrackingMode.EFFORT_LEVELS ->
+                                dayState == DayRecordState.GOAL_MET_OR_EXCEEDED || dayState == DayRecordState.PARTIAL_PROGRESS
+                        }
+                        if (d.isBefore(today)) {
+                            // Rule 1: local_date < referenceToday -> count in denominator whether met or missed
+                            scheduledDailyOpportunitiesCount++
+                            if (targetMet) {
+                                habitDaysMetCount++
+                                uniqueHabitsCompletedSet.add(hId)
+                            }
+                        } else if (d.isEqual(today)) {
+                            // Rule 2: local_date == referenceToday -> count in numerator & denominator ONLY if met
+                            if (targetMet) {
+                                scheduledDailyOpportunitiesCount++
+                                habitDaysMetCount++
+                                uniqueHabitsCompletedSet.add(hId)
+                            }
+                        }
+                    }
+                }
+
+                // Track candidate weeks for TargetPeriod.WEEK evaluation
+                if (!WeekBoundaryHelper.isNeutralTransitionDate(d, _weekStartHistory.value)) {
+                    val wsDay = getWeekStartDay(d)
+                    val (weekStart, _) = WeekBoundaryHelper.weekBounds(d, wsDay)
+                    evaluatedWeeks.add(weekStart)
+                }
+
+                d = d.plusDays(1)
+            }
+
+            // Evaluate Weekly Opportunities and Aggregated Weekly D-040 Progress Bands for TargetPeriod.WEEK
+            for (weekStart in evaluatedWeeks.sorted()) {
+                if (weekStart.isAfter(today)) continue
+                val weekEnd = weekStart.plusDays(6)
+                val evalDateForWeek = if (weekEnd.isAfter(today)) today else weekEnd
+                val fallbackVersion = getEffectiveHabitVersion(hId, evalDateForWeek)
+                    ?: versions.minWithOrNull(compareBy<HabitVersion> { it.effectiveFromLocalDate }.thenBy { it.createdAtUtcMs })
+                    ?: continue
+                val weekSnapshot = StreakAndGroveEngine.computeWeeklyProgressSnapshot(
+                    versions = versions,
+                    entries = entries,
+                    outcomes = outcomes,
+                    weekStartHistory = _weekStartHistory.value,
+                    evaluationDate = evalDateForWeek,
+                    fallbackVersion = fallbackVersion
+                )
+                val frozenVersion = weekSnapshot.frozenWeekVersion
+                if (frozenVersion.targetPeriod != TargetPeriod.WEEK) continue
+                if (frozenVersion.lifecycleState != HabitLifecycleState.ACTIVE) continue
+
+                val weekBand = weekSnapshot.weekProgressBand
+                if (weekSnapshot.weekTotalUnits > BigInteger.ZERO && weekBand != ProgressBand.ZERO) {
+                    weeklyProgressBandCounts[weekBand] = (weeklyProgressBandCounts[weekBand] ?: 0) + 1
+                    if (frozenVersion.trackingMode.canonical() in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION)) {
+                        when (weekBand) {
+                            ProgressBand.TINY_STEP, ProgressBand.GETTING_STARTED -> tinyCount++
+                            ProgressBand.HALFWAY, ProgressBand.ALMOST_THERE, ProgressBand.GOAL_MET -> usualCount++
+                            ProgressBand.EXTRA, ProgressBand.HUGE -> extraCount++
+                            ProgressBand.ZERO -> {}
+                        }
+                    }
+                }
+
+                val weekMet = weekSnapshot.weekTotalUnits >= weekSnapshot.weekTargetUnits
+                val isWeekStillOpen = !weekEnd.isBefore(today)
+                if (weekMet) {
+                    flexibleWeeklyOpportunitiesMetCount++
+                    flexibleWeeklyOpportunitiesTotalCount++
+                    uniqueHabitsCompletedSet.add(hId)
+                } else if (isWeekStillOpen) {
+                    flexibleWeeklyInProgressCount++
+                } else {
+                    flexibleWeeklyOpportunitiesTotalCount++
+                }
+            }
+        }
+
+        // Past 7 days (including today under Daily Scheduled Opportunity rules) for compact period indicator
         var pastWeekOpportunities = 0
         var pastWeekCompletions = 0
         for (i in 0..6) {
             val d = today.minusDays(i.toLong())
             for (h in _habits.value) {
                 val eff = getEffectiveHabitVersion(h.habitId, d)
-                if (eff != null && eff.lifecycleState == HabitLifecycleState.ACTIVE) {
+                if (eff != null && eff.lifecycleState == HabitLifecycleState.ACTIVE && eff.targetPeriod == TargetPeriod.DAY) {
+                    val hasRest = getExceptionForHabitOnDate(h.habitId, d)?.exceptionKind == HabitDateExceptionKind.REST_DAY
                     val isSched = when (eff.scheduleKind) {
                         ScheduleKind.DAILY -> true
                         ScheduleKind.SELECTED_WEEKDAYS -> WeekdayMask.contains(eff.scheduledWeekdaysMask ?: WeekdayMask.ALL_DAYS_MASK, d.dayOfWeek)
                         ScheduleKind.FLEXIBLE_WEEKLY_TARGET -> WeekdayMask.contains(eff.preferredWeekdaysMask ?: WeekdayMask.ALL_DAYS_MASK, d.dayOfWeek)
                     }
-                    if (isSched) {
-                        pastWeekOpportunities++
-                        if (hasQualifyingActivityOnDate(h.habitId, d)) {
+                    if (isSched && !hasRest) {
+                        val dStr = d.toString()
+                        val dayEntries = _habitEntries.value.filter { it.habitId == h.habitId && it.localDate == dStr }
+                        val dayOutcome = _habitDayOutcomes.value.find { it.habitId == h.habitId && it.localDate == dStr }
+                        val (dayState, dayBand) = StreakAndGroveEngine.evaluateDayRecordState(eff, d, dayEntries, dayOutcome, null)
+                        val met = when (eff.trackingMode.canonical()) {
+                            TrackingMode.QUANTITY, TrackingMode.DURATION ->
+                                dayBand in setOf(ProgressBand.GOAL_MET, ProgressBand.EXTRA, ProgressBand.HUGE)
+                            else -> dayState == DayRecordState.GOAL_MET_OR_EXCEEDED || dayState == DayRecordState.PARTIAL_PROGRESS
+                        }
+                        if (d.isBefore(today)) {
+                            pastWeekOpportunities++
+                            if (met) pastWeekCompletions++
+                        } else if (d.isEqual(today) && met) {
+                            pastWeekOpportunities++
                             pastWeekCompletions++
                         }
                     }
@@ -2888,21 +3125,49 @@ class DayseedRepository(
         val growingTrees = runs.count { it.treeState == GroveTreeState.GROWING_TREE }
         val dormantTrees = runs.count { it.treeState == GroveTreeState.DORMANT_TREE }
 
-        _growthMetrics.value = GrowthMetrics(
-            totalActiveDates = activeDates.size,
-            totalHabitsCompleted = completedCount,
+        val totalMetCombined = habitDaysMetCount + flexibleWeeklyOpportunitiesMetCount
+
+        return GrowthMetrics(
+            totalActiveDates = habitActiveDates.size,
+            habitActiveDatesCount = habitActiveDates.size,
+            journalActiveDatesCount = journalActiveDates.size,
+            totalHabitsCompleted = totalMetCombined,
+            habitDaysMetCount = habitDaysMetCount,
+            scheduledDailyOpportunitiesCount = scheduledDailyOpportunitiesCount,
+            uniqueHabitsCompletedCount = uniqueHabitsCompletedSet.size,
+            numericDurationSessionsCount = numericDurationSessionsCount,
+            completionOutcomesCount = completionOutcomesCount,
+            flexibleWeeklyOpportunitiesMetCount = flexibleWeeklyOpportunitiesMetCount,
+            flexibleWeeklyOpportunitiesTotalCount = flexibleWeeklyOpportunitiesTotalCount,
+            flexibleWeeklyInProgressCount = flexibleWeeklyInProgressCount,
             tinyCount = tinyCount,
             usualCount = usualCount,
             extraCount = extraCount,
-            plannedRestCount = _habitDateExceptions.value.size,
-            journalEntriesCount = _journalEntries.value.size,
+            plannedRestCount = plannedRestInPeriod,
+            journalEntriesCount = journalEntriesInPeriod,
             currentPeriodCompletions = pastWeekCompletions,
             currentPeriodOpportunities = pastWeekOpportunities,
             currentMonthDurationMinutes = currentMonthDurationMinutes,
+            currentMonthDurationPositiveSessionsCount = currentMonthDurationPositiveSessionsCount,
+            currentMonthDurationZeroSessionsCount = currentMonthDurationZeroSessionsCount,
+            currentMonthDurationDatesMinutes = currentMonthDurationDatesMinutes,
+            currentMonthDurationDateSessionCounts = currentMonthDurationDateSessionCounts,
             currentMonthDateSessionCounts = currentMonthDateSessionCounts,
+            currentMonthUnsupportedDurationUnits = currentMonthUnsupportedDurationUnits,
+            dailyProgressBandCounts = dailyProgressBandCounts,
+            weeklyProgressBandCounts = weeklyProgressBandCounts,
+            legacyEffortCounts = legacyEffortCounts,
             activeSaplingsCount = activeSaplings,
             growingTreesCount = growingTrees,
             dormantTreesCount = dormantTrees
+        )
+    }
+
+    private fun computeGrowthMetricsSync() {
+        _growthMetrics.value = computeGrowthMetricsForPeriodSync(
+            startDate = null,
+            endDate = null,
+            referenceToday = clock.todayLocal()
         )
     }
 
@@ -2992,6 +3257,86 @@ class DayseedRepository(
         _journalDrafts.value = list
     }
 
+    var onAfterDraftSavePreparedHook: ((draftId: String, preparedEntryId: String) -> Unit)? = null
+    var injectedJournalSaveFailure: (() -> Throwable?)? = null
+    private val recentlyPromotedDraftEntryIds = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    private fun readJournalDraftFromDb(db: SQLiteDatabase, draftId: String): JournalDraft? {
+        db.query(
+            DayseedDatabaseHelper.TABLE_JOURNAL_DRAFTS,
+            null,
+            "draft_id = ?",
+            arrayOf(draftId),
+            null,
+            null,
+            null
+        ).use { c ->
+            if (!c.moveToFirst()) return null
+            val idIdx = c.getColumnIndexOrThrow("draft_id")
+            val dIdx = c.getColumnIndexOrThrow("local_date")
+            val tIdx = c.getColumnIndexOrThrow("title")
+            val bIdx = c.getColumnIndexOrThrow("body")
+            val pmIdx = c.getColumnIndexOrThrow("primary_mood_code")
+            val smIdx = c.getColumnIndexOrThrow("secondary_mood_code")
+            val prIdx = c.getColumnIndexOrThrow("prompt_id")
+            val lhIdx = c.getColumnIndexOrThrow("linked_habit_id")
+            val intIdx = c.getColumnIndexOrThrow("intended_journal_entry_id")
+            val srcIdx = c.getColumnIndexOrThrow("source_context")
+            val crIdx = c.getColumnIndexOrThrow("created_at_utc_ms")
+            val upIdx = c.getColumnIndexOrThrow("updated_at_utc_ms")
+            return JournalDraft(
+                draftId = c.getString(idIdx),
+                localDate = LocalDateValidator.requireValid(c.getString(dIdx), "local_date"),
+                title = if (c.isNull(tIdx)) null else c.getString(tIdx),
+                body = c.getString(bIdx),
+                primaryMoodCode = if (c.isNull(pmIdx)) null else c.getString(pmIdx),
+                secondaryMoodCode = if (c.isNull(smIdx)) null else c.getString(smIdx),
+                promptId = if (c.isNull(prIdx)) null else c.getString(prIdx),
+                linkedHabitId = if (c.isNull(lhIdx)) null else c.getString(lhIdx),
+                intendedJournalEntryId = if (c.isNull(intIdx)) null else c.getString(intIdx),
+                sourceContext = c.getString(srcIdx),
+                createdAtUtcMs = c.getLong(crIdx),
+                updatedAtUtcMs = c.getLong(upIdx)
+            )
+        }
+    }
+
+    private fun readJournalEntryFromDb(db: SQLiteDatabase, journalEntryId: String): JournalEntry? {
+        db.query(
+            DayseedDatabaseHelper.TABLE_JOURNAL_ENTRIES,
+            null,
+            "journal_entry_id = ?",
+            arrayOf(journalEntryId),
+            null,
+            null,
+            null
+        ).use { c ->
+            if (!c.moveToFirst()) return null
+            val idIdx = c.getColumnIndexOrThrow("journal_entry_id")
+            val dIdx = c.getColumnIndexOrThrow("local_date")
+            val bIdx = c.getColumnIndexOrThrow("body")
+            val tIdx = c.getColumnIndexOrThrow("title")
+            val pmIdx = c.getColumnIndexOrThrow("primary_mood_code")
+            val smIdx = c.getColumnIndexOrThrow("secondary_mood_code")
+            val prIdx = c.getColumnIndexOrThrow("prompt_id")
+            val lhIdx = c.getColumnIndexOrThrow("linked_habit_id")
+            val crIdx = c.getColumnIndexOrThrow("created_at_utc_ms")
+            val upIdx = c.getColumnIndexOrThrow("updated_at_utc_ms")
+            return JournalEntry(
+                journalEntryId = c.getString(idIdx),
+                localDate = LocalDateValidator.requireValid(c.getString(dIdx), "local_date"),
+                body = c.getString(bIdx),
+                title = if (c.isNull(tIdx)) null else c.getString(tIdx),
+                primaryMoodCode = if (c.isNull(pmIdx)) null else c.getString(pmIdx),
+                secondaryMoodCode = if (c.isNull(smIdx)) null else c.getString(smIdx),
+                promptId = if (c.isNull(prIdx)) null else c.getString(prIdx),
+                linkedHabitId = if (c.isNull(lhIdx)) null else c.getString(lhIdx),
+                createdAtUtcMs = c.getLong(crIdx),
+                updatedAtUtcMs = c.getLong(upIdx)
+            )
+        }
+    }
+
     fun saveJournalDraftSync(
         draftId: String = "active_draft_${clock.todayLocal()}",
         localDate: LocalDate = clock.todayLocal(),
@@ -3005,7 +3350,10 @@ class DayseedRepository(
     ): JournalDraft {
         val db = dbHelper.writableDatabase
         val nowMs = clock.nowUtcMs()
-        val existing = _journalDrafts.value.find { it.draftId == draftId }
+        val existing = readJournalDraftFromDb(db, draftId)
+        if (existing == null) {
+            recentlyPromotedDraftEntryIds.remove(draftId)
+        }
         val createdAt = existing?.createdAtUtcMs ?: nowMs
         val dateStr = LocalDateValidator.requireValid(localDate.toString(), "local_date")
 
@@ -3039,42 +3387,97 @@ class DayseedRepository(
         return _journalDrafts.value.first { it.draftId == draftId }
     }
 
-    fun promoteDraftToJournalEntrySync(draftId: String): JournalEntry? {
-        val db = dbHelper.writableDatabase
-        val draft = _journalDrafts.value.find { it.draftId == draftId } ?: return null
-        if (draft.body.isBlank()) return null
+    /**
+     * Phase 1 of race-free Journal draft promotion (Review 2 Major Finding 2):
+     * Inside `db.beginTransactionNonExclusive()` (via [withImmediateTransaction]), queries SQLite
+     * for [draftId]. If `intended_journal_entry_id` is still null, assigns a new UUID with a
+     * conditional `WHERE draft_id = ? AND intended_journal_entry_id IS NULL` update and commits
+     * durably so concurrent callers or retries always converge on the exact same ID.
+     */
+    fun prepareDraftForSaveSync(draftId: String): String? {
+        return withImmediateTransaction {
+            val db = dbHelper.writableDatabase
+            val currentDraft = readJournalDraftFromDb(db, draftId) ?: return@withImmediateTransaction null
+            if (currentDraft.body.isBlank()) return@withImmediateTransaction null
 
-        val nowMs = clock.nowUtcMs()
-        val intendedId = draft.intendedJournalEntryId ?: UUID.randomUUID().toString()
-
-        if (draft.intendedJournalEntryId == null) {
-            val prepCv = ContentValues().apply {
-                put("intended_journal_entry_id", intendedId)
-                put("updated_at_utc_ms", nowMs)
+            val candidateId = currentDraft.intendedJournalEntryId?.takeIf { it.isNotBlank() }
+                ?: UUID.randomUUID().toString()
+            if (currentDraft.intendedJournalEntryId.isNullOrBlank()) {
+                val nowMs = clock.nowUtcMs()
+                db.execSQL(
+                    """
+                    UPDATE ${DayseedDatabaseHelper.TABLE_JOURNAL_DRAFTS}
+                    SET intended_journal_entry_id = COALESCE(intended_journal_entry_id, ?),
+                        updated_at_utc_ms = ?
+                    WHERE draft_id = ? AND intended_journal_entry_id IS NULL
+                    """.trimIndent(),
+                    arrayOf<Any>(candidateId, nowMs, draftId)
+                )
             }
-            db.update(
-                DayseedDatabaseHelper.TABLE_JOURNAL_DRAFTS,
-                prepCv,
-                "draft_id = ?",
-                arrayOf(draftId)
-            )
+            val refreshed = readJournalDraftFromDb(db, draftId)
+            loadJournalDraftsSync(db)
+            refreshed?.intendedJournalEntryId
         }
+    }
 
-        db.beginTransaction()
-        try {
+    /**
+     * Two-phase race-free draft promotion (D-191, Review 1 Amendment 1, Review 2 Major Finding 2):
+     * 1. Phase 1 ([prepareDraftForSaveSync]) durably persists `intended_journal_entry_id` on the
+     *    `journal_drafts` row before Phase 2 starts.
+     * 2. Phase 2 runs inside `db.beginTransactionNonExclusive()` ([withImmediateTransaction]):
+     *    - Re-reads the draft directly from SQLite.
+     *    - Checks whether `journal_entries` already has `WHERE journal_entry_id = ?`.
+     *    - If it already exists, does NOT overwrite or replace it; removes the residual source
+     *      draft row and cursor setting if still present and returns the existing saved entry.
+     *    - Otherwise verifies the SQLite draft is still present, non-blank, and matches the
+     *      prepared `intended_journal_entry_id`, inserts with `CONFLICT_ABORT`, and deletes only
+     *      the exact `draft_id` and its `journal_draft_cursor_<draftId>` setting atomically.
+     */
+    fun promoteDraftToJournalEntrySync(draftId: String): JournalEntry? {
+        val preparedId = prepareDraftForSaveSync(draftId)
+        if (preparedId != null) {
+            onAfterDraftSavePreparedHook?.invoke(draftId, preparedId)
+        }
+        injectedJournalSaveFailure?.invoke()?.let { throw it }
+
+        val promotedEntry = withImmediateTransaction {
+            val db = dbHelper.writableDatabase
+            val sqlDraft = readJournalDraftFromDb(db, draftId)
+            val targetEntryId = sqlDraft?.intendedJournalEntryId?.takeIf { it.isNotBlank() }
+                ?: preparedId
+                ?: recentlyPromotedDraftEntryIds[draftId]
+                ?: return@withImmediateTransaction null
+
+            val existingEntry = readJournalEntryFromDb(db, targetEntryId)
+            if (existingEntry != null) {
+                db.delete(DayseedDatabaseHelper.TABLE_JOURNAL_DRAFTS, "draft_id = ?", arrayOf(draftId))
+                db.delete(
+                    DayseedDatabaseHelper.TABLE_APP_SETTINGS,
+                    "setting_key = ?",
+                    arrayOf("journal_draft_cursor_$draftId")
+                )
+                recentlyPromotedDraftEntryIds[draftId] = targetEntryId
+                return@withImmediateTransaction existingEntry
+            }
+
+            if (sqlDraft == null || sqlDraft.body.isBlank() || sqlDraft.intendedJournalEntryId != targetEntryId) {
+                return@withImmediateTransaction null
+            }
+
+            val nowMs = clock.nowUtcMs()
             val jCv = ContentValues().apply {
-                put("journal_entry_id", intendedId)
-                put("local_date", draft.localDate)
-                put("body", draft.body.trim())
-                if (!draft.title.isNullOrBlank()) put("title", draft.title.trim()) else putNull("title")
-                if (draft.primaryMoodCode != null) put("primary_mood_code", draft.primaryMoodCode) else putNull("primary_mood_code")
-                if (draft.secondaryMoodCode != null && draft.secondaryMoodCode != draft.primaryMoodCode) {
-                    put("secondary_mood_code", draft.secondaryMoodCode)
+                put("journal_entry_id", targetEntryId)
+                put("local_date", sqlDraft.localDate)
+                put("body", sqlDraft.body.trim())
+                if (!sqlDraft.title.isNullOrBlank()) put("title", sqlDraft.title.trim()) else putNull("title")
+                if (sqlDraft.primaryMoodCode != null) put("primary_mood_code", sqlDraft.primaryMoodCode) else putNull("primary_mood_code")
+                if (sqlDraft.secondaryMoodCode != null && sqlDraft.secondaryMoodCode != sqlDraft.primaryMoodCode) {
+                    put("secondary_mood_code", sqlDraft.secondaryMoodCode)
                 } else {
                     putNull("secondary_mood_code")
                 }
-                if (!draft.promptId.isNullOrBlank()) put("prompt_id", draft.promptId) else putNull("prompt_id")
-                if (!draft.linkedHabitId.isNullOrBlank()) put("linked_habit_id", draft.linkedHabitId) else putNull("linked_habit_id")
+                if (!sqlDraft.promptId.isNullOrBlank()) put("prompt_id", sqlDraft.promptId) else putNull("prompt_id")
+                if (!sqlDraft.linkedHabitId.isNullOrBlank()) put("linked_habit_id", sqlDraft.linkedHabitId) else putNull("linked_habit_id")
                 put("created_at_utc_ms", nowMs)
                 put("updated_at_utc_ms", nowMs)
             }
@@ -3082,24 +3485,77 @@ class DayseedRepository(
                 DayseedDatabaseHelper.TABLE_JOURNAL_ENTRIES,
                 null,
                 jCv,
-                SQLiteDatabase.CONFLICT_REPLACE
+                SQLiteDatabase.CONFLICT_ABORT
             )
             db.delete(DayseedDatabaseHelper.TABLE_JOURNAL_DRAFTS, "draft_id = ?", arrayOf(draftId))
+            db.delete(
+                DayseedDatabaseHelper.TABLE_APP_SETTINGS,
+                "setting_key = ?",
+                arrayOf("journal_draft_cursor_$draftId")
+            )
+            recentlyPromotedDraftEntryIds[draftId] = targetEntryId
+            readJournalEntryFromDb(db, targetEntryId)
+        } ?: return null
+
+        recordObservedClockSync()
+        refreshAllSync()
+        return _journalEntries.value.find { it.journalEntryId == promotedEntry.journalEntryId } ?: promotedEntry
+    }
+
+    fun deleteJournalDraftSync(draftId: String): Boolean {
+        val db = dbHelper.writableDatabase
+        var deletedRows = 0
+        db.beginTransactionNonExclusive()
+        try {
+            deletedRows = db.delete(
+                DayseedDatabaseHelper.TABLE_JOURNAL_DRAFTS,
+                "draft_id = ?",
+                arrayOf(draftId)
+            )
+            db.delete(
+                DayseedDatabaseHelper.TABLE_APP_SETTINGS,
+                "setting_key = ?",
+                arrayOf("journal_draft_cursor_$draftId")
+            )
             db.setTransactionSuccessful()
         } finally {
             db.endTransaction()
         }
-
-        recordObservedClockSync()
+        recentlyPromotedDraftEntryIds.remove(draftId)
         refreshAllSync()
-        return _journalEntries.value.find { it.journalEntryId == intendedId }
+        return deletedRows > 0
     }
 
-    fun saveJournalEntrySync(entry: JournalEntry): JournalEntry {
+    suspend fun deleteJournalDraft(draftId: String): Boolean = withContext(Dispatchers.IO) {
+        deleteJournalDraftSync(draftId)
+    }
+
+    fun saveJournalDraftCursorSync(draftId: String, selectionStart: Int, selectionEnd: Int) {
+        if (draftId.isBlank()) return
+        val clampedStart = selectionStart.coerceAtLeast(0)
+        val clampedEnd = selectionEnd.coerceAtLeast(0)
+        setSettingSync("journal_draft_cursor_$draftId", "STRING", "$clampedStart:$clampedEnd")
+    }
+
+    fun getJournalDraftCursorSync(draftId: String): Pair<Int, Int>? {
+        if (draftId.isBlank()) return null
+        val raw = _appSettings.value["journal_draft_cursor_$draftId"]?.valueText ?: return null
+        val parts = raw.split(":")
+        if (parts.size != 2) return null
+        val s = parts[0].toIntOrNull() ?: return null
+        val e = parts[1].toIntOrNull() ?: return null
+        if (s < 0 || e < 0) return null
+        return s to e
+    }
+
+    fun saveJournalEntrySync(entry: JournalEntry, sourceDraftIdToRemove: String? = null): JournalEntry {
+        injectedJournalSaveFailure?.invoke()?.let { throw it }
+        require(entry.body.isNotBlank()) { "Journal entry body cannot be blank." }
         val db = dbHelper.writableDatabase
         val nowMs = clock.nowUtcMs()
         val dateStr = LocalDateValidator.requireValid(entry.localDate, "local_date")
-        val existing = _journalEntries.value.find { it.journalEntryId == entry.journalEntryId }
+        val existing = readJournalEntryFromDb(db, entry.journalEntryId)
+            ?: _journalEntries.value.find { it.journalEntryId == entry.journalEntryId }
         val createdAt = existing?.createdAtUtcMs ?: entry.createdAtUtcMs.takeIf { it > 0 } ?: nowMs
         val validSecondary = if (entry.primaryMoodCode != null && entry.secondaryMoodCode != entry.primaryMoodCode) {
             entry.secondaryMoodCode
@@ -3107,8 +3563,7 @@ class DayseedRepository(
             null
         }
 
-        db.beginTransaction()
-        try {
+        withImmediateTransaction {
             val cv = ContentValues().apply {
                 put("journal_entry_id", entry.journalEntryId)
                 put("local_date", dateStr)
@@ -3121,20 +3576,33 @@ class DayseedRepository(
                 put("created_at_utc_ms", createdAt)
                 put("updated_at_utc_ms", maxOf(createdAt, nowMs))
             }
-            db.insertWithOnConflict(
-                DayseedDatabaseHelper.TABLE_JOURNAL_ENTRIES,
-                null,
-                cv,
-                SQLiteDatabase.CONFLICT_REPLACE
-            )
-            db.delete(
-                DayseedDatabaseHelper.TABLE_JOURNAL_DRAFTS,
-                "local_date = ? AND source_context = 'JOURNAL_COMPOSER'",
-                arrayOf(dateStr)
-            )
-            db.setTransactionSuccessful()
-        } finally {
-            db.endTransaction()
+            if (existing != null) {
+                db.update(
+                    DayseedDatabaseHelper.TABLE_JOURNAL_ENTRIES,
+                    cv,
+                    "journal_entry_id = ?",
+                    arrayOf(entry.journalEntryId)
+                )
+            } else {
+                db.insertWithOnConflict(
+                    DayseedDatabaseHelper.TABLE_JOURNAL_ENTRIES,
+                    null,
+                    cv,
+                    SQLiteDatabase.CONFLICT_ABORT
+                )
+            }
+            if (!sourceDraftIdToRemove.isNullOrBlank()) {
+                db.delete(
+                    DayseedDatabaseHelper.TABLE_JOURNAL_DRAFTS,
+                    "draft_id = ?",
+                    arrayOf(sourceDraftIdToRemove)
+                )
+                db.delete(
+                    DayseedDatabaseHelper.TABLE_APP_SETTINGS,
+                    "setting_key = ?",
+                    arrayOf("journal_draft_cursor_$sourceDraftIdToRemove")
+                )
+            }
         }
 
         recordObservedClockSync()
@@ -3227,9 +3695,11 @@ class DayseedRepository(
         val matchingEntries = if (selectedMoodFilter.isNullOrBlank()) {
             currentEntries
         } else {
-            currentEntries.filter {
-                it.primaryMoodCode.equals(selectedMoodFilter, ignoreCase = true) ||
-                    it.secondaryMoodCode.equals(selectedMoodFilter, ignoreCase = true)
+            val targetMood = MoodCatalog.findByCode(selectedMoodFilter)?.code ?: selectedMoodFilter
+            currentEntries.filter { entry ->
+                val primaryCode = MoodCatalog.findByCode(entry.primaryMoodCode)?.code ?: entry.primaryMoodCode
+                primaryCode.equals(targetMood, ignoreCase = true) ||
+                    entry.primaryMoodCode.equals(selectedMoodFilter, ignoreCase = true)
             }
         }
 
@@ -3946,6 +4416,7 @@ class DayseedRepository(
 
         root.put("app_settings", JSONArray().apply {
             for (s in _appSettings.value.values) {
+                if (s.settingKey.startsWith("journal_draft_cursor_")) continue
                 put(appSettingToJson(s))
             }
         })
@@ -4229,6 +4700,8 @@ class DayseedRepository(
         val settingsArr = root.optJSONArray("app_settings") ?: JSONArray()
         for (i in 0 until settingsArr.length()) {
             val o = settingsArr.getJSONObject(i)
+            val sKey = o.optString("setting_key", "")
+            if (sKey.startsWith("journal_draft_cursor_")) continue
             db.insertWithOnConflict(
                 DayseedDatabaseHelper.TABLE_APP_SETTINGS,
                 null,
@@ -4638,6 +5111,7 @@ class DayseedRepository(
         for (i in 0 until settingsArr.length()) {
             val o = settingsArr.getJSONObject(i)
             val sKey = o.getString("setting_key")
+            if (sKey.startsWith("journal_draft_cursor_")) continue
             val existing = _appSettings.value[sKey]
             if (existing == null) {
                 db.insertWithOnConflict(
@@ -5665,4 +6139,611 @@ class DayseedRepository(
         put("schema_version", s.schemaVersion)
         put("updated_at_utc_ms", s.updatedAtUtcMs)
     }
+
+    // =========================================================================
+    // PHASE 3: HISTORICAL VISIBILITY, HONEST CALENDAR STATES, COLLECTED MOMENTS,
+    //          DAY DETAIL & WEEKLY BOARD (D-029..D-034, D-040, D-188..D-193, D-218)
+    // =========================================================================
+
+    /**
+     * Returns all habits that were relevant on [date]:
+     * - Effective version on [date] exists (even if currently PAUSED, COMPLETED, or ARCHIVED today), OR
+     * - Has any recorded entry, outcome, date note, or exception on [date].
+     */
+    fun getHabitsRelevantForDate(date: LocalDate): List<Pair<Habit, HabitVersion>> {
+        val dateStr = date.toString()
+        val result = mutableListOf<Pair<Habit, HabitVersion>>()
+        for (h in _habits.value) {
+            val hId = h.habitId
+            val eff = getEffectiveHabitVersion(hId, date)
+            val hasRecordOnDate = _habitEntries.value.any { it.habitId == hId && it.localDate == dateStr } ||
+                _habitDayOutcomes.value.any { it.habitId == hId && it.localDate == dateStr } ||
+                _habitDateNotes.value.any { it.habitId == hId && it.localDate == dateStr } ||
+                _habitDateExceptions.value.any { it.habitId == hId && it.localDate == dateStr }
+            if (eff != null) {
+                if (eff.lifecycleState != HabitLifecycleState.ARCHIVED || hasRecordOnDate) {
+                    result.add(h to eff)
+                }
+            } else if (hasRecordOnDate) {
+                val fallback = _habitVersions.value.filter { it.habitId == hId }
+                    .minWithOrNull(compareBy<HabitVersion> { it.effectiveFromLocalDate }.thenBy { it.createdAtUtcMs })
+                if (fallback != null) {
+                    result.add(h to fallback)
+                }
+            }
+        }
+        return result.sortedWith(compareBy<Pair<Habit, HabitVersion>> { it.second.sortOrder }.thenBy { it.first.habitId })
+    }
+
+    /**
+     * Returns all habits that had an effective version or recorded activity on at least one date in [startDate..endDate].
+     * Preserves historical visibility for habits that were ACTIVE during the inspected range even if later paused/completed/archived.
+     */
+    fun getHabitsRelevantForDateRange(startDate: LocalDate, endDate: LocalDate): List<Habit> {
+        val startStr = startDate.toString()
+        val endStr = endDate.toString()
+        return _habits.value.filter { h ->
+            val hId = h.habitId
+            val versions = _habitVersions.value.filter { it.habitId == hId }
+            val hadVersionByEnd = versions.any { it.effectiveFromLocalDate <= endStr }
+            val hasActivityInRange = _habitEntries.value.any { it.habitId == hId && it.localDate in startStr..endStr } ||
+                _habitDayOutcomes.value.any { it.habitId == hId && it.localDate in startStr..endStr } ||
+                _habitDateNotes.value.any { it.habitId == hId && it.localDate in startStr..endStr } ||
+                _habitDateExceptions.value.any { it.habitId == hId && it.localDate in startStr..endStr }
+            if (!hadVersionByEnd && !hasActivityInRange) {
+                false
+            } else {
+                // Check if active on at least one day in range or has recorded data in range or was paused in range
+                var d = startDate
+                var relevant = hasActivityInRange
+                while (!d.isAfter(endDate) && !relevant) {
+                    val eff = getEffectiveHabitVersion(hId, d)
+                    if (eff != null && eff.lifecycleState != HabitLifecycleState.ARCHIVED) {
+                        relevant = true
+                    }
+                    d = d.plusDays(1)
+                }
+                relevant
+            }
+        }.sortedWith(compareBy<Habit> { it.sortOrder }.thenBy { it.habitId })
+    }
+
+    /**
+     * Evaluates the 10-state [HonestCalendarDateState] for [habitId] on [date] anchored at [referenceToday].
+     * Uses `HabitVersion.targetPeriod` (`DAY` vs `WEEK`) as the sole authoritative rule for daily vs weekly target
+     * evaluation and `scheduleKind` for date eligibility and preferred-day guidance.
+     */
+    fun evaluateHonestCalendarDateState(
+        habitId: String,
+        date: LocalDate,
+        referenceToday: LocalDate = clock.todayLocal()
+    ): HonestCalendarDateState {
+        if (date.isAfter(referenceToday)) {
+            return HonestCalendarDateState.FUTURE_DATE
+        }
+
+        val versions = _habitVersions.value
+            .filter { it.habitId == habitId }
+            .sortedWith(compareBy<HabitVersion> { it.effectiveFromLocalDate }.thenBy { it.createdAtUtcMs })
+        val effOnDate = getEffectiveHabitVersion(habitId, date)
+            ?: return HonestCalendarDateState.UNSCHEDULED_DATE
+
+        val entriesOnDate = getEntriesForHabitOnDate(habitId, date)
+        val outcomeOnDate = getOutcomeForHabitOnDate(habitId, date)
+        val exceptionOnDate = getExceptionForHabitOnDate(habitId, date)
+
+        if (exceptionOnDate?.exceptionKind == HabitDateExceptionKind.REST_DAY &&
+            entriesOnDate.isEmpty() && outcomeOnDate == null
+        ) {
+            return HonestCalendarDateState.REST_DAY_PLANNED_PAUSE
+        }
+
+        val pauseRanges = derivePauseRanges(versions)
+        if ((effOnDate.lifecycleState == HabitLifecycleState.PAUSED || pauseRanges.any { it.contains(date) }) &&
+            entriesOnDate.isEmpty() && outcomeOnDate == null
+        ) {
+            return HonestCalendarDateState.PAUSED_DATE_RANGE
+        }
+
+        if (effOnDate.lifecycleState != HabitLifecycleState.ACTIVE &&
+            entriesOnDate.isEmpty() && outcomeOnDate == null
+        ) {
+            return HonestCalendarDateState.UNSCHEDULED_DATE
+        }
+
+        val firstHabitDate = versions.firstOrNull()?.let {
+            runCatching { LocalDateValidator.parseStrict(it.effectiveFromLocalDate) }.getOrNull()
+        } ?: date
+        val weekStartDay = getWeekStartDay(date)
+        val (weekStartDate, weekEndDate) = WeekBoundaryHelper.weekBounds(date, weekStartDay)
+        val frozenWeekVersion = StreakAndGroveEngine.resolveFrozenWeekVersion(
+            sortedVersions = versions,
+            weekStart = weekStartDate,
+            firstHabitDate = firstHabitDate,
+            fallbackDate = date,
+            fallbackVersion = effOnDate
+        ) ?: effOnDate
+
+        val evalVersion = if (frozenWeekVersion.targetPeriod == TargetPeriod.WEEK || effOnDate.targetPeriod == TargetPeriod.WEEK) {
+            frozenWeekVersion
+        } else {
+            effOnDate
+        }
+
+        // Check recorded activity on `date`
+        val (dayRecordState, dayProgressBand) = StreakAndGroveEngine.evaluateDayRecordState(
+            version = evalVersion,
+            date = date,
+            dayEntries = entriesOnDate,
+            dayOutcome = outcomeOnDate,
+            dayException = exceptionOnDate
+        )
+
+        when (dayRecordState) {
+            DayRecordState.EXPLICIT_ZERO -> return HonestCalendarDateState.EXPLICIT_ZERO_NOT_DONE
+            DayRecordState.PARTIAL_PROGRESS -> return HonestCalendarDateState.PARTIAL_OR_TINY_PROGRESS
+            DayRecordState.GOAL_MET_OR_EXCEEDED -> {
+                val mode = evalVersion.trackingMode.canonical()
+                if ((mode == TrackingMode.EFFORT_AWARE || mode == TrackingMode.EFFORT_LEVELS) &&
+                    outcomeOnDate?.effortLevel == "TINY"
+                ) {
+                    return HonestCalendarDateState.PARTIAL_OR_TINY_PROGRESS
+                }
+                return HonestCalendarDateState.COMPLETED_TARGET_MET
+            }
+            DayRecordState.REST_DAY_EXCEPTION -> return HonestCalendarDateState.REST_DAY_PLANNED_PAUSE
+            DayRecordState.PAUSED_LIFECYCLE -> return HonestCalendarDateState.PAUSED_DATE_RANGE
+            DayRecordState.NO_RECORD -> {}
+        }
+
+        // Neutral transition gap check for weekly habits
+        if (evalVersion.targetPeriod == TargetPeriod.WEEK &&
+            WeekBoundaryHelper.isNeutralTransitionDate(date, _weekStartHistory.value)
+        ) {
+            return HonestCalendarDateState.NEUTRAL_TRANSITION_GAP
+        }
+
+        // Evaluate unlogged date by authoritative targetPeriod (`DAY` vs `WEEK`) and scheduleKind
+        return if (evalVersion.targetPeriod == TargetPeriod.WEEK) {
+            val evalEndForWeek = if (weekEndDate.isAfter(referenceToday)) referenceToday else weekEndDate
+            val weekSnapshot = StreakAndGroveEngine.computeWeeklyProgressSnapshot(
+                versions = versions,
+                entries = _habitEntries.value.filter { it.habitId == habitId },
+                outcomes = _habitDayOutcomes.value.filter { it.habitId == habitId },
+                weekStartHistory = _weekStartHistory.value,
+                evaluationDate = evalEndForWeek,
+                fallbackVersion = evalVersion
+            )
+            val weekSatisfied = weekSnapshot.weekTotalUnits >= weekSnapshot.weekTargetUnits
+            when {
+                weekSatisfied -> HonestCalendarDateState.COMPLETED_TARGET_MET
+                !weekEndDate.isBefore(referenceToday) -> HonestCalendarDateState.FLEXIBLE_WEEKLY_IN_PROGRESS
+                else -> HonestCalendarDateState.MISSED_SCHEDULED_DATE
+            }
+        } else {
+            val isScheduled = when (evalVersion.scheduleKind) {
+                ScheduleKind.DAILY -> true
+                ScheduleKind.SELECTED_WEEKDAYS -> {
+                    val mask = evalVersion.scheduledWeekdaysMask ?: WeekdayMask.ALL_DAYS_MASK
+                    WeekdayMask.contains(mask, date.dayOfWeek)
+                }
+                ScheduleKind.FLEXIBLE_WEEKLY_TARGET -> {
+                    val prefMask = evalVersion.preferredWeekdaysMask
+                    prefMask == null || prefMask == 0 || WeekdayMask.contains(prefMask, date.dayOfWeek)
+                }
+            }
+            if (!isScheduled) {
+                HonestCalendarDateState.UNSCHEDULED_DATE
+            } else if (date.isBefore(referenceToday)) {
+                HonestCalendarDateState.MISSED_SCHEDULED_DATE
+            } else {
+                // Open today: not missed while today is still open
+                HonestCalendarDateState.UNSCHEDULED_DATE
+            }
+        }
+    }
+
+    /**
+     * Computes the Collected Moments (`G3`) monthly detail model for [yearMonth], strictly including
+     * `DURATION` habit entries with supported duration units (`DurationNormalizer.toMinutes`) and
+     * distinguishing explicit `0`-value sessions from positive duration sessions.
+     */
+    fun computeCollectedMomentsMonthDetail(yearMonth: YearMonth): CollectedMomentsMonthDetail {
+        val habitsById = _habits.value.associateBy { it.habitId }
+        var monthTotalMinutes = 0L
+        var monthPositiveSessions = 0
+        var monthZeroSessions = 0
+        val unsupportedUnits = mutableSetOf<String>()
+        val sessionsByDate = mutableMapOf<LocalDate, MutableList<CollectedMomentsSessionItem>>()
+
+        for (entry in _habitEntries.value) {
+            val d = try { LocalDateValidator.parseStrict(entry.localDate) } catch (_: Exception) { continue }
+            if (YearMonth.from(d) != yearMonth) continue
+
+            val eff = getEffectiveHabitVersion(entry.habitId, d)
+                ?: _habitVersions.value.filter { it.habitId == entry.habitId }
+                    .minWithOrNull(compareBy<HabitVersion> { it.effectiveFromLocalDate }.thenBy { it.createdAtUtcMs })
+                ?: continue
+            if (eff.trackingMode.canonical() != TrackingMode.DURATION) continue
+
+            val unitCode = eff.unitCode ?: "min"
+            val mins = DurationNormalizer.toMinutes(entry.valueUnits, unitCode)
+            if (mins == null) {
+                unsupportedUnits.add(unitCode)
+                continue
+            }
+
+            val isZero = entry.valueUnits == 0
+            if (isZero) {
+                monthZeroSessions++
+            } else if (entry.valueUnits > 0) {
+                monthTotalMinutes += mins
+                monthPositiveSessions++
+            }
+
+            val habit = habitsById[entry.habitId]
+            val item = CollectedMomentsSessionItem(
+                entryId = entry.entryId,
+                habitId = entry.habitId,
+                habitName = eff.name.ifBlank { habit?.name ?: "Habit" },
+                habitColorHex = eff.colorHex,
+                localDate = d,
+                rawValueUnits = entry.valueUnits,
+                unitCode = unitCode,
+                normalizedMinutes = if (isZero) 0L else mins,
+                entryNote = entry.entryNote,
+                isExplicitZero = isZero
+            )
+            sessionsByDate.getOrPut(d) { mutableListOf() }.add(item)
+        }
+
+        val dateSummaries = sessionsByDate.entries
+            .sortedByDescending { it.key }
+            .associate { (date, list) ->
+                val sortedList = list.sortedBy { it.habitName }
+                val posCount = sortedList.count { !it.isExplicitZero }
+                val zeroCount = sortedList.count { it.isExplicitZero }
+                val dateMins = sortedList.filter { !it.isExplicitZero }.sumOf { it.normalizedMinutes }
+                date to CollectedMomentsDateSummary(
+                    date = date,
+                    totalMinutes = dateMins,
+                    positiveSessionsCount = posCount,
+                    explicitZeroSessionsCount = zeroCount,
+                    sessions = sortedList
+                )
+            }
+
+        return CollectedMomentsMonthDetail(
+            yearMonth = yearMonth,
+            totalMinutes = monthTotalMinutes,
+            positiveSessionsCount = monthPositiveSessions,
+            explicitZeroSessionsCount = monthZeroSessions,
+            dateSummaries = dateSummaries,
+            unsupportedUnitCodes = unsupportedUnits
+        )
+    }
+
+    /**
+     * Computes the unified [DayDetailSummary] for [date] combining mood, saved Journal entries,
+     * unsaved drafts, historical/active habits, honest date states, session notes, and Collected Moments.
+     */
+    fun computeDayDetailSummary(
+        date: LocalDate,
+        referenceToday: LocalDate = clock.todayLocal()
+    ): DayDetailSummary {
+        val dateStr = date.toString()
+        val isFuture = date.isAfter(referenceToday)
+        val isToday = date.isEqual(referenceToday)
+        val isGap = WeekBoundaryHelper.isNeutralTransitionDate(date, _weekStartHistory.value)
+
+        val journalsOnDate = _journalEntries.value
+            .filter { it.localDate == dateStr }
+            .sortedByDescending { it.createdAtUtcMs }
+        val draftsOnDate = _journalDrafts.value
+            .filter { it.localDate == dateStr }
+            .sortedByDescending { it.updatedAtUtcMs }
+
+        val latestMoodEntry = journalsOnDate.firstOrNull { !it.primaryMoodCode.isNullOrBlank() }
+        val primaryMood = MoodCatalog.findByCode(latestMoodEntry?.primaryMoodCode)
+        val secondaryMood = MoodCatalog.findByCode(latestMoodEntry?.secondaryMoodCode)
+
+        val relevantHabits = getHabitsRelevantForDate(date)
+        val habitItems = relevantHabits.map { (habit, effVersion) ->
+            val hId = habit.habitId
+            val entries = getEntriesForHabitOnDate(hId, date)
+            val outcomes = _habitDayOutcomes.value.filter { it.habitId == hId && it.localDate == dateStr }
+            val notes = _habitDateNotes.value.filter { it.habitId == hId && it.localDate == dateStr }
+            val restEx = getExceptionForHabitOnDate(hId, date)
+            val honestState = evaluateHonestCalendarDateState(hId, date, referenceToday)
+
+            val versions = _habitVersions.value.filter { it.habitId == hId }
+            val governingVersion = getGoverningHabitVersion(hId, date) ?: effVersion
+            val (dayRecordState, dayProgressBand) = StreakAndGroveEngine.evaluateDayRecordState(
+                version = governingVersion,
+                date = date,
+                dayEntries = entries,
+                dayOutcome = outcomes.firstOrNull(),
+                dayException = restEx
+            )
+            val totalUnits = when (governingVersion.trackingMode.canonical()) {
+                TrackingMode.QUANTITY, TrackingMode.DURATION ->
+                    StreakAndGroveEngine.countDailyUnitsOrSessionsForWeek(governingVersion, entries)
+                TrackingMode.COMPLETION_ONLY ->
+                    if (outcomes.any { it.outcomeKind == "COMPLETED" }) BigInteger.ONE else BigInteger.ZERO
+                TrackingMode.EFFORT_AWARE, TrackingMode.EFFORT_LEVELS ->
+                    if (outcomes.isNotEmpty()) BigInteger.ONE else BigInteger.ZERO
+            }
+            val targetUnits = BigInteger.valueOf((governingVersion.targetValue ?: 1).coerceAtLeast(1).toLong())
+            val pct = when (governingVersion.trackingMode.canonical()) {
+                TrackingMode.QUANTITY, TrackingMode.DURATION ->
+                    ProgressBandClassifier.percentageFloor(totalUnits, targetUnits)
+                TrackingMode.COMPLETION_ONLY ->
+                    if (outcomes.any { it.outcomeKind == "COMPLETED" }) 100 else 0
+                TrackingMode.EFFORT_AWARE, TrackingMode.EFFORT_LEVELS ->
+                    when (outcomes.firstOrNull()?.effortLevel) {
+                        "TINY" -> 20
+                        "EXTRA" -> 125
+                        "USUAL" -> 100
+                        else -> if (outcomes.isNotEmpty()) 100 else 0
+                    }
+            }
+
+            val weekSummary = if (governingVersion.targetPeriod == TargetPeriod.WEEK && !isFuture) {
+                val snap = StreakAndGroveEngine.computeWeeklyProgressSnapshot(
+                    versions = versions,
+                    entries = _habitEntries.value.filter { it.habitId == hId },
+                    outcomes = _habitDayOutcomes.value.filter { it.habitId == hId },
+                    weekStartHistory = _weekStartHistory.value,
+                    evaluationDate = date,
+                    fallbackVersion = governingVersion
+                )
+                val unitLabel = when (governingVersion.trackingMode.canonical()) {
+                    TrackingMode.QUANTITY, TrackingMode.DURATION ->
+                        governingVersion.unitCode?.ifBlank { "units" } ?: "units"
+                    else -> "days"
+                }
+                "Week total: ${snap.weekTotalUnits}/${snap.weekTargetUnits} $unitLabel (${snap.weekProgressBand.displayName})"
+            } else {
+                null
+            }
+
+            DayDetailHabitItem(
+                habit = habit,
+                effectiveVersion = governingVersion,
+                honestState = honestState,
+                dayRecordState = dayRecordState,
+                compactBucket = ProgressBandClassifier.toCompactBucket(dayProgressBand),
+                progressBand = dayProgressBand,
+                totalUnits = totalUnits,
+                targetUnits = targetUnits,
+                percentage = pct,
+                entries = entries,
+                outcomes = outcomes,
+                dateNotes = notes,
+                restDayException = restEx,
+                weekProgressSummary = weekSummary
+            )
+        }
+
+        val monthDetail = computeCollectedMomentsMonthDetail(YearMonth.from(date))
+        val collectedSummary = monthDetail.dateSummaries[date]
+
+        return DayDetailSummary(
+            date = date,
+            isFutureDate = isFuture,
+            isToday = isToday,
+            isNeutralTransitionGap = isGap,
+            primaryMood = primaryMood,
+            secondaryMood = secondaryMood,
+            journalEntries = journalsOnDate,
+            unsavedDrafts = draftsOnDate,
+            habitItems = habitItems,
+            collectedMomentsSummary = collectedSummary
+        )
+    }
+
+    /**
+     * Computes the 7-column [WeeklyBoardModel] for the week containing [referenceDateInWeek],
+     * respecting historical `week_start_history` (`U-10`), frozen start-of-week versions (`U-12`),
+     * historical habit visibility, and authoritative `targetPeriod` (`DAY` vs `WEEK`) rules.
+     */
+    fun computeWeeklyBoard(
+        referenceDateInWeek: LocalDate,
+        filterHabitId: String? = null,
+        referenceToday: LocalDate = clock.todayLocal()
+    ): WeeklyBoardModel {
+        val weekStartDay = getWeekStartDay(referenceDateInWeek)
+        val (weekStart, weekEnd) = WeekBoundaryHelper.weekBounds(referenceDateInWeek, weekStartDay)
+        val days = (0..6).map { weekStart.plusDays(it.toLong()) }
+
+        val candidateHabits = getHabitsRelevantForDateRange(weekStart, weekEnd)
+            .let { list -> if (filterHabitId != null) list.filter { it.habitId == filterHabitId } else list }
+
+        val rows = candidateHabits.mapNotNull { habit ->
+            val hId = habit.habitId
+            val versions = _habitVersions.value
+                .filter { it.habitId == hId }
+                .sortedWith(compareBy<HabitVersion> { it.effectiveFromLocalDate }.thenBy { it.createdAtUtcMs })
+            if (versions.isEmpty()) return@mapNotNull null
+
+            val firstHabitDate = versions.firstOrNull()?.let {
+                runCatching { LocalDateValidator.parseStrict(it.effectiveFromLocalDate) }.getOrNull()
+            } ?: weekStart
+            val evalAnchor = if (weekEnd.isAfter(referenceToday)) referenceToday else weekEnd
+            val fallbackV = getEffectiveHabitVersion(hId, evalAnchor)
+                ?: versions.last()
+            val frozenVersion = StreakAndGroveEngine.resolveFrozenWeekVersion(
+                sortedVersions = versions,
+                weekStart = weekStart,
+                firstHabitDate = firstHabitDate,
+                fallbackDate = evalAnchor,
+                fallbackVersion = fallbackV
+            ) ?: fallbackV
+
+            val entriesForHabit = _habitEntries.value.filter { it.habitId == hId }
+            val outcomesForHabit = _habitDayOutcomes.value.filter { it.habitId == hId }
+            val notesForHabit = _habitDateNotes.value.filter { it.habitId == hId }
+
+            val cells = days.map { day ->
+                val dStr = day.toString()
+                val dayEntries = entriesForHabit.filter { it.localDate == dStr }
+                val dayOutcome = outcomesForHabit.find { it.localDate == dStr }
+                val dayException = getExceptionForHabitOnDate(hId, day)
+                val honestState = evaluateHonestCalendarDateState(hId, day, referenceToday)
+                val (_, dayBand) = StreakAndGroveEngine.evaluateDayRecordState(
+                    version = frozenVersion,
+                    date = day,
+                    dayEntries = dayEntries,
+                    dayOutcome = dayOutcome,
+                    dayException = dayException
+                )
+                val dayUnits = when (frozenVersion.trackingMode.canonical()) {
+                    TrackingMode.QUANTITY, TrackingMode.DURATION ->
+                        StreakAndGroveEngine.countDailyUnitsOrSessionsForWeek(frozenVersion, dayEntries)
+                    TrackingMode.COMPLETION_ONLY ->
+                        if (dayOutcome?.outcomeKind == "COMPLETED") BigInteger.ONE else BigInteger.ZERO
+                    TrackingMode.EFFORT_AWARE, TrackingMode.EFFORT_LEVELS ->
+                        if (dayOutcome != null) BigInteger.ONE else BigInteger.ZERO
+                }
+                val isPref = when (frozenVersion.scheduleKind) {
+                    ScheduleKind.DAILY -> true
+                    ScheduleKind.SELECTED_WEEKDAYS ->
+                        WeekdayMask.contains(frozenVersion.scheduledWeekdaysMask ?: WeekdayMask.ALL_DAYS_MASK, day.dayOfWeek)
+                    ScheduleKind.FLEXIBLE_WEEKLY_TARGET -> {
+                        val pm = frozenVersion.preferredWeekdaysMask
+                        pm != null && pm > 0 && WeekdayMask.contains(pm, day.dayOfWeek)
+                    }
+                }
+                val hasNote = dayEntries.any { !it.entryNote.isNullOrBlank() } ||
+                    notesForHabit.any { it.localDate == dStr && it.body.isNotBlank() }
+
+                val cellLabel = when (honestState) {
+                    HonestCalendarDateState.COMPLETED_TARGET_MET -> {
+                        if (frozenVersion.trackingMode.canonical() in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION) && dayUnits > BigInteger.ZERO) {
+                            dayUnits.toString()
+                        } else {
+                            "✓"
+                        }
+                    }
+                    HonestCalendarDateState.PARTIAL_OR_TINY_PROGRESS -> {
+                        if (frozenVersion.trackingMode.canonical() in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION) && dayUnits > BigInteger.ZERO) {
+                            dayUnits.toString()
+                        } else {
+                            "◐"
+                        }
+                    }
+                    else -> honestState.nonColorIndicator
+                }
+
+                WeeklyBoardCell(
+                    date = day,
+                    honestState = honestState,
+                    compactBucket = ProgressBandClassifier.toCompactBucket(dayBand),
+                    progressBand = dayBand,
+                    totalUnits = dayUnits,
+                    isPreferredWeekday = isPref,
+                    hasSessionNote = hasNote,
+                    cellLabel = cellLabel
+                )
+            }
+
+            if (frozenVersion.targetPeriod == TargetPeriod.WEEK) {
+                val snap = StreakAndGroveEngine.computeWeeklyProgressSnapshot(
+                    versions = versions,
+                    entries = entriesForHabit,
+                    outcomes = outcomesForHabit,
+                    weekStartHistory = _weekStartHistory.value,
+                    evaluationDate = evalAnchor,
+                    fallbackVersion = frozenVersion
+                )
+                val met = snap.weekTotalUnits >= snap.weekTargetUnits
+                val status = when {
+                    frozenVersion.lifecycleState == HabitLifecycleState.PAUSED -> WeeklyPeriodStatus.PAUSED
+                    frozenVersion.lifecycleState != HabitLifecycleState.ACTIVE -> WeeklyPeriodStatus.INACTIVE
+                    met -> WeeklyPeriodStatus.MET
+                    !weekEnd.isBefore(referenceToday) -> WeeklyPeriodStatus.IN_PROGRESS
+                    else -> WeeklyPeriodStatus.MISSED
+                }
+                val unitText = when (frozenVersion.trackingMode.canonical()) {
+                    TrackingMode.QUANTITY, TrackingMode.DURATION ->
+                        frozenVersion.unitCode?.ifBlank { "units" } ?: "units"
+                    else -> "days"
+                }
+                WeeklyBoardHabitRow(
+                    habit = habit,
+                    effectiveVersion = frozenVersion,
+                    cells = cells,
+                    weekTotalUnits = snap.weekTotalUnits,
+                    weekTargetUnits = snap.weekTargetUnits,
+                    weekPercentage = snap.weekPercentage,
+                    weekProgressBand = snap.weekProgressBand,
+                    periodStatus = status,
+                    summaryText = "${snap.weekTotalUnits}/${snap.weekTargetUnits} $unitText • ${status.label}"
+                )
+            } else {
+                // Daily-target habit row summary across the 7 days of the week
+                val scheduledCells = cells.filter { c ->
+                    !c.date.isAfter(referenceToday) &&
+                        c.honestState !in setOf(
+                            HonestCalendarDateState.UNSCHEDULED_DATE,
+                            HonestCalendarDateState.PAUSED_DATE_RANGE,
+                            HonestCalendarDateState.REST_DAY_PLANNED_PAUSE,
+                            HonestCalendarDateState.FUTURE_DATE,
+                            HonestCalendarDateState.NEUTRAL_TRANSITION_GAP
+                        ) || (c.date.isEqual(referenceToday) && c.honestState == HonestCalendarDateState.COMPLETED_TARGET_MET)
+                }
+                val metDays = cells.count { !it.date.isAfter(referenceToday) && it.honestState == HonestCalendarDateState.COMPLETED_TARGET_MET }
+                val schedCount = maxOf(scheduledCells.size, metDays)
+                val totalBi = BigInteger.valueOf(metDays.toLong())
+                val targetBi = BigInteger.valueOf(schedCount.coerceAtLeast(1).toLong())
+                val band = if (schedCount == 0) ProgressBand.ZERO else ProgressBandClassifier.classify(totalBi, targetBi)
+                val pct = if (schedCount == 0) 0 else ProgressBandClassifier.percentageFloor(totalBi, targetBi)
+                val isWeekOpen = !weekEnd.isBefore(referenceToday)
+                val status = when {
+                    frozenVersion.lifecycleState == HabitLifecycleState.PAUSED -> WeeklyPeriodStatus.PAUSED
+                    frozenVersion.lifecycleState != HabitLifecycleState.ACTIVE -> WeeklyPeriodStatus.INACTIVE
+                    schedCount > 0 && metDays >= schedCount -> WeeklyPeriodStatus.MET
+                    isWeekOpen -> WeeklyPeriodStatus.IN_PROGRESS
+                    else -> WeeklyPeriodStatus.MISSED
+                }
+                WeeklyBoardHabitRow(
+                    habit = habit,
+                    effectiveVersion = frozenVersion,
+                    cells = cells,
+                    weekTotalUnits = totalBi,
+                    weekTargetUnits = targetBi,
+                    weekPercentage = pct,
+                    weekProgressBand = band,
+                    periodStatus = status,
+                    summaryText = "$metDays/$schedCount days met • ${status.label}"
+                )
+            }
+        }
+
+        val journalCountsByDate = mutableMapOf<LocalDate, Int>()
+        val primaryMoodByDate = mutableMapOf<LocalDate, MoodOption>()
+        for (day in days) {
+            val dStr = day.toString()
+            val dayJournals = _journalEntries.value.filter { it.localDate == dStr }
+            if (dayJournals.isNotEmpty()) {
+                journalCountsByDate[day] = dayJournals.size
+                val moodEntry = dayJournals.maxByOrNull { it.createdAtUtcMs }
+                val moodOpt = MoodCatalog.findByCode(moodEntry?.primaryMoodCode)
+                if (moodOpt != null) {
+                    primaryMoodByDate[day] = moodOpt
+                }
+            }
+        }
+
+        return WeeklyBoardModel(
+            weekStartDate = weekStart,
+            weekEndDate = weekEnd,
+            weekStartDayOfWeek = weekStartDay,
+            days = days,
+            rows = rows,
+            journalCountsByDate = journalCountsByDate,
+            primaryMoodByDate = primaryMoodByDate
+        )
+    }
 }
+

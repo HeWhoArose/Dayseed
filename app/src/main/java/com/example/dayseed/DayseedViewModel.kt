@@ -82,6 +82,12 @@ sealed class SecondaryRoute(
         override val originTab: NavTab,
         override val parentRoute: SecondaryRoute? = null
     ) : SecondaryRoute(originTab, parentRoute)
+
+    data class DayDetail(
+        val date: LocalDate,
+        override val originTab: NavTab,
+        override val parentRoute: SecondaryRoute? = null
+    ) : SecondaryRoute(originTab, parentRoute)
 }
 
 class DayseedViewModel @JvmOverloads constructor(
@@ -161,6 +167,9 @@ class DayseedViewModel @JvmOverloads constructor(
     val lastErrorMessage: StateFlow<String?>
         get() = lastSaveError
 
+    private val _lastJournalSaveError = MutableStateFlow<String?>(null)
+    val lastJournalSaveError: StateFlow<String?> = _lastJournalSaveError.asStateFlow()
+
     // Compatibility & Dialog States
     private val _editingHabit = MutableStateFlow<Habit?>(null)
     val editingHabit: StateFlow<Habit?> = _editingHabit.asStateFlow()
@@ -173,6 +182,9 @@ class DayseedViewModel @JvmOverloads constructor(
 
     private val _editingJournalEntry = MutableStateFlow<JournalEntry?>(null)
     val editingJournalEntry: StateFlow<JournalEntry?> = _editingJournalEntry.asStateFlow()
+
+    private val _editingJournalDraftId = MutableStateFlow<String?>(null)
+    val editingJournalDraftId: StateFlow<String?> = _editingJournalDraftId.asStateFlow()
 
     private val _journalEditorDate = MutableStateFlow(repository.clock.todayLocal())
     val journalEditorDate: StateFlow<LocalDate> = _journalEditorDate.asStateFlow()
@@ -327,6 +339,41 @@ class DayseedViewModel @JvmOverloads constructor(
         )
     }
 
+    fun selectCollectedMomentsMonth(
+        yearMonth: YearMonth,
+        selectedDate: LocalDate? = null
+    ) {
+        if (selectedDate != null) {
+            _selectedHistoryDate.value = selectedDate
+        }
+        val top = _currentSecondaryRoute.value
+        if (top is SecondaryRoute.CollectedMomentsDetail) {
+            val updatedTop = top.copy(yearMonth = yearMonth, selectedDate = selectedDate)
+            _secondaryRouteStack.value = _secondaryRouteStack.value.dropLast(1) + updatedTop
+            _currentSecondaryRoute.value = updatedTop
+        } else {
+            openCollectedMomentsDetail(yearMonth, selectedDate)
+        }
+    }
+
+    fun openDayDetail(date: LocalDate = _selectedHistoryDate.value) {
+        _selectedHistoryDate.value = date
+        val top = _currentSecondaryRoute.value
+        if (top is SecondaryRoute.DayDetail) {
+            val updatedTop = top.copy(date = date)
+            _secondaryRouteStack.value = _secondaryRouteStack.value.dropLast(1) + updatedTop
+            _currentSecondaryRoute.value = updatedTop
+        } else {
+            pushSecondaryRoute(
+                SecondaryRoute.DayDetail(
+                    date = date,
+                    originTab = _selectedTab.value,
+                    parentRoute = top
+                )
+            )
+        }
+    }
+
     /**
      * Handles both system Back and top-bar Back consistently (§4.3):
      * 1. Closes open Journal Editor dialog if active.
@@ -383,6 +430,10 @@ class DayseedViewModel @JvmOverloads constructor(
                     }
                     _selectedTab.value = newTop.originTab
                 }
+                is SecondaryRoute.DayDetail -> {
+                    _selectedHistoryDate.value = newTop.date
+                    _selectedTab.value = newTop.originTab
+                }
                 null -> {
                     _selectedTab.value = popped.originTab
                 }
@@ -420,6 +471,10 @@ class DayseedViewModel @JvmOverloads constructor(
         val top = _currentSecondaryRoute.value
         if (top is SecondaryRoute.HabitDetail) {
             val updatedTop = top.copy(selectedDate = date)
+            _secondaryRouteStack.value = _secondaryRouteStack.value.dropLast(1) + updatedTop
+            _currentSecondaryRoute.value = updatedTop
+        } else if (top is SecondaryRoute.DayDetail) {
+            val updatedTop = top.copy(date = date)
             _secondaryRouteStack.value = _secondaryRouteStack.value.dropLast(1) + updatedTop
             _currentSecondaryRoute.value = updatedTop
         }
@@ -461,6 +516,10 @@ class DayseedViewModel @JvmOverloads constructor(
 
     fun clearSaveError() {
         _lastSaveError.value = null
+    }
+
+    fun clearJournalSaveError() {
+        _lastJournalSaveError.value = null
     }
 
     // =========================================================================
@@ -762,9 +821,12 @@ class DayseedViewModel @JvmOverloads constructor(
         entry: JournalEntry? = null,
         forDate: LocalDate = repository.clock.todayLocal(),
         linkedHabitId: String? = null,
-        promptId: String? = null
+        promptId: String? = null,
+        draftId: String? = null
     ) {
+        _lastJournalSaveError.value = null
         _editingJournalEntry.value = entry
+        _editingJournalDraftId.value = draftId
         _journalEditorDate.value = entry?.date ?: forDate
         _journalInitialLinkedHabitId.value = entry?.linkedHabitId ?: linkedHabitId
         _journalInitialPromptId.value = entry?.promptId ?: promptId
@@ -772,26 +834,58 @@ class DayseedViewModel @JvmOverloads constructor(
     }
 
     fun closeJournalEditor() {
+        _lastJournalSaveError.value = null
         _editingJournalEntry.value = null
+        _editingJournalDraftId.value = null
         _journalInitialLinkedHabitId.value = null
         _journalInitialPromptId.value = null
         _isJournalEditorOpen.value = false
     }
 
-    fun saveJournalEntry(entry: JournalEntry) {
-        viewModelScope.launch {
-            repository.saveJournalEntry(entry)
+    fun saveJournalEntry(entry: JournalEntry, sourceDraftId: String? = null): Boolean {
+        _lastJournalSaveError.value = null
+        return try {
+            if (!sourceDraftId.isNullOrBlank() && _editingJournalEntry.value == null) {
+                val promoted = repository.promoteDraftToJournalEntrySync(sourceDraftId)
+                    ?: repository.saveJournalEntrySync(entry, sourceDraftIdToRemove = sourceDraftId)
+                // If date/title/mood/body were modified right on Save, ensure the saved entry matches `entry`
+                if (promoted.localDate != entry.localDate ||
+                    promoted.body != entry.body.trim() ||
+                    promoted.title != entry.title?.trim()?.takeIf { it.isNotEmpty() } ||
+                    promoted.primaryMoodCode != entry.primaryMoodCode ||
+                    promoted.secondaryMoodCode != entry.secondaryMoodCode ||
+                    promoted.linkedHabitId != entry.linkedHabitId
+                ) {
+                    repository.saveJournalEntrySync(
+                        entry.copy(
+                            journalEntryId = promoted.journalEntryId,
+                            createdAtUtcMs = promoted.createdAtUtcMs
+                        )
+                    )
+                }
+            } else {
+                repository.saveJournalEntrySync(entry, sourceDraftIdToRemove = sourceDraftId)
+            }
             closeJournalEditor()
             _userMessage.value = "Daily reflection saved ✍️"
+            true
+        } catch (e: Throwable) {
+            val msg = e.message ?: "Unable to save journal entry. Your draft is safely preserved."
+            _lastJournalSaveError.value = msg
+            false
         }
     }
 
+    fun discardJournalDraft(draftId: String) {
+        repository.deleteJournalDraftSync(draftId)
+        closeJournalEditor()
+        _userMessage.value = "Draft discarded"
+    }
+
     fun deleteJournalEntry(id: String) {
-        viewModelScope.launch {
-            repository.deleteJournalEntry(id)
-            closeJournalEditor()
-            _userMessage.value = "Reflection deleted"
-        }
+        repository.deleteJournalEntrySync(id)
+        closeJournalEditor()
+        _userMessage.value = "Reflection deleted"
     }
 
     fun setThemeMode(mode: ThemeModeOption) {

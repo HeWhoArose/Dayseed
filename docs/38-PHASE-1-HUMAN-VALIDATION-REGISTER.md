@@ -514,3 +514,87 @@ Added 2026-11-05 (and extended through D-231 on 2026-11-08) for the reminder/bac
 **Procedure:** Configure two active habits with distinct reminders on the same date (e.g. habit A at 09:00, habit B at 18:00), both global reminders enabled and `POST_NOTIFICATIONS` granted; let each alarm fire at its own time within its inexact window; inspect notifications received and the ledger for each occurrence. Separately, with (a) app notifications disabled in system settings and (b) the `dayseed_reminders` channel blocked at `IMPORTANCE_NONE`, fire a reminder alarm.
 **Expected:** (1) habit A delivers at 09:00, habit B delivers at 18:00 — the earlier habit's alarm must never reserve habit B's slot or consume the shared cap on its behalf (ledger row for habit B is absent before its own alarm); both occurrences reach real `DELIVERED`. (2)(a)(b) with the app or channel blocked: no notification is posted, no `DELIVERED` row is created, and the ledger shows `SUPPRESSED`/`NOTIFICATIONS_BLOCKED` with zero cap consumption — device display honesty holds even when the app is blocked.
 **Dependencies:** Physical device; debug build; system settings access to disable app notifications and block the `dayseed_reminders` channel.
+
+---
+
+## 10. Phase 3 human-intervention cases (2026-11-08, Status: `NOT RUN`)
+
+All Phase 3 human/device validation cases below (`P3-H01` through `P3-H09`) are prepared for the consolidated human/device validation session after Stage B implementation is complete. None of these cases have been executed during Stage B (`NOT RUN`).
+
+### P3-H01 — Journal archive (`A2`), collapsible date-jump calendar, search, mood filter, and scroll-position recovery
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Open the dedicated `Journal` bottom-navigation destination.
+  2. Create multiple entries across several dates (including two entries on the same date, one body-only entry, and entries with primary and secondary moods).
+  3. Expand the collapsible date-jump month calendar (`journal_toggle_calendar_button`), navigate to an earlier month, and tap a date to filter the archive.
+  4. Search by title and body keywords, filter by a primary mood chip, tap `Clear search & filters`, and open/edit an entry from mid-list.
+- **Expected:** The `Journal` destination opens directly into the `A2` archive without a nested `Daily Log` tab; date-jump, search, and mood filters narrow entries accurately; clearing filters restores the timeline; returning from editing preserves archive scroll position.
+
+### P3-H02 — Unsaved draft persistence, cursor-position restoration, and draft-to-entry save across process death
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Open `JournalEditorDialog` for a date, type a multi-sentence reflection, place the text cursor in the middle of the first sentence, and close/force-stop the app without tapping `Save Entry`.
+  2. Relaunch Dayseed and reopen the draft from `Today` or the `Journal` archive.
+  3. Tap `Save Entry`, then test editing an already-saved entry and cancelling with unsaved edits.
+- **Expected:** The unsaved draft is clearly badged as `Draft`, never appears in saved search results, and restores both text and cursor position after relaunch. Saving promotes the draft atomically to a saved `JournalEntry` and removes the draft; cancelling an edit on a saved entry prompts before discarding unsaved changes.
+
+### P3-H03 — Shared Calendar and `Day Detail` inspection across active, paused, completed, and archived habits
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. In `Insights → 2. Habits`, switch to `Month Calendar` and navigate across current and historical months (> 30 days ago) under both `All habits` and single-habit filters.
+  2. Inspect dates with completed, partial, explicit `0`, `REST_DAY`, paused, unscheduled, missed, and flexible-weekly-in-progress states, plus mood and multi-entry Journal markers (`✍️2`).
+  3. Tap a date cell to open `DayDetailScreen`, inspect historical habits that were later paused or archived, tap a habit session to edit in `RecordSession`, and press system Back.
+- **Expected:** Historical habits remain visible on dates where they were active or had records; one completed habit never paints the entire date green in `All habits` mode; `DayDetailScreen` displays all habit records, notes, moods, and Journal entries for that date and restores the exact parent calendar context on Back.
+
+### P3-H04 — 7-column Weekly Habit Board across Monday, Sunday, and Saturday week starts
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. In `Insights → 2. Habits`, select `Weekly Board`.
+  2. Inspect rows for daily-target habits (`TargetPeriod.DAY`) and weekly-target habits (`TargetPeriod.WEEK`: `Quantity`, `Duration`, `days/week`, and `sessions/week`).
+  3. Change the week-start day in `Settings` and inspect the Weekly Board column headers and week range boundaries.
+- **Expected:** Columns follow the effective week-start preference; daily habits show daily status and scheduled days met; weekly habits show per-day contributions without false daily failures and evaluate the weekly target once against the frozen start-of-week version (showing `Week in Progress` for the current incomplete week and `Target Met` with neutral remaining days once satisfied early).
+
+### P3-H05 — Growth Mark `G2` (`Collected moments`) and `G3` (`CollectedMomentsDetailSheet`) on device
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Inspect the `Collected moments` (`G2`) card on `Today` and in `Insights → 4. Growth` across an empty month, a zero-only duration month, and a month with `min` and `hr` duration sessions.
+  2. Tap the card to open `CollectedMomentsDetailSheet` (`G3`), navigate between months, select a date, and tap a duration session to edit or delete it in `RecordSession` (testing the 8-second Undo snackbar).
+- **Expected:** `G2` and `G3` display normalized duration totals (`45 min`, `1 hr 30 min`, etc.) from `DURATION` habits only, distinguish explicit `0` duration check-ins from empty dates, and immediately recalculate date and month totals after session edit/delete/Undo.
+
+### P3-H06 — `Insights` 4-section hierarchy (`Overview`, `Habits`, `Mood`, `Growth`), separated metrics, and Mood Insights comparison
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Open `Insights` and switch through `1. Overview`, `2. Habits`, `3. Mood`, and `4. Growth`, testing period filters (`This Week`, `This Month`, `All Time`).
+  2. In `1. Overview`, verify that logging a Journal-only day increases `Journal Reflections` without increasing `Habit-Active Dates`, and verify that future dates in `This Week` / `This Month` never count as missed daily opportunities.
+  3. In `2. Habits`, inspect the separated Daily (`TargetPeriod.DAY`) and Weekly (`TargetPeriod.WEEK`) `D-040` progress-band distributions.
+  4. In `3. Mood`, toggle `This Week` / `This Month`, enable `Compare with previous period`, and tap a primary mood filter chip to inspect matching Journal entries.
+- **Expected:** Each metric states its exact unit, numerator, and denominator; `D-040` bands reflect aggregated habit-day and habit-week totals rather than raw session rows; Mood Insights counts and filters by primary mood only while keeping secondary moods visible on entry cards.
+
+### P3-H07 — Small-screen (`320dp–360dp`) and `200%` font-scale layout across `Journal`, `SharedMonthCalendar`, `WeeklyHabitBoard`, `DayDetailScreen`, `G2`/`G3`, and `Insights`
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Set display width to `320dp–360dp` and font scale to `200%`.
+  2. Inspect `Journal`, `JournalEditorDialog` (with soft keyboard open), `SharedMonthCalendar`, `WeeklyHabitBoard`, `DayDetailScreen`, `CollectedMomentsDetailSheet`, and all 4 `Insights` sections.
+- **Expected:** No clipped text, overlapping calendar cells, or unreachable Save/Cancel/Back controls; all touch targets remain at least `48dp`.
+
+### P3-H08 — TalkBack traversal of `Journal`, `SharedMonthCalendar`, `WeeklyHabitBoard`, `DayDetailScreen`, `G2`/`G3`, and `Insights`
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Enable Android TalkBack and swipe through `Journal` cards/filters, `SharedMonthCalendar` date cells, `WeeklyHabitBoard` rows/cells, `DayDetailScreen`, `G2`/`G3`, and `Insights`.
+- **Expected:** Date cells announce full date, habit status summary, mood, and Journal count; every status has a non-colour symbol/label cue; decorative graphics do not trap focus.
+
+### P3-H09 — Light, dark, `Soft Botanical`, and `Dark + Time-of-Day Artwork` contrast on Phase 3 screens
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Inspect `Journal`, `SharedMonthCalendar`, `WeeklyHabitBoard`, `DayDetailScreen`, `G2`/`G3`, and `Insights` across all 5 appearance modes and reduced-motion settings.
+- **Expected:** Calendar status indicators, mood chips, draft badges, and chart bars maintain clear contrast and calm transitions across all themes.
+

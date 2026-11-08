@@ -1,6 +1,6 @@
 {
-  "summary": "Updated Phase 2 Final Remediation Plan specifying standalone atomic deleteHabitPermanentlySync() (without calling deleteHabitWithUndoSync() or generating a HABIT_DELETION UndoToken), selective invalidation of active UndoTokens belonging to the deleted habit while preserving unrelated habits' UndoTokens, updated ViewModel/dialog messages without Undo promises, and full regression test coverage.",
-  "updatedAt": "2026-11-04T14:29:34.298139051Z",
-  "requestFeedback": true,
-  "userFacing": true
+  "summary":  "Revised Phase 3 Implementation Plan (Revision 4) adding explicit date resolution rules for Daily Scheduled Opportunities (local_date < referenceToday, local_date == referenceToday, and local_date > referenceToday excluded from both numerator and denominator) and an automated test verifying a reporting period with past, current, and future scheduled dates.",
+  "updatedAt":  "2026-11-08T13:31:57.539983256Z",
+  "requestFeedback":  true,
+  "userFacing":  true
 }

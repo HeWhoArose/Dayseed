@@ -150,8 +150,11 @@ fun TodayScreen(
     val todayExceptions = remember(dateExceptions, todayStr) {
         dateExceptions.filter { it.localDate == todayStr }
     }
-    val todayJournal = remember(journals, todayStr) {
-        journals.find { it.localDate == todayStr }
+    val todayJournals = remember(journals, todayStr) {
+        journals.filter { it.localDate == todayStr }
+    }
+    val todayJournal = remember(todayJournals) {
+        todayJournals.firstOrNull()
     }
     val todayDraft = remember(drafts, todayStr) {
         drafts.find { it.localDate == todayStr && it.sourceContext == "JOURNAL_COMPOSER" }
@@ -583,7 +586,9 @@ fun TodayScreen(
                     ReflectionCard(
                         entry = todayJournal,
                         draft = todayDraft,
-                        onOpenEditor = { viewModel.openJournalEditor(todayJournal, today) }
+                        entriesCountForDate = todayJournals.size,
+                        onOpenEditor = { viewModel.openJournalEditor(todayJournal, today) },
+                        onWriteAnother = { viewModel.openJournalEditor(null, today) }
                     )
                 }
 

@@ -4,6 +4,7 @@ import android.database.Cursor
 import java.math.BigInteger
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import java.time.format.ResolverStyle
@@ -214,6 +215,9 @@ enum class ProgressBand(
         motivationQuote = "Let today's high tide inspire calm confidence, not pressure, tomorrow."
     );
 
+    val displayName: String get() = label
+    val rangeLabel: String get() = shortBadge
+
     companion object {
         @Deprecated("Use EXTRA or HUGE in v3; alias retained for binary/source compatibility")
         val EXCEEDED: ProgressBand = EXTRA
@@ -365,6 +369,54 @@ object DurationNormalizer {
             hours > 0L && mins > 0L -> "${hours}h ${mins}m"
             hours > 0L -> "${hours}h"
             else -> "${mins}m"
+        }
+    }
+
+    /**
+     * Formats duration totals for Growth Mark (G2/G3) per D-201 / docs/26 §4.1:
+     * Uses the largest useful whole unit plus a smaller-unit remainder, with no upward rounding
+     * or silent time loss. A displayed day is 24 hours (1440 min) and a week is 7 days (10080 min).
+     * Never uses month-equivalents.
+     */
+    fun formatCollectedMomentsDuration(totalMinutes: Long): String {
+        if (totalMinutes <= 0L) return "0 min"
+        val minutesPerHour = 60L
+        val minutesPerDay = 24L * minutesPerHour // 1440
+        val minutesPerWeek = 7L * minutesPerDay  // 10080
+
+        return when {
+            totalMinutes >= minutesPerWeek -> {
+                val weeks = totalMinutes / minutesPerWeek
+                val remAfterWeeks = totalMinutes % minutesPerWeek
+                val days = remAfterWeeks / minutesPerDay
+                val remHours = (remAfterWeeks % minutesPerDay) / minutesPerHour
+                val remMins = remAfterWeeks % minutesPerHour
+                val dayWord = if (days == 1L) "day" else "days"
+                when {
+                    days > 0L -> "$weeks wk $days $dayWord"
+                    remHours > 0L -> "$weeks wk $remHours hr"
+                    remMins > 0L -> "$weeks wk $remMins min"
+                    else -> "$weeks wk"
+                }
+            }
+            totalMinutes >= minutesPerDay -> {
+                val days = totalMinutes / minutesPerDay
+                val remAfterDays = totalMinutes % minutesPerDay
+                val hours = remAfterDays / minutesPerHour
+                val mins = remAfterDays % minutesPerHour
+                val dayWord = if (days == 1L) "day" else "days"
+                when {
+                    hours > 0L -> "$days $dayWord $hours hr"
+                    mins > 0L -> "$days $dayWord $mins min"
+                    else -> "$days $dayWord"
+                }
+            }
+            totalMinutes >= minutesPerHour -> {
+                val hours = totalMinutes / minutesPerHour
+                val mins = totalMinutes % minutesPerHour
+                if (mins > 0L) "$hours hr $mins min" else "$hours hr"
+            }
+            else -> "$totalMinutes min"
         }
     }
 }
@@ -985,8 +1037,18 @@ data class ComebackInfo(
 )
 
 data class GrowthMetrics(
-    val totalActiveDates: Int = 0,
-    val totalHabitsCompleted: Int = 0,
+    val totalActiveDates: Int = 0, // Distinct dates with Habit activity (never Journal-only dates)
+    val habitActiveDatesCount: Int = totalActiveDates,
+    val journalActiveDatesCount: Int = 0,
+    val totalHabitsCompleted: Int = 0, // Backwards-compatible alias for habitDaysMetCount
+    val habitDaysMetCount: Int = totalHabitsCompleted,
+    val scheduledDailyOpportunitiesCount: Int = 0,
+    val uniqueHabitsCompletedCount: Int = 0,
+    val numericDurationSessionsCount: Int = 0,
+    val completionOutcomesCount: Int = 0,
+    val flexibleWeeklyOpportunitiesMetCount: Int = 0,
+    val flexibleWeeklyOpportunitiesTotalCount: Int = 0,
+    val flexibleWeeklyInProgressCount: Int = 0,
     val tinyCount: Int = 0,
     val usualCount: Int = 0,
     val extraCount: Int = 0,
@@ -995,10 +1057,20 @@ data class GrowthMetrics(
     val currentPeriodCompletions: Int = 0,
     val currentPeriodOpportunities: Int = 0,
     val currentMonthDurationMinutes: Long = 0L,
+    val currentMonthDurationPositiveSessionsCount: Int = 0,
+    val currentMonthDurationZeroSessionsCount: Int = 0,
+    val currentMonthDurationDatesMinutes: Map<LocalDate, Long> = emptyMap(),
+    val currentMonthDurationDateSessionCounts: Map<LocalDate, Int> = emptyMap(),
     val currentMonthDateSessionCounts: Map<LocalDate, Int> = emptyMap(),
+    val currentMonthUnsupportedDurationUnits: Set<String> = emptySet(),
+    val dailyProgressBandCounts: Map<ProgressBand, Int> = emptyMap(),
+    val weeklyProgressBandCounts: Map<ProgressBand, Int> = emptyMap(),
+    val legacyEffortCounts: Map<String, Int> = emptyMap(),
     val activeSaplingsCount: Int = 0,
     val growingTreesCount: Int = 0,
-    val dormantTreesCount: Int = 0
+    val dormantTreesCount: Int = 0,
+    val isLoading: Boolean = false,
+    val loadError: String? = null
 )
 
 data class MoodOption(
@@ -1022,6 +1094,8 @@ object MoodCatalog {
     )
 
     val allMoods: List<MoodOption> = starterMoods + listOf(
+        MoodOption("SAD", "Sad", "🌧️"),
+        MoodOption("JOYFUL", "Joyful", "🌻"),
         MoodOption("GROUNDED", "Grounded", "🌳"),
         MoodOption("ENERGIZED", "Energized", "☀️"),
         MoodOption("OVERWHELMED", "Overwhelmed", "🌊"),
@@ -1034,7 +1108,7 @@ object MoodCatalog {
 
     fun findByCode(code: String?): MoodOption? {
         if (code.isNullOrBlank()) return null
-        return allMoods.find { it.code.equals(code, ignoreCase = true) }
+        return allMoods.find { it.code.equals(code, ignoreCase = true) || it.label.equals(code, ignoreCase = true) }
     }
 }
 
@@ -1171,3 +1245,144 @@ data class LocalDateRange(
 ) {
     val isEmpty: Boolean get() = endInclusive.isBefore(startInclusive)
 }
+
+// =============================================================================
+// 9. PHASE 3 CALENDAR, WEEKLY BOARD, COLLECTED MOMENTS & DAY DETAIL MODELS
+// =============================================================================
+
+enum class HonestCalendarDateState(
+    val displayLabel: String,
+    val shortBadge: String,
+    val nonColorIndicator: String
+) {
+    COMPLETED_TARGET_MET("Completed / Target Met", "Met", "✓"),
+    PARTIAL_OR_TINY_PROGRESS("Partial / Tiny Progress", "Partial", "◐"),
+    REST_DAY_PLANNED_PAUSE("Rest Day / Planned Pause", "Rest", "⏸"),
+    PAUSED_DATE_RANGE("Paused Date Range", "Paused", "⏸"),
+    UNSCHEDULED_DATE("Unscheduled Date", "Unscheduled", "·"),
+    FLEXIBLE_WEEKLY_IN_PROGRESS("Flexible Weekly Habit — Week in Progress", "Week Open", "⟳"),
+    EXPLICIT_ZERO_NOT_DONE("Explicit Zero / Not Done", "0 Logged", "0"),
+    MISSED_SCHEDULED_DATE("Missed Scheduled Date", "Missed", "○"),
+    FUTURE_DATE("Future Date", "Future", "·"),
+    NEUTRAL_TRANSITION_GAP("Week-Start Transition Gap", "Transition", "⇄")
+}
+
+data class CollectedMomentsSessionItem(
+    val entryId: String,
+    val habitId: String,
+    val habitName: String,
+    val habitColorHex: String,
+    val localDate: LocalDate,
+    val rawValueUnits: Int,
+    val unitCode: String,
+    val normalizedMinutes: Long,
+    val entryNote: String?,
+    val isExplicitZero: Boolean
+) {
+    val formattedDuration: String
+        get() = if (isExplicitZero) {
+            "0 min logged (did not contribute to time total)"
+        } else {
+            DurationNormalizer.formatCollectedMomentsDuration(normalizedMinutes)
+        }
+}
+
+data class CollectedMomentsDateSummary(
+    val date: LocalDate,
+    val totalMinutes: Long,
+    val positiveSessionsCount: Int,
+    val explicitZeroSessionsCount: Int,
+    val sessions: List<CollectedMomentsSessionItem>
+) {
+    val totalSessionsCount: Int get() = positiveSessionsCount + explicitZeroSessionsCount
+    val formattedTotalDuration: String
+        get() = DurationNormalizer.formatCollectedMomentsDuration(totalMinutes)
+}
+
+data class CollectedMomentsMonthDetail(
+    val yearMonth: YearMonth,
+    val totalMinutes: Long,
+    val positiveSessionsCount: Int,
+    val explicitZeroSessionsCount: Int,
+    val dateSummaries: Map<LocalDate, CollectedMomentsDateSummary>,
+    val unsupportedUnitCodes: Set<String> = emptySet(),
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null
+) {
+    val formattedMonthTotal: String
+        get() = DurationNormalizer.formatCollectedMomentsDuration(totalMinutes)
+    val hasPositiveDurationActivity: Boolean get() = totalMinutes > 0L
+    val hasOnlyExplicitZeroSessions: Boolean get() = totalMinutes == 0L && explicitZeroSessionsCount > 0 && positiveSessionsCount == 0
+}
+
+data class DayDetailHabitItem(
+    val habit: Habit,
+    val effectiveVersion: HabitVersion,
+    val honestState: HonestCalendarDateState,
+    val dayRecordState: DayRecordState,
+    val compactBucket: CompactHistoryBucket,
+    val progressBand: ProgressBand,
+    val totalUnits: BigInteger,
+    val targetUnits: BigInteger,
+    val percentage: Int,
+    val entries: List<HabitEntry>,
+    val outcomes: List<HabitDayOutcome>,
+    val dateNotes: List<HabitDateNote>,
+    val restDayException: HabitDateException?,
+    val weekProgressSummary: String? = null
+)
+
+data class DayDetailSummary(
+    val date: LocalDate,
+    val isFutureDate: Boolean,
+    val isToday: Boolean,
+    val isNeutralTransitionGap: Boolean,
+    val primaryMood: MoodOption?,
+    val secondaryMood: MoodOption?,
+    val journalEntries: List<JournalEntry>,
+    val unsavedDrafts: List<JournalDraft>,
+    val habitItems: List<DayDetailHabitItem>,
+    val collectedMomentsSummary: CollectedMomentsDateSummary?
+)
+
+enum class WeeklyPeriodStatus(val label: String) {
+    MET("Target Met"),
+    IN_PROGRESS("Week in Progress"),
+    MISSED("Not Met"),
+    PAUSED("Paused"),
+    INACTIVE("Not Active")
+}
+
+data class WeeklyBoardCell(
+    val date: LocalDate,
+    val honestState: HonestCalendarDateState,
+    val compactBucket: CompactHistoryBucket,
+    val progressBand: ProgressBand,
+    val totalUnits: BigInteger,
+    val isPreferredWeekday: Boolean,
+    val hasSessionNote: Boolean,
+    val cellLabel: String
+)
+
+data class WeeklyBoardHabitRow(
+    val habit: Habit,
+    val effectiveVersion: HabitVersion,
+    val cells: List<WeeklyBoardCell>, // Always 7 ordered cells from weekStart..weekEnd
+    val weekTotalUnits: BigInteger,
+    val weekTargetUnits: BigInteger,
+    val weekPercentage: Int,
+    val weekProgressBand: ProgressBand,
+    val periodStatus: WeeklyPeriodStatus,
+    val summaryText: String
+)
+
+data class WeeklyBoardModel(
+    val weekStartDate: LocalDate,
+    val weekEndDate: LocalDate,
+    val weekStartDayOfWeek: DayOfWeek,
+    val days: List<LocalDate>, // 7 dates
+    val rows: List<WeeklyBoardHabitRow>,
+    val journalCountsByDate: Map<LocalDate, Int>,
+    val primaryMoodByDate: Map<LocalDate, MoodOption>
+)
+
