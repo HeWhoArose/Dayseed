@@ -42,10 +42,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.dayseed.DayseedViewModel
 import com.example.dayseed.data.DayDetailHabitItem
+import com.example.dayseed.data.DayRecordState
 import com.example.dayseed.data.HonestCalendarDateState
 import com.example.dayseed.data.JournalDraft
 import com.example.dayseed.data.JournalEntry
 import com.example.dayseed.data.MoodCatalog
+import com.example.dayseed.data.TargetPeriod
+import com.example.dayseed.data.TrackingMode
+import java.math.BigInteger
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -392,20 +396,44 @@ private fun DayDetailHabitCard(
                 }
             }
 
-            val unitLabel = item.effectiveVersion.unitCode ?: "sessions"
-            Text(
-                text = "${item.totalUnits} / ${item.targetUnits} $unitLabel • ${item.progressBand.displayName} (${item.progressBand.rangeLabel})",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.testTag("day_detail_habit_band_${item.habit.habitId}")
-            )
+            if (!isFutureDate) {
+                if (item.effectiveVersion.targetPeriod == TargetPeriod.WEEK) {
+                    val contributionUnitLabel = when (item.effectiveVersion.trackingMode.canonical()) {
+                        TrackingMode.QUANTITY, TrackingMode.DURATION ->
+                            item.effectiveVersion.unitCode?.ifBlank { "units" } ?: "units"
+                        else -> if (item.totalUnits == BigInteger.ONE) "day" else "days"
+                    }
+                    val contributionText = when {
+                        item.dayRecordState == DayRecordState.EXPLICIT_ZERO ->
+                            "Selected date contribution: 0 $contributionUnitLabel (explicit 0 check-in)"
+                        else ->
+                            "Selected date contribution: ${item.totalUnits} $contributionUnitLabel"
+                    }
+                    Text(
+                        text = contributionText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag("day_detail_habit_band_${item.habit.habitId}")
+                    )
 
-            if (item.weekProgressSummary != null) {
-                Text(
-                    text = item.weekProgressSummary,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                    if (item.weekProgressSummary != null) {
+                        Text(
+                            text = item.weekProgressSummary,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.testTag("day_detail_habit_week_summary_${item.habit.habitId}")
+                        )
+                    }
+                } else {
+                    val unitLabel = item.effectiveVersion.unitCode ?: "sessions"
+                    Text(
+                        text = "${item.totalUnits} / ${item.targetUnits} $unitLabel • ${item.progressBand.displayName} (${item.progressBand.rangeLabel})",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag("day_detail_habit_band_${item.habit.habitId}")
+                    )
+                }
             }
 
             if (item.restDayException != null) {

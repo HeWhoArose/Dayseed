@@ -127,6 +127,11 @@ object StreakAndGroveEngine {
 
     /**
      * Evaluates the DayRecordState and ProgressBand for a single date.
+     *
+     * For [TargetPeriod.WEEK] habits, an individual date records a daily contribution toward the
+     * week's goal and is never classified against the full weekly `targetValue` (its daily
+     * [ProgressBand] is [ProgressBand.ZERO]; the weekly D-040 classification is computed once for
+     * the week via [computeWeeklyProgressSnapshot]).
      */
     fun evaluateDayRecordState(
         version: HabitVersion?,
@@ -140,6 +145,45 @@ object StreakAndGroveEngine {
         }
         if (version.lifecycleState == HabitLifecycleState.PAUSED) {
             return DayRecordState.PAUSED_LIFECYCLE to ProgressBand.ZERO
+        }
+
+        if (version.targetPeriod == TargetPeriod.WEEK) {
+            return when (version.trackingMode.canonical()) {
+                TrackingMode.QUANTITY, TrackingMode.DURATION -> {
+                    if (dayEntries.isNotEmpty()) {
+                        val total = countDailyUnitsOrSessionsForWeek(version, dayEntries)
+                        if (total == BigInteger.ZERO) {
+                            DayRecordState.EXPLICIT_ZERO to ProgressBand.ZERO
+                        } else {
+                            DayRecordState.PARTIAL_PROGRESS to ProgressBand.ZERO
+                        }
+                    } else if (dayException?.exceptionKind == HabitDateExceptionKind.REST_DAY) {
+                        DayRecordState.REST_DAY_EXCEPTION to ProgressBand.ZERO
+                    } else {
+                        DayRecordState.NO_RECORD to ProgressBand.ZERO
+                    }
+                }
+
+                TrackingMode.COMPLETION_ONLY -> {
+                    if (dayOutcome != null && dayOutcome.outcomeKind == "COMPLETED") {
+                        DayRecordState.PARTIAL_PROGRESS to ProgressBand.ZERO
+                    } else if (dayException?.exceptionKind == HabitDateExceptionKind.REST_DAY) {
+                        DayRecordState.REST_DAY_EXCEPTION to ProgressBand.ZERO
+                    } else {
+                        DayRecordState.NO_RECORD to ProgressBand.ZERO
+                    }
+                }
+
+                TrackingMode.EFFORT_AWARE, TrackingMode.EFFORT_LEVELS -> {
+                    if (dayOutcome != null && (dayOutcome.outcomeKind == "EFFORT_LOGGED" || dayOutcome.outcomeKind == "COMPLETED")) {
+                        DayRecordState.PARTIAL_PROGRESS to ProgressBand.ZERO
+                    } else if (dayException?.exceptionKind == HabitDateExceptionKind.REST_DAY) {
+                        DayRecordState.REST_DAY_EXCEPTION to ProgressBand.ZERO
+                    } else {
+                        DayRecordState.NO_RECORD to ProgressBand.ZERO
+                    }
+                }
+            }
         }
 
         return when (version.trackingMode.canonical()) {

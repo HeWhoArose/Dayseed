@@ -2,6 +2,7 @@ package com.example.dayseed
 
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
+import com.example.dayseed.data.DayRecordState
 import com.example.dayseed.data.DayseedClock
 import com.example.dayseed.data.DayseedRepository
 import com.example.dayseed.data.DurationNormalizer
@@ -26,6 +27,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.math.BigInteger
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -844,5 +846,115 @@ class Phase3ImplementationTest {
         val gm = repository.growthMetrics.value
         assertEquals(1, gm.dailyProgressBandCounts[ProgressBand.ZERO])
         assertEquals(1, gm.weeklyProgressBandCounts[ProgressBand.ZERO])
+    }
+
+    @Test
+    fun p3_13_dayDetailWeeklyHabitShowsDailyContributionWithoutWeeklyTargetMisclassificationAndPreservesDailyHabitBehavior() {
+        val today = LocalDate.of(2026, 10, 14) // Wednesday (week: Mon Oct 12 .. Sun Oct 18)
+        testClock.currentLocalDate = today
+
+        // 1. Weekly habit: 50 pages/week effective from start of week (2026-10-12)
+        val weeklyReading = Habit(
+            habitId = "h_daydetail_week_pages",
+            name = "Weekly Literature",
+            trackingMode = TrackingMode.QUANTITY,
+            unitCode = "pages",
+            targetPeriod = TargetPeriod.WEEK,
+            targetValue = 50,
+            scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET
+        )
+        repository.saveHabitSync(weeklyReading, effectiveDateOverride = LocalDate.of(2026, 10, 12))
+
+        // Mid-week version change on Wednesday (2026-10-14) raising target to 100 pages/week:
+        // Under U-12 frozen start-of-week rule, the week of Oct 12..18 must still be evaluated once against the frozen 50-page version!
+        repository.saveHabitSync(
+            weeklyReading.copy(targetValue = 100),
+            effectiveDateOverride = LocalDate.of(2026, 10, 14)
+        )
+
+        // 2. Daily habit: 20 min/day for verifying daily-target Day Detail behaviour remains unchanged
+        val dailyMeditation = Habit(
+            habitId = "h_daydetail_day_med",
+            name = "Daily Meditation",
+            trackingMode = TrackingMode.DURATION,
+            unitCode = "min",
+            targetPeriod = TargetPeriod.DAY,
+            targetValue = 20,
+            scheduleKind = ScheduleKind.DAILY
+        )
+        repository.saveHabitSync(dailyMeditation, effectiveDateOverride = LocalDate.of(2026, 10, 12))
+
+        // Log partially contributing Monday (2026-10-12): 15 pages on weekly habit, 10 min on daily habit (HALFWAY)
+        repository.logHabitEntrySync("h_daydetail_week_pages", LocalDate.of(2026, 10, 12), 15)
+        repository.logHabitEntrySync("h_daydetail_day_med", LocalDate.of(2026, 10, 12), 10)
+
+        val monDetailBeforeWeekMet = repository.computeDayDetailSummary(LocalDate.of(2026, 10, 12), today)
+        val monWeeklyBefore = monDetailBeforeWeekMet.habitItems.first { it.habit.habitId == "h_daydetail_week_pages" }
+        // Selected date's contribution is 15 pages, NOT classified as GETTING_STARTED on the individual date
+        assertEquals(BigInteger.valueOf(15), monWeeklyBefore.totalUnits)
+        assertEquals(BigInteger.ZERO, monWeeklyBefore.targetUnits)
+        assertEquals(0, monWeeklyBefore.percentage)
+        assertEquals(ProgressBand.ZERO, monWeeklyBefore.progressBand)
+        assertEquals(DayRecordState.PARTIAL_PROGRESS, monWeeklyBefore.dayRecordState)
+        assertEquals(HonestCalendarDateState.COMPLETED_TARGET_MET, monWeeklyBefore.honestState)
+        // Weekly result is calculated once using the frozen start-of-week version (15 / 50 = 30% -> GETTING_STARTED)
+        assertEquals(50, monWeeklyBefore.effectiveVersion.targetValue)
+        assertEquals(BigInteger.valueOf(15), monWeeklyBefore.weekTotalUnits)
+        assertEquals(BigInteger.valueOf(50), monWeeklyBefore.weekTargetUnits)
+        assertEquals(30, monWeeklyBefore.weekPercentage)
+        assertEquals(ProgressBand.GETTING_STARTED, monWeeklyBefore.weekProgressBand)
+        assertNotNull(monWeeklyBefore.weekProgressSummary)
+        assertTrue(monWeeklyBefore.weekProgressSummary!!.contains("15 / 50 pages"))
+        assertTrue(monWeeklyBefore.weekProgressSummary!!.contains(ProgressBand.GETTING_STARTED.displayName))
+
+        // Verify daily-target habit on Monday is unchanged (10 / 20 min = 50% -> HALFWAY)
+        val monDaily = monDetailBeforeWeekMet.habitItems.first { it.habit.habitId == "h_daydetail_day_med" }
+        assertEquals(BigInteger.valueOf(10), monDaily.totalUnits)
+        assertEquals(BigInteger.valueOf(20), monDaily.targetUnits)
+        assertEquals(50, monDaily.percentage)
+        assertEquals(ProgressBand.HALFWAY, monDaily.progressBand)
+        assertNull(monDaily.weekProgressSummary)
+        assertNull(monDaily.weekProgressBand)
+
+        // Now log 35 pages on Wednesday (2026-10-14) so the week meets its frozen 50-page target (15 + 35 = 50 / 50 -> GOAL_MET),
+        // and log 20 min on the daily habit on Wednesday (20 / 20 -> GOAL_MET).
+        repository.logHabitEntrySync("h_daydetail_week_pages", LocalDate.of(2026, 10, 14), 35)
+        repository.logHabitEntrySync("h_daydetail_day_med", LocalDate.of(2026, 10, 14), 20)
+
+        val monDetailAfterWeekMet = repository.computeDayDetailSummary(LocalDate.of(2026, 10, 12), today)
+        val tueDetailAfterWeekMet = repository.computeDayDetailSummary(LocalDate.of(2026, 10, 13), today)
+        val wedDetailAfterWeekMet = repository.computeDayDetailSummary(LocalDate.of(2026, 10, 14), today)
+
+        val monWeeklyAfter = monDetailAfterWeekMet.habitItems.first { it.habit.habitId == "h_daydetail_week_pages" }
+        val tueWeeklyAfter = tueDetailAfterWeekMet.habitItems.first { it.habit.habitId == "h_daydetail_week_pages" }
+        val wedWeeklyAfter = wedDetailAfterWeekMet.habitItems.first { it.habit.habitId == "h_daydetail_week_pages" }
+
+        // Each date shows its own actual daily contribution (15, 0, 35) without daily weekly-target classification
+        assertEquals(BigInteger.valueOf(15), monWeeklyAfter.totalUnits)
+        assertEquals(ProgressBand.ZERO, monWeeklyAfter.progressBand)
+        assertEquals(BigInteger.ZERO, tueWeeklyAfter.totalUnits)
+        assertEquals(ProgressBand.ZERO, tueWeeklyAfter.progressBand)
+        assertEquals(BigInteger.valueOf(35), wedWeeklyAfter.totalUnits)
+        assertEquals(ProgressBand.ZERO, wedWeeklyAfter.progressBand)
+
+        // And all dates in the week share the single weekly result computed from the frozen start-of-week version (50 / 50 -> GOAL_MET)
+        for (item in listOf(monWeeklyAfter, tueWeeklyAfter, wedWeeklyAfter)) {
+            assertEquals(50, item.effectiveVersion.targetValue)
+            assertEquals(BigInteger.valueOf(50), item.weekTotalUnits)
+            assertEquals(BigInteger.valueOf(50), item.weekTargetUnits)
+            assertEquals(100, item.weekPercentage)
+            assertEquals(ProgressBand.GOAL_MET, item.weekProgressBand)
+            assertNotNull(item.weekProgressSummary)
+            assertTrue(item.weekProgressSummary!!.contains("50 / 50 pages"))
+            assertTrue(item.weekProgressSummary!!.contains(ProgressBand.GOAL_MET.displayName))
+        }
+
+        // Daily habit on Wednesday shows 20 / 20 min -> GOAL_MET, unchanged
+        val wedDaily = wedDetailAfterWeekMet.habitItems.first { it.habit.habitId == "h_daydetail_day_med" }
+        assertEquals(BigInteger.valueOf(20), wedDaily.totalUnits)
+        assertEquals(BigInteger.valueOf(20), wedDaily.targetUnits)
+        assertEquals(100, wedDaily.percentage)
+        assertEquals(ProgressBand.GOAL_MET, wedDaily.progressBand)
+        assertNull(wedDaily.weekProgressSummary)
     }
 }

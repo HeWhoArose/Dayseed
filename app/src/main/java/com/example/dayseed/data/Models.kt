@@ -1329,7 +1329,11 @@ data class DayDetailHabitItem(
     val outcomes: List<HabitDayOutcome>,
     val dateNotes: List<HabitDateNote>,
     val restDayException: HabitDateException?,
-    val weekProgressSummary: String? = null
+    val weekProgressSummary: String? = null,
+    val weekTotalUnits: BigInteger? = null,
+    val weekTargetUnits: BigInteger? = null,
+    val weekPercentage: Int? = null,
+    val weekProgressBand: ProgressBand? = null
 )
 
 data class DayDetailSummary(

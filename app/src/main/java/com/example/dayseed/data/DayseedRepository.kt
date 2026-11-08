@@ -6489,38 +6489,10 @@ class DayseedRepository(
 
             val versions = _habitVersions.value.filter { it.habitId == hId }
             val governingVersion = getGoverningHabitVersion(hId, date) ?: effVersion
-            val (dayRecordState, dayProgressBand) = StreakAndGroveEngine.evaluateDayRecordState(
-                version = governingVersion,
-                date = date,
-                dayEntries = entries,
-                dayOutcome = outcomes.firstOrNull(),
-                dayException = restEx
-            )
-            val totalUnits = when (governingVersion.trackingMode.canonical()) {
-                TrackingMode.QUANTITY, TrackingMode.DURATION ->
-                    StreakAndGroveEngine.countDailyUnitsOrSessionsForWeek(governingVersion, entries)
-                TrackingMode.COMPLETION_ONLY ->
-                    if (outcomes.any { it.outcomeKind == "COMPLETED" }) BigInteger.ONE else BigInteger.ZERO
-                TrackingMode.EFFORT_AWARE, TrackingMode.EFFORT_LEVELS ->
-                    if (outcomes.isNotEmpty()) BigInteger.ONE else BigInteger.ZERO
-            }
-            val targetUnits = BigInteger.valueOf((governingVersion.targetValue ?: 1).coerceAtLeast(1).toLong())
-            val pct = when (governingVersion.trackingMode.canonical()) {
-                TrackingMode.QUANTITY, TrackingMode.DURATION ->
-                    ProgressBandClassifier.percentageFloor(totalUnits, targetUnits)
-                TrackingMode.COMPLETION_ONLY ->
-                    if (outcomes.any { it.outcomeKind == "COMPLETED" }) 100 else 0
-                TrackingMode.EFFORT_AWARE, TrackingMode.EFFORT_LEVELS ->
-                    when (outcomes.firstOrNull()?.effortLevel) {
-                        "TINY" -> 20
-                        "EXTRA" -> 125
-                        "USUAL" -> 100
-                        else -> if (outcomes.isNotEmpty()) 100 else 0
-                    }
-            }
+            val isWeeklyHabit = governingVersion.targetPeriod == TargetPeriod.WEEK
 
-            val weekSummary = if (governingVersion.targetPeriod == TargetPeriod.WEEK && !isFuture) {
-                val snap = StreakAndGroveEngine.computeWeeklyProgressSnapshot(
+            val weekSnapshot = if (isWeeklyHabit) {
+                StreakAndGroveEngine.computeWeeklyProgressSnapshot(
                     versions = versions,
                     entries = _habitEntries.value.filter { it.habitId == hId },
                     outcomes = _habitDayOutcomes.value.filter { it.habitId == hId },
@@ -6528,32 +6500,94 @@ class DayseedRepository(
                     evaluationDate = date,
                     fallbackVersion = governingVersion
                 )
-                val unitLabel = when (governingVersion.trackingMode.canonical()) {
-                    TrackingMode.QUANTITY, TrackingMode.DURATION ->
-                        governingVersion.unitCode?.ifBlank { "units" } ?: "units"
-                    else -> "days"
-                }
-                "Week total: ${snap.weekTotalUnits}/${snap.weekTargetUnits} $unitLabel (${snap.weekProgressBand.displayName})"
             } else {
                 null
             }
+            val effectiveEvalVersion = weekSnapshot?.frozenWeekVersion ?: governingVersion
 
-            DayDetailHabitItem(
-                habit = habit,
-                effectiveVersion = governingVersion,
-                honestState = honestState,
-                dayRecordState = dayRecordState,
-                compactBucket = ProgressBandClassifier.toCompactBucket(dayProgressBand),
-                progressBand = dayProgressBand,
-                totalUnits = totalUnits,
-                targetUnits = targetUnits,
-                percentage = pct,
-                entries = entries,
-                outcomes = outcomes,
-                dateNotes = notes,
-                restDayException = restEx,
-                weekProgressSummary = weekSummary
+            val (dayRecordState, dayProgressBand) = StreakAndGroveEngine.evaluateDayRecordState(
+                version = effectiveEvalVersion,
+                date = date,
+                dayEntries = entries,
+                dayOutcome = outcomes.firstOrNull(),
+                dayException = restEx
             )
+            val totalUnits = when (effectiveEvalVersion.trackingMode.canonical()) {
+                TrackingMode.QUANTITY, TrackingMode.DURATION ->
+                    StreakAndGroveEngine.countDailyUnitsOrSessionsForWeek(effectiveEvalVersion, entries)
+                TrackingMode.COMPLETION_ONLY ->
+                    if (outcomes.any { it.outcomeKind == "COMPLETED" }) BigInteger.ONE else BigInteger.ZERO
+                TrackingMode.EFFORT_AWARE, TrackingMode.EFFORT_LEVELS ->
+                    if (outcomes.isNotEmpty()) BigInteger.ONE else BigInteger.ZERO
+            }
+
+            if (isWeeklyHabit && weekSnapshot != null) {
+                val unitLabel = when (effectiveEvalVersion.trackingMode.canonical()) {
+                    TrackingMode.QUANTITY, TrackingMode.DURATION ->
+                        effectiveEvalVersion.unitCode?.ifBlank { "units" } ?: "units"
+                    else -> "days"
+                }
+                val weekSummary = if (!isFuture) {
+                    "Week progress: ${weekSnapshot.weekTotalUnits} / ${weekSnapshot.weekTargetUnits} $unitLabel • ${weekSnapshot.weekProgressBand.displayName} (${weekSnapshot.weekProgressBand.rangeLabel})"
+                } else {
+                    null
+                }
+                DayDetailHabitItem(
+                    habit = habit,
+                    effectiveVersion = effectiveEvalVersion,
+                    honestState = honestState,
+                    dayRecordState = dayRecordState,
+                    compactBucket = if (totalUnits > BigInteger.ZERO) {
+                        CompactHistoryBucket.COMPLETED
+                    } else {
+                        CompactHistoryBucket.NONE_RECORDED
+                    },
+                    progressBand = ProgressBand.ZERO,
+                    totalUnits = totalUnits,
+                    targetUnits = BigInteger.ZERO,
+                    percentage = 0,
+                    entries = entries,
+                    outcomes = outcomes,
+                    dateNotes = notes,
+                    restDayException = restEx,
+                    weekProgressSummary = weekSummary,
+                    weekTotalUnits = weekSnapshot.weekTotalUnits,
+                    weekTargetUnits = weekSnapshot.weekTargetUnits,
+                    weekPercentage = weekSnapshot.weekPercentage,
+                    weekProgressBand = weekSnapshot.weekProgressBand
+                )
+            } else {
+                val targetUnits = BigInteger.valueOf((effectiveEvalVersion.targetValue ?: 1).coerceAtLeast(1).toLong())
+                val pct = when (effectiveEvalVersion.trackingMode.canonical()) {
+                    TrackingMode.QUANTITY, TrackingMode.DURATION ->
+                        ProgressBandClassifier.percentageFloor(totalUnits, targetUnits)
+                    TrackingMode.COMPLETION_ONLY ->
+                        if (outcomes.any { it.outcomeKind == "COMPLETED" }) 100 else 0
+                    TrackingMode.EFFORT_AWARE, TrackingMode.EFFORT_LEVELS ->
+                        when (outcomes.firstOrNull()?.effortLevel) {
+                            "TINY" -> 20
+                            "EXTRA" -> 125
+                            "USUAL" -> 100
+                            else -> if (outcomes.isNotEmpty()) 100 else 0
+                        }
+                }
+                DayDetailHabitItem(
+                    habit = habit,
+                    effectiveVersion = effectiveEvalVersion,
+                    honestState = honestState,
+                    dayRecordState = dayRecordState,
+                    compactBucket = ProgressBandClassifier.toCompactBucket(dayProgressBand),
+                    progressBand = dayProgressBand,
+                    totalUnits = totalUnits,
+                    targetUnits = targetUnits,
+                    percentage = pct,
+                    entries = entries,
+                    outcomes = outcomes,
+                    dateNotes = notes,
+                    restDayException = restEx,
+                    weekProgressSummary = null
+                )
+            }
         }
 
         val monthDetail = computeCollectedMomentsMonthDetail(YearMonth.from(date))
