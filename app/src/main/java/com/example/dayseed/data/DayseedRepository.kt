@@ -17,6 +17,7 @@ import java.io.File
 import java.math.BigInteger
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.YearMonth
 import java.time.temporal.ChronoUnit
 import java.util.UUID
@@ -4263,6 +4264,357 @@ class DayseedRepository(
         val (_, weekEnd) = WeekBoundaryHelper.weekBounds(date, weekStartDay)
         return WeeklyReminderGateState(opportunity, met, weekEnd)
     }
+
+    // ===== PHASE4-WEEKLY BLOCK START =====
+    // =========================================================================
+    // WEEKLY REMINDER FAMILY (D-043, docs/23, Phase 4A)
+    //
+    // Four occurrence types share the reminder_deliveries ledger with the per-habit daily
+    // reminders, so the shared 3-per-day cap, quiet hours, notification availability and
+    // dedupe behaviour stay in one place. Weekly prompts are evaluated by the durable
+    // reconcile pass (WorkManager, ~15 min) and by explicit callers, so Android may deliver
+    // them a little after the intended 09:00 local moment — copy never promises an exact time.
+    // =========================================================================
+
+    /** Per-habit weekly reminder state for one configured progress week. */
+    internal data class WeeklyHabitReminderState(
+        val habitId: String,
+        val habitName: String,
+        val weekStart: LocalDate,
+        val weekEnd: LocalDate,
+        val weekTotalUnits: BigInteger,
+        val weekTargetUnits: BigInteger,
+        val weeklyTargetMet: Boolean,
+        val hasProgress: Boolean,
+        val lastProgressDate: LocalDate?
+    )
+
+    data class WeeklyReminderPassResult(
+        val posted: Int,
+        val suppressed: Int,
+        val deferred: Int,
+        val plans: List<WeeklyReminderEngine.Plan>
+    )
+
+    private data class WeeklyLedgerRow(
+        val deliveryKey: String,
+        val habitId: String?,
+        val periodKey: String,
+        val status: String
+    )
+
+    /**
+     * Weekly reminder state for every ACTIVE weekly-target habit in [reference]'s week.
+     * Recorded entries, qualifying outcomes and a planned rest day all act as a progress
+     * anchor, so an intentional rest day never triggers an inactivity check-in.
+     */
+    internal fun weeklyHabitStatesForWeek(reference: LocalDate): List<WeeklyHabitReminderState> {
+        val weekStartDay = getWeekStartDay(reference)
+        val (weekStart, weekEnd) = WeekBoundaryHelper.weekBounds(reference, weekStartDay)
+        val upperBound = if (reference.isBefore(weekEnd)) reference else weekEnd
+        val states = mutableListOf<WeeklyHabitReminderState>()
+
+        for (habit in _habits.value) {
+            val eff = getEffectiveHabitVersion(habit.habitId, reference) ?: continue
+            if (eff.lifecycleState != HabitLifecycleState.ACTIVE) continue
+            if (eff.targetPeriod != TargetPeriod.WEEK) continue
+
+            val habitEntries = _habitEntries.value.filter { it.habitId == habit.habitId }
+            val habitOutcomes = _habitDayOutcomes.value.filter { it.habitId == habit.habitId }
+            val snapshot = StreakAndGroveEngine.computeWeeklyProgressSnapshot(
+                versions = _habitVersions.value.filter { it.habitId == habit.habitId },
+                entries = habitEntries,
+                outcomes = habitOutcomes,
+                weekStartHistory = _weekStartHistory.value,
+                evaluationDate = reference,
+                fallbackVersion = eff
+            )
+
+            val progressDates = mutableSetOf<LocalDate>()
+            var cursor = weekStart
+            while (!cursor.isAfter(upperBound)) {
+                val dateKey = cursor.toString()
+                val entryProgress = habitEntries.any { it.localDate == dateKey && it.valueUnits > 0 }
+                val outcomeProgress = habitOutcomes.any { out ->
+                    out.localDate == dateKey && StreakAndGroveEngine.isQualifyingWeeklyEffortOutcome(out)
+                }
+                val plannedRest = getExceptionForHabitOnDate(habit.habitId, cursor) != null
+                if (entryProgress || outcomeProgress || plannedRest) {
+                    progressDates.add(cursor)
+                }
+                cursor = cursor.plusDays(1)
+            }
+
+            states.add(
+                WeeklyHabitReminderState(
+                    habitId = habit.habitId,
+                    habitName = habit.name,
+                    weekStart = weekStart,
+                    weekEnd = weekEnd,
+                    weekTotalUnits = snapshot.weekTotalUnits,
+                    weekTargetUnits = snapshot.weekTargetUnits,
+                    weeklyTargetMet = snapshot.weekTotalUnits >= snapshot.weekTargetUnits,
+                    hasProgress = snapshot.weekTotalUnits > BigInteger.ZERO,
+                    lastProgressDate = progressDates.maxOrNull()
+                )
+            )
+        }
+        return states
+    }
+
+    /** Previous completed week's aggregate outcome across weekly-target habits. */
+    private fun previousWeekResultFor(
+        currentWeekStart: LocalDate
+    ): WeeklyReminderEngine.PreviousWeekResult? {
+        val states = weeklyHabitStatesForWeek(currentWeekStart.minusWeeks(1))
+        if (states.isEmpty()) return null
+        return when {
+            states.any { it.weeklyTargetMet } -> WeeklyReminderEngine.PreviousWeekResult.MET
+            states.any { it.hasProgress } -> WeeklyReminderEngine.PreviousWeekResult.PARTIAL
+            else -> WeeklyReminderEngine.PreviousWeekResult.NONE
+        }
+    }
+
+    private fun existingWeeklyLedgerRows(): List<WeeklyLedgerRow> {
+        val rows = mutableListOf<WeeklyLedgerRow>()
+        dbHelper.readableDatabase.rawQuery(
+            """
+            SELECT delivery_key, habit_id, target_period_key, delivery_status
+            FROM ${DayseedDatabaseHelper.TABLE_REMINDER_DELIVERIES}
+            WHERE reminder_type IN ('WEEKLY_GOAL_REACHED', 'WEEK_START_REFLECTION', 'WEEKLY_INACTIVITY',
+                                    'PARTIAL_PROGRESS_TIP')
+            """.trimIndent(),
+            null
+        ).use { c ->
+            while (c.moveToNext()) {
+                rows.add(
+                    WeeklyLedgerRow(
+                        deliveryKey = c.getString(0),
+                        habitId = if (c.isNull(1)) null else c.getString(1),
+                        periodKey = c.getString(2),
+                        status = c.getString(3)
+                    )
+                )
+            }
+        }
+        return rows
+    }
+
+    /**
+     * Plans the weekly reminder occurrences that are due at [nowLocalTime] on [today].
+     *
+     * Ordering follows the documented priority when the shared cap is tight (D-043/docs/23):
+     * weekly-goal acknowledgement, week-start reflection, inactivity check-in, then optional
+     * tips. Planning applies no Android gates — [runWeeklyReminderPassSync] re-checks opt-in,
+     * notification availability, quiet hours and the cap atomically per occurrence.
+     *
+     * At most one weekly prompt per habit is planned per local day, so catching up after
+     * several app-free days cannot produce a burst.
+     */
+    fun planWeeklyRemindersSync(
+        today: LocalDate = clock.todayLocal(),
+        nowLocalTime: LocalTime = clock.nowLocalTime(),
+        ignoreDueTime: Boolean = false
+    ): List<WeeklyReminderEngine.Plan> {
+        val weekStartDay = getWeekStartDay(today)
+        val (weekStart, _) = WeekBoundaryHelper.weekBounds(today, weekStartDay)
+        val existingRows = existingWeeklyLedgerRows()
+        val existingKeys = existingRows.map { it.deliveryKey }.toSet()
+
+        fun inactivityRowsInWeek(habitId: String, start: LocalDate, end: LocalDate): Int {
+            val prefix = "WEEKLY_INACTIVITY:$habitId:"
+            return existingRows.count { row ->
+                if (!row.deliveryKey.startsWith(prefix)) return@count false
+                val date = try {
+                    LocalDate.parse(row.deliveryKey.removePrefix(prefix))
+                } catch (_: Exception) {
+                    null
+                } ?: return@count false
+                !date.isBefore(start) && !date.isAfter(end)
+            }
+        }
+
+        // One weekly prompt per habit per local day (also covers a late catch-up pass).
+        val habitIdsPromptedToday = existingRows
+            .filter { it.periodKey == today.toString() && it.habitId != null }
+            .mapNotNull { it.habitId }
+            .toSet()
+
+        val planned = mutableListOf<WeeklyReminderEngine.Plan>()
+        val plannedHabitIds = mutableSetOf<String>()
+        fun addHabitPlan(plan: WeeklyReminderEngine.Plan) {
+            val id = plan.habitId ?: return
+            if (id in habitIdsPromptedToday || id in plannedHabitIds) return
+            plannedHabitIds.add(id)
+            planned.add(plan)
+        }
+
+        // 1. Weekly goal acknowledgement — one per habit per configured week, immediately.
+        for (state in weeklyHabitStatesForWeek(today)) {
+            if (!state.weeklyTargetMet) continue
+            val key = WeeklyReminderEngine.goalReachedKey(state.habitId, state.weekStart)
+            if (existingKeys.contains(key)) continue
+            addHabitPlan(
+                WeeklyReminderEngine.buildGoalReached(
+                    habitId = state.habitId,
+                    habitName = state.habitName,
+                    weekStart = state.weekStart
+                )
+            )
+        }
+
+        val dueTimeReached = ignoreDueTime ||
+            !nowLocalTime.isBefore(LocalTime.parse(WeeklyReminderEngine.WEEKLY_TIME_LOCAL))
+
+        // 2. Week-start reflection — 09:00 device-local on the configured week-start day, for
+        //    the most recently completed week only (never a multi-week backlog).
+        val weeklyReflectionsEnabled = !getSettingString("weekly_reflections_enabled", "true")
+            .equals("false", ignoreCase = true)
+        if (weeklyReflectionsEnabled && dueTimeReached) {
+            val reflectionKey = WeeklyReminderEngine.weekStartReflectionKey(weekStart)
+            val previousResult = previousWeekResultFor(weekStart)
+            if (previousResult != null && !existingKeys.contains(reflectionKey)) {
+                planned.add(
+                    WeeklyReminderEngine.buildWeekStartReflection(
+                        weekStart = weekStart,
+                        previous = previousResult
+                    )
+                )
+            }
+        }
+
+        // 3. Inactivity check-ins for unmet weekly goals: at most three per configured week.
+        for (state in weeklyHabitStatesForWeek(today)) {
+            if (state.weeklyTargetMet) continue
+            val anchor = state.lastProgressDate ?: state.weekStart.minusDays(1)
+            val candidateDates = WeeklyReminderEngine.inactivityCheckInDates(
+                anchorDate = anchor,
+                weekStart = state.weekStart,
+                weekEnd = state.weekEnd,
+                today = today
+            )
+            if (inactivityRowsInWeek(state.habitId, state.weekStart, state.weekEnd) >=
+                WeeklyReminderEngine.MAX_INACTIVITY_PER_WEEK
+            ) {
+                continue
+            }
+            val pendingDate = candidateDates.firstOrNull { candidate ->
+                !existingKeys.contains(WeeklyReminderEngine.inactivityKey(state.habitId, candidate))
+            } ?: continue
+            if (pendingDate == today && !dueTimeReached) continue
+            addHabitPlan(
+                WeeklyReminderEngine.buildInactivity(
+                    habitId = state.habitId,
+                    habitName = state.habitName,
+                    checkInDate = pendingDate
+                )
+            )
+        }
+
+        // 4. Optional partial-progress tips (opt-in; default off).
+        val tipsEnabled = getSettingString("encouragement_tips_enabled", "false")
+            .equals("true", ignoreCase = true)
+        if (tipsEnabled && dueTimeReached) {
+            val previousWeekEnd = weekStart.minusDays(1)
+            for (state in weeklyHabitStatesForWeek(previousWeekEnd)) {
+                if (state.weeklyTargetMet || !state.hasProgress) continue
+                val pendingDate = WeeklyReminderEngine.tipDates(previousWeekEnd, today)
+                    .firstOrNull { candidate ->
+                        !existingKeys.contains(WeeklyReminderEngine.tipKey(state.habitId, candidate))
+                    } ?: continue
+                addHabitPlan(
+                    WeeklyReminderEngine.buildTip(
+                        habitId = state.habitId,
+                        habitName = state.habitName,
+                        tipDate = pendingDate
+                    )
+                )
+            }
+        }
+
+        return planned
+    }
+
+    /**
+     * Reserves, posts and finalises the due weekly reminders. Posting happens outside the
+     * reservation transaction, and the ledger is promoted to `DELIVERED` only after the real
+     * `NotificationManager.notify` call succeeded (same contract as the daily pipeline).
+     */
+    fun runWeeklyReminderPassSync(
+        today: LocalDate = clock.todayLocal(),
+        nowLocalTime: LocalTime = clock.nowLocalTime(),
+        poster: (tag: String, id: Int, title: String, body: String) -> Boolean = { tag, id, title, body ->
+            ReminderNotifier.postWeeklyReminder(appContext, tag, id, title, body)
+        }
+    ): WeeklyReminderPassResult {
+        val quietStart = getSettingString("quiet_hours_start", ReminderEngine.DEFAULT_QUIET_START)
+        val quietEnd = getSettingString("quiet_hours_end", ReminderEngine.DEFAULT_QUIET_END)
+        val dailyCap = getSettingInt("daily_reminder_cap", ReminderEngine.DEFAULT_DAILY_CAP)
+        val nowMs = clock.nowUtcMs()
+        val globallyEnabled = ReminderScheduler.isGlobalRemindersEnabled(this)
+        val notificationsAvailable = ReminderNotifier.isNotificationDeliveryAvailable(appContext)
+
+        val plans = planWeeklyRemindersSync(today = today, nowLocalTime = nowLocalTime)
+        if (plans.isEmpty()) {
+            return WeeklyReminderPassResult(0, 0, 0, emptyList())
+        }
+
+        val reservations = withImmediateTransaction {
+            plans.map { plan ->
+                val habitEligible = plan.habitId?.let { id ->
+                    val eff = getEffectiveHabitVersion(id, today)
+                    eff != null && eff.lifecycleState == HabitLifecycleState.ACTIVE
+                } ?: true
+                WeeklyReminderEngine.reserve(
+                    db = dbHelper.writableDatabase,
+                    plan = plan,
+                    habitEligible = habitEligible,
+                    globallyEnabled = globallyEnabled,
+                    notificationsAvailable = notificationsAvailable,
+                    quietStartLocal = quietStart,
+                    quietEndLocal = quietEnd,
+                    dailyCap = dailyCap,
+                    nowUtcMs = nowMs,
+                    today = today
+                )
+            }
+        }
+
+        var posted = 0
+        var suppressed = 0
+        var deferred = 0
+        for (reservation in reservations) {
+            when (reservation.status) {
+                WeeklyReminderEngine.ReservationStatus.RESERVED -> {
+                    val token = reservation.claimToken
+                    val plan = reservation.plan
+                    val success = try {
+                        poster(
+                            WeeklyReminderEngine.platformTagFor(plan),
+                            WeeklyReminderEngine.platformIdFor(plan),
+                            plan.title,
+                            plan.body
+                        )
+                    } catch (_: Exception) {
+                        false
+                    }
+                    if (success) {
+                        markReminderDeliveryDelivered(plan.deliveryKey, nowMs, token)
+                        posted++
+                    } else {
+                        markReminderDeliveryNotDelivered(plan.deliveryKey, "POST_FAILED", nowMs, token)
+                        suppressed++
+                    }
+                }
+                WeeklyReminderEngine.ReservationStatus.SUPPRESSED -> suppressed++
+                WeeklyReminderEngine.ReservationStatus.DEFERRED -> deferred++
+                WeeklyReminderEngine.ReservationStatus.ALREADY_FINALISED -> Unit
+            }
+        }
+        return WeeklyReminderPassResult(posted, suppressed, deferred, plans)
+    }
+
+    // ===== PHASE4-WEEKLY BLOCK END =====
 
     /**
      * Runs [block] inside a serialised database write transaction, retrying on transient

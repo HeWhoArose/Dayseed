@@ -598,3 +598,85 @@ All Phase 3 human/device validation cases below (`P3-H01` through `P3-H09`) are 
   1. Inspect `Journal`, `SharedMonthCalendar`, `WeeklyHabitBoard`, `DayDetailScreen`, `G2`/`G3`, and `Insights` across all 5 appearance modes and reduced-motion settings.
 - **Expected:** Calendar status indicators, mood chips, draft badges, and chart bars maintain clear contrast and calm transitions across all themes.
 
+## Phase 4 — Human/Device Validation Cases (added 2026-11-09)
+
+All Phase 4 cases are **`NOT RUN`**. They require a physical Android device (Android 13+ for permission cases) and must be executed only in a separately authorised validation stage; they are not satisfied by the Stage B self-checks.
+
+### P4-H01 — Notification permission allow/deny on Android 13+
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Install a debug build on Android 13+.
+  2. Open Settings → Notifications & reminders and tap "Allow notifications"; deny the first prompt, then grant it via the second attempt or the system settings route.
+  3. Confirm all core features (habits, journal, history, insights) remain usable with notifications denied.
+- **Expected:** The explanation precedes the system prompt, denial never blocks core features, and the panel's permission state matches the OS state after each choice.
+
+### P4-H02 — Weekly goal acknowledgement
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Create a weekly-target habit (e.g. 3 days/week) with reminders enabled and permission granted.
+  2. Reach the weekly target mid-week.
+- **Expected:** Exactly one small congratulations arrives shortly after the third qualifying day (inexact timing is acceptable), it names only the habit, and no duplicate arrives later in the same week.
+
+### P4-H03 — Week-start reflection and late delivery
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Set the week start (Monday and Sunday fixtures) and keep reminders enabled.
+  2. Prepare three previous weeks: target met, partial progress, no progress.
+  3. Observe the notification at 09:00 device-local on the week-start day; then repeat with the device off at 09:00 and switched on later the same day or the next day.
+- **Expected:** Copy matches the previous week's outcome, arrives once, late delivery still happens once without a multi-week backlog, and no reflection is sent when no weekly-target habit existed.
+
+### P4-H04 — Inactivity check-in cadence
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. With an unmet weekly goal, record no progress and watch days 1–7 of the configured week; then repeat with a planned rest day and with progress resumed mid-week.
+- **Expected:** No check-in before two complete days without progress; at most three per week; the check-in stops when the target is met or the week ends; a rest day does not trigger one.
+
+### P4-H05 — Optional encouragement tips
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Confirm tips are off by default.
+  2. Enable `encouragement_tips_enabled` (debug/settings write) and finish a week with partial progress.
+  3. Observe the following seven days.
+- **Expected:** At most three tips, never two on one local day, at least 24 hours apart, suppressed when the habit is later met or the user opts out.
+
+### P4-H06 — Reboot, force-stop, time zone and week-start changes
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Reboot the device, force-stop the app, change the time zone, change the start-of-week setting, and edit a habit reminder time.
+- **Expected:** No duplicate weekly or daily notifications, no reminder for an obsolete configuration, and no notification for a paused, archived, completed or deleted habit.
+
+### P4-H07 — Quiet hours and shared cap across reminder types
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Set quiet hours to cover the weekly 09:00 moment; then restore them and configure several habits plus a weekly goal on the same day.
+- **Expected:** Nothing posts inside quiet hours; after quiet hours the pending weekly occurrence may still arrive once; total notifications per local day never exceed three.
+
+### P4-H08 — Backup and restore through the system file picker
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Export a password-protected backup via the Storage Access Framework, then restore it with the correct password, a wrong password, a truncated file and a tampered file.
+  2. Repeat with REPLACE and MERGE, including an intentionally conflicting record, and interrupt a restore.
+- **Expected:** Only the correct payload restores; failures leave the source data intact; a verified safety backup exists before Replace; unresolved conflicts stay preserved and reviewable; restored settings rebuild future notifications from the current device's configuration.
+
+### P4-H09 — Deletion outcomes match the disclosure
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Delete one journal entry, discard a draft, permanently delete a habit with linked journal text, resolve a restore conflict, then delete all data.
+- **Expected:** Journal text survives habit deletion with only the optional link cleared; delete-all removes habits, journal, drafts, streak/Grove records, reminder ledger and settings; the UI never claims that provider or other-app copies were deleted.
+
+### P4-H10 — Accessibility and layout of the Phase 4 surfaces
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. With TalkBack enabled, traverse Settings → Notifications & reminders and tap a weekly notification.
+  2. Set font scale to 200% and width to 320–360 dp; measure contrast in all appearance modes; test keyboard/focus restoration and reduced motion.
+- **Expected:** Every switch, row and status announces its state and purpose; no clipped or unreachable controls; touch targets at least 48 dp; contrast meets the project thresholds when measured; tapping a weekly notification opens Dayseed; reduced motion suppresses plant/Grove and theme transitions.

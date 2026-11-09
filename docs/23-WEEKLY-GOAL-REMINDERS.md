@@ -1,6 +1,6 @@
 # Weekly Goal Reminders
 
-**Status:** Approved product direction; detailed timing/copy tests remain to be specified.
+**Status:** Approved product direction; Stage B implementation of the four occurrence types (`WEEKLY_GOAL_REACHED`, `WEEK_START_REFLECTION`, `WEEKLY_INACTIVITY`, `PARTIAL_PROGRESS_TIP`) is implemented and self-checked under D-232 (2026-11-09) with the delegated timing/cadence defaults recorded there. Physical-device delivery, week-boundary/time-zone behaviour and the human cases in `docs/38` (`P4-H*`) remain **NOT RUN**; Stage C/D remain open.
 
 ## Weekly rhythm
 

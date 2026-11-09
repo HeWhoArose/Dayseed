@@ -498,9 +498,10 @@ fun QuietHoursPanel(
  *   action, and a route to the system notification settings.
  * - Habit reminders stay configured inside Create/Edit Habit (no duplicate reminder store).
  * - Quiet-hours controls and the shared three-per-day cap keep the existing behaviour.
- * - Weekly reflection reminders are documented here as not-yet-implemented rather than
- *   shown as a control that does nothing.
- * - Separate encouragement-tip controls are intentionally not exposed (feature unsupported).
+ * - The weekly reminder family (D-043, Phase 4A) is implemented: week-start reflection,
+ *   weekly-goal acknowledgement, two-day inactivity check-ins and optional encouragement
+ *   tips. Their switches are shown read-only for the same device-verification reason, and
+ *   the tips preference defaults to off.
  */
 @Composable
 fun RemindersPanel(
@@ -687,28 +688,72 @@ fun RemindersPanel(
     }
     Spacer(modifier = Modifier.height(14.dp))
 
-    // ---- Area 4: Weekly goal reminders (honest not-implemented state) ----
+    // ---- Area 4: Weekly reminders (implemented; activation still gated) ----
+    val weeklyReflectionsPreference =
+        appSettings["weekly_reflections_enabled"]?.valueText?.equals("false", ignoreCase = true) != true
+    val encouragementTipsPreference =
+        appSettings["encouragement_tips_enabled"]?.valueText.equals("true", ignoreCase = true)
     SettingsGroupCard {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Weekly reflection reminders",
+                text = "Weekly reminders",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "The weekly reflection runs at 09:00 device-local time when implemented. " +
-                    "That is the intended time, not a delivery guarantee — Android may delay " +
-                    "reminders slightly so they arrive close to the intended moment.\n\n" +
-                    "Weekly reflection reminder preferences are not implemented yet, so there " +
-                    "is no switch here.",
+                text = "These prompts are built and evaluated at 09:00 device-local time on " +
+                    "your configured week-start day. That is the intended time, not a delivery " +
+                    "guarantee — Android may delay them slightly. Weekly goal congratulations " +
+                    "are evaluated as progress is saved, and an inactivity check-in may follow " +
+                    "two complete days without progress, at most three times a week. All of " +
+                    "them respect quiet hours and the shared daily limit of 3 notifications.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Week-start reflection", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        text = "Outcome-aware fresh start for the previous week.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = weeklyReflectionsPreference,
+                    onCheckedChange = null,
+                    enabled = false,
+                    modifier = Modifier.testTag("weekly_reflection_switch")
+                )
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Encouragement tips", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        text = "Optional tips after a week of partial progress (default off).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = encouragementTipsPreference,
+                    onCheckedChange = null,
+                    enabled = false,
+                    modifier = Modifier.testTag("encouragement_tips_switch")
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Both switches stay read-only until reminder delivery passes physical-device " +
+                    "verification, matching the rest of this panel.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
-    // ---- Area 5: Optional encouragement tips are intentionally not exposed — the feature
-    //      is not supported yet, and unsupported controls must never appear switchable.
 
     // ---- Debug only: real delivery verification (never shown in release builds) ----
     if (com.example.dayseed.BuildConfig.DEBUG) {

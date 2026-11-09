@@ -481,7 +481,11 @@ class DayseedDatabaseHelper(
         CREATE TABLE $tableName (
             delivery_key TEXT NOT NULL PRIMARY KEY CHECK (length(trim(delivery_key)) > 0),
             reminder_type TEXT NOT NULL CHECK (
-                reminder_type IN ('HABIT', 'HABIT_DAILY', 'COMEBACK_14D', 'COMEBACK_30D')
+                reminder_type IN (
+                    'HABIT', 'HABIT_DAILY', 'COMEBACK_14D', 'COMEBACK_30D',
+                    'WEEKLY_GOAL_REACHED', 'WEEK_START_REFLECTION', 'WEEKLY_INACTIVITY',
+                    'PARTIAL_PROGRESS_TIP'
+                )
             ),
             habit_id TEXT REFERENCES $TABLE_HABITS(habit_id) ON DELETE CASCADE,
             target_period_key TEXT NOT NULL CHECK (length(trim(target_period_key)) > 0),
@@ -495,8 +499,12 @@ class DayseedDatabaseHelper(
             platform_notification_id INTEGER,
             suppression_reason TEXT,
             CHECK (
-                (reminder_type IN ('HABIT', 'HABIT_DAILY') AND habit_id IS NOT NULL)
-                OR (reminder_type IN ('COMEBACK_14D', 'COMEBACK_30D') AND habit_id IS NULL)
+                (reminder_type IN (
+                    'HABIT', 'HABIT_DAILY', 'WEEKLY_GOAL_REACHED',
+                    'WEEKLY_INACTIVITY', 'PARTIAL_PROGRESS_TIP'
+                ) AND habit_id IS NOT NULL)
+                OR (reminder_type IN ('COMEBACK_14D', 'COMEBACK_30D', 'WEEK_START_REFLECTION')
+                    AND habit_id IS NULL)
             )
         );
         """.trimIndent()
@@ -1495,7 +1503,14 @@ class DayseedDatabaseHelper(
         val needsRestoreConflictsUpgrade = restoreConflictsSql != null &&
             !restoreConflictsSql.contains("'habit_streak_run'")
 
-        if (!needsHabitVersionsUpgrade && !needsRestoreConflictsUpgrade) {
+        // Phase 4A: the weekly reminder family (D-043) records its occurrence types in the
+        // shared reminder_deliveries ledger, so an existing v3 database must gain the wider
+        // reminder_type/CHECK constraint without a DATABASE_VERSION bump (D-219 pattern).
+        val reminderDeliveriesSql = getTableCreateSql(db, TABLE_REMINDER_DELIVERIES)
+        val needsReminderTypesUpgrade = reminderDeliveriesSql != null &&
+            !reminderDeliveriesSql.contains("'WEEKLY_GOAL_REACHED'")
+
+        if (!needsHabitVersionsUpgrade && !needsRestoreConflictsUpgrade && !needsReminderTypesUpgrade) {
             return
         }
 
@@ -1556,6 +1571,16 @@ class DayseedDatabaseHelper(
                     createSql = buildRestoreConflictsTableSql("restore_conflicts_v3_reconcile"),
                     tempName = "restore_conflicts_v3_reconcile",
                     columns = "conflict_id, restore_session_id, record_type, record_key, current_payload_json, backup_payload_json, created_at_utc_ms"
+                )
+            }
+
+            if (needsReminderTypesUpgrade) {
+                rebuildTableCopy(
+                    db = db,
+                    tableName = TABLE_REMINDER_DELIVERIES,
+                    createSql = buildReminderDeliveriesTableSql("reminder_deliveries_v3_reconcile"),
+                    tempName = "reminder_deliveries_v3_reconcile",
+                    columns = "delivery_key, reminder_type, habit_id, target_period_key, delivery_status, scheduled_at_utc_ms, attempted_at_utc_ms, delivered_at_utc_ms, platform_notification_tag, platform_notification_id, suppression_reason"
                 )
             }
 

@@ -2,7 +2,9 @@ package com.example.dayseed.data
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import androidx.core.app.NotificationCompat
 
 /**
@@ -84,6 +86,52 @@ internal object ReminderNotifier {
             // Android refused the post (blocked channel, revoked permission at the last
             // moment, etc.) — the pipeline corrects the ledger row instead of leaving it
             // claiming a delivery that never happened.
+            false
+        }
+    }
+
+    /**
+     * Posts one weekly reminder occurrence (D-043 / Phase 4A: weekly goal acknowledgement,
+     * week-start reflection, inactivity check-in or optional encouragement tip).
+     *
+     * Copy is supplied by [WeeklyReminderEngine] and never contains journal text, mood,
+     * habit notes or any other private content. Tapping opens Dayseed so the user lands on the
+     * app rather than a dead notification. Returns true only when `notify` did not throw.
+     */
+    fun postWeeklyReminder(
+        context: Context,
+        tag: String,
+        id: Int,
+        title: String,
+        body: String
+    ): Boolean {
+        val notificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return false
+        ensureReminderChannel(context)
+
+        val openAppIntent = Intent(context, com.example.dayseed.MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val contentIntent = PendingIntent.getActivity(
+            context,
+            0,
+            openAppIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.star_on)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setContentIntent(contentIntent)
+            .setAutoCancel(true)
+            .build()
+
+        return try {
+            notificationManager.notify(tag, id, notification)
+            true
+        } catch (_: Exception) {
             false
         }
     }

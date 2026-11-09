@@ -28,6 +28,12 @@ class ReminderReconcileWorker(
                 // Crash-recovery for incomplete delivery reservations (Phase 1 remediation):
                 // stale SCHEDULED reservations are re-posted while still eligible, or honestly corrected.
                 repository.reconcilePendingReminderPostsSync()
+                // Weekly reminder family (D-043 / Phase 4A): goal acknowledgement, week-start
+                // reflection, inactivity check-in and optional tips are due-time evaluated here
+                // because WorkManager may defer this pass by a few minutes (never an exact time).
+                if (ReminderScheduler.isGlobalRemindersEnabled(repository)) {
+                    repository.runWeeklyReminderPassSync()
+                }
                 // Then bring the alarm schedule back in line with current settings/habits.
                 ReminderScheduler.scheduleAll(applicationContext, repository)
             } finally {
