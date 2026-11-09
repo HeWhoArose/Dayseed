@@ -317,7 +317,7 @@ Following explicit owner authorisation in Google AI Studio to execute the Correc
 
 ## Phase 4A — Weekly reminder family traceability (implemented 2026-11-09, Stage B self-check)
 
-Maps `implementation_plan.md` Phase 4 §A (weekly goal acknowledgement, weekly inactivity check-in, week-start reflection, optional tips) to implementation and executed tests. Baseline `fe0846e` + working-tree Phase 4A changes; D-232 records the delegated details.
+Maps `implementation_plan.md` Phase 4 §A (weekly goal acknowledgement, weekly inactivity check-in, week-start reflection, optional tips) to implementation and executed tests. Committed on `main` at `7bb8d80` (on top of `fe0846e`); D-232 records the delegated details.
 
 | Plan requirement | Implementation | Executed evidence |
 | --- | --- | --- |
