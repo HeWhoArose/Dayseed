@@ -403,9 +403,13 @@ private fun DayDetailHabitCard(
                             item.effectiveVersion.unitCode?.ifBlank { "units" } ?: "units"
                         else -> if (item.totalUnits == BigInteger.ONE) "day" else "days"
                     }
+                    val recordedEffort = item.outcomes.firstOrNull()?.effortLevel
                     val contributionText = when {
                         item.dayRecordState == DayRecordState.EXPLICIT_ZERO ->
                             "Selected date contribution: 0 $contributionUnitLabel (explicit 0 check-in)"
+                        item.effectiveVersion.trackingMode.canonical() in listOf(TrackingMode.EFFORT_AWARE, TrackingMode.EFFORT_LEVELS) &&
+                            item.outcomes.isNotEmpty() && item.totalUnits == BigInteger.ZERO ->
+                            "Selected date contribution: 0 $contributionUnitLabel (${recordedEffort ?: "TINY"} effort recorded)"
                         else ->
                             "Selected date contribution: ${item.totalUnits} $contributionUnitLabel"
                     }

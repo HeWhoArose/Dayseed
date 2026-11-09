@@ -6518,7 +6518,15 @@ class DayseedRepository(
                 TrackingMode.COMPLETION_ONLY ->
                     if (outcomes.any { it.outcomeKind == "COMPLETED" }) BigInteger.ONE else BigInteger.ZERO
                 TrackingMode.EFFORT_AWARE, TrackingMode.EFFORT_LEVELS ->
-                    if (outcomes.isNotEmpty()) BigInteger.ONE else BigInteger.ZERO
+                    if (isWeeklyHabit) {
+                        if (outcomes.any { StreakAndGroveEngine.isQualifyingWeeklyEffortOutcome(it) }) {
+                            BigInteger.ONE
+                        } else {
+                            BigInteger.ZERO
+                        }
+                    } else {
+                        if (outcomes.isNotEmpty()) BigInteger.ONE else BigInteger.ZERO
+                    }
             }
 
             if (isWeeklyHabit && weekSnapshot != null) {
@@ -6537,10 +6545,10 @@ class DayseedRepository(
                     effectiveVersion = effectiveEvalVersion,
                     honestState = honestState,
                     dayRecordState = dayRecordState,
-                    compactBucket = if (totalUnits > BigInteger.ZERO) {
-                        CompactHistoryBucket.COMPLETED
-                    } else {
-                        CompactHistoryBucket.NONE_RECORDED
+                    compactBucket = when {
+                        totalUnits > BigInteger.ZERO -> CompactHistoryBucket.COMPLETED
+                        dayRecordState == DayRecordState.PARTIAL_PROGRESS -> CompactHistoryBucket.PARTIAL
+                        else -> CompactHistoryBucket.NONE_RECORDED
                     },
                     progressBand = ProgressBand.ZERO,
                     totalUnits = totalUnits,
@@ -6673,7 +6681,11 @@ class DayseedRepository(
                     TrackingMode.COMPLETION_ONLY ->
                         if (dayOutcome?.outcomeKind == "COMPLETED") BigInteger.ONE else BigInteger.ZERO
                     TrackingMode.EFFORT_AWARE, TrackingMode.EFFORT_LEVELS ->
-                        if (dayOutcome != null) BigInteger.ONE else BigInteger.ZERO
+                        if (isWeeklyHabit) {
+                            if (StreakAndGroveEngine.isQualifyingWeeklyEffortOutcome(dayOutcome)) BigInteger.ONE else BigInteger.ZERO
+                        } else {
+                            if (dayOutcome != null) BigInteger.ONE else BigInteger.ZERO
+                        }
                 }
                 val isPref = when (dayEvalVersion.scheduleKind) {
                     ScheduleKind.DAILY -> true
@@ -6692,6 +6704,7 @@ class DayseedRepository(
                         honestState == HonestCalendarDateState.REST_DAY_PLANNED_PAUSE -> "Rest"
                         honestState == HonestCalendarDateState.PAUSED_DATE_RANGE -> "⏸"
                         honestState == HonestCalendarDateState.EXPLICIT_ZERO_NOT_DONE -> "0"
+                        honestState == HonestCalendarDateState.PARTIAL_OR_TINY_PROGRESS -> "◐"
                         dayUnits > BigInteger.ZERO -> {
                             when (frozenVersion.trackingMode.canonical()) {
                                 TrackingMode.DURATION -> {

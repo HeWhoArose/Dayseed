@@ -2,6 +2,7 @@ package com.example.dayseed
 
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
+import com.example.dayseed.data.CompactHistoryBucket
 import com.example.dayseed.data.DayRecordState
 import com.example.dayseed.data.DayseedClock
 import com.example.dayseed.data.DayseedRepository
@@ -956,5 +957,106 @@ class Phase3ImplementationTest {
         assertEquals(100, wedDaily.percentage)
         assertEquals(ProgressBand.GOAL_MET, wedDaily.progressBand)
         assertNull(wedDaily.weekProgressSummary)
+    }
+
+    @Test
+    fun p3_14_weeklyEffortAwareDayDetailPreservesRecordedTinyEffortVersusQualifyingContribution() {
+        val today = LocalDate.of(2026, 10, 14) // Wednesday (week: Mon Oct 12 .. Sun Oct 18)
+        testClock.currentLocalDate = today
+
+        // Legacy weekly EFFORT_AWARE habit: target 2 days/week
+        val weeklyEffortHabit = Habit(
+            habitId = "h_weekly_effort_legacy",
+            name = "Legacy Weekly Practice",
+            trackingMode = TrackingMode.EFFORT_AWARE,
+            targetPeriod = TargetPeriod.WEEK,
+            targetValue = 2,
+            scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET
+        )
+        repository.saveHabitSync(
+            weeklyEffortHabit,
+            effectiveDateOverride = LocalDate.of(2026, 10, 12),
+            allowLegacyEffortModeCreation = true
+        )
+
+        // 1. Log TINY effort on Monday (2026-10-12):
+        // Recorded effort is preserved (outcomes non-empty, PARTIAL_PROGRESS, PARTIAL_OR_TINY_PROGRESS, CompactHistoryBucket.PARTIAL),
+        // but qualifying weekly contribution is 0 days (matching computeWeeklyProgressSnapshot).
+        repository.logHabitDayOutcomeSync(
+            habitId = "h_weekly_effort_legacy",
+            date = LocalDate.of(2026, 10, 12),
+            outcomeKind = "EFFORT_LOGGED",
+            effortLevel = "TINY"
+        )
+
+        val monDetailTinyOnly = repository.computeDayDetailSummary(LocalDate.of(2026, 10, 12), today)
+        val monItemTiny = monDetailTinyOnly.habitItems.first { it.habit.habitId == "h_weekly_effort_legacy" }
+        assertEquals(1, monItemTiny.outcomes.size)
+        assertEquals("TINY", monItemTiny.outcomes.single().effortLevel)
+        assertEquals(DayRecordState.PARTIAL_PROGRESS, monItemTiny.dayRecordState)
+        assertEquals(HonestCalendarDateState.PARTIAL_OR_TINY_PROGRESS, monItemTiny.honestState)
+        assertEquals(CompactHistoryBucket.PARTIAL, monItemTiny.compactBucket)
+        // Qualifying weekly contribution on Monday is 0 days, and weekly total is 0 / 2 days (ProgressBand.ZERO)
+        assertEquals(BigInteger.ZERO, monItemTiny.totalUnits)
+        assertEquals(ProgressBand.ZERO, monItemTiny.progressBand)
+        assertEquals(BigInteger.ZERO, monItemTiny.weekTotalUnits)
+        assertEquals(BigInteger.valueOf(2), monItemTiny.weekTargetUnits)
+        assertEquals(0, monItemTiny.weekPercentage)
+        assertEquals(ProgressBand.ZERO, monItemTiny.weekProgressBand)
+
+        // 2. Log qualifying USUAL effort on Tuesday (2026-10-13) and EXTRA effort on Wednesday (2026-10-14):
+        // Now the week has 2 qualifying days (Tue + Wed = 2 / 2 -> GOAL_MET), while Monday remains 0 qualifying days with TINY effort preserved.
+        repository.logHabitDayOutcomeSync(
+            habitId = "h_weekly_effort_legacy",
+            date = LocalDate.of(2026, 10, 13),
+            outcomeKind = "EFFORT_LOGGED",
+            effortLevel = "USUAL"
+        )
+        repository.logHabitDayOutcomeSync(
+            habitId = "h_weekly_effort_legacy",
+            date = LocalDate.of(2026, 10, 14),
+            outcomeKind = "EFFORT_LOGGED",
+            effortLevel = "EXTRA"
+        )
+
+        val monDetailAfter = repository.computeDayDetailSummary(LocalDate.of(2026, 10, 12), today)
+        val tueDetailAfter = repository.computeDayDetailSummary(LocalDate.of(2026, 10, 13), today)
+        val wedDetailAfter = repository.computeDayDetailSummary(LocalDate.of(2026, 10, 14), today)
+
+        val monItemAfter = monDetailAfter.habitItems.first { it.habit.habitId == "h_weekly_effort_legacy" }
+        val tueItemAfter = tueDetailAfter.habitItems.first { it.habit.habitId == "h_weekly_effort_legacy" }
+        val wedItemAfter = wedDetailAfter.habitItems.first { it.habit.habitId == "h_weekly_effort_legacy" }
+
+        // Monday still preserves recorded TINY effort while reporting 0 qualifying days for that date
+        assertEquals("TINY", monItemAfter.outcomes.single().effortLevel)
+        assertEquals(DayRecordState.PARTIAL_PROGRESS, monItemAfter.dayRecordState)
+        assertEquals(HonestCalendarDateState.PARTIAL_OR_TINY_PROGRESS, monItemAfter.honestState)
+        assertEquals(CompactHistoryBucket.PARTIAL, monItemAfter.compactBucket)
+        assertEquals(BigInteger.ZERO, monItemAfter.totalUnits)
+        assertEquals(ProgressBand.ZERO, monItemAfter.progressBand)
+
+        // Tuesday (USUAL) and Wednesday (EXTRA) each report 1 qualifying day for their date
+        assertEquals("USUAL", tueItemAfter.outcomes.single().effortLevel)
+        assertEquals(HonestCalendarDateState.COMPLETED_TARGET_MET, tueItemAfter.honestState)
+        assertEquals(CompactHistoryBucket.COMPLETED, tueItemAfter.compactBucket)
+        assertEquals(BigInteger.ONE, tueItemAfter.totalUnits)
+        assertEquals(ProgressBand.ZERO, tueItemAfter.progressBand)
+
+        assertEquals("EXTRA", wedItemAfter.outcomes.single().effortLevel)
+        assertEquals(HonestCalendarDateState.COMPLETED_TARGET_MET, wedItemAfter.honestState)
+        assertEquals(CompactHistoryBucket.COMPLETED, wedItemAfter.compactBucket)
+        assertEquals(BigInteger.ONE, wedItemAfter.totalUnits)
+        assertEquals(ProgressBand.ZERO, wedItemAfter.progressBand)
+
+        // All three dates show the consistent weekly snapshot: 2 / 2 days (100% -> GOAL_MET)
+        for (item in listOf(monItemAfter, tueItemAfter, wedItemAfter)) {
+            assertEquals(BigInteger.valueOf(2), item.weekTotalUnits)
+            assertEquals(BigInteger.valueOf(2), item.weekTargetUnits)
+            assertEquals(100, item.weekPercentage)
+            assertEquals(ProgressBand.GOAL_MET, item.weekProgressBand)
+            assertNotNull(item.weekProgressSummary)
+            assertTrue(item.weekProgressSummary!!.contains("2 / 2 days"))
+            assertTrue(item.weekProgressSummary!!.contains(ProgressBand.GOAL_MET.displayName))
+        }
     }
 }

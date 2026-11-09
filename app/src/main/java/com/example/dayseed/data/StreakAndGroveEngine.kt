@@ -848,6 +848,17 @@ object StreakAndGroveEngine {
     )
 
     /**
+     * Returns true when [outcome] counts as a qualifying day toward a [TargetPeriod.WEEK]
+     * [TrackingMode.EFFORT_AWARE] / [TrackingMode.EFFORT_LEVELS] target (`COMPLETED`, `USUAL`, or `EXTRA`).
+     * `EFFORT_LOGGED` with `effortLevel == "TINY"` is recorded effort on that date, not a qualifying weekly day.
+     */
+    fun isQualifyingWeeklyEffortOutcome(outcome: HabitDayOutcome?): Boolean {
+        if (outcome == null) return false
+        return outcome.outcomeKind == "COMPLETED" ||
+            (outcome.outcomeKind == "EFFORT_LOGGED" && outcome.effortLevel in setOf("USUAL", "EXTRA"))
+    }
+
+    /**
      * Computes week-to-date progress on [evaluationDate] under U-12 Option B (frozen start-of-week HabitVersion).
      */
     fun computeWeeklyProgressSnapshot(
@@ -906,10 +917,7 @@ object StreakAndGroveEngine {
                 }
                 TrackingMode.EFFORT_AWARE, TrackingMode.EFFORT_LEVELS -> {
                     val hasQualifyingOutcome = outcomes.any { out ->
-                        out.localDate == dStr && (
-                            out.outcomeKind == "COMPLETED" ||
-                                (out.outcomeKind == "EFFORT_LOGGED" && out.effortLevel in setOf("USUAL", "EXTRA"))
-                            )
+                        out.localDate == dStr && isQualifyingWeeklyEffortOutcome(out)
                     }
                     if (hasQualifyingOutcome && completedDates.add(dStr)) {
                         totalUnits = BigInteger.valueOf(completedDates.size.toLong())
