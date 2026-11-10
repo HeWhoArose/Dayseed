@@ -335,3 +335,11 @@ Maps `implementation_plan.md` Phase 4 §A (weekly goal acknowledgement, weekly i
 | Privacy/deletion/backup invariants stay intact | Delete-all clears the weekly ledger; portable backup excludes `reminder_deliveries`/platform IDs while covering streak runs, exceptions and notes; manifest keeps `allowBackup=false`, no `INTERNET`, no exact-alarm permissions | `p4_15`, `p4_16`, `p4_18` |
 
 **Not executed:** all `P4-H*` human/device cases in `docs/38` remain `NOT RUN`; Stage C independent validation and Stage D acceptance remain `NOT OPEN`.
+
+## Phase 4 audit corrections (2026-11-10, Stage B self-check, uncommitted working tree on top of `4308111`)
+
+| Plan bullet | Correction | Test |
+| --- | --- | --- |
+| §B "reconcile on reboot, time change, time-zone change, day boundary, app update **and deletion**" — delete-all must not leave scheduling state behind | `deleteAllDataSync` now calls `ReminderScheduler.cancelAllRegistered` **before** the reset transaction deletes the `reminder_scheduled_alarm_ids` registry, so no armed alarm survives the reset | `p4_32` |
+| §A/§B "reconcile on week-start change" — a policy change can move weekly target windows immediately | `setWeekStartSync` and the legacy-baseline branch of `setSettingSync("week_start")` call `rescheduleReminderAlarms()` instead of waiting for the 15-minute reconcile pass | `p4_33` |
+| §B "Never include OS notification/scheduling state as active work" in the portable backup | Export skips `reminder_scheduled_alarm_ids`; REPLACE and MERGE restore ignore it, so a foreign device registry is never adopted and local state is re-derived | `p4_34` |

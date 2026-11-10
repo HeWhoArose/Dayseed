@@ -248,6 +248,20 @@ object ReminderScheduler {
         )
     }
 
+    /**
+     * Cancels every alarm recorded in the persisted registry and clears it. Full local reset
+     * (delete-all) deletes the settings row that holds the registry, so the armed alarms must
+     * be cancelled first: otherwise they survive the reset and fire once against data that no
+     * longer exists, and nothing is left to identify them.
+     */
+    fun cancelAllRegistered(context: Context, repository: DayseedRepository) {
+        val appContext = context.applicationContext
+        val registered = readScheduledAlarmIds(repository)
+        if (registered.isEmpty()) return
+        registered.forEach { cancelAlarm(appContext, it) }
+        writeScheduledAlarmIds(repository, emptySet())
+    }
+
     private fun readScheduledAlarmIds(repository: DayseedRepository): Set<String> {
         val text = repository.getSettingString(SETTING_SCHEDULED_ALARM_IDS, "")
         if (text.isBlank()) return emptySet()

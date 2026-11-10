@@ -1,6 +1,8 @@
 package com.example.dayseed
 
+import android.app.AlarmManager
 import android.app.Application
+import android.content.Context
 import android.database.sqlite.SQLiteConstraintException
 import androidx.test.core.app.ApplicationProvider
 import com.example.dayseed.data.DayseedClock
@@ -8,6 +10,7 @@ import com.example.dayseed.data.BackupAndExportManager
 import com.example.dayseed.data.DayseedDatabaseHelper
 import com.example.dayseed.data.DayseedRepository
 import com.example.dayseed.data.Habit
+import com.example.dayseed.data.ReminderScheduler
 import com.example.dayseed.data.ScheduleKind
 import com.example.dayseed.data.TargetPeriod
 import com.example.dayseed.data.TrackingMode
@@ -23,6 +26,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowAlarmManager
 import java.io.File
 import java.time.LocalDate
 import java.time.LocalTime
@@ -949,5 +953,118 @@ class Phase4ImplementationTest {
             target.dbHelper.close()
             app.deleteDatabase(targetDbName)
         }
+    }
+
+    // ---------------------------------------------------------------------
+    // D. Phase 4 audit corrections: reset, week-start realignment, portability
+    // ---------------------------------------------------------------------
+
+    private fun seedReminderHabit(id: String = "h_reminder_p4", time: String = "09:00") {
+        repository.saveHabitSync(
+            Habit(
+                habitId = id,
+                name = "Stretch",
+                trackingMode = TrackingMode.COMPLETION_ONLY,
+                targetPeriod = TargetPeriod.DAY,
+                targetValue = 1,
+                scheduleKind = ScheduleKind.DAILY,
+                reminderMode = "AT_TIME",
+                reminderTimeLocal = time
+            ),
+            effectiveDateOverride = LocalDate.of(2026, 10, 5)
+        )
+    }
+
+    private fun alarmRepository(): ShadowAlarmManager =
+        org.robolectric.Shadows.shadowOf(
+            app.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        )
+
+    private fun registryIds(): Set<String> {
+        val text = repository.getSettingString(ReminderScheduler.SETTING_SCHEDULED_ALARM_IDS, "")
+        if (text.isBlank()) return emptySet()
+        val arr = org.json.JSONArray(text)
+        return (0 until arr.length()).map { arr.getString(it) }.toSet()
+    }
+
+    @Test
+    fun p4_32_deleteAllCancelsArmedReminderAlarmsBeforeClearingTheirRegistry() {
+        seedReminderHabit()
+        ReminderScheduler.scheduleAll(app, repository)
+        assertEquals(1, alarmRepository().scheduledAlarms.size)
+        assertTrue(registryIds().contains("h_reminder_p4"))
+
+        repository.deleteAllDataSync()
+
+        assertEquals(
+            "delete-all must not leave an armed reminder behind",
+            0,
+            alarmRepository().scheduledAlarms.size
+        )
+        assertTrue(registryIds().isEmpty())
+    }
+
+    @Test
+    fun p4_33_weekStartChangeRealignsArmedReminderAlarms() {
+        // A registration left over from an earlier run, as if its habit had since disappeared.
+        val staleIntent = ReminderScheduler.buildAlarmPendingIntent(
+            app,
+            habitId = "h_stale_p4",
+            deliveryDate = "",
+            reminderTimeLocal = ""
+        )
+        (app.getSystemService(Context.ALARM_SERVICE) as AlarmManager).set(
+            AlarmManager.RTC_WAKEUP,
+            testClock.currentUtcMs + 60_000L,
+            staleIntent
+        )
+        repository.setSettingSync(
+            ReminderScheduler.SETTING_SCHEDULED_ALARM_IDS,
+            "JSON",
+            "[\"h_stale_p4\"]"
+        )
+        assertEquals(1, alarmRepository().scheduledAlarms.size)
+
+        repository.setWeekStartSync(java.time.DayOfWeek.FRIDAY)
+
+        assertEquals(
+            "a week-start change must realign the alarm registry, not wait for reconcile",
+            0,
+            alarmRepository().scheduledAlarms.size
+        )
+        assertFalse(registryIds().contains("h_stale_p4"))
+    }
+
+    @Test
+    fun p4_34_portableBackupNeverCarriesDeviceSchedulerState() {
+        seedReminderHabit()
+        ReminderScheduler.scheduleAll(app, repository)
+        assertTrue(registryIds().contains("h_reminder_p4"))
+
+        val exported = JSONObject(repository.exportPortableBackupSync())
+        assertFalse(
+            "device-local alarm registry must not be exported",
+            exported.toString().contains(ReminderScheduler.SETTING_SCHEDULED_ALARM_IDS)
+        )
+
+        // A backup that still carries the key (older or hand-edited) must not import it either.
+        exported.getJSONArray("app_settings").put(
+            JSONObject().apply {
+                put("setting_key", ReminderScheduler.SETTING_SCHEDULED_ALARM_IDS)
+                put("value_type", "JSON")
+                put("value_text", "[\"h_imported_p4\"]")
+                put("schema_version", 1)
+                put("updated_at_utc_ms", 100)
+            }
+        )
+        repository.restorePortableBackupSync(
+            rawBackupPayload = exported.toString(),
+            restoreMode = "REPLACE"
+        )
+
+        assertFalse(
+            "restore must not adopt another device's alarm registry",
+            registryIds().contains("h_imported_p4")
+        )
     }
 }

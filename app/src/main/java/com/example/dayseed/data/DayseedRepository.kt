@@ -625,6 +625,9 @@ class DayseedRepository(
         }
 
         refreshAllSync()
+        // A week-start change moves weekly boundaries, so reminder eligibility/target windows
+        // can change immediately; realign armed alarms instead of waiting for the reconcile pass.
+        rescheduleReminderAlarms()
         return _weekStartHistory.value.find { it.effectiveFromLocalDate == effectiveDateStr }
             ?: WeekStartPolicyEntry(
                 effectiveFromLocalDate = effectiveDateStr,
@@ -681,6 +684,7 @@ class DayseedRepository(
                     db.endTransaction()
                 }
                 refreshAllSync()
+                rescheduleReminderAlarms()
             } else {
                 setWeekStartSync(parsedDay)
             }
@@ -4785,6 +4789,8 @@ class DayseedRepository(
         root.put("app_settings", JSONArray().apply {
             for (s in _appSettings.value.values) {
                 if (s.settingKey.startsWith("journal_draft_cursor_")) continue
+                // Device-local scheduler state (which alarms this device armed) is not portable.
+                if (s.settingKey == ReminderScheduler.SETTING_SCHEDULED_ALARM_IDS) continue
                 put(appSettingToJson(s))
             }
         })
@@ -5255,6 +5261,7 @@ class DayseedRepository(
             val o = settingsArr.getJSONObject(i)
             val sKey = o.optString("setting_key", "")
             if (sKey.startsWith("journal_draft_cursor_")) continue
+            if (sKey == ReminderScheduler.SETTING_SCHEDULED_ALARM_IDS) continue
             db.insertWithOnConflict(
                 DayseedDatabaseHelper.TABLE_APP_SETTINGS,
                 null,
@@ -5716,6 +5723,7 @@ class DayseedRepository(
             val o = settingsArr.getJSONObject(i)
             val sKey = o.getString("setting_key")
             if (sKey.startsWith("journal_draft_cursor_")) continue
+            if (sKey == ReminderScheduler.SETTING_SCHEDULED_ALARM_IDS) continue
             val existing = _appSettings.value[sKey]
             if (existing == null) {
                 db.insertWithOnConflict(
@@ -6319,6 +6327,10 @@ class DayseedRepository(
     fun deleteAllDataSync() {
         val db = dbHelper.writableDatabase
         val nowMs = clock.nowUtcMs()
+
+        // Cancel armed reminder alarms while the registry that identifies them still exists;
+        // the transaction below removes that registry along with every other setting.
+        ReminderScheduler.cancelAllRegistered(appContext, this)
 
         db.beginTransaction()
         try {
