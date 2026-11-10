@@ -37,6 +37,33 @@ The project declares a native Android/Kotlin + Jetpack Compose stack with SQLite
 - **Architecture:** ViewModel/StateFlow and repository-based structure
 - **Local persistence:** SQLiteOpenHelper (`DATABASE_VERSION = 2`, 12 tables, fail-closed v1-to-v2 migration in source; v2-to-v3 migration scheduled for Phase 1).
 
+## Building from source
+
+Prerequisites (versions this project is verified against):
+
+- **JDK 21** — required, not optional: `app/build.gradle.kts` sets `sourceCompatibility`/`targetCompatibility` to `VERSION_21`.
+- **Android SDK platform 36** with **build-tools 36.0.0** (`compileSdk = 36`, `targetSdk = 36`, `minSdk = 26`).
+- The **Gradle wrapper** in this repository (Gradle 9.3.1). Do not substitute a different Gradle version.
+
+Point the build at the SDK either with the `ANDROID_HOME` environment variable or a gitignored `local.properties` containing `sdk.dir=/path/to/android-sdk`.
+
+Both signing configs reference `${rootDir}/debug.keystore`, which is gitignored, so a fresh checkout cannot assemble an APK until that file exists. Create it once with the development-only bootstrap script (it refuses to overwrite an existing keystore):
+
+```bash
+./scripts/bootstrap-debug-keystore.sh       # macOS / Linux
+.\scripts\bootstrap-debug-keystore.ps1      # Windows
+```
+
+Then build, test and lint:
+
+```bash
+./gradlew :app:assembleDebug
+./gradlew :app:testDebugUnitTest --rerun-tasks
+./gradlew :app:lintDebug
+```
+
+The release variant is signed with the **same debug keystore**, deliberately, until the owner supplies production signing material: `:app:assembleRelease` produces an installable artifact for testing, never a production-signed release. Never commit `debug.keystore`, `local.properties` or any credential.
+
 ## Project status and audits
 
 - [Phase 0 Preflight Reconciliation Report](docs/37-PHASE-0-PREFLIGHT-RECONCILIATION.md) — verified baseline at `main` `ebeca3ebff1155c220f8e09f1e00e07fdb28209b`, corrected build/schema/signing inventories, executed `30/30` test evidence, and the owner-confirmed D-040/D-216 Option A resolution (seven bands plus paired encouragement/motivation quotes).
