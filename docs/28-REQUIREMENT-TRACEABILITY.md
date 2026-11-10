@@ -336,10 +336,12 @@ Maps `implementation_plan.md` Phase 4 §A (weekly goal acknowledgement, weekly i
 
 **Not executed:** all `P4-H*` human/device cases in `docs/38` remain `NOT RUN`; Stage C independent validation and Stage D acceptance remain `NOT OPEN`.
 
-## Phase 4 audit corrections (2026-11-10, Stage B self-check, uncommitted working tree on top of `4308111`)
+## Phase 4 audit corrections (2026-11-10, Stage B self-check, committed at `b0fc29d`)
 
 | Plan bullet | Correction | Test |
 | --- | --- | --- |
 | §B "reconcile on reboot, time change, time-zone change, day boundary, app update **and deletion**" — delete-all must not leave scheduling state behind | `deleteAllDataSync` now calls `ReminderScheduler.cancelAllRegistered` **before** the reset transaction deletes the `reminder_scheduled_alarm_ids` registry, so no armed alarm survives the reset | `p4_32` |
 | §A/§B "reconcile on week-start change" — a policy change can move weekly target windows immediately | `setWeekStartSync` and the legacy-baseline branch of `setSettingSync("week_start")` call `rescheduleReminderAlarms()` instead of waiting for the 15-minute reconcile pass | `p4_33` |
 | §B "Never include OS notification/scheduling state as active work" in the portable backup | Export skips `reminder_scheduled_alarm_ids`; REPLACE and MERGE restore ignore it, so a foreign device registry is never adopted and local state is re-derived | `p4_34` |
+
+F-1 through F-3 were committed on `main` at `b0fc29d` on top of `4308111`; the exact-tree sweep recorded in `docs/12` reports 215/215 passing tests across 14 classes, 0 lint errors and a debug-signed 12,671,118-byte release artifact. **Coverage limits:** `p4_33` covers stale-registration removal only, and `p4_34` covers the REPLACE restore path only (MERGE unexercised); `p4_35` and `p4_36` are scheduled to close both gaps during the Phase 5 closeout. All `P4-H*` cases remain `NOT RUN`.
