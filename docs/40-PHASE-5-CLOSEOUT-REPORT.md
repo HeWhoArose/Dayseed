@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-10
 **Repository:** `HeWhoArose/Dayseed`, branch `main`
-**Verified baseline:** `e68b74b752e75aaccafa7aa1e684450ee6707f16` (clean-extraction sweep, see `docs/evidence/phase5/e68b74b.md`)
+**Verified baselines:** `e68b74b752e75aaccafa7aa1e684450ee6707f16` and, re-verified after the documentation commits, `56942fb` (both clean-extraction sweeps recorded in `docs/evidence/phase5/e68b74b.md`)
 **Scope:** Stage B integration closeout only. No new product features, no UI redesign, no change to habit, streak, reminder, backup or privacy semantics, no production signing.
 
 ## 1. Implemented in Phase 5
@@ -28,7 +28,7 @@ Both new tests were executed twice: once normally and once with the production l
 ## 3. Verified by the clean-extraction sweep
 
 - Build from an empty directory through the committed wrapper: **BUILD SUCCESSFUL**.
-- Tests: **217/217 across 14 classes**, 0 failures, 0 errors, 0 skipped; `Phase4ImplementationTest` 36/36.
+- Tests: **217/217 across 14 classes**, 0 failures, 0 errors, 0 skipped; `Phase4ImplementationTest` 36/36. The sweep was repeated at `56942fb` with the toolchain rebuilt from scratch and produced identical counts and APK sizes.
 - Lint: **0 errors, 58 warnings** (58 vs 57 explained in the evidence log as a remote version-availability suggestion).
 - Debug APK 19,126,660 bytes; release APK 12,671,118 bytes, **debug-signed** (`CN=Android Debug`), confirmed with `apksigner`.
 - The `debug.keystore` bootstrap is required and works from a clean tree; no `local.properties` is needed when `ANDROID_HOME` is set; neither file is tracked.
