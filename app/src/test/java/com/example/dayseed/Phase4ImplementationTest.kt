@@ -1067,4 +1067,84 @@ class Phase4ImplementationTest {
             registryIds().contains("h_imported_p4")
         )
     }
+
+    @Test
+    fun p4_35_weekStartChangeKeepsAnEligibleHabitArmedWhileRemovingStaleRegistrations() {
+        seedReminderHabit()
+        ReminderScheduler.scheduleAll(app, repository)
+        assertEquals(1, alarmRepository().scheduledAlarms.size)
+
+        // A registration whose habit no longer exists, as left behind by an earlier policy change.
+        val staleIntent = ReminderScheduler.buildAlarmPendingIntent(
+            app,
+            habitId = "h_stale_p4",
+            deliveryDate = "",
+            reminderTimeLocal = ""
+        )
+        (app.getSystemService(Context.ALARM_SERVICE) as AlarmManager).set(
+            AlarmManager.RTC_WAKEUP,
+            testClock.currentUtcMs + 120_000L,
+            staleIntent
+        )
+        repository.setSettingSync(
+            ReminderScheduler.SETTING_SCHEDULED_ALARM_IDS,
+            "JSON",
+            "[\"h_reminder_p4\",\"h_stale_p4\"]"
+        )
+        assertEquals(2, alarmRepository().scheduledAlarms.size)
+
+        repository.setWeekStartSync(java.time.DayOfWeek.FRIDAY)
+
+        assertEquals(
+            "the eligible habit must still have exactly one armed alarm after the change",
+            1,
+            alarmRepository().scheduledAlarms.size
+        )
+        assertEquals(
+            "only the eligible habit may remain registered",
+            setOf("h_reminder_p4"),
+            registryIds()
+        )
+    }
+
+    @Test
+    fun p4_36_mergeRestoreNeverAdoptsADeviceSchedulerRegistry() {
+        seedReminderHabit()
+        ReminderScheduler.scheduleAll(app, repository)
+        val before = registryIds()
+        assertTrue(before.contains("h_reminder_p4"))
+
+        val exported = JSONObject(repository.exportPortableBackupSync())
+        exported.getJSONArray("app_settings").put(
+            JSONObject().apply {
+                put("setting_key", ReminderScheduler.SETTING_SCHEDULED_ALARM_IDS)
+                put("value_type", "JSON")
+                put("value_text", "[\"h_imported_p4\"]")
+                put("schema_version", 1)
+                put("updated_at_utc_ms", 100)
+            }
+        )
+        val restored = repository.restorePortableBackupSync(
+            rawBackupPayload = exported.toString(),
+            restoreMode = "MERGE"
+        )
+
+        assertTrue(
+            "the merge must complete; any remaining conflicts are the pre-existing reminders_enabled rule, not this key",
+            restored.sessionState == "AWAITING_CONFLICT_RESOLUTION" || restored.sessionState == "COMPLETED"
+        )
+        assertEquals(
+            "device-local scheduler state must not become a mergeable portable record",
+            emptyList<String>(),
+            repository.restoreConflicts.value
+                .filter { it.recordKey == ReminderScheduler.SETTING_SCHEDULED_ALARM_IDS }
+                .map { it.recordKey }
+        )
+        assertEquals("local scheduler state must survive the merge untouched", before, registryIds())
+        assertEquals(
+            "no foreign alarm may be registered by a merge restore",
+            1,
+            alarmRepository().scheduledAlarms.size
+        )
+    }
 }
