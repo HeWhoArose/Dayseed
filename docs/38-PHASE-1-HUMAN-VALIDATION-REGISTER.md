@@ -680,3 +680,19 @@ All Phase 4 cases are **`NOT RUN`**. They require a physical Android device (And
   1. With TalkBack enabled, traverse Settings → Notifications & reminders and tap a weekly notification.
   2. Set font scale to 200% and width to 320–360 dp; measure contrast in all appearance modes; test keyboard/focus restoration and reduced motion.
 - **Expected:** Every switch, row and status announces its state and purpose; no clipped or unreachable controls; touch targets at least 48 dp; contrast meets the project thresholds when measured; tapping a weekly notification opens Dayseed; reduced motion suppresses plant/Grove and theme transitions.
+
+### P4-H11 — Synthetic-data performance on representative devices
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Use only synthetic data: a long habit list, several years of habit history, hundreds of journal entries, and multiple entries on the same date.
+  2. Profile Today, History, Journal, Insights and Grove while scrolling, switching dates, and returning from Settings on a lower- and mid-range Android device.
+- **Expected:** Lists remain responsive, database work does not rescan full history on every Compose recomposition, and no private journal content appears in logs.
+
+### P4-H12 — Core use with Airplane mode enabled
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Enable Airplane mode before opening the app.
+  2. Create/edit a habit, record progress, write and save a journal entry, browse history/insights, and open privacy/backup settings without exporting a file.
+- **Expected:** Core habit and journal use remains available offline; no sign-in or network connection is required.
