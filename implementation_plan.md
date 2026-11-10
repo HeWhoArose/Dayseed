@@ -3,11 +3,11 @@
 **Prepared:** 2026-11-01 (last reconciled: 2026-11-09)  
 **Repository:** HeWhoArose/Dayseed  
 **Current repository baseline:**
-- **Current GitHub `main` HEAD:** `3ca397f7f3f2293a2025a3379fdd65fd65c35b1b` (`3ca397f`, 2026-11-09)
-- **Latest application-code baseline:** `dd6501f69cac9558e5423eca873e7ab1da469594` (`dd6501f`, 2026-11-09; on top of preceding Phase 3 commits `f0d8c32ac1281ca89050cf0f60ce42bfb0e007ea` [`f0d8c32`] and `8a282150db3a48be8ab85ff21ca6df871eda4e7c` [`8a28215`], `D-220`–`D-231` baseline `86d3e65c3165bdc4ce8cd92d570547efc61feb39` [`86d3e65`], Phase 2 baseline `8a20a249f557d2bebbded4a4bd64b4fe1178524b`, and Phase 1 / PR #5 baselines `e3c3dc4360626315b68319570d4fb8f59444d88a` / `41ec70b268df2a1345390292a606e28a610663c0`)
-- **Documentation reconciliation commit:** `3ca397f7f3f2293a2025a3379fdd65fd65c35b1b` (`3ca397f`, documentation-only commit on top of `dd6501f69cac9558e5423eca873e7ab1da469594`)
+- **Current GitHub `main` HEAD:** `b0fc29dab7ba0b70cb97381eb2434d1d2ca41648` (`b0fc29d`, 2026-11-10; Phase 4 audit corrections F-1–F-3)
+- **Latest application-code baseline:** `6561588` (Phase 5 closeout tests `p4_35`/`p4_36`) on top of Phase 4 at `b0fc29d` and `6ae1ea1` (remaining Phase 4 implementation: delivery gating, backup v3, reduced motion, Settings honesty) and Phase 4A at `7bb8d80` (weekly reminder family, `D-232`), all on top of the Phase 3 baseline `dd6501f`
+- **Documentation reconciliation commit:** the Phase 5 closeout documentation commits themselves; the Phase 4 register update is `4308111`
 **Technology:** Native Android, Kotlin (`2.2.10`), Jetpack Compose (`BOM 2024.09.00`), AGP (`9.1.1`), `SQLiteOpenHelper` (`DATABASE_VERSION = 3`)  
-**Current status (reconciled 2026-11-09):** Stage A planning is closed (`D-208`) and Stage B initial-v1 implementation is authorised under `D-213`. On GitHub `main` (current HEAD `3ca397f7f3f2293a2025a3379fdd65fd65c35b1b` [`3ca397f`]; latest application-code baseline `dd6501f69cac9558e5423eca873e7ab1da469594` [`dd6501f`]), Phase 0 (`docs/37`), Phase 1 (domain/SQLite v3/backup remediation), Phase 2 (5-tab navigation, compact Today, Habits lifecycle, streaks, Living Grove), Phase 2.5 & Reminder/Backup Remediation (`D-220`–`D-231`, `86d3e65`), and **Phase 3 (`Journal, Shared Calendar, Weekly Board, Growth Mark and Insights`, `8a28215` / `f0d8c32` / `dd6501f`)** are implemented and verified in Stage B self-checks executed against application-code baseline `dd6501f69cac9558e5423eca873e7ab1da469594` (`compile_applet` **PASSED**; `gradle :app:testDebugUnitTest --rerun-tasks :app:assembleDebug :app:assembleRelease :app:lintDebug` **PASSED 179/179** across 13 test classes including `Phase3ImplementationTest` **14/14** [`p3_01`..`p3_14`], `Phase2ImplementationTest` **31/31**, and `Phase1ImplementationTest` **29/29**, 0 failures, 0 errors, 0 skipped, 0 lint errors). All physical-device and human validation cases (`docs/38-PHASE-1-HUMAN-VALIDATION-REGISTER.md`, including `P1-H*`, `P2-H*`, `P2-C*`, `P25-H*`, `RM-H*`, and `P3-H01`–`P3-H09`) remain **`NOT RUN`**. **Stage C (independent technical validation)** and **Stage D (final owner acceptance / release readiness)** remain **NOT OPEN** — Stage B self-checks do not constitute independent Stage C validation.
+**Current status (reconciled 2026-11-10):** Stage A planning is closed (`D-208`) and Stage B initial-v1 implementation is authorised under `D-213`. Phases 0–4 are implemented on GitHub `main` (current HEAD `b0fc29d`; Phase 4 application code `7bb8d80` + `6ae1ea1`, audit corrections `b0fc29d`). The latest recorded Stage B self-check is **217/217 PASSED** across 14 test classes (including `Phase4ImplementationTest` **36/36**, `p4_01`–`p4_36`), 0 failures/errors/skips, `0 errors, 57 warnings` lint, debug APK 19,126,660 bytes and a **debug-signed** release APK 12,671,118 bytes. Phase 5 is the Stage B integration closeout: Gradle wrapper and debug-keystore bootstrap, documentation reconciliation, and a final exact-commit evidence sweep. All 70 human/device cases in `docs/38` (`P1-H*`, `P2-C*`, `P2-H*`, `P25-H*`, `P3-H*`, `P4-H*`, `RM-H*`) remain **`NOT RUN`**. **Stage C (independent technical validation)** and **Stage D (final owner acceptance / release readiness)** remain **NOT OPEN**.
 
 **Historical status note (2026-11-03 Phase 1 / PR #5 checkpoint — preserved for audit provenance):** At the 2026-11-03 checkpoint (`main` at `41ec70b268df2a1345390292a606e28a610663c0`, with Stage C remediation isolated on `stage-c-remediation` and merged into `main` through PR #5 as `e3c3dc4360626315b68319570d4fb8f59444d88a`), Phase 0 and Phase 1 implementation work was present on `main` (57/57 self-check tests on 2026-11-03) and the review identified MERGE streak-history deletion and restore/schema/test-evidence/documentation gaps that were remediated in `e3c3dc4360626315b68319570d4fb8f59444d88a` and subsequently executed in the Phase 2–3 Stage B self-check suites (see Sections 11–17 below).
 
@@ -22,7 +22,7 @@
 Dayseed already has a meaningful native Android implementation. It is not a blank project and must not be rebuilt from scratch. The current source on the audited Phase 1 baseline contains:
 
 - A Kotlin/Jetpack Compose app shell with Today, History, Insights and Settings destinations.
-- A SQLiteOpenHelper database at schema version 2, a 12-table schema and a fail-closed version-1-to-version-2 migration path.
+- A SQLiteOpenHelper database that declared schema version 2 with a 12-table schema and a fail-closed version-1-to-version-2 migration path **at the audited baseline** (the current schema is version 3 with 15 tables; see Section 18).
 - Effective-dated habit configuration, individual numeric entries, daily non-numeric outcomes, habit/date notes, Journal entries and drafts.
 - Local backup/restore, encrypted portable-backup support, restore-session/conflict structures and a notification-cancellation outbox.
 - A deterministic clock abstraction, derived day-status logic, comeback evaluation, mood insights and Growth Mark aggregation.
@@ -115,7 +115,7 @@ The application ID is currently com.aistudio.dayseed.wkqmfl. Confirm that this i
 
 ### 3.2 Existing data model and persistence
 
-The current source declares DayseedDatabaseHelper.DATABASE_VERSION = 2. Its schema-creation path defines 12 tables:
+At the audited baseline (`ebeca3e`, 2026-11-01) the source declared DayseedDatabaseHelper.DATABASE_VERSION = 2 and its schema-creation path defined 12 tables (the current schema is version 3 with 15 tables; see Section 18):
 
 1. habits
 2. habit_versions
@@ -811,7 +811,7 @@ The current repository authority chain says:
 
 The owner explicitly authorised the complete Stage B initial-v1 scope on 2026-11-01 under D-213, tied to this plan on `planning/system-wide-audit-implementation-plan-2026-11-01`. Record D-213 in the canonical decision/authority documents before feature work. Stage B includes Phase 0 and Phases 1–5. Stage C independent validation remains NOT AUTHORISED until separate written owner approval after Stage B is committed; Stage D release acceptance remains NOT OPEN until the owner accepts the Stage C-verified candidate.
 
-**Recommended next action:** after Stage B is explicitly opened, start Phase 0 preflight; then implement Phases 1–5 as the large workstreams above, preserving existing working code and committing each phase to a reviewable Git branch. Do not merge stale PR #1 or begin from an outdated AI Studio import.
+**Current next action (2026-11-10):** Phase 5, the Stage B integration closeout — reproducible build infrastructure, documentation reconciliation against the Phase 1–4 implementation, and a final exact-commit evidence sweep; see Section 18. Do not restart Phase 0 or re-implement completed phases.
 
 ---
 
@@ -978,3 +978,39 @@ Following the owner's Phase 2 Final Remediation Instructions (`F-01` to `F-06`) 
   - `gradle :app:testDebugUnitTest --rerun-tasks :app:assembleDebug :app:assembleRelease :app:lintDebug`: **PASSED** (`BUILD SUCCESSFUL in 4m 31s`, 0 lint errors in `app/build/reports/lint-results-debug.html`).
   - **Executed JUnit / Robolectric Suite:** **179/179 PASSED** across 13 test classes (`Phase3ImplementationTest`: **14/14** [`p3_01`..`p3_14`]; `Phase2ImplementationTest`: **31/31**; `Phase1ImplementationTest`: **29/29**; `DayseedAcceptanceTest`: **12/12**; `DayseedReminderAlarmLifecycleTest`: **16/16**; `DayseedReminderSemanticsTest`: **16/16**; `DayseedReminderConcurrencyTest`: **11/11**; `DayseedVisualResolutionTest`: **15/15**; `DayseedSettingsValidationTest`: **10/10**; `DayseedReminderAndBackupTest`: **9/9**; `DayseedSafFilenameFeedbackTest`: **7/7**; `DayseedReminderDebugProbeTest`: **5/5**; `DayseedAppearanceSettingsTest`: **4/4**), **0 failed, 0 errors, 0 skipped**.
   - Human/device validation cases (`P1-H01`–`P1-H27`, `P2-H01`–`P2-H17`, `P2-C01`–`P2-C09`, `P25-H01`–`P25-H06`, `RM-H01`–`RM-H14`, and `P3-H01`–`P3-H09` in `docs/38-PHASE-1-HUMAN-VALIDATION-REGISTER.md`) remain **`NOT RUN`**. Stage C independent technical validation and Stage D final owner acceptance remain **NOT OPEN**.
+
+---
+
+## 18. Phase 4 Implementation, Audit Corrections and Phase 5 Closeout Addendum (2026-11-09..2026-11-10, Stage B Self-Check)
+
+**Commit chain (GitHub `main`, in order):** `7bb8d80` Phase 4A weekly reminder family (`D-232`); `e31394a` documentation update; `6ae1ea1` remaining Phase 4 implementation (delivery gating, backup v3, reduced motion, Settings honesty); `4308111` `P4-H11`/`P4-H12` register update; `b0fc29d` audit corrections F-1–F-3; Phase 5 closeout commits (wrapper, bootstrap, `p4_35`/`p4_36`, documentation).
+
+### 18.1 Phase 4 scope as implemented
+
+**A. Notification delivery.** `ReminderNotifier` posts on the `dayseed_reminders` channel with BigText copy that carries only a habit name or generic wording, never journal text, mood or notes. Delivery requires the runtime `POST_NOTIFICATIONS` permission, app-level `areNotificationsEnabled()` and a channel not at `IMPORTANCE_NONE` (`ReminderNotifier.isNotificationDeliveryAvailable`). The ledger distinguishes `SCHEDULED` from `DELIVERED`, promotes only after a real post, records `POST_FAILED` on failure, and coordinates concurrent posting with a `POSTING_CLAIM:<uuid>` lease inside `BEGIN IMMEDIATE`. The weekly family covers goal reached, week-start reflection, inactivity check-in and opt-in encouragement tips, sharing quiet hours, the three-per-local-day cap and deterministic occurrence keys. Inexact `AlarmManager` alarms plus a ~15-minute `WorkManager` reconcile pass cover reboot, time change, time-zone change, day boundary, app update and deletion.
+
+**B. Backup and restore v3.** Portable format/schema v3, in-memory normalization of supported v2 payloads before any write, rejection of unknown versions, password/tamper/truncation/missing-collection rejection, transactional rollback, restore-session and conflict preservation, `reminders_enabled` forced off after restore, and exclusion of device-local scheduler state from export and both import paths.
+
+**C. Privacy and deletion.** `allowBackup=false` with data-extraction restrictions, no `INTERNET` permission, portable backup excluding live notification/scheduler state, and delete-all covering all 15 tables while cancelling notifications, the cancel outbox and armed alarms.
+
+**D. Accessibility, resilience and performance.** Reduced-motion handling in theme and artwork paths; TalkBack traversal, 200% text, compact width, measured contrast, focus restoration, touch targets and representative-device performance are implemented subject to device verification and remain unverified.
+
+### 18.2 Audit corrections (F-1–F-3), committed at `b0fc29d`
+
+1. **F-1** — `deleteAllDataSync` deleted the `reminder_scheduled_alarm_ids` setting without cancelling the alarms it identified; `ReminderScheduler.cancelAllRegistered` now runs before the reset transaction.
+2. **F-2** — `setWeekStartSync` and the legacy baseline branch of `setSettingSync("week_start")` refreshed state without rescheduling; both now call `rescheduleReminderAlarms()`.
+3. **F-3** — the portable export shipped the device-local alarm registry and both restore paths could adopt it; export skips the key and REPLACE/MERGE import ignore it.
+
+Regression coverage: `p4_32`–`p4_34` (committed `b0fc29d`), plus `p4_35` (an eligible habit stays armed while a stale registration is cleared by a week-start change) and `p4_36` (MERGE restore never adopts a foreign registry and never turns the key into a portable conflict). Each was verified to fail with its production line reverted.
+
+### 18.3 Recorded Stage B evidence (latest, 2026-11-10)
+
+- **Tests:** 217/217 PASSED across 14 classes, 0 failures, 0 errors, 0 skipped; `Phase4ImplementationTest` 36/36 (`p4_01`–`p4_36`).
+- **Lint:** `0 errors, 57 warnings`.
+- **Artifacts:** `app-debug.apk` 19,126,660 bytes; `app-release.apk` 12,671,118 bytes signed `CN=Android Debug, O=Android, C=US` — an installation artifact, **not** a production-signed release.
+- **Reproducibility:** Gradle wrapper 9.3.1 (`gradlew`, `gradlew.bat`, `gradle/wrapper/*`), JDK 21 required, Android platform 36 with build-tools 36.0.0, `scripts/bootstrap-debug-keystore.sh` (and an unexecuted PowerShell equivalent) generating the gitignored `debug.keystore` that both signing configs reference.
+- **Clean-checkout proof:** `git archive HEAD` into an empty directory → bootstrap → `./gradlew :app:assembleDebug` → BUILD SUCCESSFUL, APK 19,126,660 bytes.
+
+### 18.4 Obligations carried into Stage C
+
+All 70 human/device cases in `docs/38` remain `NOT RUN`; the Phase 4 ones (`P4-H01`–`P4-H12`) cover permission allow/deny, weekly copy, quiet hours/cap, dedupe after restart, delete-all, restore safety of `reminders_enabled`, SAF save/open, airplane mode, accessibility and large-history performance. Release signing still uses the debug identity, and the PowerShell bootstrap script remains unverified on Windows. Stage C independent validation and Stage D owner acceptance are unaffected by this addendum and remain closed.

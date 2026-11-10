@@ -1,6 +1,6 @@
 # Testing and Quality
 
-**Status:** Required test strategy for the approved native Kotlin + Jetpack Compose direction; implementation and validation remain unauthorised until the planning gate is approved.
+**Status (2026-11-10):** Test strategy for the approved native Kotlin + Jetpack Compose direction. The Stage A planning gate is approved/open under D-208, and Stage B implementation is authorised under D-213; Phases 0–4 are implemented and self-checked (latest recorded: 217/217 tests across 14 classes, 0 lint errors). Stage C independent validation and Stage D acceptance remain closed, and all 70 human/device cases in `docs/38` remain `NOT RUN`. Historical execution records below are preserved as provenance, not current status.
 
 Requirement-to-test mapping is tracked in [28-REQUIREMENT-TRACEABILITY.md](28-REQUIREMENT-TRACEABILITY.md). Test cases in that matrix and this file are plans only unless explicit execution evidence is recorded.
 
