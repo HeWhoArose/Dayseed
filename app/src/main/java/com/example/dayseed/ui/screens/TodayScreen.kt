@@ -186,6 +186,7 @@ fun TodayScreen(
     val themeMode = remember(appSettings) {
         ThemeModeOption.fromSetting(appSettings["theme_mode"]?.valueText)
     }
+    val reducedMotion = remember(appSettings) { viewModel.isReducedMotionEnabled() }
     val isSystemDark = isSystemInDarkTheme()
     val nowLocal by produceState(initialValue = viewModel.repository.clock.nowLocalTime(), key1 = today) {
         value = viewModel.repository.clock.nowLocalTime()
@@ -221,6 +222,7 @@ fun TodayScreen(
         ) {
             DaypartBackgroundLayer(
                 artworkBlend = artworkBlend,
+                reducedMotion = reducedMotion,
                 modifier = Modifier.fillMaxSize()
             )
 
@@ -264,6 +266,7 @@ fun TodayScreen(
                             artwork = artworkBlend.primaryArtwork,
                             secondaryArtwork = artworkBlend.secondaryArtwork,
                             blendFraction = artworkBlend.blendFraction,
+                            reducedMotion = reducedMotion,
                             modifier = Modifier.size(width = 132.dp, height = 112.dp)
                         )
                     }

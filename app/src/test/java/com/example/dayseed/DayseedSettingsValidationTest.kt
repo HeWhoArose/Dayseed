@@ -20,6 +20,33 @@ import java.time.LocalTime
 class DayseedSettingsValidationTest {
 
     @Test
+    fun reminderAvailabilityKeepsPreferenceAndAndroidGatesIndependent() {
+        val available = SettingsSupport.reminderAvailability(
+            appPreferenceEnabled = true,
+            runtimePermissionGranted = true,
+            appNotificationsEnabled = true,
+            reminderChannelCreated = true,
+            reminderChannelEnabled = true
+        )
+        assertTrue(available.appPreferenceEnabled)
+        assertTrue(available.runtimePermissionGranted)
+        assertTrue(available.appNotificationsEnabled)
+        assertTrue(available.reminderChannelCreated)
+        assertTrue(available.reminderChannelEnabled)
+        assertTrue(available.canDeliver)
+
+        val blockedBySystem = SettingsSupport.reminderAvailability(
+            appPreferenceEnabled = true,
+            runtimePermissionGranted = true,
+            appNotificationsEnabled = false,
+            reminderChannelCreated = true,
+            reminderChannelEnabled = true
+        )
+        assertFalse(blockedBySystem.appNotificationsEnabled)
+        assertFalse(blockedBySystem.canDeliver)
+    }
+
+    @Test
     fun quietHoursAcceptsWellFormedTimes() {
         assertEquals(LocalTime.of(21, 0), SettingsSupport.parseQuietHours("21:00"))
         assertEquals(LocalTime.of(0, 0), SettingsSupport.parseQuietHours("00:00"))

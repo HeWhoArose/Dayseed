@@ -35,8 +35,8 @@ object BackupCryptoConfig {
 
 object BackupAndExportManager {
 
-    const val BACKUP_FORMAT_VERSION = 2
-    const val BACKUP_SCHEMA_VERSION = 2
+    const val BACKUP_FORMAT_VERSION = 3
+    const val BACKUP_SCHEMA_VERSION = 3
 
     /**
      * Readable journal export (D-105 / D-200): exports saved journal_entries ONLY.

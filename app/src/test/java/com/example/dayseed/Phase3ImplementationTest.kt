@@ -62,7 +62,9 @@ class Phase3ImplementationTest {
     fun setUp() {
         app = ApplicationProvider.getApplicationContext()
         testClock = MutableTestClock()
-        dbName = "dayseed_phase3_test_${UUID.randomUUID()}.db"
+        // Robolectric already isolates each test method in its own sandbox directory. Keep the
+        // database filename short so the full sandbox path stays below Windows' MAX_PATH limit.
+        dbName = "p3.db"
         repository = DayseedRepository(
             context = app,
             clock = testClock,

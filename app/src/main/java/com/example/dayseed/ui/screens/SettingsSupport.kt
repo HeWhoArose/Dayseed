@@ -19,6 +19,33 @@ import java.time.format.DateTimeFormatter
  */
 object SettingsSupport {
 
+    data class ReminderAvailability(
+        val appPreferenceEnabled: Boolean,
+        val runtimePermissionGranted: Boolean,
+        val appNotificationsEnabled: Boolean,
+        val reminderChannelCreated: Boolean,
+        val reminderChannelEnabled: Boolean
+    ) {
+        val canDeliver: Boolean
+            get() = appPreferenceEnabled && runtimePermissionGranted &&
+                appNotificationsEnabled && reminderChannelCreated && reminderChannelEnabled
+    }
+
+    /** Keeps Dayseed's opt-in separate from each Android-controlled notification gate. */
+    fun reminderAvailability(
+        appPreferenceEnabled: Boolean,
+        runtimePermissionGranted: Boolean,
+        appNotificationsEnabled: Boolean,
+        reminderChannelCreated: Boolean,
+        reminderChannelEnabled: Boolean
+    ): ReminderAvailability = ReminderAvailability(
+        appPreferenceEnabled = appPreferenceEnabled,
+        runtimePermissionGranted = runtimePermissionGranted,
+        appNotificationsEnabled = appNotificationsEnabled,
+        reminderChannelCreated = reminderChannelCreated,
+        reminderChannelEnabled = reminderChannelEnabled
+    )
+
     /**
      * Resolves the actual display name of an SAF document (Android 4.x+ Storage Access
      * Framework) from [ContentResolver.query] on [OpenableColumns.DISPLAY_NAME].

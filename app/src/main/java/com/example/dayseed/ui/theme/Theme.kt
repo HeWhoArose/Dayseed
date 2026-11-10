@@ -160,11 +160,18 @@ fun resolveDayseedColorScheme(
     }
 }
 
+internal fun themeTransitionDurationMillis(reducedMotion: Boolean): Int =
+    if (reducedMotion) 0 else 1200
+
 @Composable
-private fun animateThemeColor(target: Color): Color {
+private fun animateThemeColor(target: Color, reducedMotion: Boolean): Color {
+    if (reducedMotion) return target
     val animated by animateColorAsState(
         targetValue = target,
-        animationSpec = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
+        animationSpec = tween(
+            durationMillis = themeTransitionDurationMillis(reducedMotion),
+            easing = FastOutSlowInEasing
+        ),
         label = "dayseed_theme_color_shift"
     )
     return animated
@@ -175,30 +182,31 @@ fun DayseedTheme(
     themeMode: ThemeModeOption = ThemeModeOption.SYSTEM,
     darkTheme: Boolean = isSystemInDarkTheme(),
     localTime: LocalTime = LocalTime.now(),
+    reducedMotion: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val (targetScheme, isDarkResolved) = resolveDayseedColorScheme(themeMode, darkTheme, localTime)
 
     val animatedColorScheme = targetScheme.copy(
-        primary = animateThemeColor(targetScheme.primary),
-        onPrimary = animateThemeColor(targetScheme.onPrimary),
-        primaryContainer = animateThemeColor(targetScheme.primaryContainer),
-        onPrimaryContainer = animateThemeColor(targetScheme.onPrimaryContainer),
-        secondary = animateThemeColor(targetScheme.secondary),
-        onSecondary = animateThemeColor(targetScheme.onSecondary),
-        secondaryContainer = animateThemeColor(targetScheme.secondaryContainer),
-        onSecondaryContainer = animateThemeColor(targetScheme.onSecondaryContainer),
-        tertiary = animateThemeColor(targetScheme.tertiary),
-        onTertiary = animateThemeColor(targetScheme.onTertiary),
-        background = animateThemeColor(targetScheme.background),
-        onBackground = animateThemeColor(targetScheme.onBackground),
-        surface = animateThemeColor(targetScheme.surface),
-        onSurface = animateThemeColor(targetScheme.onSurface),
-        surfaceVariant = animateThemeColor(targetScheme.surfaceVariant),
-        onSurfaceVariant = animateThemeColor(targetScheme.onSurfaceVariant),
-        outline = animateThemeColor(targetScheme.outline),
-        error = animateThemeColor(targetScheme.error),
-        onError = animateThemeColor(targetScheme.onError)
+        primary = animateThemeColor(targetScheme.primary, reducedMotion),
+        onPrimary = animateThemeColor(targetScheme.onPrimary, reducedMotion),
+        primaryContainer = animateThemeColor(targetScheme.primaryContainer, reducedMotion),
+        onPrimaryContainer = animateThemeColor(targetScheme.onPrimaryContainer, reducedMotion),
+        secondary = animateThemeColor(targetScheme.secondary, reducedMotion),
+        onSecondary = animateThemeColor(targetScheme.onSecondary, reducedMotion),
+        secondaryContainer = animateThemeColor(targetScheme.secondaryContainer, reducedMotion),
+        onSecondaryContainer = animateThemeColor(targetScheme.onSecondaryContainer, reducedMotion),
+        tertiary = animateThemeColor(targetScheme.tertiary, reducedMotion),
+        onTertiary = animateThemeColor(targetScheme.onTertiary, reducedMotion),
+        background = animateThemeColor(targetScheme.background, reducedMotion),
+        onBackground = animateThemeColor(targetScheme.onBackground, reducedMotion),
+        surface = animateThemeColor(targetScheme.surface, reducedMotion),
+        onSurface = animateThemeColor(targetScheme.onSurface, reducedMotion),
+        surfaceVariant = animateThemeColor(targetScheme.surfaceVariant, reducedMotion),
+        onSurfaceVariant = animateThemeColor(targetScheme.onSurfaceVariant, reducedMotion),
+        outline = animateThemeColor(targetScheme.outline, reducedMotion),
+        error = animateThemeColor(targetScheme.error, reducedMotion),
+        onError = animateThemeColor(targetScheme.onError, reducedMotion)
     )
 
     val view = LocalView.current

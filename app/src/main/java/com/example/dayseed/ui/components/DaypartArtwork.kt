@@ -20,6 +20,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import com.example.dayseed.ui.theme.DayseedArtwork
 import com.example.dayseed.ui.theme.DayseedArtworkBlend
+import com.example.dayseed.ui.theme.themeTransitionDurationMillis
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -967,12 +968,16 @@ private fun DrawScope.drawPainterlyDaypartScene(
 @Composable
 fun DaypartBackgroundLayer(
     artworkBlend: DayseedArtworkBlend,
+    reducedMotion: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val canvasColor = MaterialTheme.colorScheme.background
     val smoothFraction by animateFloatAsState(
         targetValue = artworkBlend.blendFraction.coerceIn(0f, 1f),
-        animationSpec = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
+        animationSpec = tween(
+            durationMillis = themeTransitionDurationMillis(reducedMotion),
+            easing = FastOutSlowInEasing
+        ),
         label = "daypart_bg_blend"
     )
 
@@ -1099,12 +1104,16 @@ fun DaypartArtwork(
     artwork: DayseedArtwork,
     modifier: Modifier = Modifier,
     secondaryArtwork: DayseedArtwork = artwork,
-    blendFraction: Float = 0f
+    blendFraction: Float = 0f,
+    reducedMotion: Boolean = false
 ) {
     val canvasColor = MaterialTheme.colorScheme.background
     val animatedBlend by animateFloatAsState(
         targetValue = blendFraction.coerceIn(0f, 1f),
-        animationSpec = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
+        animationSpec = tween(
+            durationMillis = themeTransitionDurationMillis(reducedMotion),
+            easing = FastOutSlowInEasing
+        ),
         label = "daypart_artwork_blend"
     )
 

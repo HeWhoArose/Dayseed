@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.dayseed.data.DayseedRepository
 import com.example.dayseed.data.TestDayseedClock
 import com.example.dayseed.ui.theme.ThemeModeOption
+import com.example.dayseed.ui.theme.themeTransitionDurationMillis
 import com.example.dayseed.ui.theme.resolveDayseedArtwork
 import com.example.dayseed.ui.theme.resolveDayseedColorScheme
 import com.example.dayseed.ui.theme.DarkCanvas
@@ -105,5 +106,11 @@ class DayseedAppearanceSettingsTest {
         assertTrue(ThemeModeOption.entries.any { it.settingValue == "DARK_DAYPART_ART" })
         // The original automatic combination is still offered (assignment requirement).
         assertTrue(ThemeModeOption.entries.any { it.settingValue == "SOFT_BOTANICAL_AUTO" })
+    }
+
+    @Test
+    fun reducedMotionDisablesThemeTransitionAnimation() {
+        assertEquals(1200, themeTransitionDurationMillis(reducedMotion = false))
+        assertEquals(0, themeTransitionDurationMillis(reducedMotion = true))
     }
 }

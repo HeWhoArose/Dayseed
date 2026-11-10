@@ -49,8 +49,10 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -61,16 +63,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.dayseed.DayseedViewModel
 import com.example.dayseed.data.ConflictResolution
 import com.example.dayseed.data.Habit
 import com.example.dayseed.data.HabitLifecycleState
 import com.example.dayseed.data.JournalExportFormat
+import com.example.dayseed.data.ReminderNotifier
 import com.example.dayseed.ui.components.DaypartArtwork
 import com.example.dayseed.ui.components.SettingsGroupCard
 import com.example.dayseed.ui.theme.BotanicalDaypart
@@ -504,6 +513,7 @@ fun QuietHoursPanel(
  *   the tips preference defaults to off.
  */
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 fun RemindersPanel(
     viewModel: DayseedViewModel,
     onOpenQuietHours: () -> Unit,
@@ -517,16 +527,25 @@ fun RemindersPanel(
         appSettings["quiet_hours_start"]?.valueText,
         appSettings["quiet_hours_end"]?.valueText
     )
-    val canPostNow = remember {
-        ContextCompat.checkSelfPermission(
-            context,
-            android.Manifest.permission.POST_NOTIFICATIONS
-        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var notificationAvailability by remember(context, remindersEnabledNow) {
+        mutableStateOf(readReminderAvailability(context, remindersEnabledNow))
     }
-    var permissionState by remember { mutableStateOf(canPostNow) }
+    fun refreshNotificationAvailability() {
+        notificationAvailability = readReminderAvailability(context, remindersEnabledNow)
+    }
     val requestPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { granted -> permissionState = granted }
+    ) { _ -> refreshNotificationAvailability() }
+
+    LaunchedEffect(remindersEnabledNow) { refreshNotificationAvailability() }
+    DisposableEffect(lifecycleOwner, remindersEnabledNow) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) refreshNotificationAvailability()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     PanelTitle(
         "Notifications & reminders",
@@ -584,12 +603,21 @@ fun RemindersPanel(
                     checked = remindersEnabledNow,
                     onCheckedChange = null,
                     enabled = false,
-                    modifier = Modifier.testTag("reminders_global_switch")
+                    modifier = Modifier
+                        .testTag("reminders_global_switch")
+                        .semantics {
+                            contentDescription = "Dayseed reminders"
+                            stateDescription = if (remindersEnabledNow) {
+                                "On; activation unavailable pending device verification"
+                            } else {
+                                "Off; activation unavailable pending device verification"
+                            }
+                        }
                 )
             }
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = if (permissionState) {
+                text = if (notificationAvailability.runtimePermissionGranted) {
                     "Android permission: allowed to show notifications."
                 } else {
                     "Android permission: notifications are not allowed right now. Android " +
@@ -599,9 +627,37 @@ fun RemindersPanel(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.testTag("reminders_permission_state")
             )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = if (notificationAvailability.appNotificationsEnabled) {
+                    "Android app notifications: enabled."
+                } else {
+                    "Android app notifications: blocked in system settings."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag("reminders_app_notifications_state")
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = when {
+                    !notificationAvailability.reminderChannelCreated ->
+                        "Reminder channel: not created yet."
+                    !notificationAvailability.reminderChannelEnabled ->
+                        "Reminder channel: blocked in Android settings."
+                    else -> "Reminder channel: available."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag("reminders_channel_state")
+            )
             Spacer(modifier = Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (!permissionState) {
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (!notificationAvailability.runtimePermissionGranted) {
                     OutlinedButton(
                         onClick = {
                             if (android.os.Build.VERSION.SDK_INT >= 33) {
@@ -690,7 +746,7 @@ fun RemindersPanel(
 
     // ---- Area 4: Weekly reminders (implemented; activation still gated) ----
     val weeklyReflectionsPreference =
-        appSettings["weekly_reflections_enabled"]?.valueText?.equals("false", ignoreCase = true) != true
+        appSettings["weekly_reflections_enabled"]?.valueText.equals("true", ignoreCase = true)
     val encouragementTipsPreference =
         appSettings["encouragement_tips_enabled"]?.valueText.equals("true", ignoreCase = true)
     SettingsGroupCard {
@@ -725,7 +781,12 @@ fun RemindersPanel(
                     checked = weeklyReflectionsPreference,
                     onCheckedChange = null,
                     enabled = false,
-                    modifier = Modifier.testTag("weekly_reflection_switch")
+                    modifier = Modifier
+                        .testTag("weekly_reflection_switch")
+                        .semantics {
+                            contentDescription = "Week-start reflection"
+                            stateDescription = if (weeklyReflectionsPreference) "On" else "Off"
+                        }
                 )
             }
             Spacer(modifier = Modifier.height(10.dp))
@@ -742,7 +803,12 @@ fun RemindersPanel(
                     checked = encouragementTipsPreference,
                     onCheckedChange = null,
                     enabled = false,
-                    modifier = Modifier.testTag("encouragement_tips_switch")
+                    modifier = Modifier
+                        .testTag("encouragement_tips_switch")
+                        .semantics {
+                            contentDescription = "Encouragement tips"
+                            stateDescription = if (encouragementTipsPreference) "On" else "Off"
+                        }
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -840,6 +906,26 @@ private fun ReminderDebugVerificationSection() {
             }
         }
     }
+}
+
+private fun readReminderAvailability(
+    context: android.content.Context,
+    appPreferenceEnabled: Boolean
+): SettingsSupport.ReminderAvailability {
+    val manager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE)
+        as? android.app.NotificationManager
+    val channel = manager?.getNotificationChannel(ReminderNotifier.CHANNEL_ID)
+    return SettingsSupport.reminderAvailability(
+        appPreferenceEnabled = appPreferenceEnabled,
+        runtimePermissionGranted = ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.POST_NOTIFICATIONS
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED,
+        appNotificationsEnabled = manager?.areNotificationsEnabled() == true,
+        reminderChannelCreated = channel != null,
+        reminderChannelEnabled = channel != null &&
+            channel.importance != android.app.NotificationManager.IMPORTANCE_NONE
+    )
 }
 
 private fun openSystemNotificationSettings(context: android.content.Context) {

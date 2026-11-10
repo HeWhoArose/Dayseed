@@ -4468,8 +4468,8 @@ class DayseedRepository(
 
         // 2. Week-start reflection — 09:00 device-local on the configured week-start day, for
         //    the most recently completed week only (never a multi-week backlog).
-        val weeklyReflectionsEnabled = !getSettingString("weekly_reflections_enabled", "true")
-            .equals("false", ignoreCase = true)
+        val weeklyReflectionsEnabled = getSettingString("weekly_reflections_enabled", "false")
+            .equals("true", ignoreCase = true)
         if (weeklyReflectionsEnabled && dueTimeReached) {
             val reflectionKey = WeeklyReminderEngine.weekStartReflectionKey(weekStart)
             val previousResult = previousWeekResultFor(weekStart)
@@ -4718,6 +4718,7 @@ class DayseedRepository(
         val root = JSONObject()
         root.put("backup_kind", "dayseed_portable_backup")
         root.put("format_version", BackupAndExportManager.BACKUP_FORMAT_VERSION)
+        root.put("schema_version", BackupAndExportManager.BACKUP_SCHEMA_VERSION)
         root.put("source_schema_version", DayseedDatabaseHelper.DATABASE_VERSION)
         root.put("exported_at_utc_ms", clock.nowUtcMs())
 
@@ -4788,6 +4789,9 @@ class DayseedRepository(
             }
         })
 
+        root.put("restore_sessions", exportPortableRestoreSessions())
+        root.put("restore_conflicts", exportPortableRestoreConflicts())
+
         val plainJson = root.toString(2)
         return if (!password.isNullOrEmpty()) {
             BackupAndExportManager.encryptBackupPayload(plainJson, password)
@@ -4811,12 +4815,10 @@ class DayseedRepository(
     ): RestoreSession {
         require(restoreMode in listOf("REPLACE", "MERGE")) { "Invalid restoreMode: $restoreMode" }
         val unwrappedJson = BackupAndExportManager.unwrapBackupPayload(rawBackupPayload, password)
-        val root = JSONObject(unwrappedJson)
+        val inputRoot = JSONObject(unwrappedJson)
+        val root = normalizePortableBackupToV3(inputRoot)
         val formatVersion = root.optInt("format_version", 0)
         val sourceSchemaVersion = root.optInt("source_schema_version", 0)
-        require(formatVersion == BackupAndExportManager.BACKUP_FORMAT_VERSION && sourceSchemaVersion in listOf(2, 3)) {
-            "Unsupported or corrupted backup format (format_version=$formatVersion, source_schema_version=$sourceSchemaVersion)"
-        }
 
         // Pre-validate dates and numeric bounds in backup payload before touching live tables
         validateBackupJsonPayload(root)
@@ -4853,6 +4855,11 @@ class DayseedRepository(
 
             if (restoreMode == "REPLACE") {
                 db.delete(DayseedDatabaseHelper.TABLE_RESTORE_CONFLICTS, null, null)
+                db.delete(
+                    DayseedDatabaseHelper.TABLE_RESTORE_SESSIONS,
+                    "restore_session_id != ?",
+                    arrayOf(sessionId)
+                )
                 db.delete(DayseedDatabaseHelper.TABLE_JOURNAL_DRAFTS, null, null)
                 db.delete(DayseedDatabaseHelper.TABLE_JOURNAL_ENTRIES, null, null)
                 db.delete(DayseedDatabaseHelper.TABLE_HABIT_STREAK_RUNS, null, null)
@@ -4865,10 +4872,11 @@ class DayseedRepository(
                 db.delete(DayseedDatabaseHelper.TABLE_WEEK_START_HISTORY, null, null)
                 db.delete(DayseedDatabaseHelper.TABLE_APP_SETTINGS, null, null)
 
-                importBackupArraysDirect(db, root, nowMs)
+                importBackupArraysDirect(db, root, nowMs, sessionId)
                 finalState = "COMPLETED"
             } else {
                 val conflictCount = mergeBackupWithConflictDetection(db, sessionId, root, nowMs)
+                importPortableRestoreState(db, root)
                 finalState = if (conflictCount > 0) "AWAITING_CONFLICT_RESOLUTION" else "COMPLETED"
             }
 
@@ -4904,7 +4912,77 @@ class DayseedRepository(
         )
     }
 
+    /**
+     * Validates and upgrades supported portable v2 payloads in memory before any safety-backup
+     * write or live database mutation. Unknown format/schema versions are rejected unchanged.
+     * Missing v3-only collections in v2 are represented as empty collections; fields already
+     * present in v2 records are copied byte-for-byte by JSONObject's object copy.
+     */
+    private fun normalizePortableBackupToV3(input: JSONObject): JSONObject {
+        val formatVersion = input.optInt("format_version", 0)
+        val sourceSchemaVersion = input.optInt("source_schema_version", 0)
+        val payloadSchemaVersion = input.optInt("schema_version", sourceSchemaVersion)
+        val supportedVersions = setOf(2, BackupAndExportManager.BACKUP_SCHEMA_VERSION)
+        require(
+            formatVersion in supportedVersions &&
+                sourceSchemaVersion in supportedVersions &&
+                payloadSchemaVersion in supportedVersions
+        ) {
+            "Unsupported or corrupted backup format (format_version=$formatVersion, " +
+                "schema_version=$payloadSchemaVersion, source_schema_version=$sourceSchemaVersion)"
+        }
+
+        val normalized = JSONObject(input.toString())
+        val isLegacyV2Payload = formatVersion == 2 || payloadSchemaVersion == 2 || sourceSchemaVersion == 2
+        if (isLegacyV2Payload) {
+            listOf(
+                "habit_date_exceptions",
+                "habit_streak_runs",
+                "week_start_history",
+                "restore_sessions",
+                "restore_conflicts"
+            ).forEach { key ->
+                if (!normalized.has(key) || normalized.isNull(key)) normalized.put(key, JSONArray())
+            }
+            val habits = normalized.optJSONArray("habits") ?: JSONArray()
+            for (index in 0 until habits.length()) {
+                val habit = habits.optJSONObject(index) ?: continue
+                if (!habit.has("category")) habit.put("category", JSONObject.NULL)
+                if (!habit.has("lifetime_goal_days")) habit.put("lifetime_goal_days", JSONObject.NULL)
+            }
+        }
+        // Recovery state was added to portable backups after the initial v3 format. Older v3
+        // payloads remain valid and simply have no portable restore state to import.
+        listOf("restore_sessions", "restore_conflicts").forEach { key ->
+            if (!normalized.has(key) || normalized.isNull(key)) normalized.put(key, JSONArray())
+        }
+        val settings = normalized.optJSONArray("app_settings")
+        if (settings != null) {
+            for (index in 0 until settings.length()) {
+                val setting = settings.optJSONObject(index) ?: continue
+                if (setting.optString("setting_key") == ReminderScheduler.SETTING_REMINDERS_ENABLED) {
+                    // Reminder activation is held behind physical-device verification. A
+                    // portable backup cannot bypass that release gate on a fresh install.
+                    setting.put("value_text", "false")
+                }
+            }
+        }
+        normalized.put("format_version", BackupAndExportManager.BACKUP_FORMAT_VERSION)
+        normalized.put("schema_version", BackupAndExportManager.BACKUP_SCHEMA_VERSION)
+        return normalized
+    }
+
     private fun validateBackupJsonPayload(root: JSONObject) {
+        val requiredArrayKeys = listOf(
+            "habits", "habit_versions", "habit_entries", "habit_day_outcomes", "habit_date_notes",
+            "habit_date_exceptions", "habit_streak_runs", "week_start_history", "journal_entries",
+            "journal_drafts", "app_settings", "restore_sessions", "restore_conflicts"
+        )
+        for (key in requiredArrayKeys) {
+            require(root.optJSONArray(key) != null && !root.isNull(key)) {
+                "Portable backup is missing the '$key' collection."
+            }
+        }
         val dateArrays = listOf(
             "habit_versions" to "effective_from_local_date",
             "habit_entries" to "local_date",
@@ -4946,6 +5024,57 @@ class DayseedRepository(
                     throw DayseedNumericRangeException("Invalid value_units $rawVal in backup habit_entries.")
                 }
             }
+        }
+        validatePortableRestoreState(root)
+    }
+
+    private fun validatePortableRestoreState(root: JSONObject) {
+        val sessionIds = mutableSetOf<String>()
+        val sessions = root.optJSONArray("restore_sessions") ?: JSONArray()
+        val validStates = setOf(
+            "STARTED", "VALIDATED", "AWAITING_CONFLICT_RESOLUTION", "APPLYING",
+            "COMPLETED", "FAILED", "ROLLED_BACK"
+        )
+        for (index in 0 until sessions.length()) {
+            val session = sessions.getJSONObject(index)
+            val id = session.getString("restore_session_id").trim()
+            require(id.isNotEmpty() && sessionIds.add(id)) { "Invalid or duplicate restore session in backup." }
+            require(session.getString("restore_mode") in setOf("REPLACE", "MERGE")) {
+                "Unsupported restore mode in backup session '$id'."
+            }
+            require(session.getInt("format_version") in 1..BackupAndExportManager.BACKUP_FORMAT_VERSION)
+            require(session.getInt("source_schema_version") >= 1)
+            require(session.getString("session_state") in validStates) {
+                "Unsupported restore session state in backup session '$id'."
+            }
+            val startedAt = session.getLong("started_at_utc_ms")
+            require(startedAt >= 0L && session.getLong("updated_at_utc_ms") >= startedAt) {
+                "Invalid restore session timestamps in backup session '$id'."
+            }
+            JSONObject(session.getString("manifest_json"))
+        }
+
+        val validRecordTypes = setOf(
+            "habit", "habit_version", "habit_entry", "habit_day_outcome", "habit_date_note",
+            "habit_date_exception", "habit_streak_run", "journal_entry", "journal_draft",
+            "app_setting", "week_start_history"
+        )
+        val conflictIds = mutableSetOf<String>()
+        val conflicts = root.optJSONArray("restore_conflicts") ?: JSONArray()
+        for (index in 0 until conflicts.length()) {
+            val conflict = conflicts.getJSONObject(index)
+            val id = conflict.getString("conflict_id").trim()
+            require(id.isNotEmpty() && conflictIds.add(id)) { "Invalid or duplicate restore conflict in backup." }
+            require(conflict.getString("restore_session_id") in sessionIds) {
+                "Portable backup restore conflict has no restore session."
+            }
+            require(conflict.getString("record_type") in validRecordTypes) {
+                "Unsupported restore conflict type in backup."
+            }
+            require(conflict.getString("record_key").isNotBlank()) { "Restore conflict key is blank." }
+            JSONObject(conflict.getString("current_payload_json"))
+            JSONObject(conflict.getString("backup_payload_json"))
+            require(conflict.getLong("created_at_utc_ms") >= 0L) { "Invalid restore conflict timestamp." }
         }
     }
 
@@ -4995,7 +5124,64 @@ class DayseedRepository(
         }
     }
 
-    private fun importBackupArraysDirect(db: SQLiteDatabase, root: JSONObject, nowMs: Long) {
+    private fun exportPortableRestoreSessions(): JSONArray = JSONArray().apply {
+        dbHelper.readableDatabase.rawQuery(
+            """
+            SELECT restore_session_id, restore_mode, format_version, source_schema_version,
+                   session_state, started_at_utc_ms, updated_at_utc_ms, manifest_json
+            FROM ${DayseedDatabaseHelper.TABLE_RESTORE_SESSIONS}
+            ORDER BY started_at_utc_ms, restore_session_id
+            """.trimIndent(),
+            null
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                put(JSONObject().apply {
+                    put("restore_session_id", cursor.getString(0))
+                    put("restore_mode", cursor.getString(1))
+                    put("format_version", cursor.getInt(2))
+                    put("source_schema_version", cursor.getInt(3))
+                    put("session_state", cursor.getString(4))
+                    put("started_at_utc_ms", cursor.getLong(5))
+                    put("updated_at_utc_ms", cursor.getLong(6))
+                    put("manifest_json", cursor.getString(7))
+                    // A safety-backup path is local to this installation and is never portable.
+                    put("safety_backup_ref", JSONObject.NULL)
+                    put("safety_backup_verified", false)
+                })
+            }
+        }
+    }
+
+    private fun exportPortableRestoreConflicts(): JSONArray = JSONArray().apply {
+        dbHelper.readableDatabase.rawQuery(
+            """
+            SELECT conflict_id, restore_session_id, record_type, record_key,
+                   current_payload_json, backup_payload_json, created_at_utc_ms
+            FROM ${DayseedDatabaseHelper.TABLE_RESTORE_CONFLICTS}
+            ORDER BY created_at_utc_ms, conflict_id
+            """.trimIndent(),
+            null
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                put(JSONObject().apply {
+                    put("conflict_id", cursor.getString(0))
+                    put("restore_session_id", cursor.getString(1))
+                    put("record_type", cursor.getString(2))
+                    put("record_key", cursor.getString(3))
+                    put("current_payload_json", cursor.getString(4))
+                    put("backup_payload_json", cursor.getString(5))
+                    put("created_at_utc_ms", cursor.getLong(6))
+                })
+            }
+        }
+    }
+
+    private fun importBackupArraysDirect(
+        db: SQLiteDatabase,
+        root: JSONObject,
+        nowMs: Long,
+        currentRestoreSessionId: String
+    ) {
         val habitsArr = root.optJSONArray("habits") ?: JSONArray()
         for (i in 0 until habitsArr.length()) {
             val o = habitsArr.getJSONObject(i)
@@ -5112,6 +5298,57 @@ class DayseedRepository(
                     put("created_at_utc_ms", nowMs)
                 },
                 SQLiteDatabase.CONFLICT_IGNORE
+            )
+        }
+
+        importPortableRestoreState(db, root)
+    }
+
+    /** Imports portable recovery records with fresh local identifiers in both restore modes. */
+    private fun importPortableRestoreState(db: SQLiteDatabase, root: JSONObject) {
+        val sessionIdMap = mutableMapOf<String, String>()
+        val restoreSessions = root.optJSONArray("restore_sessions") ?: JSONArray()
+        for (i in 0 until restoreSessions.length()) {
+            val session = restoreSessions.getJSONObject(i)
+            val sourceSessionId = session.getString("restore_session_id")
+            val importedSessionId = UUID.randomUUID().toString()
+            sessionIdMap[sourceSessionId] = importedSessionId
+            val startedAt = session.getLong("started_at_utc_ms")
+            db.insertOrThrow(
+                DayseedDatabaseHelper.TABLE_RESTORE_SESSIONS,
+                null,
+                ContentValues().apply {
+                    put("restore_session_id", importedSessionId)
+                    put("restore_mode", session.getString("restore_mode"))
+                    put("format_version", session.getInt("format_version"))
+                    put("source_schema_version", session.getInt("source_schema_version"))
+                    put("session_state", session.getString("session_state"))
+                    put("started_at_utc_ms", startedAt)
+                    put("updated_at_utc_ms", maxOf(startedAt, session.getLong("updated_at_utc_ms")))
+                    put("manifest_json", session.getString("manifest_json"))
+                    putNull("safety_backup_ref")
+                    put("safety_backup_verified", 0)
+                }
+            )
+        }
+
+        val restoreConflicts = root.optJSONArray("restore_conflicts") ?: JSONArray()
+        for (i in 0 until restoreConflicts.length()) {
+            val conflict = restoreConflicts.getJSONObject(i)
+            val importedSessionId = sessionIdMap[conflict.getString("restore_session_id")]
+                ?: throw IllegalArgumentException("Portable backup restore conflict has no restore session.")
+            db.insertOrThrow(
+                DayseedDatabaseHelper.TABLE_RESTORE_CONFLICTS,
+                null,
+                ContentValues().apply {
+                    put("conflict_id", UUID.randomUUID().toString())
+                    put("restore_session_id", importedSessionId)
+                    put("record_type", conflict.getString("record_type"))
+                    put("record_key", conflict.getString("record_key"))
+                    put("current_payload_json", conflict.getString("current_payload_json"))
+                    put("backup_payload_json", conflict.getString("backup_payload_json"))
+                    put("created_at_utc_ms", conflict.getLong("created_at_utc_ms"))
+                }
             )
         }
     }

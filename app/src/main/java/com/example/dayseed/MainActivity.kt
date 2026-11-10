@@ -62,6 +62,8 @@ class MainActivity : ComponentActivity() {
             val themeMode = remember(appSettings) {
                 ThemeModeOption.fromSetting(appSettings["theme_mode"]?.valueText)
             }
+            val reducedMotion = appSettings["reduced_motion_enabled"]?.valueText
+                .equals("true", ignoreCase = true)
             val liveLocalTime by produceState(initialValue = viewModel.repository.clock.nowLocalTime()) {
                 while (true) {
                     delay(30_000L)
@@ -70,7 +72,8 @@ class MainActivity : ComponentActivity() {
             }
             DayseedTheme(
                 themeMode = themeMode,
-                localTime = liveLocalTime
+                localTime = liveLocalTime,
+                reducedMotion = reducedMotion
             ) {
                 DayseedApp(viewModel = viewModel)
             }

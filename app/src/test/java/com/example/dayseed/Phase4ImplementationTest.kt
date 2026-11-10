@@ -4,6 +4,7 @@ import android.app.Application
 import android.database.sqlite.SQLiteConstraintException
 import androidx.test.core.app.ApplicationProvider
 import com.example.dayseed.data.DayseedClock
+import com.example.dayseed.data.BackupAndExportManager
 import com.example.dayseed.data.DayseedDatabaseHelper
 import com.example.dayseed.data.DayseedRepository
 import com.example.dayseed.data.Habit
@@ -26,7 +27,6 @@ import java.io.File
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
-import java.util.UUID
 
 /**
  * Phase 4 implementation self-checks (Stage B). These are implementation tests, not
@@ -61,7 +61,9 @@ class Phase4ImplementationTest {
     fun setUp() {
         app = ApplicationProvider.getApplicationContext()
         testClock = MutableTestClock()
-        dbName = "dayseed_phase4_test_${UUID.randomUUID()}.db"
+        // Robolectric isolates each test method in its own sandbox; keep this filename short
+        // so long method names remain within Windows' legacy path limit.
+        dbName = "p4.db"
         repository = DayseedRepository(context = app, clock = testClock, databaseName = dbName)
         // The weekly family is part of the same opt-in reminder feature, so the pass tests run
         // with reminders enabled and the Android notification permission granted.
@@ -487,11 +489,58 @@ class Phase4ImplementationTest {
         repository.logHabitDayOutcomeSync(habitId, LocalDate.of(2026, 10, 14), "COMPLETED")
         repository.runWeeklyReminderPassSync(today = LocalDate.of(2026, 10, 14), nowLocalTime = LocalTime.of(10, 0)) { _, _, _, _ -> true }
         assertTrue(weeklyLedgerCount() > 0)
+        repository.saveJournalEntrySync(
+            com.example.dayseed.data.JournalEntry(
+                journalEntryId = "j_delete_all",
+                localDate = "2026-10-14",
+                body = "private journal body",
+                linkedHabitId = habitId
+            )
+        )
+        repository.saveJournalDraftSync(draftId = "draft_delete_all", body = "private draft")
+        repository.dbHelper.writableDatabase.execSQL(
+            """
+            INSERT INTO ${DayseedDatabaseHelper.TABLE_RESTORE_SESSIONS}
+                (restore_session_id, restore_mode, format_version, source_schema_version,
+                 session_state, started_at_utc_ms, updated_at_utc_ms, manifest_json,
+                 safety_backup_ref, safety_backup_verified)
+            VALUES ('delete_all_session', 'MERGE', 3, 3, 'AWAITING_CONFLICT_RESOLUTION', 100, 100, '{}', NULL, 0)
+            """.trimIndent()
+        )
+        repository.dbHelper.writableDatabase.execSQL(
+            """
+            INSERT INTO ${DayseedDatabaseHelper.TABLE_RESTORE_CONFLICTS}
+                (conflict_id, restore_session_id, record_type, record_key,
+                 current_payload_json, backup_payload_json, created_at_utc_ms)
+            VALUES ('delete_all_conflict', 'delete_all_session', 'journal_entry', 'j_delete_all', '{}', '{}', 100)
+            """.trimIndent()
+        )
+        repository.dbHelper.writableDatabase.execSQL(
+            """
+            INSERT INTO ${DayseedDatabaseHelper.TABLE_NOTIFICATION_CANCEL_OUTBOX}
+                (cancel_id, platform_notification_tag, platform_notification_id, created_at_utc_ms,
+                 last_attempt_at_utc_ms, attempt_count, status, error_category)
+            VALUES ('delete_all_cancel', 'test-tag', 4321, 100, NULL, 0, 'PENDING', NULL)
+            """.trimIndent()
+        )
 
         repository.deleteAllDataSync()
-        assertEquals(0, weeklyLedgerCount())
-        assertEquals(0, repository.habits.value.size)
-        assertEquals(0, repository.habitEntries.value.size)
+        val db = repository.dbHelper.readableDatabase
+        for (table in DayseedDatabaseHelper.ALL_V3_TABLES) {
+            val expectedRows = when (table) {
+                DayseedDatabaseHelper.TABLE_APP_SETTINGS,
+                DayseedDatabaseHelper.TABLE_WEEK_START_HISTORY -> 1
+                else -> 0
+            }
+            db.rawQuery("SELECT COUNT(*) FROM $table", null).use { cursor ->
+                cursor.moveToFirst()
+                assertEquals("Unexpected rows remain in $table after delete-all", expectedRows, cursor.getInt(0))
+            }
+        }
+        assertEquals("false", repository.getSettingString("onboarding_completed", ""))
+        assertTrue(repository.habits.value.isEmpty())
+        assertTrue(repository.journalEntries.value.isEmpty())
+        assertTrue(repository.journalDrafts.value.isEmpty())
     }
 
     @Test
@@ -536,5 +585,369 @@ class Phase4ImplementationTest {
         assertFalse("Core features must stay offline: no network permission", text.contains("android.permission.INTERNET"))
         assertFalse(text.contains("android.permission.SCHEDULE_EXACT_ALARM"))
         assertFalse(text.contains("android.permission.USE_EXACT_ALARM"))
+
+        val extractionRules = File("src/main/res/xml/data_extraction_rules.xml")
+        assertTrue("Data extraction rules must be available to the test", extractionRules.exists())
+        val extractionText = extractionRules.readText()
+        assertTrue(extractionText.contains("<cloud-backup>"))
+        assertTrue(extractionText.contains("<device-transfer>"))
+        for (domain in listOf("database", "sharedpref", "file")) {
+            assertTrue(extractionText.contains("exclude domain=\"$domain\" path=\".\""))
+        }
+        val dependencyCatalog = File("../gradle/libs.versions.toml")
+            .takeIf { it.exists() } ?: File("gradle/libs.versions.toml")
+        assertTrue(dependencyCatalog.exists())
+        val dependencyText = dependencyCatalog.readText().lowercase()
+        for (blocked in listOf("firebase", "analytics", "admob", "billing", "okhttp", "retrofit", "ktor-client", "gemini", "openai")) {
+            assertFalse("Unapproved network/analytics dependency marker '$blocked'", dependencyText.contains(blocked))
+        }
+        val mainSources = File("src/main/java").takeIf { it.exists() } ?: File("app/src/main/java")
+        val networkMarkers = listOf("HttpURLConnection", "OkHttpClient", "Retrofit.Builder", "FirebaseAnalytics", "MobileAds")
+        mainSources.walkTopDown().filter { it.isFile && it.extension == "kt" }.forEach { source ->
+            val sourceText = source.readText()
+            for (marker in networkMarkers) {
+                assertFalse("Unapproved network-capable code marker '$marker' in ${source.name}", sourceText.contains(marker))
+            }
+        }
+    }
+
+    @Test
+    fun p4_19_weekStartReflectionPreferenceDefaultsOff() {
+        val defaultDbName = "p4_default.db"
+        val defaultRepository = DayseedRepository(
+            context = app,
+            clock = testClock,
+            databaseName = defaultDbName
+        )
+        try {
+            defaultRepository.setSettingSync("reminders_enabled", "BOOL", "true")
+            defaultRepository.saveHabitSync(
+                Habit(
+                    habitId = "h_default_reflection",
+                    name = "Swim",
+                    trackingMode = TrackingMode.COMPLETION_ONLY,
+                    targetPeriod = TargetPeriod.WEEK,
+                    targetValue = 3,
+                    scheduleKind = ScheduleKind.DAILY
+                ),
+                effectiveDateOverride = LocalDate.of(2026, 10, 5)
+            )
+
+            val plans = defaultRepository.planWeeklyRemindersSync(
+                today = weekStart,
+                nowLocalTime = LocalTime.of(10, 0)
+            )
+
+            assertFalse(
+                "Weekly reflection must require explicit opt-in on a fresh install",
+                plans.any { it.kind == WeeklyReminderEngine.Kind.WEEK_START_REFLECTION }
+            )
+        } finally {
+            defaultRepository.dbHelper.close()
+            app.deleteDatabase(defaultDbName)
+        }
+    }
+
+    @Test
+    fun p4_20_portableBackupDeclaresTheV3ModelVersion() {
+        val root = JSONObject(repository.exportPortableBackupSync())
+
+        assertEquals(3, root.getInt("format_version"))
+        assertEquals(3, root.getInt("schema_version"))
+        assertEquals(3, root.getInt("source_schema_version"))
+    }
+
+    @Test
+    fun p4_21_supportedV2BackupConvertsBeforeReplaceAndPreservesV2Records() {
+        seedWeeklyHabit()
+        repository.logHabitDayOutcomeSync(habitId, LocalDate.of(2026, 10, 12), "COMPLETED")
+        val legacyV2 = JSONObject(repository.exportPortableBackupSync()).apply {
+            put("format_version", 2)
+            put("schema_version", 2)
+            put("source_schema_version", 2)
+            remove("habit_date_exceptions")
+            remove("habit_streak_runs")
+            remove("week_start_history")
+        }
+        val expectedOutcomeCount = legacyV2.getJSONArray("habit_day_outcomes").length()
+
+        val session = repository.restorePortableBackupSync(
+            rawBackupPayload = legacyV2.toString(),
+            restoreMode = "REPLACE"
+        )
+
+        assertEquals(3, session.formatVersion)
+        assertEquals(2, session.sourceSchemaVersion)
+        assertTrue(repository.habits.value.any { it.habitId == habitId })
+        assertEquals(expectedOutcomeCount, repository.habitDayOutcomes.value.size)
+        assertTrue(repository.weekStartHistory.value.isNotEmpty())
+    }
+
+    @Test
+    fun p4_22_portableBackupPreservesPendingRestoreConflictsWithoutDeviceFilePaths() {
+        val sourceSessionId = "source-pending-session"
+        val sourceConflictId = "source-pending-conflict"
+        val db = repository.dbHelper.writableDatabase
+        db.execSQL(
+            """
+            INSERT INTO ${DayseedDatabaseHelper.TABLE_RESTORE_SESSIONS}
+                (restore_session_id, restore_mode, format_version, source_schema_version,
+                 session_state, started_at_utc_ms, updated_at_utc_ms, manifest_json,
+                 safety_backup_ref, safety_backup_verified)
+            VALUES (?, 'MERGE', 3, 3, 'AWAITING_CONFLICT_RESOLUTION', 100, 100, '{}', ?, 1)
+            """.trimIndent(),
+            arrayOf(sourceSessionId, "C:\\private\\local-safety-backup.dayseed.json")
+        )
+        db.execSQL(
+            """
+            INSERT INTO ${DayseedDatabaseHelper.TABLE_RESTORE_CONFLICTS}
+                (conflict_id, restore_session_id, record_type, record_key,
+                 current_payload_json, backup_payload_json, created_at_utc_ms)
+            VALUES (?, ?, 'journal_entry', 'j_pending', '{"body":"local"}', '{"body":"backup"}', 100)
+            """.trimIndent(),
+            arrayOf(sourceConflictId, sourceSessionId)
+        )
+
+        val backup = JSONObject(repository.exportPortableBackupSync())
+        val sessions = backup.getJSONArray("restore_sessions")
+        val conflicts = backup.getJSONArray("restore_conflicts")
+        assertEquals(1, sessions.length())
+        assertEquals(1, conflicts.length())
+        assertTrue(sessions.getJSONObject(0).isNull("safety_backup_ref"))
+        assertFalse(backup.toString().contains("C:\\\\private"))
+
+        val targetDbName = "p4_target.db"
+        val targetRepository = DayseedRepository(context = app, clock = testClock, databaseName = targetDbName)
+        try {
+            targetRepository.restorePortableBackupSync(backup.toString(), restoreMode = "REPLACE")
+
+            assertEquals(1, targetRepository.restoreConflicts.value.size)
+            val restoredConflict = targetRepository.restoreConflicts.value.single()
+            assertEquals("journal_entry", restoredConflict.recordType)
+            assertTrue(restoredConflict.restoreSessionId != sourceSessionId)
+            targetRepository.dbHelper.readableDatabase.rawQuery(
+                "SELECT session_state FROM ${DayseedDatabaseHelper.TABLE_RESTORE_SESSIONS} WHERE restore_session_id = ?",
+                arrayOf(restoredConflict.restoreSessionId)
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals("AWAITING_CONFLICT_RESOLUTION", cursor.getString(0))
+            }
+        } finally {
+            targetRepository.dbHelper.close()
+            app.deleteDatabase(targetDbName)
+        }
+    }
+
+    @Test
+    fun p4_23_unsupportedBackupVersionLeavesExistingDataUnchanged() {
+        seedWeeklyHabit()
+        val before = repository.habits.value.map { it.habitId }
+        val unsupported = JSONObject(repository.exportPortableBackupSync()).put("format_version", 99)
+
+        var rejected = false
+        try {
+            repository.restorePortableBackupSync(unsupported.toString(), restoreMode = "REPLACE")
+        } catch (_: IllegalArgumentException) {
+            rejected = true
+        }
+
+        assertTrue("Unknown portable backup versions must be rejected", rejected)
+        assertEquals(before, repository.habits.value.map { it.habitId })
+    }
+
+    @Test
+    fun p4_24_wrongBackupPasswordLeavesExistingDataUnchanged() {
+        seedWeeklyHabit()
+        val before = repository.habits.value.map { it.habitId }
+        val encrypted = BackupAndExportManager.encryptBackupPayload(
+            repository.exportPortableBackupSync(),
+            "correct horse battery staple"
+        )
+
+        var rejected = false
+        try {
+            repository.restorePortableBackupSync(
+                encrypted,
+                restoreMode = "REPLACE",
+                password = "wrong password"
+            )
+        } catch (_: Exception) {
+            rejected = true
+        }
+
+        assertTrue("Wrong-password backups must be rejected", rejected)
+        assertEquals(before, repository.habits.value.map { it.habitId })
+    }
+
+    @Test
+    fun p4_25_tamperedBackupLeavesExistingDataUnchanged() {
+        seedWeeklyHabit()
+        val before = repository.habits.value.map { it.habitId }
+        val envelope = JSONObject(
+            BackupAndExportManager.encryptBackupPayload(repository.exportPortableBackupSync(), "backup password")
+        )
+        val ciphertext = envelope.getString("ciphertext_b64")
+        envelope.put("ciphertext_b64", (if (ciphertext.first() == 'A') "B" else "A") + ciphertext.drop(1))
+
+        var rejected = false
+        try {
+            repository.restorePortableBackupSync(envelope.toString(), restoreMode = "REPLACE", password = "backup password")
+        } catch (_: Exception) {
+            rejected = true
+        }
+
+        assertTrue("Tampered encrypted backups must be rejected", rejected)
+        assertEquals(before, repository.habits.value.map { it.habitId })
+    }
+
+    @Test
+    fun p4_26_safetyBackupWriteFailureLeavesExistingDataUnchanged() {
+        seedWeeklyHabit()
+        val before = repository.habits.value.map { it.habitId }
+        val safetyPath = File(app.filesDir, "pre_restore_safety_${testClock.nowUtcMs()}.dayseed.json")
+        safetyPath.deleteRecursively()
+        assertTrue(safetyPath.mkdir())
+        try {
+            var rejected = false
+            try {
+                repository.restorePortableBackupSync(repository.exportPortableBackupSync(), restoreMode = "REPLACE")
+            } catch (_: Exception) {
+                rejected = true
+            }
+            assertTrue("Restore must stop when the pre-restore safety backup cannot be written", rejected)
+            assertEquals(before, repository.habits.value.map { it.habitId })
+        } finally {
+            safetyPath.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun p4_27_midRestoreFailureRollsBackExistingRecords() {
+        seedWeeklyHabit()
+        repository.logHabitDayOutcomeSync(habitId, LocalDate.of(2026, 10, 12), "COMPLETED")
+        val db = repository.dbHelper.readableDatabase
+        fun rowCount(table: String): Int = db.rawQuery("SELECT COUNT(*) FROM $table", null).use { cursor ->
+            cursor.moveToFirst()
+            cursor.getInt(0)
+        }
+        val beforeHabits = rowCount(DayseedDatabaseHelper.TABLE_HABITS)
+        val beforeOutcomes = rowCount(DayseedDatabaseHelper.TABLE_HABIT_DAY_OUTCOMES)
+        val root = JSONObject(repository.exportPortableBackupSync())
+        root.getJSONArray("habit_streak_runs").put(
+            JSONObject()
+                .put("habit_id", "missing_parent")
+                .put("start_local_date", "2026-10-12")
+                .put("end_local_date", "2026-10-12")
+        )
+        val safetyPath = File(app.filesDir, "pre_restore_safety_${testClock.nowUtcMs()}.dayseed.json")
+        safetyPath.delete()
+        try {
+            var rejected = false
+            try {
+                repository.restorePortableBackupSync(root.toString(), restoreMode = "REPLACE")
+            } catch (_: IllegalStateException) {
+                rejected = true
+            }
+            assertTrue("Orphan streak data must abort the restore", rejected)
+            assertEquals(beforeHabits, rowCount(DayseedDatabaseHelper.TABLE_HABITS))
+            assertEquals(beforeOutcomes, rowCount(DayseedDatabaseHelper.TABLE_HABIT_DAY_OUTCOMES))
+        } finally {
+            safetyPath.delete()
+        }
+    }
+
+    @Test
+    fun p4_28_mergeRestorePreservesPortableUnresolvedConflicts() {
+        val sourceSessionId = "merge-source-session"
+        repository.dbHelper.writableDatabase.execSQL(
+            """
+            INSERT INTO ${DayseedDatabaseHelper.TABLE_RESTORE_SESSIONS}
+                (restore_session_id, restore_mode, format_version, source_schema_version,
+                 session_state, started_at_utc_ms, updated_at_utc_ms, manifest_json,
+                 safety_backup_ref, safety_backup_verified)
+            VALUES (?, 'MERGE', 3, 3, 'AWAITING_CONFLICT_RESOLUTION', 100, 100, '{}', NULL, 0)
+            """.trimIndent(),
+            arrayOf(sourceSessionId)
+        )
+        repository.dbHelper.writableDatabase.execSQL(
+            """
+            INSERT INTO ${DayseedDatabaseHelper.TABLE_RESTORE_CONFLICTS}
+                (conflict_id, restore_session_id, record_type, record_key,
+                 current_payload_json, backup_payload_json, created_at_utc_ms)
+            VALUES ('merge-source-conflict', ?, 'journal_entry', 'j_pending', '{"body":"local"}', '{"body":"backup"}', 100)
+            """.trimIndent(),
+            arrayOf(sourceSessionId)
+        )
+        val portable = repository.exportPortableBackupSync()
+        val targetDbName = "p4_merge.db"
+        val target = DayseedRepository(context = app, clock = testClock, databaseName = targetDbName)
+        try {
+            target.restorePortableBackupSync(portable, restoreMode = "MERGE")
+            assertEquals(1, target.restoreConflicts.value.size)
+            val conflict = target.restoreConflicts.value.single()
+            assertEquals("j_pending", conflict.recordKey)
+            assertEquals("{\"body\":\"backup\"}", conflict.backupPayloadJson)
+        } finally {
+            target.dbHelper.close()
+            app.deleteDatabase(targetDbName)
+        }
+    }
+
+    @Test
+    fun p4_29_truncatedBackupLeavesExistingDataUnchanged() {
+        seedWeeklyHabit()
+        val before = repository.habits.value.map { it.habitId }
+        val truncated = "{\"backup_kind\":\"dayseed_portable_backup\",\"format_version\":3,\"habits\":["
+
+        var rejected = false
+        try {
+            repository.restorePortableBackupSync(truncated, restoreMode = "REPLACE")
+        } catch (_: Exception) {
+            rejected = true
+        }
+
+        assertTrue("Truncated backup content must be rejected before mutation", rejected)
+        assertEquals(before, repository.habits.value.map { it.habitId })
+    }
+
+    @Test
+    fun p4_30_missingRequiredCollectionLeavesExistingDataUnchanged() {
+        seedWeeklyHabit()
+        val before = repository.habits.value.map { it.habitId }
+        val incomplete = JSONObject(repository.exportPortableBackupSync()).apply { remove("habits") }.toString()
+        val safetyFile = File(app.filesDir, "pre_restore_safety_${testClock.nowUtcMs()}.dayseed.json")
+        safetyFile.delete()
+
+        try {
+            var rejected = false
+            try {
+                repository.restorePortableBackupSync(incomplete, restoreMode = "REPLACE")
+            } catch (_: Exception) {
+                rejected = true
+            }
+
+            assertTrue("Portable backup must include its required record collections", rejected)
+            assertEquals(before, repository.habits.value.map { it.habitId })
+            assertFalse("Malformed input must be rejected before creating a safety backup", safetyFile.exists())
+        } finally {
+            safetyFile.delete()
+        }
+    }
+
+    @Test
+    fun p4_31_restoreCannotReEnableReminderDeliveryBeforeDeviceVerification() {
+        repository.setSettingSync("reminders_enabled", "BOOL", "true")
+        val targetDbName = "p4_lock.db"
+        val target = DayseedRepository(context = app, clock = testClock, databaseName = targetDbName)
+        try {
+            target.restorePortableBackupSync(repository.exportPortableBackupSync(), restoreMode = "REPLACE")
+            assertEquals(
+                "false",
+                target.getSettingString("reminders_enabled", "true")
+            )
+        } finally {
+            target.dbHelper.close()
+            app.deleteDatabase(targetDbName)
+        }
     }
 }
