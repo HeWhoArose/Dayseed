@@ -31,6 +31,8 @@ This document is a test plan, not evidence that any test has passed. Stage C ind
 
 ### P1-H01 — Upgrade an existing v2 installation to v3 without losing history
 
+- **Status:** `NOT RUN`
+
 **Why human intervention is needed:** A real app upgrade exercises Android installation and app-private database continuity in addition to the automated migration fixture.
 
 **Dependency:** A reproducible v2 test installation or a documented way to seed a synthetic v2 database on the test device.
@@ -48,6 +50,8 @@ This document is a test plan, not evidence that any test has passed. Stage C ind
 
 ### P1-H02 — Data persistence after force-stop and process death
 
+- **Status:** `NOT RUN`
+
 **Why human intervention is needed:** This verifies the installed Android app and its process lifecycle, not merely an in-memory repository test.
 
 **Procedure:**
@@ -63,6 +67,8 @@ This document is a test plan, not evidence that any test has passed. Stage C ind
 
 ### P1-H03 — Same-day configuration protection after real activity
 
+- **Status:** `NOT RUN`
+
 **Procedure:**
 1. Create a scheduled habit and record a qualifying entry.
 2. Attempt to change an evaluation-affecting target or schedule with an Apply-today action.
@@ -74,6 +80,8 @@ This document is a test plan, not evidence that any test has passed. Stage C ind
 **Evidence:** Screenshots of the offered action, saved configuration, and selected-date result.
 
 ### P1-H04 — Weekly target semantics and week-start history
+
+- **Status:** `NOT RUN`
 
 **Procedure:**
 1. Create a weekly Quantity or Duration habit and record multiple sessions across several dates.
@@ -90,6 +98,8 @@ This document is a test plan, not evidence that any test has passed. Stage C ind
 
 ### P1-H05 — One-off REST_DAY behaviour
 
+- **Status:** `NOT RUN`
+
 **Procedure:**
 1. On an eligible scheduled date, choose **Take a rest day** for one habit.
 2. Inspect Today, History/Calendar, streak display, and weekly target progress.
@@ -103,6 +113,8 @@ This document is a test plan, not evidence that any test has passed. Stage C ind
 **Evidence:** Screenshots of the date state and totals before/after each action.
 
 ### P1-H06 — Individual streak independence and Grove lifecycle
+
+- **Status:** `NOT RUN`
 
 **Procedure:**
 1. Create at least two habits with different cadences.
@@ -120,6 +132,8 @@ This document is a test plan, not evidence that any test has passed. Stage C ind
 
 ### P1-H07 — Backdated correction does not cross lifecycle boundaries
 
+- **Status:** `NOT RUN`
+
 **Procedure:**
 1. Build a synthetic history with a missed gap and a separate PAUSED, ARCHIVED, or COMPLETED closure.
 2. Use the finished record-edit flow to add or correct a backdated entry around the missed gap.
@@ -133,6 +147,8 @@ This document is a test plan, not evidence that any test has passed. Stage C ind
 **Evidence:** Before/after screenshots and the exact synthetic timeline.
 
 ### P1-H08 — Portable backup compatibility and full v3 round-trip
+
+- **Status:** `NOT RUN`
 
 **Procedure:**
 1. Export a v3 portable backup from a disposable installation containing the Phase 1 data families.
@@ -148,6 +164,8 @@ This document is a test plan, not evidence that any test has passed. Stage C ind
 **Evidence:** Sanitised backup metadata, before/after screenshots, restore outcome, and commit/build details. Never share backup passwords or private payload contents.
 
 ### P1-H09 — Permanent habit deletion and selective Undo-token invalidation
+
+- **Status:** `NOT RUN`
 
 **Procedure:**
 1. Create a synthetic habit with versions, entries, date notes, REST_DAY/streak history, and a linked Journal entry.
@@ -436,11 +454,15 @@ Added 2026-11-04 (Phase 2.5, decisions D-220–D-224). All cases **NOT RUN**; th
 
 ### P25-H01 — Verify the fifth appearance option on device
 
+- **Status:** `NOT RUN`
+
 **Procedure:** Select "Dark + Time-of-Day Artwork" in Settings → Appearance & rhythm; observe the app across the four daypart boundaries (or by changing system time on a test device): the palette stays dark all day, the Morning sprig / Day branch / Evening hills / Night moon each appear in their local-time windows, and transitions remain gradual; relaunch the app and confirm the selection persists; confirm `SOFT_BOTANICAL_AUTO`, `SYSTEM`, `LIGHT`, and fixed `DARK` behave exactly as before; observe the Appearance preview updating over time without leaving Settings.
 **Expected:** Dark palette + time-cycling artwork simultaneously; no illustration is locked to the Night moon; preview tracks the Today screen's clock; no duplicate Today screen ever rendered.
 **Dependencies:** Physical device or emulator; ability to advance device time.
 
 ### P25-H02 — Measure illustration contrast on the dark canvas
+
+- **Status:** `NOT RUN`
 
 **Procedure:** On the `DARK_DAYPART_ART` theme, render each of the four illustrations against the dark canvas on a physical screen; compare visual legibility with the native `SOFT_BOTANICAL_AUTO` night leg; check text over the artwork stays readable; confirm reduced-motion behaviour of theme colour shifts.
 **Expected:** All four illustrations remain clearly visible without weakening text readability.
@@ -448,26 +470,36 @@ Added 2026-11-04 (Phase 2.5, decisions D-220–D-224). All cases **NOT RUN**; th
 
 ### P25-H03 — Reminder delivery end-to-end on a physical device (gating check)
 
+- **Status:** `NOT RUN`
+
 **Procedure:** On a device, build a debug APK with at least one active habit reminder due within a few minutes, Android notification channel available; grant `POST_NOTIFICATIONS`; wait for the intended window (± the inexact delivery window); observe the delivered notification; inspect `reminder_deliveries` for the fresh `DELIVERED` record; fire/repeat the same window to confirm no duplicate notification; then revoke permission and repeat (expect no notification and no ledger delivery record).
 **Expected:** Exactly one notification per due reminder; idempotency holds across restart/reschedule; quiet hours and the 3/day cap hold on device.
 **Rules:** The Settings activation switch may only be enabled after this case **PASSES**. Until then switches stay disabled.
 
 ### P25-H04 — Reboot / time-change / Doze reminder recovery
 
+- **Status:** `NOT RUN`
+
 **Procedure:** Schedule a reminder, reboot the device (and separately change system time/timezone), verify the reminder still rings at the intended time within the inexact window; with battery optimisation/Doze active, observe any delay is bounded and copy never promised an exact minute.
 **Expected:** Reminders re-registered automatically by the system-event receiver + reconcile worker; delayed-but-delivered outcome is acceptable and never reported as exact-time delivery.
 
 ### P25-H05 — Permission-denied UI honesty
+
+- **Status:** `NOT RUN`
 
 **Procedure:** Deny notifications for Dayseed in system settings; open Settings → Notifications & reminders; confirm the panel shows the real denied state, request/route buttons work, and global switches remain disabled with the "delivery not yet available" copy; confirm core app use (habit creation, logging, Journal) is unaffected.
 **Expected:** No control implies delivery works while permission is denied.
 
 ### P25-H06 — SAF backup save with read-back verification on device
 
+- **Status:** `NOT RUN`
+
 **Procedure:** Settings → Back up or restore → "Save backup to a file (choose location)" with and without a password; pick a Files/Drive/USB document provider; verify the file appears in the chosen location and can be re-opened; attempt a failing destination (write-protected) and confirm honest failure copy without a success claim.
 **Expected:** Success only after verified read-back; failure copy accurate; repository backup format unchanged (`dayseed_portable_backup`, format v2).
 
 ### P25-H07 — SAF backup restore with metadata on device
+
+- **Status:** `NOT RUN`
 
 **Procedure:** "Choose a backup file…" → select the saved file → confirm the pre-restore metadata line (date, format/schema version, category counts, password flag) matches the file; restore Merge and Replace on a disposable installation; try wrong password, corrupt file, non-Dayseed JSON, and an empty file.
 **Expected:** Correct metadata before any mutation; safety backup created before restore; Merge/Replace + conflicts unchanged; unsupported/corrupt files never mutate data and the source stays untouched.
@@ -478,16 +510,22 @@ Added 2026-11-05 (and extended through D-231 on 2026-11-08) for the reminder/bac
 
 ### RM-H01 — Atomic cap, posting ownership, and idempotent delivery on a real device (extends P25-H03; D-225, D-231)
 
+- **Status:** `NOT RUN`
+
 **Procedure:** Configure three active habits with reminders due within a few minutes of each other on a device; ensure quiet hours/comparisons do not interfere; grant `POST_NOTIFICATIONS`; let all alarms fire (inexact window); inspect notifications received and Settings → debug probe ledger view (or `reminder_deliveries` via a debug tool).
 **Expected:** At most 3 notifications on the local date under the shared cap; exactly one notification per habit occurrence even if the inexact alarm fires twice concurrently or the app is force-stopped and relaunched mid-window (`evaluateAndClaimHabitReminderForPostingSync` grants posting ownership to at most one active poster); ledger shows `SCHEDULED` promoted to `DELIVERED` (with `suppression_reason` cleared to `NULL`) only for posted occurrences; no `DELIVERED` row exists without the user-observable notification.
 **Dependencies:** Physical device; debug build.
 
 ### RM-H02 — Alarm cancellation and stale protection on config change
 
+- **Status:** `NOT RUN`
+
 **Procedure:** Schedule a reminder; before it fires, change the habit's reminder time (advance to a later time), then separately pause the habit, then delete a habit with a pending reminder; also edit a habit's reminder time *after* an alarm for the old time was already registered.
 **Expected:** No notification is posted for a cancelled/paused/deleted habit; an alarm registered for the old time does not post after the config changed (stale `SKIPPED_*` path with no ledger row creation); the new time delivers within its inexact window.
 
 ### RM-H03 — Debug probe four-gate report on device
+
+- **Status:** `NOT RUN`
 
 **Procedure:** In a debug build, open Settings → Notifications & reminders → debug probe section with (a) all gates open, (b) notification permission denied, (c) channel blocked in system settings.
 **Expected:** (a) A real notification appears and auto-cancels within ~5 s; (b)/(c) the panel names the exact blocking gate (permission vs app-level vs channel), no alarm is scheduled, and no `reminders_enabled` write or ledger row occurs (verify via app data inspection that global switches stayed untouched).
@@ -495,21 +533,29 @@ Added 2026-11-05 (and extended through D-231 on 2026-11-08) for the reminder/bac
 
 ### RM-H04 — SAF filename display against real providers
 
+- **Status:** `NOT RUN`
+
 **Procedure:** Save a backup twice to the same folder choosing the same suggested name with (a) the system Files/Downloads provider, (b) a different provider if available (USB/Drive); then restore and check the "Selected file:" line with a file whose name Android renumbers.
 **Expected:** The panel shows the **actual** provider filename (e.g. `dayseed-backup-2026-11-05 (1)`) rather than the requested name, plus the duplicate-numbering explanation; restore shows the real selected name; behaviour degrades gracefully (no crash) if a provider reports no name.
 
 ### RM-H05 — Force-stop crash recovery sweep and lease expiry (D-225, D-231)
+
+- **Status:** `NOT RUN`
 
 **Procedure:** With a reminder that has just been reserved/claimed (ledger `SCHEDULED`) and before the post completes, force-stop the process (developer options → running app); relaunch before and after the 30-minute pending lease window (`DEFAULT_MAX_PENDING_AGE_MS`) or wait for the next reconcile cycle after lease expiry.
 **Expected:** While a claim lease is fresh (<30 min), the sweep does not steal or double-post it; once stale (≥30 min), no notification-less `DELIVERED` row is left permanently — the sweep atomically claims and re-posts when still eligible or records an honest `SUPPRESSED` outcome (`NOT_SCHEDULED`, `WEEKLY_TARGET_MET`, `NOTIFICATIONS_BLOCKED`, `DAILY_CAP_REACHED`, or `PENDING_EXPIRED`); subsequent days deliver normally.
 
 ### RM-H06 — Scheduled-day and weekly-target reminder semantics on device (D-229)
 
+- **Status:** `NOT RUN`
+
 **Procedure:** On a device, create (a) a daily habit with a reminder, (b) a weekday habit scheduled only for a weekday that is *not* today, (c) a flexible "3 sessions per week" habit with preferred weekdays that excludes today, and (d) a flexible weekly habit whose target is already met earlier this week. Allow the reminder time to pass with global reminders enabled.
 **Expected:** (a) delivers; (b) and (c) produce **no** notification on the unscheduled/preferred-excluded day, and deliver on their next scheduled/preferred day; (d) produces no notification for the rest of the week and resumes the following week. Inspect the ledger (debug): unscheduled days show `SUPPRESSED`/`NOT_SCHEDULED`, met-target days show `SUPPRESSED`/`WEEKLY_TARGET_MET`, and an unrelated reminder-enabled habit on the same day still delivered (per-habit gate, shared cap intact).
 **Dependencies:** Physical device; debug build; device date control for week-boundary checks.
 
 ### RM-H07 — Multi-habit sequential delivery and channel-blocked honesty on device (D-230)
+
+- **Status:** `NOT RUN`
 
 **Procedure:** Configure two active habits with distinct reminders on the same date (e.g. habit A at 09:00, habit B at 18:00), both global reminders enabled and `POST_NOTIFICATIONS` granted; let each alarm fire at its own time within its inexact window; inspect notifications received and the ledger for each occurrence. Separately, with (a) app notifications disabled in system settings and (b) the `dayseed_reminders` channel blocked at `IMPORTANCE_NONE`, fire a reminder alarm.
 **Expected:** (1) habit A delivers at 09:00, habit B delivers at 18:00 — the earlier habit's alarm must never reserve habit B's slot or consume the shared cap on its behalf (ledger row for habit B is absent before its own alarm); both occurrences reach real `DELIVERED`. (2)(a)(b) with the app or channel blocked: no notification is posted, no `DELIVERED` row is created, and the ledger shows `SUPPRESSED`/`NOTIFICATIONS_BLOCKED` with zero cap consumption — device display honesty holds even when the app is blocked.

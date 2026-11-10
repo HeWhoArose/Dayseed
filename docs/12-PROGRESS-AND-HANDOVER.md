@@ -1,11 +1,11 @@
 # Progress and Handover
 
-**Last updated:** 2026-11-09
+**Last updated:** 2026-11-10
 **Current repository baseline:**
-- **Current GitHub `main` HEAD:** `3ca397f7f3f2293a2025a3379fdd65fd65c35b1b` (`3ca397f`; imported AI Studio workspace/base SHA: `UNKNOWN`, inspected GitHub `main` commit `3ca397f7f3f2293a2025a3379fdd65fd65c35b1b`).
-- **Latest application-code baseline:** `dd6501f69cac9558e5423eca873e7ab1da469594` (`dd6501f`, on top of preceding Phase 3 commits `f0d8c32ac1281ca89050cf0f60ce42bfb0e007ea` [`f0d8c32`] and `8a282150db3a48be8ab85ff21ca6df871eda4e7c` [`8a28215`], and `86d3e65c3165bdc4ce8cd92d570547efc61feb39` / `3f0e450` / `3ec099d`), containing **Phase 3 (`Dayseed Phase 3 — Journal, Shared Calendar, Weekly Board, Growth Mark and Insights`)**, the `DayDetail` weekly-habit classification fix (`f0d8c32ac1281ca89050cf0f60ce42bfb0e007ea`), and the legacy weekly `EFFORT_AWARE` contribution consistency fix (`dd6501f69cac9558e5423eca873e7ab1da469594`, `p3_14`).
-- **Documentation reconciliation commit:** `3ca397f7f3f2293a2025a3379fdd65fd65c35b1b` (`3ca397f`, documentation-only commit on top of `dd6501f69cac9558e5423eca873e7ab1da469594`). *(Historical note: the earlier D-231 handover text stating that `3f0e450` was the pushed baseline and D-231 was uncommitted working-tree work, the pre-push Phase 3 note stating that `86d3e65` was the current baseline with Phase 3 awaiting push authorisation, and the intermediate notes identifying `8a282150db3a48be8ab85ff21ca6df871eda4e7c` [`8a28215`], `f0d8c32ac1281ca89050cf0f60ce42bfb0e007ea` [`f0d8c32`], or `dd6501f69cac9558e5423eca873e7ab1da469594` [`dd6501f`] as `main` HEAD before `3ca397f` are now superseded.)*
-**Status:** Stage A planning is closed (`D-208`); Stage B implementation is authorised under `D-213`. Phases 1–2, Phase 2.5 (`D-220`–`D-224`), the reminder/backup remediation Phases 1–5 (`D-225`–`D-231`, committed on `main` through `86d3e65c3165bdc4ce8cd92d570547efc61feb39`), and **Phase 3 (`Journal, Shared Calendar, Weekly Board, Growth Mark and Insights`, committed on `main` at application-code commits `8a282150db3a48be8ab85ff21ca6df871eda4e7c` [`8a28215`], `f0d8c32ac1281ca89050cf0f60ce42bfb0e007ea` [`f0d8c32`], and `dd6501f69cac9558e5423eca873e7ab1da469594` [`dd6501f`], with documentation reconciliation at `3ca397f7f3f2293a2025a3379fdd65fd65c35b1b` [`3ca397f`], 2026-11-09)** are implemented and self-checked against application-code baseline `dd6501f69cac9558e5423eca873e7ab1da469594`: `compile_applet` **PASSED** and `gradle :app:testDebugUnitTest --rerun-tasks :app:assembleDebug :app:assembleRelease :app:lintDebug` **PASSED 179/179** across 13 test classes (0 failures, 0 errors, 0 skipped) — `Phase3ImplementationTest` **14/14** (`p3_01`..`p3_14`), `Phase2ImplementationTest` **31/31**, `Phase1ImplementationTest` **29/29**, `DayseedAcceptanceTest` **12/12**, `DayseedReminderAlarmLifecycleTest` **16/16**, `DayseedReminderSemanticsTest` **16/16**, `DayseedReminderConcurrencyTest` **11/11**, `DayseedVisualResolutionTest` **15/15**, `DayseedSettingsValidationTest` **10/10**, `DayseedReminderAndBackupTest` **9/9**, `DayseedSafFilenameFeedbackTest` **7/7**, `DayseedReminderDebugProbeTest` **5/5**, `DayseedAppearanceSettingsTest` **4/4**; `:app:assembleDebug`, `:app:assembleRelease`, and `:app:lintDebug` re-executed **PASSED** (`BUILD SUCCESSFUL in 4m 31s`, 105 actionable tasks executed, 0 lint errors). All human/device checks (`P1-H*`, `P2-H*`, `P2-C*`, `P25-H*`, `RM-H01`–`RM-H07`, and `P3-H01`–`P3-H09` in `docs/38`) remain **`NOT RUN`** (`PHYSICAL DEVICE VALIDATION: NOT RUN`). **Stage C (independent technical validation)** and **Stage D (final owner acceptance / release readiness)** remain **NOT PASSED / NOT OPEN** — Stage B self-checks are not Stage C evidence. **Phase 4A** (weekly reminder family: goal acknowledgement, week-start reflection, weekly inactivity check-in and optional tips) is implemented and self-checked, committed on `main` at `7bb8d80`: `Phase4ImplementationTest` **18/18** and the full `:app:testDebugUnitTest --rerun-tasks` suite **197/197** PASSED, `:app:assembleDebug` + `:app:lintDebug` BUILD SUCCESSFUL with `0 errors, 57 warnings`; see the Phase 4A section below and D-232.
+- **Current GitHub `main` HEAD:** `b0fc29dab7ba0b70cb97381eb2434d1d2ca41648` (`b0fc29d`, 2026-11-10; Phase 4 audit corrections F-1–F-3), followed by the Phase 5 closeout commits (wrapper, debug-keystore bootstrap, `p4_35`/`p4_36`, documentation reconciliation) recorded in this file's Phase 5 section.
+- **Latest application-code baseline:** `6561588` (Phase 5 tests `p4_35`/`p4_36`) on top of Phase 4 at `b0fc29d` and `6ae1ea1`, and Phase 4A at `7bb8d80` (`D-232`), on top of the Phase 3 baseline `dd6501f`.
+- **Documentation reconciliation:** Phase 5 closeout commits (2026-11-10) covering `implementation_plan.md` Section 18, `README.md`, `docs/07`, `docs/25`, `docs/28`, `docs/32` and this file.
+**Status (2026-11-10):** Stage A planning is closed (`D-208`); Stage B implementation is authorised under `D-213`. **Phases 0–4 are implemented** on `main` (Phase 4: `7bb8d80` weekly reminder family, `6ae1ea1` delivery/backup-v3/reduced-motion/settings, `b0fc29d` audit corrections). **Phase 5 (Stage B integration closeout)** adds the Gradle wrapper and debug-keystore bootstrap, `p4_35`/`p4_36`, documentation reconciliation and a final exact-commit evidence sweep. Latest recorded Stage B self-check: **217/217 tests across 14 classes**, 0 failures/errors/skips, lint `0 errors, 57 warnings`, debug APK 19,126,660 bytes and a **debug-signed** release APK. All **70** human/device cases remain **`NOT RUN`** (see the Phase 5 handover table below). **Stage C** and **Stage D** remain **NOT OPEN**.
 
 **Historical baseline note (2026-11-03/04, superseded by the 2026-11-08 top block):** prior baseline was `main` at `8a20a249f557d2bebbded4a4bd64b4fe1178524b` (after `8c15569…` / `bf19bc11…` / `e3c3dc43…`). PR #5 was merged into `main` on 2026-11-03 as commit `e3c3dc4360626315b68319570d4fb8f59444d88a`; Phase 1 human-validation handoff was committed at `bf19bc11c37dd9a7929594871266bdff07dfc94e`; the Phase 2 baseline was committed at `8c15569a47cac7f447c49b72172d36ee7d9a041c` and `8a20a249f557d2bebbded4a4bd64b4fe1178524b`.
 
@@ -831,3 +831,34 @@ Following the owner's Phase 3 Implementation Assignment (`Dayseed Phase 3 — Jo
 - **Known coverage limits of `p4_32`–`p4_34`:** `p4_33` verifies that a stale registration is removed when the week start changes, but it does not prove that an eligible habit's alarm is re-armed; `p4_34` exercises the REPLACE restore path only, not MERGE. Both gaps are scheduled in the Phase 5 closeout as `p4_35` and `p4_36`; until those land, this entry must not be read as full positive-path coverage.
 
 **Still not met:** Phase 4's device/human exit conditions (reboot, time-zone change, Doze, SQLite-to-`NotificationManager` end-to-end, TalkBack, 200% text, measured contrast, performance) remain **NOT RUN**; `P4-H*` in `docs/38` remain `NOT RUN`. Stage C and Stage D remain **NOT OPEN**.
+
+## Phase 5 closeout — consolidated human/device handover (2026-11-10)
+
+One consolidated list of every outstanding human/device case, reconciled against `docs/38-PHASE-1-HUMAN-VALIDATION-REGISTER.md`. Every case now carries an explicit per-case `- **Status:**` line; all 70 are `NOT RUN` and none has been executed. IDs and counts below were parsed from the register, not transcribed by hand.
+
+| Group | Cases | IDs | Status | Register section |
+| --- | --- | --- | --- | --- |
+| `P1-H` | 9 | `P1-H01`–`P1-H09` | `NOT RUN` | Phase 1 (v2→v3 upgrade, persistence, config protection, migration, backup safety) |
+| `P2-C` | 9 | `P2-C01`–`P2-C09` | `NOT RUN` | Phase 2 correction cases |
+| `P2-H` | 17 | `P2-H01`–`P2-H17` | `NOT RUN` | Phase 2 (navigation, Today, Habits, streaks, Grove) |
+| `P25-H` | 7 | `P25-H01`–`P25-H07` | `NOT RUN` | Phase 2.5 (appearance, contrast, daypart artwork) |
+| `P3-H` | 9 | `P3-H01`–`P3-H09` | `NOT RUN` | Phase 3 (journal, shared calendar, weekly board, insights) |
+| `P4-H` | 12 | `P4-H01`–`P4-H12` | `NOT RUN` | Phase 4 (permission, weekly copy, quiet hours/cap, restart dedupe, SAF, delete-all, accessibility, performance, airplane mode) |
+| `RM-H` | 7 | `RM-H01`–`RM-H07` | `NOT RUN` | Reminder/backup remediation (cap, posting ownership, cancellation, probe) |
+| **Total** | **70** | | | |
+
+**Rules for executing these cases (from `docs/38`):** use only `PASS` / `FAIL` / `BLOCKED` / `NOT RUN`; a blocked test is not a pass. Record the exact commit SHA and APK under test, device model, Android version, date/time, steps, expected/actual and evidence. Use synthetic data only; never include journal text, notes, passwords or tokens in captured logs. Do not execute destructive migration/restore cases against the owner's real history.
+
+### Artifact and evidence inventory
+
+| Item | Location / value |
+| --- | --- |
+| Final commit under test | recorded with the sweep log (see the Phase 5 report); implementation baseline `b0fc29d`, tests `6561588` |
+| JUnit/Robolectric results | `app/build/test-results/testDebugUnitTest/*.xml` — 217 tests, 14 classes, 0 failures/errors/skips |
+| Lint report | `app/build/reports/lint-results-debug.txt` — `0 errors, 57 warnings` |
+| Debug APK | `app/build/outputs/apk/debug/app-debug.apk` — 19,126,660 bytes |
+| Release APK | `app/build/outputs/apk/release/app-release.apk` — **debug-signed** (`CN=Android Debug, O=Android, C=US`); installation artifact only |
+| Toolchain | Temurin JDK 21.0.13, Gradle 9.3.1 via committed wrapper, Android platform 36, build-tools 36.0.0 |
+| Build/bootstrap | `./scripts/bootstrap-debug-keystore.sh` (POSIX) or `.\scripts\bootstrap-debug-keystore.ps1` (Windows, **not executed in this environment**) |
+
+The release APK is signed with the debug keystore by design; it must never be presented as a production-signed release, and production signing material requires an owner decision.
