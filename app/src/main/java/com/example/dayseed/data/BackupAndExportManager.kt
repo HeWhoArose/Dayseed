@@ -6,6 +6,7 @@ import android.util.Base64
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.InputStream
 import java.nio.charset.StandardCharsets
 import java.security.SecureRandom
 import java.util.UUID
@@ -31,6 +32,73 @@ object BackupCryptoConfig {
     const val IV_BYTES = 12
     const val GCM_TAG_BITS = 128
     const val CIPHER_TRANSFORMATION = "AES/GCM/NoPadding"
+}
+
+/**
+ * Centralised resource and cryptographic limits for the backup importer (F-02).
+ *
+ * Every generated backup uses values inside these accepted ranges, so
+ * legitimate backups produced by this app are never rejected. Values
+ * outside these bounds indicate a malformed or adversarial file and must
+ * be rejected before any expensive cryptographic work.
+ */
+object BackupLimits {
+    // Maximum accepted backup size. 8 MiB is the initial limit; it must be
+    // validated against realistic long-term user datasets before adoption
+    // is finalised (R2 work item).
+    const val MAX_BACKUP_SIZE_BYTES = 8L * 1024 * 1024
+
+    // KDF iteration bounds (inclusive).
+    const val MIN_KDF_ITERATIONS = 10_000
+    const val MAX_KDF_ITERATIONS = 600_000
+
+    // Accepted key lengths (bits).
+    val ACCEPTED_KEY_LENGTH_BITS = setOf(128, 256)
+
+    // Accepted GCM tag lengths (bits).
+    val ACCEPTED_GCM_TAG_BITS = setOf(96, 104, 112, 120, 128)
+
+    // Exact salt / IV sizes (bytes).
+    const val SALT_BYTES_EXACT = 16
+    const val IV_BYTES_EXACT = 12
+}
+
+/**
+ * Thrown when a backup file is rejected before any expensive processing.
+ * Application data is never modified when this exception propagates.
+ */
+class BackupRejectedException(message: String, cause: Throwable? = null) : Exception(message, cause)
+
+/**
+ * Reads a text file with a hard size cap, throwing [BackupRejectedException]
+ * when the file exceeds [BackupLimits.MAX_BACKUP_SIZE_BYTES]. Replaces
+ * unbounded File.readBytes()/readText() call sites in the backup import path.
+ */
+fun readBackupFileBounded(file: File, maxSizeBytes: Long = BackupLimits.MAX_BACKUP_SIZE_BYTES): String {
+    val size = file.length()
+    if (size > maxSizeBytes) {
+        throw BackupRejectedException("Backup file size $size bytes exceeds limit of $maxSizeBytes bytes")
+    }
+    return file.readText(StandardCharsets.UTF_8)
+}
+
+/**
+ * Reads from an [InputStream] with a hard byte cap, throwing
+ * [BackupRejectedException] when the stream exceeds [maxBytes]. Used for
+ * SAF document streams where the file length is not known up front.
+ */
+fun InputStream.readBoundedBytes(maxBytes: Long): ByteArray {
+    val buf = ByteArray((maxBytes + 1).toInt())
+    var total = 0
+    while (true) {
+        val read = read(buf, total, (buf.size - total).coerceAtLeast(1))
+        if (read == -1) break
+        total += read
+        if (total > maxBytes) {
+            throw BackupRejectedException("Backup stream size exceeds limit of $maxBytes bytes")
+        }
+    }
+    return buf.copyOfRange(0, total)
 }
 
 object BackupAndExportManager {
@@ -167,27 +235,77 @@ object BackupAndExportManager {
 
     /**
      * Decrypts an encrypted backup envelope or returns plain JSON if not encrypted.
+     *
+     * The envelope is fully validated before any PBKDF2/AES-GCM work, so
+     * malformed or adversarial inputs are rejected with [BackupRejectedException]
+     * before expensive cryptographic processing. Application data is never
+     * modified when this exception propagates.
      */
     fun unwrapBackupPayload(rawPayload: String, password: String? = null): String {
-        val obj = JSONObject(rawPayload)
-        if (!obj.optBoolean("encrypted", false)) {
+        val obj: JSONObject
+        try {
+            obj = JSONObject(rawPayload)
+        } catch (e: Exception) {
+            throw BackupRejectedException("Backup payload is not valid JSON", e)
+        }
+
+        val encrypted = obj.optBoolean("encrypted", false)
+        if (!encrypted) {
             return rawPayload
         }
-        val pwd = password ?: throw IllegalArgumentException("Password required to decrypt backup")
-        val iterations = obj.optInt("kdf_iterations", BackupCryptoConfig.KDF_ITERATIONS)
-        val keyLengthBits = obj.optInt("key_length_bits", BackupCryptoConfig.KEY_LENGTH_BITS)
-        val tagBits = obj.optInt("gcm_tag_bits", BackupCryptoConfig.GCM_TAG_BITS)
-        val salt = Base64.decode(obj.getString("salt_b64"), Base64.NO_WRAP)
-        val iv = Base64.decode(obj.getString("iv_b64"), Base64.NO_WRAP)
-        val ciphertext = Base64.decode(obj.getString("ciphertext_b64"), Base64.NO_WRAP)
 
-        val keySpec = PBEKeySpec(pwd.toCharArray(), salt, iterations, keyLengthBits)
+        // ---- Envelope format validation (before any crypto) ----
+        val envelopeFormat = obj.optString("envelope_format", null)
+        if (envelopeFormat != BackupCryptoConfig.ENVELOPE_FORMAT) {
+            throw BackupRejectedException("Unsupported backup envelope format: $envelopeFormat")
+        }
+
+        val iterations = obj.optInt("kdf_iterations", BackupCryptoConfig.KDF_ITERATIONS)
+        if (iterations < BackupLimits.MIN_KDF_ITERATIONS || iterations > BackupLimits.MAX_KDF_ITERATIONS) {
+            throw BackupRejectedException("KDF iterations $iterations outside accepted range " +
+                "[${BackupLimits.MIN_KDF_ITERATIONS}, ${BackupLimits.MAX_KDF_ITERATIONS}]")
+        }
+
+        val keyLengthBits = obj.optInt("key_length_bits", BackupCryptoConfig.KEY_LENGTH_BITS)
+        if (keyLengthBits !in BackupLimits.ACCEPTED_KEY_LENGTH_BITS) {
+            throw BackupRejectedException("Key length $keyLengthBits bits not accepted: " +
+                BackupLimits.ACCEPTED_KEY_LENGTH_BITS)
+        }
+
+        val tagBits = obj.optInt("gcm_tag_bits", BackupCryptoConfig.GCM_TAG_BITS)
+        if (tagBits !in BackupLimits.ACCEPTED_GCM_TAG_BITS) {
+            throw BackupRejectedException("GCM tag length $tagBits bits not accepted: " +
+                BackupLimits.ACCEPTED_GCM_TAG_BITS)
+        }
+
+        val pwd = password ?: throw BackupRejectedException("Password required to decrypt backup")
+
+        val saltBytes: ByteArray
+        val ivBytes: ByteArray
+        try {
+            saltBytes = Base64.decode(obj.getString("salt_b64"), Base64.NO_WRAP)
+            ivBytes = Base64.decode(obj.getString("iv_b64"), Base64.NO_WRAP)
+        } catch (e: IllegalArgumentException) {
+            throw BackupRejectedException("Malformed Base64 in backup envelope", e)
+        }
+        if (saltBytes.size != BackupLimits.SALT_BYTES_EXACT) {
+            throw BackupRejectedException("Salt length ${saltBytes.size} bytes; expected exactly " +
+                "${BackupLimits.SALT_BYTES_EXACT} bytes")
+        }
+        if (ivBytes.size != BackupLimits.IV_BYTES_EXACT) {
+            throw BackupRejectedException("IV length ${ivBytes.size} bytes; expected exactly " +
+                "${BackupLimits.IV_BYTES_EXACT} bytes")
+        }
+
+        // ---- Expensive cryptographic work only after validation passes ----
+        val keySpec = PBEKeySpec(pwd.toCharArray(), saltBytes, iterations, keyLengthBits)
         val secretKey = SecretKeyFactory.getInstance(BackupCryptoConfig.KDF_ALGORITHM)
             .generateSecret(keySpec).encoded
         val aesKey = SecretKeySpec(secretKey, "AES")
 
         val cipher = Cipher.getInstance(BackupCryptoConfig.CIPHER_TRANSFORMATION)
-        cipher.init(Cipher.DECRYPT_MODE, aesKey, GCMParameterSpec(tagBits, iv))
+        cipher.init(Cipher.DECRYPT_MODE, aesKey, GCMParameterSpec(tagBits, ivBytes))
+        val ciphertext = Base64.decode(obj.getString("ciphertext_b64"), Base64.NO_WRAP)
         val plainBytes = cipher.doFinal(ciphertext)
         return String(plainBytes, StandardCharsets.UTF_8)
     }

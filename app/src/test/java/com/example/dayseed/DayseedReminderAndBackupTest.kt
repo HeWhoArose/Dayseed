@@ -5,7 +5,10 @@ import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import com.example.dayseed.data.BackupAndExportManager
 import com.example.dayseed.data.BackupCryptoConfig
+import com.example.dayseed.data.BackupLimits
+import com.example.dayseed.data.BackupRejectedException
 import com.example.dayseed.data.DayseedRepository
+import com.example.dayseed.data.readBoundedBytes
 import com.example.dayseed.data.ReminderScheduler
 import com.example.dayseed.data.TargetPeriod
 import com.example.dayseed.data.TestDayseedClock
@@ -24,6 +27,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import java.io.ByteArrayInputStream
+import java.nio.charset.StandardCharsets
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -209,5 +214,148 @@ class DayseedReminderAndBackupTest {
         assertNull(SettingsSupport.inspectBackupMetadata("{\"not\":\"dayseed\"}"))
         assertNull(SettingsSupport.inspectBackupMetadata("plain text"))
         assertNull(SettingsSupport.inspectBackupMetadata(""))
+    }
+
+    // ---- R2 / F-02: backup importer security ----
+
+    private fun encryptedBackup(password: String = "pebble", iterations: Int = BackupCryptoConfig.KDF_ITERATIONS): String {
+        val habit = Habit(
+            habitId = "h_sec",
+            name = "Security",
+            trackingMode = TrackingMode.EFFORT_AWARE
+        )
+        repository.saveHabitSync(habit, allowLegacyEffortModeCreation = true)
+        return repository.exportPortableBackupSync(password)
+    }
+
+    private fun tamperedEnvelope(
+        password: String = "pebble",
+        modify: (org.json.JSONObject) -> Unit
+    ): String {
+        val raw = encryptedBackup(password)
+        val obj = org.json.JSONObject(raw)
+        modify(obj)
+        return obj.toString(2)
+    }
+
+    private fun assertRejected(block: () -> Unit) {
+        try {
+            block()
+            throw AssertionError("Expected BackupRejectedException but none was thrown")
+        } catch (e: BackupRejectedException) {
+            assertNotNull(e.message)
+        } catch (e: Exception) {
+            throw AssertionError("Expected BackupRejectedException but got ${e.javaClass.name}: ${e.message}", e)
+        }
+    }
+
+    /** Asserts that validation passes (no BackupRejectedException); crypto may fail due to mismatched params. */
+    private fun assertNotRejected(block: () -> Unit) {
+        try {
+            block()
+        } catch (e: BackupRejectedException) {
+            throw AssertionError("Unexpectedly rejected: ${e.message}")
+        } catch (_: Exception) {
+            // Crypto exceptions (e.g. AEADBadTagException from mismatched ciphertext/params)
+            // mean validation passed but decryption can't succeed — expected outcome here.
+        }
+    }
+
+    @Test
+    fun unwrapRejectsExcessiveKdfIterations() {
+        val payload = tamperedEnvelope { it.put("kdf_iterations", 1_000_000_000) }
+        assertRejected { BackupAndExportManager.unwrapBackupPayload(payload, "pebble") }
+    }
+
+    @Test
+    fun unwrapRejectsExcessiveKeyLength() {
+        val payload = tamperedEnvelope { it.put("key_length_bits", 1_000_000) }
+        assertRejected { BackupAndExportManager.unwrapBackupPayload(payload, "pebble") }
+    }
+
+    @Test
+    fun unwrapRejectsInvalidTagLength() {
+        val payload = tamperedEnvelope { it.put("gcm_tag_bits", 64) }
+        assertRejected { BackupAndExportManager.unwrapBackupPayload(payload, "pebble") }
+    }
+
+    @Test
+    fun unwrapRejectsEmptySalt() {
+        val payload = tamperedEnvelope { it.put("salt_b64", "") }
+        assertRejected { BackupAndExportManager.unwrapBackupPayload(payload, "pebble") }
+    }
+
+    @Test
+    fun unwrapRejectsIncorrectIvLength() {
+        val payload = tamperedEnvelope { it.put("iv_b64", android.util.Base64.encodeToString(ByteArray(8), android.util.Base64.NO_WRAP)) }
+        assertRejected { BackupAndExportManager.unwrapBackupPayload(payload, "pebble") }
+    }
+
+    @Test
+    fun unwrapRejectsUnsupportedEnvelopeFormat() {
+        val payload = tamperedEnvelope { it.put("envelope_format", "not_a_real_format") }
+        assertRejected { BackupAndExportManager.unwrapBackupPayload(payload, "pebble") }
+    }
+
+    @Test
+    fun unwrapRejectsMalformedJson() {
+        assertRejected { BackupAndExportManager.unwrapBackupPayload("{not valid json", "pebble") }
+    }
+
+    @Test
+    fun boundedReadRejectsOversizedInput() {
+        val oversized = StringBuilder()
+        repeat(BackupLimits.MAX_BACKUP_SIZE_BYTES.toInt() + 1024) { oversized.append("a") }
+        assertRejected {
+            java.io.ByteArrayInputStream(oversized.toString().toByteArray(StandardCharsets.UTF_8))
+                .readBoundedBytes(BackupLimits.MAX_BACKUP_SIZE_BYTES)
+        }
+    }
+
+    @Test
+    fun encryptedBackupRoundTripsThroughUnwrap() {
+        val raw = encryptedBackup("pebble")
+        val unwrapped = BackupAndExportManager.unwrapBackupPayload(raw, "pebble")
+        val root = org.json.JSONObject(unwrapped)
+        assertEquals("dayseed_portable_backup", root.optString("backup_kind"))
+        assertTrue(root.has("habits"))
+    }
+
+    @Test
+    fun historicalKdfConfigurationsAreNotRejected() {
+        // The minimum accepted iteration count passes validation (decryption may fail due to
+        // mismatched ciphertext, but that is a crypto exception, not a rejection).
+        val payload = tamperedEnvelope(password = "pebble", modify = { it.put("kdf_iterations", BackupLimits.MIN_KDF_ITERATIONS) })
+        assertNotRejected { BackupAndExportManager.unwrapBackupPayload(payload, "pebble") }
+
+        // All accepted tag lengths pass validation.
+        for (tagBits in BackupLimits.ACCEPTED_GCM_TAG_BITS) {
+            val tPayload = tamperedEnvelope { it.put("gcm_tag_bits", tagBits) }
+            assertNotRejected { BackupAndExportManager.unwrapBackupPayload(tPayload, "pebble") }
+        }
+
+        // Both accepted key lengths pass validation.
+        for (keyBits in BackupLimits.ACCEPTED_KEY_LENGTH_BITS) {
+            val kPayload = tamperedEnvelope { it.put("key_length_bits", keyBits) }
+            assertNotRejected { BackupAndExportManager.unwrapBackupPayload(kPayload, "pebble") }
+        }
+    }
+
+    @Test
+    fun failedImportLeavesDatabaseContentsUnchanged() {
+        repository.setSettingSync("theme_mode", "ENUM", "LIGHT")
+        val before = repository.habits.value.size
+
+        // Minimal invalid envelope: unsupported format, no crypto attempted, no DB mutation.
+        val badPayload = """{
+            "envelope_format": "not_a_real_format",
+            "encrypted": true
+        }"""
+        assertRejected {
+            BackupAndExportManager.unwrapBackupPayload(badPayload, "pebble")
+        }
+
+        // No restoration was attempted; database is untouched.
+        assertEquals(before, repository.habits.value.size)
     }
 }

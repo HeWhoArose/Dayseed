@@ -4840,7 +4840,7 @@ class DayseedRepository(
         val safetyBackupJson = exportPortableBackupSync(password = null)
         val safetyFile = File(appContext.filesDir, "pre_restore_safety_$nowMs.dayseed.json")
         safetyFile.writeText(safetyBackupJson)
-        val verifiedSafety = safetyFile.exists() && JSONObject(safetyFile.readText()).optString("backup_kind") == "dayseed_portable_backup"
+        val verifiedSafety = safetyFile.exists() && JSONObject(readBackupFileBounded(safetyFile)).optString("backup_kind") == "dayseed_portable_backup"
         check(verifiedSafety) { "Failed to verify pre-restore safety backup" }
 
         val sessionId = UUID.randomUUID().toString()

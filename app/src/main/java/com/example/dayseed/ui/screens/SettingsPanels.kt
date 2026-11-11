@@ -75,8 +75,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.dayseed.DayseedViewModel
+import com.example.dayseed.data.BackupLimits
 import com.example.dayseed.data.ConflictResolution
 import com.example.dayseed.data.Habit
+import com.example.dayseed.data.readBoundedBytes
 import com.example.dayseed.data.HabitLifecycleState
 import com.example.dayseed.data.JournalExportFormat
 import com.example.dayseed.data.ReminderNotifier
@@ -1288,7 +1290,8 @@ fun BackupRestorePanel(
         restoreFileName = SettingsSupport.resolveDocumentDisplayName(context.contentResolver, uri)
         try {
             val text = context.contentResolver.openInputStream(uri)?.use {
-                it.readBytes().toString(Charsets.UTF_8)
+                it.readBoundedBytes(BackupLimits.MAX_BACKUP_SIZE_BYTES)
+                    .toString(Charsets.UTF_8)
             } ?: throw IllegalStateException("Could not read the selected backup")
             if (text.isBlank()) throw IllegalStateException("The selected backup is empty")
             val summary = SettingsSupport.inspectBackupPayloadSummary(text)
