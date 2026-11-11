@@ -53,14 +53,14 @@
 - **Android's inexact alarms** mean reminder timing is approximate by design; copy must never promise an exact time.
 - **Stage C / Stage D remain NOT OPEN.** Nothing in this audit is independent validation or owner acceptance.
 
-## 6. Uncommitted edits produced by this audit
+## 6. Edits produced by this audit (committed 2026-11-11)
 
 - `docs/28-REQUIREMENT-TRACEABILITY.md` — A-1, A-2.
 - `docs/12-PROGRESS-AND-HANDOVER.md` — A-3 plus a pointer to this audit and the evidence file.
 - `implementation_plan.md` — A-3.
 - `README.md` — A-4.
 - `docs/evidence/phase5/reverify-windows-2026-11-11.md` — this session's sweep record.
-- This file.
+- This file, plus §7 below covering the remediation pass.
 
 ## 7. Remediation pass executed — 2026-11-11
 
