@@ -26,6 +26,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowAlarmManager
 import java.io.File
 import java.time.LocalDate
@@ -1074,6 +1075,12 @@ class Phase4ImplementationTest {
         ReminderScheduler.scheduleAll(app, repository)
         assertEquals(1, alarmRepository().scheduledAlarms.size)
 
+        // Capture the eligible habit's alarm identity before any change.
+        val eligibleAlarm = alarmRepository().scheduledAlarms.single()
+        val eligiblePendingIntent = eligibleAlarm.operation
+        val expectedRequestCode = ReminderScheduler.requestIdFor("h_reminder_p4")
+        assertEquals(expectedRequestCode, shadowOf(eligiblePendingIntent).requestCode)
+
         // A registration whose habit no longer exists, as left behind by an earlier policy change.
         val staleIntent = ReminderScheduler.buildAlarmPendingIntent(
             app,
@@ -1092,19 +1099,32 @@ class Phase4ImplementationTest {
             "[\"h_reminder_p4\",\"h_stale_p4\"]"
         )
         assertEquals(2, alarmRepository().scheduledAlarms.size)
+        assertEquals(setOf("h_reminder_p4", "h_stale_p4"), registryIds())
 
         repository.setWeekStartSync(java.time.DayOfWeek.FRIDAY)
 
+        // The eligible habit must still have exactly one armed alarm, with the same identity.
+        val afterAlarms = alarmRepository().scheduledAlarms
         assertEquals(
             "the eligible habit must still have exactly one armed alarm after the change",
             1,
-            alarmRepository().scheduledAlarms.size
+            afterAlarms.size
         )
+        val afterPendingIntent = afterAlarms.single().operation
+        // Same PendingIntent identity: same request code and flags.
+        assertEquals("same PendingIntent request code after re-arm",
+            shadowOf(eligiblePendingIntent).requestCode, shadowOf(afterPendingIntent).requestCode)
+        assertEquals("same PendingIntent flags after re-arm",
+            shadowOf(eligiblePendingIntent).flags, shadowOf(afterPendingIntent).flags)
+
+        // Only the eligible habit may remain registered.
         assertEquals(
             "only the eligible habit may remain registered",
             setOf("h_reminder_p4"),
             registryIds()
         )
+        assertTrue("the stale registration must have been removed",
+            !registryIds().contains("h_stale_p4"))
     }
 
     @Test
@@ -1113,6 +1133,12 @@ class Phase4ImplementationTest {
         ReminderScheduler.scheduleAll(app, repository)
         val before = registryIds()
         assertTrue(before.contains("h_reminder_p4"))
+
+        // Capture the local alarm identity before merge.
+        val beforeAlarm = alarmRepository().scheduledAlarms.single()
+        val beforePendingIntent = beforeAlarm.operation
+        val beforeRequestCode = shadowOf(beforePendingIntent).requestCode
+        val beforeFlags = shadowOf(beforePendingIntent).flags
 
         val exported = JSONObject(repository.exportPortableBackupSync())
         exported.getJSONArray("app_settings").put(
@@ -1129,22 +1155,28 @@ class Phase4ImplementationTest {
             restoreMode = "MERGE"
         )
 
-        assertTrue(
-            "the merge must complete; any remaining conflicts are the pre-existing reminders_enabled rule, not this key",
+        // MERGE completes; conflicts are limited to pre-existing rules, not the scheduler key.
+        assertTrue("the merge must complete",
             restored.sessionState == "AWAITING_CONFLICT_RESOLUTION" || restored.sessionState == "COMPLETED"
         )
-        assertEquals(
-            "device-local scheduler state must not become a mergeable portable record",
-            emptyList<String>(),
-            repository.restoreConflicts.value
-                .filter { it.recordKey == ReminderScheduler.SETTING_SCHEDULED_ALARM_IDS }
-                .map { it.recordKey }
-        )
+        val conflicts = repository.restoreConflicts.value
+        val schedulerKeyConflicts = conflicts.filter { it.recordKey == ReminderScheduler.SETTING_SCHEDULED_ALARM_IDS }
+        assertTrue("device-local scheduler state must not become a mergeable portable record",
+            schedulerKeyConflicts.isEmpty())
+
+        // Local scheduler state survives the merge untouched.
         assertEquals("local scheduler state must survive the merge untouched", before, registryIds())
-        assertEquals(
-            "no foreign alarm may be registered by a merge restore",
-            1,
-            alarmRepository().scheduledAlarms.size
-        )
+        assertFalse("the foreign h_imported_p4 must never appear in the local registry",
+            registryIds().contains("h_imported_p4"))
+
+        // Local alarm identity is preserved: same PendingIntent request code and flags.
+        assertEquals("no foreign alarm may be registered by a merge restore",
+            1, alarmRepository().scheduledAlarms.size)
+        val afterAlarm = alarmRepository().scheduledAlarms.single()
+        val afterPendingIntent = afterAlarm.operation
+        assertEquals("same PendingIntent request code after merge",
+            beforeRequestCode, shadowOf(afterPendingIntent).requestCode)
+        assertEquals("same PendingIntent flags after merge",
+            beforeFlags, shadowOf(afterPendingIntent).flags)
     }
 }
