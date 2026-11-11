@@ -41,7 +41,7 @@ The project declares a native Android/Kotlin + Jetpack Compose stack with SQLite
 
 Prerequisites (versions this project is verified against):
 
-- **JDK 21** — required, not optional: `app/build.gradle.kts` sets `sourceCompatibility`/`targetCompatibility` to `VERSION_21`.
+- **JDK 21** — required, not optional: `app/build.gradle.kts` sets `sourceCompatibility`/`targetCompatibility` to `VERSION_21`. Gradle launches the JDK that `JAVA_HOME` points at, so pointing `JAVA_HOME` at an older JDK fails with `error: invalid source release: 21` even when `java -version` on `PATH` already reports 21; set `JAVA_HOME` to the JDK 21 installation.
 - **Android SDK platform 36** with **build-tools 36.0.0** (`compileSdk = 36`, `targetSdk = 36`, `minSdk = 26`).
 - The **Gradle wrapper** in this repository (Gradle 9.3.1). Do not substitute a different Gradle version.
 

@@ -3,7 +3,7 @@
 **Prepared:** 2026-11-01 (last reconciled: 2026-11-09)  
 **Repository:** HeWhoArose/Dayseed  
 **Current repository baseline:**
-- **Current GitHub `main` HEAD:** `b0fc29dab7ba0b70cb97381eb2434d1d2ca41648` (`b0fc29d`, 2026-11-10; Phase 4 audit corrections F-1–F-3)
+- **Current GitHub `main` HEAD:** `b30efbc7f830b57baae96d32bc64d30a549b8806` (`b30efbc`, 2026-11-10; Phase 5 closeout documentation and evidence), on top of Phase 4 at `b0fc29d` (audit corrections F-1–F-3) and the Phase 5 closeout application commits `9c46edf`/`6561588`
 - **Latest application-code baseline:** `6561588` (Phase 5 closeout tests `p4_35`/`p4_36`) on top of Phase 4 at `b0fc29d` and `6ae1ea1` (remaining Phase 4 implementation: delivery gating, backup v3, reduced motion, Settings honesty) and Phase 4A at `7bb8d80` (weekly reminder family, `D-232`), all on top of the Phase 3 baseline `dd6501f`
 - **Documentation reconciliation commit:** the Phase 5 closeout documentation commits themselves; the Phase 4 register update is `4308111`
 **Technology:** Native Android, Kotlin (`2.2.10`), Jetpack Compose (`BOM 2024.09.00`), AGP (`9.1.1`), `SQLiteOpenHelper` (`DATABASE_VERSION = 3`)  
