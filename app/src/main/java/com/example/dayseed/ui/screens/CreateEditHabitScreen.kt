@@ -1,5 +1,6 @@
 package com.example.dayseed.ui.screens
 
+import androidx.core.graphics.toColorInt
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -422,7 +423,7 @@ fun CreateEditHabitFormContent(
                 ) {
                     for (hex in colorOptions) {
                         val c = try {
-                            Color(android.graphics.Color.parseColor(hex))
+                            Color(hex.toColorInt())
                         } catch (_: Exception) {
                             Color.Green
                         }

@@ -917,10 +917,14 @@ private fun readReminderAvailability(
     val channel = manager?.getNotificationChannel(ReminderNotifier.CHANNEL_ID)
     return SettingsSupport.reminderAvailability(
         appPreferenceEnabled = appPreferenceEnabled,
-        runtimePermissionGranted = ContextCompat.checkSelfPermission(
-            context,
-            android.Manifest.permission.POST_NOTIFICATIONS
-        ) == android.content.pm.PackageManager.PERMISSION_GRANTED,
+        // Only API 33+ has a runtime notification permission. Without this guard the
+        // availability panel reports "permission not granted" on API 26-32 devices that never
+        // had to grant anything, which reads as a broken feature.
+        runtimePermissionGranted = android.os.Build.VERSION.SDK_INT < 33 ||
+            ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.POST_NOTIFICATIONS
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED,
         appNotificationsEnabled = manager?.areNotificationsEnabled() == true,
         reminderChannelCreated = channel != null,
         reminderChannelEnabled = channel != null &&

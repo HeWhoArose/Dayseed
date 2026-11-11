@@ -53,7 +53,7 @@ Not established anywhere in this closeout: real notification delivery and permis
 ## 5. Known limitations and blockers
 
 - **Release signing:** both variants use the gitignored `debug.keystore`; the release APK is an installation artifact only. Production signing material requires an owner decision and was not introduced.
-- **PowerShell bootstrap:** authored but **not executed** here (no PowerShell available); it must be run once on Windows before it can be called verified.
+- **PowerShell bootstrap:** **executed and verified on Windows on 2026-11-11** — creation, idempotency and mismatched-keystore paths all behaved as intended after a real stderr-handling defect (native `JAVA_TOOL_OPTIONS` output aborting the script under `$ErrorActionPreference = 'Stop'`) was found and fixed; see [docs/evidence/phase5/powershell-bootstrap-2026-11-11.md](evidence/phase5/powershell-bootstrap-2026-11-11.md). PowerShell 7 (`pwsh`) remains unexercised.
 - **Debug signature is per machine:** each bootstrap creates a new certificate, so APK signatures are not identical across environments even when content is.
 - **Lint warnings:** 57–58 non-error warnings remain; they are optional improvements, not blockers for this closeout.
 

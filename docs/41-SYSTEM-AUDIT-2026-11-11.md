@@ -61,3 +61,47 @@
 - `README.md` — A-4.
 - `docs/evidence/phase5/reverify-windows-2026-11-11.md` — this session's sweep record.
 - This file.
+
+## 7. Remediation pass executed — 2026-11-11
+
+**Environment:** Windows 11 (`MINGW64_NT-10.0-26200`), Temurin JDK 21.0.13+9-LTS, Gradle 9.3.1, branch `main`.
+**Command:** `./gradlew --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug`
+**Result:** **BUILD SUCCESSFUL** — 217/217 tests across 14 classes, 0 failures, 0 errors, 0 skipped; lint **10 warnings, 0 errors** (was 57); debug APK **19,508,532 bytes** (was 19,126,660; +381,872 bytes).
+
+### 7.1 Two real defects found while fixing the reported items
+
+| ID | Severity | Finding | Disposition |
+| --- | --- | --- | --- |
+| A-6 | **High (functional)** | `ContextCompat.checkSelfPermission(POST_NOTIFICATIONS)` was called **without an API guard** in `ReminderAlarmReceiver`, `ReminderDebugProbe` and `SettingsPanels`. That permission does not exist below API 33, so the query reports `DENIED`: every reminder would be suppressed on Android 8-12, and Settings would claim the user had denied a permission nobody had to grant. The one `SDK_INT >= 33` check in `SettingsPanels` guarded the *request*, not the *check*. | **Fixed** at all three sites; below API 33 the runtime permission is treated as satisfied and notification-channel state remains the real gate. |
+| A-7 | **High (developer tooling)** | `scripts/bootstrap-debug-keystore.ps1` aborted with exit 1 on any machine whose JDK writes to stderr (`JAVA_TOOL_OPTIONS` printing "Picked up ..."). `$ErrorActionPreference = 'Stop'` promotes native stderr to a terminating error, so the script died after `keytool` had already succeeded. | **Fixed** with an `Invoke-Keytool` helper that judges native calls by exit code; three paths verified — see [docs/evidence/phase5/powershell-bootstrap-2026-11-11.md](evidence/phase5/powershell-bootstrap-2026-11-11.md). |
+
+### 7.2 Lint remediation (57 → 10)
+
+- **Converted** the four `toColorInt` sites to the KTX extension.
+- **`UseKtx` suppressed with an explicit rationale**, not converted, on the write paths using `beginTransaction()` / `BEGIN IMMEDIATE`: androidx KTX `transaction {}` cannot request an immediate write lock, so converting them would trade a lint warning for weaker concurrency guarantees behind the reminder-posting claim (§4). Four `UseKtx` findings were genuinely fixed, so this is a documented exception, not blanket silencing.
+- **Launcher assets rebuilt as adaptive-only** (`minSdk` is 26, so legacy PNG mipmaps were dead weight): removed five density buckets and `anydpi-v26`, added a `mipmap-anydpi` adaptive icon with a `<monochrome>` themed-icon layer, pointed `roundIcon` at the same adaptive icon, moved the artwork to `drawable-nodpi`, and deleted a byte-identical unused duplicate JPEG.
+- **`DefaultLocale` fixed:** reminder times now format with `Locale.ROOT`. This is a correctness fix — a locale using non-ASCII digits could otherwise emit a malformed `HH:mm` that the reminder re-check parses back.
+- **APK size grew** by +381,872 bytes despite the deleted assets: the themed-icon layer plus two dependency bumps outweighed the removed PNGs. Reported rather than dressed up as a win.
+- **Remaining 10:** `GradleDependency` ×7, `NewerVersionAvailable` ×2, `AndroidGradlePluginVersion` ×1 — all version advisories in `gradle/libs.versions.toml`, none a code defect.
+
+### 7.3 Deferred dependency advisories (owner decision)
+
+Available: AGP `9.1.1 → 9.5.1`, Kotlin Compose plugin `2.2.10 → 2.4.21`, Compose BOM `2024.09.00 → 2026.09.00`, lifecycle `2.8.7 → 2.11.0`, activity-compose `1.10.1 → 1.13.0`, navigation-compose `2.8.9 → 2.10.2`, work `2.9.1 → 2.12.0`, core-ktx `1.18.0 → 1.19.1`, Robolectric `4.14.1 → 4.17`.
+
+These are multi-year jumps, not patches: they would change Compose rendering, lifecycle behaviour and the AGP/Kotlin toolchain, none of which can be regression-tested without a device (§5). Only two low-risk bumps were taken (`material-icons-extended 1.7.0 → 1.7.8`, `androidx.test:core 1.6.1 → 1.7.0`). The rest are named deferrals requiring an owner decision and a device pass — not an assertion that the current versions are ideal.
+
+### 7.4 CI
+
+`.github/workflows/android.yml` authored: Ubuntu, Temurin JDK 21, Gradle cache, keystore bootstrap, then `testDebugUnitTest lintDebug assembleDebug`, uploading JUnit XML and lint reports. **Never executed** — the first green run is the evidence. Authored, not verified.
+
+### 7.5 Device validation — BLOCKED
+
+`adb` exists at the SDK path but lists **zero** devices; `C:\Users\AHMAD\.android\avd` does not exist and the SDK has **no emulator binary**. `P25-H03` and every other `docs/38` case remain **`NOT RUN`**, so the reminder activation switches stay disabled. Enabling them would assert a delivery path nobody has observed.
+
+### 7.6 Gates
+
+Unchanged: **Stage C and Stage D remain NOT OPEN.** This pass fixed two real defects and removed noise; it established nothing about behaviour on a real Android device, and §5's residual risks (debug-only release signing, per-machine certificate, no CI evidence yet) still stand.
+
+### 7.7 Behaviour-change note
+
+A-6 changes runtime behaviour on API 26-32: reminders are no longer suppressed there. No automated test covers that branch — Robolectric runs one SDK level — so it is **a reasoned fix awaiting device confirmation**, not a demonstrated one. It is the only change in this pass that could alter what a user experiences.

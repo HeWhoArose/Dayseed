@@ -83,14 +83,21 @@ internal object ReminderDebugProbe {
             )
         )
 
-        val permissionGranted = ContextCompat.checkSelfPermission(
+        // API 26-32 has no POST_NOTIFICATIONS permission; an unguarded query would report a
+        // false denial, so the probe treats "permission not required" as passing.
+        val permissionRequired = android.os.Build.VERSION.SDK_INT >= 33
+        val permissionGranted = !permissionRequired || ContextCompat.checkSelfPermission(
             appContext, android.Manifest.permission.POST_NOTIFICATIONS
         ) == android.content.pm.PackageManager.PERMISSION_GRANTED
         steps.add(
             Step(
                 "Android 13+ POST_NOTIFICATIONS permission",
                 permissionGranted,
-                if (permissionGranted) "granted" else "not granted"
+                when {
+                    !permissionRequired -> "not required before API 33"
+                    permissionGranted -> "granted"
+                    else -> "not granted"
+                }
             )
         )
 

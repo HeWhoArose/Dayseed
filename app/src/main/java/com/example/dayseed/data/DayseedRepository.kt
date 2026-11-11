@@ -1,3 +1,10 @@
+// Lint "UseKtx" is suppressed for this file on purpose: the write paths below call
+// SQLiteDatabase.beginTransaction()/withImmediateTransaction explicitly because the
+// reminder-posting claim depends on BEGIN IMMEDIATE write locking. androidx.core KTX
+// `transaction {}` cannot request an immediate write lock, so converting these call
+// sites would trade a lint warning for weaker concurrency guarantees.
+@file:Suppress("UseKtx")
+
 package com.example.dayseed.data
 
 import android.app.NotificationManager
@@ -360,7 +367,7 @@ class DayseedRepository(
                 val habitId = parts[1]
                 val targetDate = try { LocalDate.parse(parts[2]) } catch (_: Exception) { null }
                 val today = clock.todayLocal()
-                val timeNow = clock.nowLocalTime().let { String.format("%02d:%02d", it.hour, it.minute) }
+                val timeNow = clock.nowLocalTime().let { String.format(java.util.Locale.ROOT, "%02d:%02d", it.hour, it.minute) }
                 val quietStart = getSettingString("quiet_hours_start", ReminderEngine.DEFAULT_QUIET_START)
                 val quietEnd = getSettingString("quiet_hours_end", ReminderEngine.DEFAULT_QUIET_END)
                 val dailyCap = getSettingInt("daily_reminder_cap", ReminderEngine.DEFAULT_DAILY_CAP)

@@ -1,3 +1,10 @@
+// Lint "UseKtx" is suppressed for this file on purpose: the write paths below call
+// SQLiteDatabase.beginTransaction()/withImmediateTransaction explicitly because the
+// reminder-posting claim depends on BEGIN IMMEDIATE write locking. androidx.core KTX
+// `transaction {}` cannot request an immediate write lock, so converting these call
+// sites would trade a lint warning for weaker concurrency guarantees.
+@file:Suppress("UseKtx")
+
 package com.example.dayseed.data
 
 import android.content.ContentValues

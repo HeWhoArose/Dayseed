@@ -183,9 +183,13 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
             if (!ReminderScheduler.isGlobalRemindersEnabled(repository)) {
                 return DECISION_GLOBALLY_DISABLED
             }
-            val permissionGranted = ContextCompat.checkSelfPermission(
-                context, android.Manifest.permission.POST_NOTIFICATIONS
-            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            // POST_NOTIFICATIONS is a runtime permission only from API 33. On API 26-32 the
+            // constant is unknown to the platform, so querying it reports DENIED and would
+            // silently suppress every reminder there; the notification channel is the real gate.
+            val permissionGranted = android.os.Build.VERSION.SDK_INT < 33 ||
+                ContextCompat.checkSelfPermission(
+                    context, android.Manifest.permission.POST_NOTIFICATIONS
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
             if (!permissionGranted) return DECISION_NO_PERMISSION
 
             // ---- D-230 + D-231: Atomic per-habit evaluation + exclusive posting-ownership claim ----

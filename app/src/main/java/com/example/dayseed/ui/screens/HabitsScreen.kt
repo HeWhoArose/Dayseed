@@ -1,5 +1,6 @@
 package com.example.dayseed.ui.screens
 
+import androidx.core.graphics.toColorInt
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -337,7 +338,7 @@ private fun HabitDirectoryCard(
                             .clip(RoundedCornerShape(6.dp))
                             .background(
                                 try {
-                                    Color(android.graphics.Color.parseColor(habit.colorHex))
+                                    Color(habit.colorHex.toColorInt())
                                 } catch (_: Exception) {
                                     MaterialTheme.colorScheme.primary
                                 }

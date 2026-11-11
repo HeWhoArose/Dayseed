@@ -1,5 +1,6 @@
 package com.example.dayseed.ui.screens
 
+import androidx.core.graphics.toColorInt
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -181,7 +182,7 @@ fun HabitDetailScreen(
 
     val habitColor = remember(habit.colorHex) {
         try {
-            Color(android.graphics.Color.parseColor(habit.colorHex))
+            Color(habit.colorHex.toColorInt())
         } catch (_: Exception) {
             Color(0xFF286143)
         }
