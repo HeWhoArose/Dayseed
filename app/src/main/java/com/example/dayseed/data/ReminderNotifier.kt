@@ -43,7 +43,11 @@ internal object ReminderNotifier {
     fun isNotificationDeliveryAvailable(context: Context): Boolean {
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return false
-        if (androidx.core.content.ContextCompat.checkSelfPermission(
+        // POST_NOTIFICATIONS is a runtime permission only from API 33. On API 26-32 the
+        // permission does not exist, so an unguarded check would wrongly report DENIED
+        // and suppress every reminder on Android 8-12.
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            androidx.core.content.ContextCompat.checkSelfPermission(
                 context, android.Manifest.permission.POST_NOTIFICATIONS
             ) != android.content.pm.PackageManager.PERMISSION_GRANTED
         ) {
