@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "skills": {
+    "android-cli": {
+      "source": "android/skills",
+      "sourceType": "github",
+      "skillPath": "devtools/android-cli/SKILL.md",
+      "computedHash": "83e2185e315636bfd2fa89d7f77639c8604c4d1da7ad4f7cd5876da282d11527"
+    },
+    "gradle-run": {
+      "source": "chrisbanes/skills",
+      "sourceType": "github",
+      "skillPath": "skills/gradle-run/SKILL.md",
+      "computedHash": "043462cfa81c560b7cb2d61b6957fad43efc9216585c7256f415ef742d9eae92"
+    },
+    "verification-before-completion": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/verification-before-completion/SKILL.md",
+      "computedHash": "09b0e3a4689c1c38a3b8fc6ef57a1d4165aa33c0013d546dbde9dd348941a319"
+    }
+  }
+}
