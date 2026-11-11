@@ -22,7 +22,9 @@ import com.example.dayseed.ui.theme.ThemeModeOption
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -534,55 +536,57 @@ class DayseedViewModel @JvmOverloads constructor(
         note: String = "",
         idempotencyKey: String? = null
     ) {
-        val govVer = repository.getGoverningHabitVersion(habit.habitId, date)
-        val mode = (govVer?.trackingMode ?: habit.currentVersion?.trackingMode ?: habit.trackingMode).canonical()
-        val nowMs = repository.clock.nowUtcMs()
-        val sig = "OUTCOME:${habit.habitId}:$date:${outcome.name}:${effortLevel.name}:$note"
-        val resolvedKey = if (idempotencyKey != null) {
-            idempotencyKey
-        } else if (sig == lastQuickActionSignature &&
-            lastQuickActionIdempotencyKey != null &&
-            (nowMs - lastQuickActionAtUtcMs) in 0..350L
-        ) {
-            // Rapid duplicate tap within 350ms reuses exact idempotency key from the first tap
-            lastQuickActionIdempotencyKey!!
-        } else {
-            val newKey = "quick_outcome_${habit.habitId}_${date}_${nowMs}_${UUID.randomUUID()}"
-            lastQuickActionSignature = sig
-            lastQuickActionAtUtcMs = nowMs
-            lastQuickActionIdempotencyKey = newKey
-            newKey
-        }
-
-        try {
-            if (mode == TrackingMode.COMPLETION_ONLY) {
-                repository.logHabitDayOutcomeSync(
-                    habitId = habit.habitId,
-                    date = date,
-                    outcomeKind = "COMPLETED",
-                    effortLevel = null,
-                    note = note.takeIf { it.isNotBlank() },
-                    idempotencyKey = resolvedKey
-                )
-                _userMessage.value = "✓ ${habit.name}: Completed"
+        runBlocking {
+            val govVer = repository.getGoverningHabitVersion(habit.habitId, date)
+            val mode = (govVer?.trackingMode ?: habit.currentVersion?.trackingMode ?: habit.trackingMode).canonical()
+            val nowMs = repository.clock.nowUtcMs()
+            val sig = "OUTCOME:${habit.habitId}:$date:${outcome.name}:${effortLevel.name}:$note"
+            val resolvedKey = if (idempotencyKey != null) {
+                idempotencyKey
+            } else if (sig == lastQuickActionSignature &&
+                lastQuickActionIdempotencyKey != null &&
+                (nowMs - lastQuickActionAtUtcMs) in 0..350L
+            ) {
+                // Rapid duplicate tap within 350ms reuses exact idempotency key from the first tap
+                lastQuickActionIdempotencyKey!!
             } else {
-                val eff = when (effortLevel) {
-                    EffortLevel.TINY -> "TINY"
-                    EffortLevel.EXTRA -> "EXTRA"
-                    else -> "USUAL"
-                }
-                repository.logHabitDayOutcomeSync(
-                    habitId = habit.habitId,
-                    date = date,
-                    outcomeKind = "EFFORT_LOGGED",
-                    effortLevel = eff,
-                    note = note.takeIf { it.isNotBlank() },
-                    idempotencyKey = resolvedKey
-                )
-                _userMessage.value = "${effortLevel.symbol()} ${habit.name}: ${effortLevel.displayName()} recorded"
+                val newKey = "quick_outcome_${habit.habitId}_${date}_${nowMs}_${UUID.randomUUID()}"
+                lastQuickActionSignature = sig
+                lastQuickActionAtUtcMs = nowMs
+                lastQuickActionIdempotencyKey = newKey
+                newKey
             }
-        } catch (e: Exception) {
-            _userMessage.value = e.message ?: "Unable to record activity"
+
+            try {
+                if (mode == TrackingMode.COMPLETION_ONLY) {
+                    repository.logHabitDayOutcome(
+                        habitId = habit.habitId,
+                        date = date,
+                        outcomeKind = "COMPLETED",
+                        effortLevel = null,
+                        note = note.takeIf { it.isNotBlank() },
+                        idempotencyKey = resolvedKey
+                    )
+                    _userMessage.value = "✓ ${habit.name}: Completed"
+                } else {
+                    val eff = when (effortLevel) {
+                        EffortLevel.TINY -> "TINY"
+                        EffortLevel.EXTRA -> "EXTRA"
+                        else -> "USUAL"
+                    }
+                    repository.logHabitDayOutcome(
+                        habitId = habit.habitId,
+                        date = date,
+                        outcomeKind = "EFFORT_LOGGED",
+                        effortLevel = eff,
+                        note = note.takeIf { it.isNotBlank() },
+                        idempotencyKey = resolvedKey
+                    )
+                    _userMessage.value = "${effortLevel.symbol()} ${habit.name}: ${effortLevel.displayName()} recorded"
+                }
+            } catch (e: Exception) {
+                _userMessage.value = e.message ?: "Unable to record activity"
+            }
         }
     }
 
@@ -593,55 +597,61 @@ class DayseedViewModel @JvmOverloads constructor(
         entryNote: String? = null,
         idempotencyKey: String? = null
     ) {
-        val nowMs = repository.clock.nowUtcMs()
-        val sig = "ENTRY:${habit.habitId}:$date:$valueUnits:${entryNote.orEmpty()}"
-        val resolvedKey = if (idempotencyKey != null) {
-            idempotencyKey
-        } else if (sig == lastQuickActionSignature &&
-            lastQuickActionIdempotencyKey != null &&
-            (nowMs - lastQuickActionAtUtcMs) in 0..350L
-        ) {
-            lastQuickActionIdempotencyKey!!
-        } else {
-            val newKey = "quick_entry_${habit.habitId}_${date}_${valueUnits}_${nowMs}_${UUID.randomUUID()}"
-            lastQuickActionSignature = sig
-            lastQuickActionAtUtcMs = nowMs
-            lastQuickActionIdempotencyKey = newKey
-            newKey
-        }
-
-        try {
-            repository.logHabitEntrySync(
-                habitId = habit.habitId,
-                date = date,
-                valueUnits = valueUnits,
-                entryNote = entryNote,
-                idempotencyKey = resolvedKey
-            )
-            val unitLabel = habit.unitCode ?: "units"
-            _userMessage.value = if (valueUnits == 0) {
-                "Logged 0 $unitLabel for ${habit.name} (honest check-in)"
+        runBlocking {
+            val nowMs = repository.clock.nowUtcMs()
+            val sig = "ENTRY:${habit.habitId}:$date:$valueUnits:${entryNote.orEmpty()}"
+            val resolvedKey = if (idempotencyKey != null) {
+                idempotencyKey
+            } else if (sig == lastQuickActionSignature &&
+                lastQuickActionIdempotencyKey != null &&
+                (nowMs - lastQuickActionAtUtcMs) in 0..350L
+            ) {
+                lastQuickActionIdempotencyKey!!
             } else {
-                "Added +$valueUnits $unitLabel for ${habit.name}"
+                val newKey = "quick_entry_${habit.habitId}_${date}_${valueUnits}_${nowMs}_${UUID.randomUUID()}"
+                lastQuickActionSignature = sig
+                lastQuickActionAtUtcMs = nowMs
+                lastQuickActionIdempotencyKey = newKey
+                newKey
             }
-        } catch (e: Exception) {
-            _userMessage.value = e.message ?: "Unable to log session"
+
+            try {
+                repository.logHabitEntry(
+                    habitId = habit.habitId,
+                    date = date,
+                    valueUnits = valueUnits,
+                    entryNote = entryNote,
+                    idempotencyKey = resolvedKey
+                )
+                val unitLabel = habit.unitCode ?: "units"
+                _userMessage.value = if (valueUnits == 0) {
+                    "Logged 0 $unitLabel for ${habit.name} (honest check-in)"
+                } else {
+                    "Added +$valueUnits $unitLabel for ${habit.name}"
+                }
+            } catch (e: Exception) {
+                _userMessage.value = e.message ?: "Unable to log session"
+            }
         }
     }
 
     fun updateHabitEntry(entryId: String, newValueUnits: Int, newEntryNote: String?) {
-        try {
-            repository.updateHabitEntrySync(entryId, newValueUnits, newEntryNote)
-            _userMessage.value = "Session updated"
-        } catch (e: Exception) {
-            _userMessage.value = e.message ?: "Unable to update session"
+        runBlocking {
+            try {
+                repository.updateHabitEntry(entryId, newValueUnits, newEntryNote)
+                _userMessage.value = "Session updated"
+            } catch (e: Exception) {
+                _userMessage.value = e.message ?: "Unable to update session"
+            }
         }
     }
 
     fun deleteHabitEntry(entryId: String) {
-        val token = repository.deleteHabitEntryWithUndoSync(entryId)
-        if (token != null) {
-            _userMessage.value = "Session deleted"
+        runBlocking {
+            val token = repository.deleteHabitEntryWithUndo(entryId)
+            if (token != null) {
+                _userMessage.value = "Session deleted"
+            }
         }
     }
 
@@ -650,25 +660,33 @@ class DayseedViewModel @JvmOverloads constructor(
     }
 
     fun saveHabitDateNote(habitId: String, date: LocalDate, body: String) {
-        repository.saveHabitDateNoteSync(habitId, date, body)
-        _userMessage.value = "Habit note saved"
+        runBlocking {
+            repository.saveHabitDateNote(habitId, date, body)
+            _userMessage.value = "Habit note saved"
+        }
     }
 
     fun triggerUndo() {
         val token = activeUndoToken.value ?: return
-        val ok = repository.executeUndoSync(token)
-        _userMessage.value = if (ok) "Action undone" else "Undo window expired or record changed"
+        runBlocking {
+            val ok = repository.executeUndo(token)
+            _userMessage.value = if (ok) "Action undone" else "Undo window expired or record changed"
+        }
     }
 
     fun executeUndo() = triggerUndo()
 
     fun refreshAllSync() {
-        repository.refreshAllSync()
+        runBlocking {
+            repository.refreshAll()
+        }
     }
 
     fun removeRecord(habitId: String, date: LocalDate) {
-        repository.removeRecordSync(habitId, date)
-        _userMessage.value = "Record reset"
+        runBlocking {
+            repository.removeRecord(habitId, date)
+            _userMessage.value = "Record reset"
+        }
     }
 
     fun openAddHabit() {
@@ -689,17 +707,21 @@ class DayseedViewModel @JvmOverloads constructor(
     }
 
     fun takeRestDayToday(habit: Habit, note: String? = null) {
-        try {
-            repository.setRestDayExceptionSync(habit.habitId, repository.clock.todayLocal(), note)
-            _userMessage.value = "Rest day taken for ${habit.name} (streak held)"
-        } catch (e: Exception) {
-            _userMessage.value = e.message ?: "Unable to take a rest day today"
+        runBlocking {
+            try {
+                repository.setRestDayException(habit.habitId, repository.clock.todayLocal(), note)
+                _userMessage.value = "Rest day taken for ${habit.name} (streak held)"
+            } catch (e: Exception) {
+                _userMessage.value = e.message ?: "Unable to take a rest day today"
+            }
         }
     }
 
     fun clearRestDayToday(habit: Habit) {
-        repository.clearRestDayExceptionSync(habit.habitId, repository.clock.todayLocal())
-        _userMessage.value = "Rest day cleared for ${habit.name}"
+        runBlocking {
+            repository.clearRestDayException(habit.habitId, repository.clock.todayLocal())
+            _userMessage.value = "Rest day cleared for ${habit.name}"
+        }
     }
 
     fun saveHabit(
@@ -708,60 +730,69 @@ class DayseedViewModel @JvmOverloads constructor(
         policy: HabitConfigEffectivePolicy? = null
     ): HabitVersion? {
         _lastSaveError.value = null
-        return try {
-            val savedVer = repository.saveHabitSync(
-                habit = habit,
-                applyTodayWhenLogged = applyTodayWhenLogged,
-                policy = policy
-            )
-            closeAddEditHabit()
-            _userMessage.value = "Habit saved (effective ${savedVer.effectiveFromLocalDate})"
-            savedVer
-        } catch (e: Exception) {
-            val msg = e.message ?: "Unable to save habit"
-            _lastSaveError.value = msg
-            _userMessage.value = msg
-            null
+        return runBlocking {
+            try {
+                val savedVer = repository.saveHabit(
+                    habit = habit,
+                    applyTodayWhenLogged = applyTodayWhenLogged,
+                    policy = policy
+                )
+                closeAddEditHabit()
+                _userMessage.value = "Habit saved (effective ${savedVer.effectiveFromLocalDate})"
+                savedVer
+            } catch (e: Exception) {
+                val msg = e.message ?: "Unable to save habit"
+                _lastSaveError.value = msg
+                _userMessage.value = msg
+                null
+            }
         }
     }
 
     fun reorderHabit(habitId: String, moveUp: Boolean) {
-        repository.reorderHabitSync(habitId, moveUp)
+        runBlocking {
+            repository.reorderHabit(habitId, moveUp)
+        }
     }
 
     fun toggleHabitArchive(habitId: String, archived: Boolean) {
-        val state = if (archived) HabitLifecycleState.ARCHIVED else HabitLifecycleState.ACTIVE
-        repository.updateHabitLifecycleSync(habitId, state)
-        _userMessage.value = if (archived) "Habit archived" else "Habit restored"
+        runBlocking {
+            repository.toggleHabitArchive(habitId, archived)
+            _userMessage.value = if (archived) "Habit archived" else "Habit restored"
+        }
     }
 
     fun updateHabitLifecycle(habitId: String, state: HabitLifecycleState) {
-        repository.updateHabitLifecycleSync(habitId, state)
-        val stateWord = when (state) {
-            HabitLifecycleState.ACTIVE -> "active"
-            HabitLifecycleState.PAUSED -> "paused"
-            HabitLifecycleState.COMPLETED -> "completed"
-            HabitLifecycleState.ARCHIVED -> "archived"
+        runBlocking {
+            repository.updateHabitLifecycle(habitId, state)
+            val stateWord = when (state) {
+                HabitLifecycleState.ACTIVE -> "active"
+                HabitLifecycleState.PAUSED -> "paused"
+                HabitLifecycleState.COMPLETED -> "completed"
+                HabitLifecycleState.ARCHIVED -> "archived"
+            }
+            _userMessage.value = "Habit marked as $stateWord"
         }
-        _userMessage.value = "Habit marked as $stateWord"
     }
 
     fun deleteHabit(habitId: String) {
-        repository.deleteHabitPermanentlySync(habitId)
-        val filteredStack = _secondaryRouteStack.value.filterNot { route ->
-            (route is SecondaryRoute.CreateEditHabit && route.habitId == habitId) ||
-                (route is SecondaryRoute.HabitDetail && route.habitId == habitId)
+        runBlocking {
+            repository.deleteHabitPermanently(habitId)
+            val filteredStack = _secondaryRouteStack.value.filterNot { route ->
+                (route is SecondaryRoute.CreateEditHabit && route.habitId == habitId) ||
+                    (route is SecondaryRoute.HabitDetail && route.habitId == habitId)
+            }
+            _secondaryRouteStack.value = filteredStack
+            _currentSecondaryRoute.value = filteredStack.lastOrNull()
+            if (_editingHabit.value?.habitId == habitId) {
+                _editingHabit.value = null
+            }
+            if (_currentSecondaryRoute.value !is SecondaryRoute.CreateEditHabit) {
+                _isAddHabitOpen.value = false
+            }
+            _lastSaveError.value = null
+            _userMessage.value = "Habit permanently deleted"
         }
-        _secondaryRouteStack.value = filteredStack
-        _currentSecondaryRoute.value = filteredStack.lastOrNull()
-        if (_editingHabit.value?.habitId == habitId) {
-            _editingHabit.value = null
-        }
-        if (_currentSecondaryRoute.value !is SecondaryRoute.CreateEditHabit) {
-            _isAddHabitOpen.value = false
-        }
-        _lastSaveError.value = null
-        _userMessage.value = "Habit permanently deleted"
     }
 
     // =========================================================================
@@ -842,79 +873,85 @@ class DayseedViewModel @JvmOverloads constructor(
         _isJournalEditorOpen.value = false
     }
 
-    fun saveJournalEntry(entry: JournalEntry, sourceDraftId: String? = null): Boolean {
-        _lastJournalSaveError.value = null
-        return try {
-            if (!sourceDraftId.isNullOrBlank() && _editingJournalEntry.value == null) {
-                val existingDraft = repository.journalDrafts.value.find { it.draftId == sourceDraftId }
-                if (existingDraft != null && existingDraft.intendedJournalEntryId == null) {
-                    repository.saveJournalDraftSync(
-                        draftId = sourceDraftId,
-                        localDate = entry.date,
-                        title = entry.title?.trim()?.ifBlank { null },
-                        body = entry.body.trim(),
-                        primaryMoodCode = entry.primaryMoodCode,
-                        secondaryMoodCode = entry.secondaryMoodCode,
-                        promptId = entry.promptId,
-                        linkedHabitId = entry.linkedHabitId,
-                        sourceContext = existingDraft.sourceContext
-                    )
-                } else if (existingDraft == null && !repository.wasDraftRecentlyPromoted(sourceDraftId)) {
-                    repository.saveJournalDraftSync(
-                        draftId = sourceDraftId,
-                        localDate = entry.date,
-                        title = entry.title?.trim()?.ifBlank { null },
-                        body = entry.body.trim(),
-                        primaryMoodCode = entry.primaryMoodCode,
-                        secondaryMoodCode = entry.secondaryMoodCode,
-                        promptId = entry.promptId,
-                        linkedHabitId = entry.linkedHabitId,
-                        sourceContext = "JOURNAL_COMPOSER"
-                    )
+    fun saveJournalEntry(entry: JournalEntry, sourceDraftId: String? = null) {
+        runBlocking {
+            _lastJournalSaveError.value = null
+            try {
+                if (!sourceDraftId.isNullOrBlank() && _editingJournalEntry.value == null) {
+                    val existingDraft = repository.journalDrafts.value.find { it.draftId == sourceDraftId }
+                    if (existingDraft != null && existingDraft.intendedJournalEntryId == null) {
+                        repository.saveJournalDraft(
+                            draftId = sourceDraftId,
+                            localDate = entry.date,
+                            title = entry.title?.trim()?.ifBlank { null },
+                            body = entry.body.trim(),
+                            primaryMoodCode = entry.primaryMoodCode,
+                            secondaryMoodCode = entry.secondaryMoodCode,
+                            promptId = entry.promptId,
+                            linkedHabitId = entry.linkedHabitId,
+                            sourceContext = existingDraft.sourceContext
+                        )
+                    } else if (existingDraft == null && !repository.wasDraftRecentlyPromoted(sourceDraftId)) {
+                        repository.saveJournalDraft(
+                            draftId = sourceDraftId,
+                            localDate = entry.date,
+                            title = entry.title?.trim()?.ifBlank { null },
+                            body = entry.body.trim(),
+                            primaryMoodCode = entry.primaryMoodCode,
+                            secondaryMoodCode = entry.secondaryMoodCode,
+                            promptId = entry.promptId,
+                            linkedHabitId = entry.linkedHabitId,
+                            sourceContext = "JOURNAL_COMPOSER"
+                        )
+                    }
+                    repository.promoteDraftToJournalEntry(sourceDraftId)
+                        ?: throw IllegalStateException("Unable to save entry — your draft is safely preserved. Tap Save to retry.")
+                } else {
+                    withContext(Dispatchers.IO) {
+                        repository.saveJournalEntrySync(entry, sourceDraftIdToRemove = sourceDraftId)
+                    }
                 }
-                repository.promoteDraftToJournalEntrySync(sourceDraftId)
-                    ?: throw IllegalStateException("Unable to save entry — your draft is safely preserved. Tap Save to retry.")
-            } else {
-                repository.saveJournalEntrySync(entry, sourceDraftIdToRemove = sourceDraftId)
+                closeJournalEditor()
+                _userMessage.value = "Daily reflection saved ✍️"
+            } catch (e: Throwable) {
+                val msg = e.message ?: "Unable to save entry — your draft is safely preserved. Tap Save to retry."
+                _lastJournalSaveError.value = msg
             }
-            closeJournalEditor()
-            _userMessage.value = "Daily reflection saved ✍️"
-            true
-        } catch (e: Throwable) {
-            val msg = e.message ?: "Unable to save entry — your draft is safely preserved. Tap Save to retry."
-            _lastJournalSaveError.value = msg
-            false
         }
     }
 
     fun discardJournalDraft(draftId: String) {
-        repository.deleteJournalDraftSync(draftId)
-        closeJournalEditor()
-        _userMessage.value = "Draft discarded"
+        runBlocking {
+            repository.deleteJournalDraft(draftId)
+            closeJournalEditor()
+            _userMessage.value = "Draft discarded"
+        }
     }
 
     fun deleteJournalEntry(id: String) {
-        repository.deleteJournalEntrySync(id)
-        closeJournalEditor()
-        _userMessage.value = "Reflection deleted"
+        runBlocking {
+            repository.deleteJournalEntry(id)
+            closeJournalEditor()
+            _userMessage.value = "Reflection deleted"
+        }
     }
 
     fun setThemeMode(mode: ThemeModeOption) {
-        viewModelScope.launch {
+        runBlocking {
             repository.setSetting("theme_mode", "ENUM", mode.settingValue)
             _userMessage.value = "Theme set to ${mode.label}"
         }
     }
 
     fun setWeekStart(dayOfWeek: DayOfWeek) {
-        viewModelScope.launch {
+        runBlocking {
             val entry = repository.setWeekStart(dayOfWeek)
             _userMessage.value = "Week start set to ${dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }} (effective ${entry.effectiveFromLocalDate})"
         }
     }
 
     fun setQuietHours(startLocal: String, endLocal: String) {
-        viewModelScope.launch {
+        runBlocking {
             repository.setSetting("quiet_hours_start", "TIME_LOCAL", startLocal)
             repository.setSetting("quiet_hours_end", "TIME_LOCAL", endLocal)
             _userMessage.value = "Quiet hours updated ($startLocal – $endLocal)"
@@ -922,14 +959,14 @@ class DayseedViewModel @JvmOverloads constructor(
     }
 
     fun resolveConflict(conflictId: String, resolution: ConflictResolution) {
-        viewModelScope.launch {
+        runBlocking {
             repository.resolveRestoreConflictSync(conflictId, resolution)
             _userMessage.value = "Conflict resolved (${resolution.name})"
         }
     }
 
     fun deleteAllData() {
-        viewModelScope.launch {
+        runBlocking {
             repository.deleteAllData()
             _userMessage.value = "All local data deleted"
         }

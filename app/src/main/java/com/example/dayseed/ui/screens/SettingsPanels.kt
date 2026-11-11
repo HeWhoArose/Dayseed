@@ -58,6 +58,8 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -1212,13 +1214,22 @@ fun BackupRestorePanel(
     val payloadInspection = remember(restoreJsonInput) {
         SettingsSupport.inspectBackupPayloadSummary(restoreJsonInput)
     }
-    // Pre-mutation metadata (date, format/schema version, category counts) shown before restore;
-    // parsed from the selected backup without touching any stored data.
-    val restoreMetadata = remember(restoreJsonInput, backupPassword) {
-        SettingsSupport.backupMetadataLine(
-            SettingsSupport.inspectBackupMetadata(restoreJsonInput, backupPassword.takeIf { it.isNotBlank() })
-        )
+    // Pre-restore metadata runs off the UI thread (Dispatchers.IO) so password-based
+    // PBKDF2 decryption never blocks composition, even on every keystroke while typing.
+    var restoreMetadataState by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(restoreJsonInput, backupPassword) {
+        coroutineScope.launch {
+            withContext(Dispatchers.IO) {
+                val metadata = SettingsSupport.inspectBackupMetadata(
+                    restoreJsonInput,
+                    backupPassword.takeIf { it.isNotBlank() }
+                )
+                val line = SettingsSupport.backupMetadataLine(metadata)
+                restoreMetadataState = line
+            }
+        }
     }
+    val restoreMetadata: String? = restoreMetadataState
     var saveFileMessage by remember { mutableStateOf<String?>(null) }
     var saveFileError by remember { mutableStateOf<String?>(null) }
     var filePickerError by remember { mutableStateOf<String?>(null) }

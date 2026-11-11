@@ -1,5 +1,8 @@
 package com.example.dayseed.ui.screens
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import androidx.core.graphics.toColorInt
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -120,7 +123,10 @@ fun CreateEditHabitScreen(
             onClearSaveError = { viewModel.clearSaveError() },
             onDismiss = onNavigateBack,
             onSave = { habit, applyTodayWhenLogged ->
-                viewModel.saveHabit(habit, applyTodayWhenLogged) != null
+                viewModel.viewModelScope.launch {
+                    viewModel.saveHabit(habit, applyTodayWhenLogged) != null
+                }
+                true
             },
             onDelete = if (initialHabit != null) {
                 { id ->

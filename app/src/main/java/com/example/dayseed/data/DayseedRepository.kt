@@ -1420,6 +1420,65 @@ class DayseedRepository(
     }
 
     /**
+     * Suspend variant of [updateHabitLifecycleSync] — moves lifecycle mutation off the UI thread (R3/F-01).
+     */
+    suspend fun updateHabitLifecycle(
+        habitId: String,
+        newState: HabitLifecycleState,
+        effectiveDate: LocalDate = clock.todayLocal()
+    ) = withContext(Dispatchers.IO) {
+        updateHabitLifecycleSync(habitId, newState, effectiveDate)
+    }
+
+    /**
+     * Suspend variant of [saveJournalDraftSync] — moves journal draft persistence off the UI thread (R3/F-01).
+     */
+    suspend fun saveJournalDraft(
+        draftId: String = "active_draft_${clock.todayLocal()}",
+        localDate: LocalDate = clock.todayLocal(),
+        title: String? = null,
+        body: String = "",
+        primaryMoodCode: String? = null,
+        secondaryMoodCode: String? = null,
+        promptId: String? = null,
+        linkedHabitId: String? = null,
+        sourceContext: String = "JOURNAL_COMPOSER"
+    ): JournalDraft = withContext(Dispatchers.IO) {
+        saveJournalDraftSync(
+            draftId = draftId,
+            localDate = localDate,
+            title = title,
+            body = body,
+            primaryMoodCode = primaryMoodCode,
+            secondaryMoodCode = secondaryMoodCode,
+            promptId = promptId,
+            linkedHabitId = linkedHabitId,
+            sourceContext = sourceContext
+        )
+    }
+
+    /**
+     * Suspend variant of [promoteDraftToJournalEntrySync] — moves draft promotion off the UI thread (R3/F-01).
+     */
+    suspend fun promoteDraftToJournalEntry(draftId: String): JournalEntry? = withContext(Dispatchers.IO) {
+        promoteDraftToJournalEntrySync(draftId)
+    }
+
+    /**
+     * Suspend variant of [resolveRestoreConflictSync] — moves restore conflict resolution off the UI thread (R3/F-01).
+     */
+    suspend fun resolveRestoreConflict(conflictId: String, resolution: ConflictResolution) = withContext(Dispatchers.IO) {
+        resolveRestoreConflictSync(conflictId, resolution)
+    }
+
+    /**
+     * Suspend variant of [deleteHabitPermanentlySync] — moves permanent habit deletion off the UI thread (R3/F-01).
+     */
+    suspend fun deleteHabitPermanently(habitId: String): Boolean = withContext(Dispatchers.IO) {
+        deleteHabitPermanentlySync(habitId)
+    }
+
+    /**
      * Reorders a habit up or down and persists contiguous, duplicate-free `sort_order` (`0..N-1`)
      * across `habit_versions` inside an atomic SQLite transaction (§9.D).
      */

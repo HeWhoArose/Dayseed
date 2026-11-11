@@ -942,6 +942,7 @@ class Phase2ImplementationTest {
         testClock.currentUtcMs += 500L
         viewModel.logHabitQuantityOrDuration(habit, 10, LocalDate.of(2026, 3, 18))
         assertEquals(20, repository.loadHabitSummariesSync()[habit.habitId]!!.todayTotalUnits.toInt())
+        assertEquals(20, repository.loadHabitSummariesSync()[habit.habitId]!!.todayTotalUnits.toInt())
 
         // Verify every ProgressBand has distinct non-empty encouragementQuote and motivationQuote
         for (band in ProgressBand.entries) {

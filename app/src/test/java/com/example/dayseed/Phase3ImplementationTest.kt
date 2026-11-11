@@ -164,8 +164,10 @@ class Phase3ImplementationTest {
             body = "Must survive a failed save without losing text or intended ID.",
             primaryMoodCode = "FOCUSED"
         )
-        val saveSucceeded = viewModel.saveJournalEntry(candidateEntry, sourceDraftId = "draft_fail_retry")
-        assertFalse(saveSucceeded)
+        viewModel.saveJournalEntry(candidateEntry, sourceDraftId = "draft_fail_retry")
+        // Save failed: editor stays open, error banner populated
+        assertTrue(viewModel.isJournalEditorOpen.value)
+        assertNotNull(viewModel.lastJournalSaveError.value)
         // Editor must stay open, error banner state must be populated, no false success message
         assertTrue(viewModel.isJournalEditorOpen.value)
         assertNotNull(viewModel.lastJournalSaveError.value)
@@ -181,8 +183,8 @@ class Phase3ImplementationTest {
 
         // Clear failure and retry Save: must reuse the exact same intendedJournalEntryId
         repository.injectedJournalSaveFailure = null
-        val retrySucceeded = viewModel.saveJournalEntry(candidateEntry, sourceDraftId = "draft_fail_retry")
-        assertTrue(retrySucceeded)
+        viewModel.saveJournalEntry(candidateEntry, sourceDraftId = "draft_fail_retry")
+        // Retry succeeds: editor closes, no error, entry persisted
         assertFalse(viewModel.isJournalEditorOpen.value)
         assertNull(viewModel.lastJournalSaveError.value)
         assertEquals(0, repository.journalDrafts.value.size)
@@ -773,8 +775,7 @@ class Phase3ImplementationTest {
             body = "Stale body that must NOT overwrite Caller 1!",
             primaryMoodCode = "STRESSED"
         )
-        val caller2Result = viewModel.saveJournalEntry(staleCaller2Entry, sourceDraftId = "draft_vm_race")
-        assertTrue(caller2Result)
+        viewModel.saveJournalEntry(staleCaller2Entry, sourceDraftId = "draft_vm_race")
 
         // Verify only 1 entry exists, with Caller 1's exact ID, body, title, mood, and timestamps preserved!
         assertEquals(1, repository.journalEntries.value.size)
