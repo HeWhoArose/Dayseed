@@ -1,8 +1,8 @@
 # Progress and Handover
 
-**Last updated:** 2026-11-10
+**Last updated:** 2026-11-11
 **Current repository baseline:**
-- **Current GitHub `main` HEAD:** `b30efbc7f830b57baae96d32bc64d30a549b8806` (`b30efbc`, 2026-11-10; Phase 5 closeout documentation and evidence), on top of the Phase 5 closeout application commits (`9c46edf` wrapper and keystore bootstrap, `6561588` `p4_35`/`p4_36`) and Phase 4 at `b0fc29d` (audit corrections F-1–F-3).
+- **Current GitHub `main` HEAD:** `2c543418850d59257a4ef516b1dabea2de2f6c15` (`2c54341`, 2026-11-11; Windows re-verification, Phase 5 documentation corrections and the whole-system audit `docs/41`), on top of `1d85138` (agent-skills install) and `b30efbc` (Phase 5 closeout: `9c46edf` wrapper/keystore bootstrap, `6561588` `p4_35`/`p4_36`, Phase 4 at `b0fc29d`). **Remote and local `main` are reconciled at `2c54341`**, confirmed by `git ls-remote` on 2026-11-11.
 - **Latest application-code baseline:** `6561588` (Phase 5 tests `p4_35`/`p4_36`) on top of Phase 4 at `b0fc29d` and `6ae1ea1`, and Phase 4A at `7bb8d80` (`D-232`), on top of the Phase 3 baseline `dd6501f`.
 - **Documentation reconciliation:** Phase 5 closeout commits (2026-11-10) covering `implementation_plan.md` Section 18, `README.md`, `docs/07`, `docs/25`, `docs/28`, `docs/32` and this file.
 - **Independent re-verification (2026-11-11):** the closeout sweep was repeated on a separate Windows machine from the committed wrapper at `b30efbc` — see [docs/evidence/phase5/reverify-windows-2026-11-11.md](evidence/phase5/reverify-windows-2026-11-11.md) and the [system-wide audit](41-SYSTEM-AUDIT-2026-11-11.md). Results matched the recorded evidence exactly (217/217 tests, 0 lint errors, 57 warnings, identical APK byte sizes). This is a Stage B re-check, not Stage C validation.
