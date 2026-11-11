@@ -65,4 +65,21 @@ class DayseedReminderNotificationApiTest {
             }
         }
     }
+
+    @Test
+    fun isNotificationDeliveryAvailableDeniesWhenPermissionRevokedOnApi33Plus() {
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            // Revoke the runtime permission: the API-33 guard must deny delivery.
+            shadowOf(context.applicationContext as Application)
+                .denyPermissions(Manifest.permission.POST_NOTIFICATIONS)
+            val available = ReminderNotifier.isNotificationDeliveryAvailable(context)
+            assertTrue("API ${android.os.Build.VERSION.SDK_INT}: delivery must be denied when " +
+                "POST_NOTIFICATIONS is revoked", !available)
+        } else {
+            // Pre-33: no runtime permission exists; app-level enablement governs.
+            val available = ReminderNotifier.isNotificationDeliveryAvailable(context)
+            assertTrue("API ${android.os.Build.VERSION.SDK_INT}: delivery must be available " +
+                "when notifications are enabled (no runtime permission exists)", available)
+        }
+    }
 }
