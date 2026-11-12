@@ -1149,7 +1149,13 @@ fun RemovedHabitsPanel(
 @Composable
 fun AboutPanel() {
     PanelTitle("About Dayseed")
-    Spacer(modifier = Modifier.height(10.dp))
+    Spacer(modifier = Modifier.height(12.dp))
+    com.example.dayseed.ui.components.DayseedOpeningBrandLockup(
+        emblemSize = 68.dp,
+        showMotto = true,
+        modifier = Modifier.fillMaxWidth()
+    )
+    Spacer(modifier = Modifier.height(12.dp))
     Text(
         text = "Dayseed 1.0.0",
         style = MaterialTheme.typography.bodyMedium,

@@ -63,6 +63,8 @@ import com.example.dayseed.ui.components.CollectedMomentsSummaryCard
 import com.example.dayseed.ui.components.ComebackCard
 import com.example.dayseed.ui.components.DaypartArtwork
 import com.example.dayseed.ui.components.DaypartBackgroundLayer
+import com.example.dayseed.ui.components.DayseedLogoSymbol
+import com.example.dayseed.ui.components.DayseedOpeningBrandLockup
 import com.example.dayseed.ui.components.HabitCard
 import com.example.dayseed.ui.components.ReflectionCard
 import com.example.dayseed.ui.components.TodayLongestStreakIndicator
@@ -299,6 +301,12 @@ fun TodayScreen(
                                 .testTag("onboarding_welcome_card")
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
+                                DayseedOpeningBrandLockup(
+                                    emblemSize = 64.dp,
+                                    showMotto = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
                                 Text(
                                     text = "Welcome to Dayseed",
                                     style = MaterialTheme.typography.titleMedium,
@@ -658,11 +666,9 @@ private fun EmptyHabitsCard(onAddHabit: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = Icons.Default.Spa,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(48.dp)
+        DayseedLogoSymbol(
+            size = 56.dp,
+            contentDesc = null
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(

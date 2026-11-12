@@ -1,6 +1,0 @@
-{
-  "summary":  "Revised Phase 3 Implementation Plan (Revision 4) adding explicit date resolution rules for Daily Scheduled Opportunities (local_date < referenceToday, local_date == referenceToday, and local_date > referenceToday excluded from both numerator and denominator) and an automated test verifying a reporting period with past, current, and future scheduled dates.",
-  "updatedAt":  "2026-11-08T13:31:57.539983256Z",
-  "requestFeedback":  true,
-  "userFacing":  true
-}

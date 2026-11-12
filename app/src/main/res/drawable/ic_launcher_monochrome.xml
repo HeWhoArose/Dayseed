@@ -1,10 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Themed-icon layer required from Android 13. Reuses the existing foreground
-     artwork; a purpose-drawn silhouette is a design decision, not a build fix. -->
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item
-        android:width="66dp"
-        android:height="66dp"
-        android:drawable="@drawable/dayseed_app_icon"
-        android:gravity="center" />
-</layer-list>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Android 13+ Single-Colour Monochrome Silhouette inside 66dp safe zone -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M 31.25,70.9 C 30.27,69.93 31.57,68.3 33.2,69.28 C 40.35,74.8 46.85,77.4 54.0,77.4 C 61.15,77.4 67.65,74.8 74.8,69.28 C 76.43,68.3 77.72,69.93 76.75,70.9 C 69.6,78.38 62.12,81.95 54.0,81.95 C 45.88,81.95 38.4,78.38 31.25,70.9 Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M 54.0,74.8 C 44.25,74.8 38.4,68.62 38.4,60.5 C 38.4,55.3 41.65,50.75 46.2,50.1 C 48.48,49.77 50.1,51.4 50.43,54.0 C 51.08,58.55 52.05,63.1 54.0,63.1 C 55.95,63.1 56.93,58.55 57.58,54.0 C 57.9,51.4 59.52,49.77 61.8,50.1 C 66.35,50.75 69.6,55.3 69.6,60.5 C 69.6,68.62 63.75,74.8 54.0,74.8 Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M 50.1,47.83 C 42.95,47.83 37.1,43.6 34.5,37.1 C 33.85,35.8 34.83,34.5 36.45,34.83 C 43.6,35.48 48.8,39.7 50.75,45.88 C 51.08,47.18 50.75,47.83 50.1,47.83 Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M 52.38,59.85 C 52.38,51.4 53.02,43.6 55.62,37.1 C 58.88,29.62 65.7,26.05 72.85,26.05 C 74.15,26.05 74.8,27.02 74.47,28.33 C 72.53,37.75 66.35,44.9 58.23,47.18 C 56.27,47.83 55.62,49.45 55.62,52.05 L 55.62,59.85 C 55.62,61.48 52.38,61.48 52.38,59.85 Z" />
+</vector>
