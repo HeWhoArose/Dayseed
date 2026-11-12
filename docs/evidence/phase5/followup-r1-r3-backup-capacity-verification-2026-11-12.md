@@ -5,7 +5,7 @@ runs executed in one session at a single final HEAD (see §1).
 **Repository:** `HeWhoArose/Dayseed`, branch `main`, local working tree at `C:\Dev\Dayseed`.
 **Base:** `origin/main` = `ddfef76` (F-01…F-06 remediation closeout commit; CI run
 43094155264 success, verified earlier in this session).
-**Commits created in this session (local `main`, unpushed at evidence-draft time):**
+**Commits created and pushed in this session (2026-11-12; remote `main` = `2ba23ef`, fetch-verified):**
 
 | Commit | Subject | Scope |
 | --- | --- | --- |
@@ -221,9 +221,11 @@ determinism, not proof of content identity).
 
 ## 7. CI status
 
-The three new commits (`83037df`, `a61db75`, `3f4f45c`) were **unpushed at evidence-draft time**;
-the first push to `origin/main` triggers `.github/workflows/android.yml`. [PENDING — CI run
-number/result to be recorded after push; a green run there is separate evidence.]
+The follow-up chain (`83037df`, `a61db75`, `3f4f45c`, plus the evidence/docs commit `2ba23ef`)
+was pushed to `origin/main` on 2026-11-12 and fetch-verified (remote `main` = `2ba23ef`).
+GitHub Actions run **43286286411** (run number 4) for `2ba23ef` **completed successfully**
+(`conclusion=success`, updated 2026-11-12T19:09:37Z) — the second executed run of
+`.github/workflows/android.yml` (run 3 = 43094155264 for `ddfef76`, also success).
 
 ## 8. Retained evidence artefacts (harness-local)
 
