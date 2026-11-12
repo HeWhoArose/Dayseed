@@ -13,6 +13,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -20,6 +21,7 @@ import org.robolectric.annotation.Config
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneOffset
+import kotlinx.coroutines.test.advanceUntilIdle
 
 /**
  * R6 / F-06: Automated Compose UI coverage.
@@ -43,6 +45,9 @@ import java.time.ZoneOffset
 @Config(sdk = [34])
 class DayseedComposeUITest {
 
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private lateinit var viewModel: DayseedViewModel
 
     @Before
@@ -56,7 +61,9 @@ class DayseedComposeUITest {
                 .toInstant(java.time.ZoneOffset.UTC)
                 .toEpochMilli()
         )
-        viewModel = DayseedViewModel(app)
+        // Dispatchers.Unconfined (test-only, see Phase2 setup): mutation chains
+        // never return to the paused test Main, so awaits cannot deadlock.
+        viewModel = DayseedViewModel(app, ioDispatcher = kotlinx.coroutines.Dispatchers.Unconfined)
     }
 
     // -----------------------------------------------------------------------
@@ -84,6 +91,8 @@ class DayseedComposeUITest {
             date = LocalDate.of(2026, 3, 15),
             outcome = com.example.dayseed.data.DailyOutcome.COMPLETED
         )
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        viewModel.userMessage.awaitMatch { it != null && it.contains("Completed") }
 
         // Verify user message confirms completion (what Compose would render).
         assertNotNull(viewModel.userMessage.value)
@@ -122,6 +131,8 @@ class DayseedComposeUITest {
             date = LocalDate.of(2026, 3, 15),
             entryNote = "Chapter 3"
         )
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        viewModel.userMessage.awaitMatch { it != null && it.contains("pages") }
 
         // Verify the entry was accepted - user message confirms logging.
         assertNotNull(viewModel.userMessage.value)
@@ -155,6 +166,8 @@ class DayseedComposeUITest {
             date = LocalDate.of(2026, 3, 15),
             entryNote = "Honest zero"
         )
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        viewModel.userMessage.awaitMatch { it != null && it.contains("0") }
 
         // Zero should be accepted (not rejected as invalid).
         assertNotNull(viewModel.userMessage.value)

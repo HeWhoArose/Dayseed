@@ -19,9 +19,11 @@ import com.example.dayseed.data.JournalEntry
 import com.example.dayseed.data.LongestActiveStreakSelection
 import com.example.dayseed.data.TrackingMode
 import com.example.dayseed.ui.theme.ThemeModeOption
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
@@ -94,9 +96,22 @@ sealed class SecondaryRoute(
 
 class DayseedViewModel @JvmOverloads constructor(
     application: Application,
-    customRepository: DayseedRepository? = null
+    customRepository: DayseedRepository? = null,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : AndroidViewModel(application) {
     val repository = customRepository ?: DayseedRepository(application)
+
+    /**
+     * True while a habit save launched from [saveHabit] is still executing.
+     * The Create/Edit screen Save button can be tapped faster than an
+     * asynchronous save completes; without this guard a double-tap would
+     * enqueue two saves (the synchronous pre-R3 implementation could not,
+     * because it blocked the main thread). Both the check-and-set in
+     * [saveHabit] and the clear happen on the main dispatcher, so the guard
+     * is race-free. Exposed for the UI and tests.
+     */
+    private val _isSaveInFlight = MutableStateFlow(false)
+    val isSaveInFlight: StateFlow<Boolean> = _isSaveInFlight.asStateFlow()
 
     val habits = repository.habits
     val habitVersions = repository.habitVersions
@@ -536,9 +551,10 @@ class DayseedViewModel @JvmOverloads constructor(
         note: String = "",
         idempotencyKey: String? = null
     ) {
-        runBlocking {
-            val govVer = repository.getGoverningHabitVersion(habit.habitId, date)
-            val mode = (govVer?.trackingMode ?: habit.currentVersion?.trackingMode ?: habit.trackingMode).canonical()
+        viewModelScope.launch {
+            // The idempotency-key resolution runs before the first suspension point so
+            // rapid duplicate taps (see the 350ms window) are serialised on the main
+            // dispatcher exactly as they were with the synchronous implementation.
             val nowMs = repository.clock.nowUtcMs()
             val sig = "OUTCOME:${habit.habitId}:$date:${outcome.name}:${effortLevel.name}:$note"
             val resolvedKey = if (idempotencyKey != null) {
@@ -557,35 +573,40 @@ class DayseedViewModel @JvmOverloads constructor(
                 newKey
             }
 
-            try {
-                if (mode == TrackingMode.COMPLETION_ONLY) {
-                    repository.logHabitDayOutcome(
-                        habitId = habit.habitId,
-                        date = date,
-                        outcomeKind = "COMPLETED",
-                        effortLevel = null,
-                        note = note.takeIf { it.isNotBlank() },
-                        idempotencyKey = resolvedKey
-                    )
-                    _userMessage.value = "✓ ${habit.name}: Completed"
-                } else {
-                    val eff = when (effortLevel) {
-                        EffortLevel.TINY -> "TINY"
-                        EffortLevel.EXTRA -> "EXTRA"
-                        else -> "USUAL"
+            withContext(ioDispatcher) {
+                val govVer = repository.getGoverningHabitVersion(habit.habitId, date)
+                val mode = (govVer?.trackingMode ?: habit.currentVersion?.trackingMode ?: habit.trackingMode).canonical()
+
+                try {
+                    if (mode == TrackingMode.COMPLETION_ONLY) {
+                        repository.logHabitDayOutcome(
+                            habitId = habit.habitId,
+                            date = date,
+                            outcomeKind = "COMPLETED",
+                            effortLevel = null,
+                            note = note.takeIf { it.isNotBlank() },
+                            idempotencyKey = resolvedKey
+                        )
+                        _userMessage.value = "✓ ${habit.name}: Completed"
+                    } else {
+                        val eff = when (effortLevel) {
+                            EffortLevel.TINY -> "TINY"
+                            EffortLevel.EXTRA -> "EXTRA"
+                            else -> "USUAL"
+                        }
+                        repository.logHabitDayOutcome(
+                            habitId = habit.habitId,
+                            date = date,
+                            outcomeKind = "EFFORT_LOGGED",
+                            effortLevel = eff,
+                            note = note.takeIf { it.isNotBlank() },
+                            idempotencyKey = resolvedKey
+                        )
+                        _userMessage.value = "${effortLevel.symbol()} ${habit.name}: ${effortLevel.displayName()} recorded"
                     }
-                    repository.logHabitDayOutcome(
-                        habitId = habit.habitId,
-                        date = date,
-                        outcomeKind = "EFFORT_LOGGED",
-                        effortLevel = eff,
-                        note = note.takeIf { it.isNotBlank() },
-                        idempotencyKey = resolvedKey
-                    )
-                    _userMessage.value = "${effortLevel.symbol()} ${habit.name}: ${effortLevel.displayName()} recorded"
+                } catch (e: Exception) {
+                    _userMessage.value = e.message ?: "Unable to record activity"
                 }
-            } catch (e: Exception) {
-                _userMessage.value = e.message ?: "Unable to record activity"
             }
         }
     }
@@ -597,7 +618,8 @@ class DayseedViewModel @JvmOverloads constructor(
         entryNote: String? = null,
         idempotencyKey: String? = null
     ) {
-        runBlocking {
+        viewModelScope.launch {
+            // Idempotency-key resolution before the first suspension point (see logHabit).
             val nowMs = repository.clock.nowUtcMs()
             val sig = "ENTRY:${habit.habitId}:$date:$valueUnits:${entryNote.orEmpty()}"
             val resolvedKey = if (idempotencyKey != null) {
@@ -615,42 +637,48 @@ class DayseedViewModel @JvmOverloads constructor(
                 newKey
             }
 
-            try {
-                repository.logHabitEntry(
-                    habitId = habit.habitId,
-                    date = date,
-                    valueUnits = valueUnits,
-                    entryNote = entryNote,
-                    idempotencyKey = resolvedKey
-                )
-                val unitLabel = habit.unitCode ?: "units"
-                _userMessage.value = if (valueUnits == 0) {
-                    "Logged 0 $unitLabel for ${habit.name} (honest check-in)"
-                } else {
-                    "Added +$valueUnits $unitLabel for ${habit.name}"
+            withContext(ioDispatcher) {
+                try {
+                    repository.logHabitEntry(
+                        habitId = habit.habitId,
+                        date = date,
+                        valueUnits = valueUnits,
+                        entryNote = entryNote,
+                        idempotencyKey = resolvedKey
+                    )
+                    val unitLabel = habit.unitCode ?: "units"
+                    _userMessage.value = if (valueUnits == 0) {
+                        "Logged 0 $unitLabel for ${habit.name} (honest check-in)"
+                    } else {
+                        "Added +$valueUnits $unitLabel for ${habit.name}"
+                    }
+                } catch (e: Exception) {
+                    _userMessage.value = e.message ?: "Unable to log session"
                 }
-            } catch (e: Exception) {
-                _userMessage.value = e.message ?: "Unable to log session"
             }
         }
     }
 
     fun updateHabitEntry(entryId: String, newValueUnits: Int, newEntryNote: String?) {
-        runBlocking {
-            try {
-                repository.updateHabitEntry(entryId, newValueUnits, newEntryNote)
-                _userMessage.value = "Session updated"
-            } catch (e: Exception) {
-                _userMessage.value = e.message ?: "Unable to update session"
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                try {
+                    repository.updateHabitEntry(entryId, newValueUnits, newEntryNote)
+                    _userMessage.value = "Session updated"
+                } catch (e: Exception) {
+                    _userMessage.value = e.message ?: "Unable to update session"
+                }
             }
         }
     }
 
     fun deleteHabitEntry(entryId: String) {
-        runBlocking {
-            val token = repository.deleteHabitEntryWithUndo(entryId)
-            if (token != null) {
-                _userMessage.value = "Session deleted"
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                val token = repository.deleteHabitEntryWithUndo(entryId)
+                if (token != null) {
+                    _userMessage.value = "Session deleted"
+                }
             }
         }
     }
@@ -660,17 +688,21 @@ class DayseedViewModel @JvmOverloads constructor(
     }
 
     fun saveHabitDateNote(habitId: String, date: LocalDate, body: String) {
-        runBlocking {
-            repository.saveHabitDateNote(habitId, date, body)
-            _userMessage.value = "Habit note saved"
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                repository.saveHabitDateNote(habitId, date, body)
+                _userMessage.value = "Habit note saved"
+            }
         }
     }
 
     fun triggerUndo() {
         val token = activeUndoToken.value ?: return
-        runBlocking {
-            val ok = repository.executeUndo(token)
-            _userMessage.value = if (ok) "Action undone" else "Undo window expired or record changed"
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                val ok = repository.executeUndo(token)
+                _userMessage.value = if (ok) "Action undone" else "Undo window expired or record changed"
+            }
         }
     }
 
@@ -683,9 +715,11 @@ class DayseedViewModel @JvmOverloads constructor(
     }
 
     fun removeRecord(habitId: String, date: LocalDate) {
-        runBlocking {
-            repository.removeRecord(habitId, date)
-            _userMessage.value = "Record reset"
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                repository.removeRecord(habitId, date)
+                _userMessage.value = "Record reset"
+            }
         }
     }
 
@@ -707,30 +741,65 @@ class DayseedViewModel @JvmOverloads constructor(
     }
 
     fun takeRestDayToday(habit: Habit, note: String? = null) {
-        runBlocking {
-            try {
-                repository.setRestDayException(habit.habitId, repository.clock.todayLocal(), note)
-                _userMessage.value = "Rest day taken for ${habit.name} (streak held)"
-            } catch (e: Exception) {
-                _userMessage.value = e.message ?: "Unable to take a rest day today"
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                try {
+                    repository.setRestDayException(habit.habitId, repository.clock.todayLocal(), note)
+                    _userMessage.value = "Rest day taken for ${habit.name} (streak held)"
+                } catch (e: Exception) {
+                    _userMessage.value = e.message ?: "Unable to take a rest day today"
+                }
             }
         }
     }
 
     fun clearRestDayToday(habit: Habit) {
-        runBlocking {
-            repository.clearRestDayException(habit.habitId, repository.clock.todayLocal())
-            _userMessage.value = "Rest day cleared for ${habit.name}"
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                repository.clearRestDayException(habit.habitId, repository.clock.todayLocal())
+                _userMessage.value = "Rest day cleared for ${habit.name}"
+            }
         }
     }
 
+    /**
+     * Fire-and-forget habit save for UI call sites. The saved [HabitVersion]
+     * is not returned (callers observe save outcomes via [lastSaveError],
+     * [userMessage] and the post-save navigation performed by
+     * [closeAddEditHabit]); tests that need the saved version call
+     * [saveHabitAsync] directly. Duplicate submissions while a save is
+     * already executing are dropped (the pre-R3 synchronous implementation
+     * blocked the main thread and made double-taps impossible).
+     */
     fun saveHabit(
+        habit: Habit,
+        applyTodayWhenLogged: Boolean = true,
+        policy: HabitConfigEffectivePolicy? = null
+    ) {
+        if (_isSaveInFlight.value) return
+        _isSaveInFlight.value = true
+        viewModelScope.launch {
+            try {
+                saveHabitAsync(habit, applyTodayWhenLogged, policy)
+            } finally {
+                _isSaveInFlight.value = false
+            }
+        }
+    }
+
+    /**
+     * Suspend variant of [saveHabit]: performs the save off the main thread
+     * and returns the saved version, or null when the save was rejected
+     * (rejection reason in [lastSaveError]). UI navigation on success is
+     * performed by [closeAddEditHabit] exactly as before.
+     */
+    suspend fun saveHabitAsync(
         habit: Habit,
         applyTodayWhenLogged: Boolean = true,
         policy: HabitConfigEffectivePolicy? = null
     ): HabitVersion? {
         _lastSaveError.value = null
-        return runBlocking {
+        return withContext(ioDispatcher) {
             try {
                 val savedVer = repository.saveHabit(
                     habit = habit,
@@ -750,34 +819,42 @@ class DayseedViewModel @JvmOverloads constructor(
     }
 
     fun reorderHabit(habitId: String, moveUp: Boolean) {
-        runBlocking {
-            repository.reorderHabit(habitId, moveUp)
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                repository.reorderHabit(habitId, moveUp)
+            }
         }
     }
 
     fun toggleHabitArchive(habitId: String, archived: Boolean) {
-        runBlocking {
-            repository.toggleHabitArchive(habitId, archived)
-            _userMessage.value = if (archived) "Habit archived" else "Habit restored"
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                repository.toggleHabitArchive(habitId, archived)
+                _userMessage.value = if (archived) "Habit archived" else "Habit restored"
+            }
         }
     }
 
     fun updateHabitLifecycle(habitId: String, state: HabitLifecycleState) {
-        runBlocking {
-            repository.updateHabitLifecycle(habitId, state)
-            val stateWord = when (state) {
-                HabitLifecycleState.ACTIVE -> "active"
-                HabitLifecycleState.PAUSED -> "paused"
-                HabitLifecycleState.COMPLETED -> "completed"
-                HabitLifecycleState.ARCHIVED -> "archived"
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                repository.updateHabitLifecycle(habitId, state)
+                val stateWord = when (state) {
+                    HabitLifecycleState.ACTIVE -> "active"
+                    HabitLifecycleState.PAUSED -> "paused"
+                    HabitLifecycleState.COMPLETED -> "completed"
+                    HabitLifecycleState.ARCHIVED -> "archived"
+                }
+                _userMessage.value = "Habit marked as $stateWord"
             }
-            _userMessage.value = "Habit marked as $stateWord"
         }
     }
 
     fun deleteHabit(habitId: String) {
-        runBlocking {
-            repository.deleteHabitPermanently(habitId)
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                repository.deleteHabitPermanently(habitId)
+            }
             val filteredStack = _secondaryRouteStack.value.filterNot { route ->
                 (route is SecondaryRoute.CreateEditHabit && route.habitId == habitId) ||
                     (route is SecondaryRoute.HabitDetail && route.habitId == habitId)
@@ -822,7 +899,11 @@ class DayseedViewModel @JvmOverloads constructor(
 
     fun acknowledgeDormantRun(runId: String) {
         val updated = getAcknowledgedTerminalRunIds() + runId
-        repository.setSettingSync("acknowledged_terminal_run_ids", "STRING", updated.joinToString(","))
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                repository.setSetting("acknowledged_terminal_run_ids", "STRING", updated.joinToString(","))
+            }
+        }
     }
 
     fun acknowledgeDormantTransition(runId: String) = acknowledgeDormantRun(runId)
@@ -874,101 +955,115 @@ class DayseedViewModel @JvmOverloads constructor(
     }
 
     fun saveJournalEntry(entry: JournalEntry, sourceDraftId: String? = null) {
-        runBlocking {
-            _lastJournalSaveError.value = null
-            try {
-                if (!sourceDraftId.isNullOrBlank() && _editingJournalEntry.value == null) {
-                    val existingDraft = repository.journalDrafts.value.find { it.draftId == sourceDraftId }
-                    if (existingDraft != null && existingDraft.intendedJournalEntryId == null) {
-                        repository.saveJournalDraft(
-                            draftId = sourceDraftId,
-                            localDate = entry.date,
-                            title = entry.title?.trim()?.ifBlank { null },
-                            body = entry.body.trim(),
-                            primaryMoodCode = entry.primaryMoodCode,
-                            secondaryMoodCode = entry.secondaryMoodCode,
-                            promptId = entry.promptId,
-                            linkedHabitId = entry.linkedHabitId,
-                            sourceContext = existingDraft.sourceContext
-                        )
-                    } else if (existingDraft == null && !repository.wasDraftRecentlyPromoted(sourceDraftId)) {
-                        repository.saveJournalDraft(
-                            draftId = sourceDraftId,
-                            localDate = entry.date,
-                            title = entry.title?.trim()?.ifBlank { null },
-                            body = entry.body.trim(),
-                            primaryMoodCode = entry.primaryMoodCode,
-                            secondaryMoodCode = entry.secondaryMoodCode,
-                            promptId = entry.promptId,
-                            linkedHabitId = entry.linkedHabitId,
-                            sourceContext = "JOURNAL_COMPOSER"
-                        )
-                    }
-                    repository.promoteDraftToJournalEntry(sourceDraftId)
-                        ?: throw IllegalStateException("Unable to save entry — your draft is safely preserved. Tap Save to retry.")
-                } else {
-                    withContext(Dispatchers.IO) {
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                _lastJournalSaveError.value = null
+                try {
+                    if (!sourceDraftId.isNullOrBlank() && _editingJournalEntry.value == null) {
+                        val existingDraft = repository.journalDrafts.value.find { it.draftId == sourceDraftId }
+                        if (existingDraft != null && existingDraft.intendedJournalEntryId == null) {
+                            repository.saveJournalDraft(
+                                draftId = sourceDraftId,
+                                localDate = entry.date,
+                                title = entry.title?.trim()?.ifBlank { null },
+                                body = entry.body.trim(),
+                                primaryMoodCode = entry.primaryMoodCode,
+                                secondaryMoodCode = entry.secondaryMoodCode,
+                                promptId = entry.promptId,
+                                linkedHabitId = entry.linkedHabitId,
+                                sourceContext = existingDraft.sourceContext
+                            )
+                        } else if (existingDraft == null && !repository.wasDraftRecentlyPromoted(sourceDraftId)) {
+                            repository.saveJournalDraft(
+                                draftId = sourceDraftId,
+                                localDate = entry.date,
+                                title = entry.title?.trim()?.ifBlank { null },
+                                body = entry.body.trim(),
+                                primaryMoodCode = entry.primaryMoodCode,
+                                secondaryMoodCode = entry.secondaryMoodCode,
+                                promptId = entry.promptId,
+                                linkedHabitId = entry.linkedHabitId,
+                                sourceContext = "JOURNAL_COMPOSER"
+                            )
+                        }
+                        repository.promoteDraftToJournalEntry(sourceDraftId)
+                            ?: throw IllegalStateException("Unable to save entry — your draft is safely preserved. Tap Save to retry.")
+                    } else {
                         repository.saveJournalEntrySync(entry, sourceDraftIdToRemove = sourceDraftId)
                     }
+                    closeJournalEditor()
+                    _userMessage.value = "Daily reflection saved ✍️"
+                } catch (e: Throwable) {
+                    val msg = e.message ?: "Unable to save entry — your draft is safely preserved. Tap Save to retry."
+                    _lastJournalSaveError.value = msg
                 }
-                closeJournalEditor()
-                _userMessage.value = "Daily reflection saved ✍️"
-            } catch (e: Throwable) {
-                val msg = e.message ?: "Unable to save entry — your draft is safely preserved. Tap Save to retry."
-                _lastJournalSaveError.value = msg
             }
         }
     }
 
     fun discardJournalDraft(draftId: String) {
-        runBlocking {
-            repository.deleteJournalDraft(draftId)
-            closeJournalEditor()
-            _userMessage.value = "Draft discarded"
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                repository.deleteJournalDraft(draftId)
+                closeJournalEditor()
+                _userMessage.value = "Draft discarded"
+            }
         }
     }
 
     fun deleteJournalEntry(id: String) {
-        runBlocking {
-            repository.deleteJournalEntry(id)
-            closeJournalEditor()
-            _userMessage.value = "Reflection deleted"
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                repository.deleteJournalEntry(id)
+                closeJournalEditor()
+                _userMessage.value = "Reflection deleted"
+            }
         }
     }
 
     fun setThemeMode(mode: ThemeModeOption) {
-        runBlocking {
-            repository.setSetting("theme_mode", "ENUM", mode.settingValue)
-            _userMessage.value = "Theme set to ${mode.label}"
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                repository.setSetting("theme_mode", "ENUM", mode.settingValue)
+                _userMessage.value = "Theme set to ${mode.label}"
+            }
         }
     }
 
     fun setWeekStart(dayOfWeek: DayOfWeek) {
-        runBlocking {
-            val entry = repository.setWeekStart(dayOfWeek)
-            _userMessage.value = "Week start set to ${dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }} (effective ${entry.effectiveFromLocalDate})"
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                val entry = repository.setWeekStart(dayOfWeek)
+                _userMessage.value = "Week start set to ${dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }} (effective ${entry.effectiveFromLocalDate})"
+            }
         }
     }
 
     fun setQuietHours(startLocal: String, endLocal: String) {
-        runBlocking {
-            repository.setSetting("quiet_hours_start", "TIME_LOCAL", startLocal)
-            repository.setSetting("quiet_hours_end", "TIME_LOCAL", endLocal)
-            _userMessage.value = "Quiet hours updated ($startLocal – $endLocal)"
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                repository.setSetting("quiet_hours_start", "TIME_LOCAL", startLocal)
+                repository.setSetting("quiet_hours_end", "TIME_LOCAL", endLocal)
+                _userMessage.value = "Quiet hours updated ($startLocal – $endLocal)"
+            }
         }
     }
 
     fun resolveConflict(conflictId: String, resolution: ConflictResolution) {
-        runBlocking {
-            repository.resolveRestoreConflictSync(conflictId, resolution)
-            _userMessage.value = "Conflict resolved (${resolution.name})"
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                repository.resolveRestoreConflict(conflictId, resolution)
+                _userMessage.value = "Conflict resolved (${resolution.name})"
+            }
         }
     }
 
     fun deleteAllData() {
-        runBlocking {
-            repository.deleteAllData()
-            _userMessage.value = "All local data deleted"
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                repository.deleteAllData()
+                _userMessage.value = "All local data deleted"
+            }
         }
     }
 }

@@ -2,7 +2,6 @@ package com.example.dayseed.ui.screens
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.launch
 import androidx.core.graphics.toColorInt
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -123,9 +122,10 @@ fun CreateEditHabitScreen(
             onClearSaveError = { viewModel.clearSaveError() },
             onDismiss = onNavigateBack,
             onSave = { habit, applyTodayWhenLogged ->
-                viewModel.viewModelScope.launch {
-                    viewModel.saveHabit(habit, applyTodayWhenLogged) != null
-                }
+                // saveHabit is fire-and-forget; navigation after a successful save is
+                // performed by the ViewModel (closeAddEditHabit). The Boolean return
+                // of onSave was always a constant true and is never inspected.
+                viewModel.saveHabit(habit, applyTodayWhenLogged)
                 true
             },
             onDelete = if (initialHabit != null) {

@@ -33,6 +33,9 @@ import com.example.dayseed.ui.screens.defaultRecordSessionValueText
 import com.example.dayseed.ui.screens.isScheduledHabitTendedToday
 import com.example.dayseed.ui.screens.resolveRecordSessionGoverningVersion
 import com.example.dayseed.ui.screens.weeklyTargetSemanticsExplanation
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -42,6 +45,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -61,6 +65,9 @@ import java.time.ZoneOffset
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class Phase2ImplementationTest {
+
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
 
     private lateinit var app: Application
     private lateinit var testClock: TestDayseedClock
@@ -83,7 +90,13 @@ class Phase2ImplementationTest {
             clock = testClock,
             databaseName = null
         )
-        viewModel = DayseedViewModel(app, customRepository = repository)
+        // Dispatchers.Unconfined (test-only): the ViewModel mutation chain —
+        // including the post-withContext continuations (e.g. deleteHabit route
+        // cleanup) — never returns to the paused test Main dispatcher, so a
+        // single event-driven await per mutation can never deadlock. The
+        // repository's internal withContext(Dispatchers.IO) still exercises
+        // real background threading.
+        viewModel = DayseedViewModel(app, customRepository = repository, ioDispatcher = kotlinx.coroutines.Dispatchers.Unconfined)
     }
 
     @After
@@ -343,6 +356,10 @@ class Phase2ImplementationTest {
 
         // User can still log extra activity on an unscheduled habit today without penalty
         viewModel.logHabitQuantityOrDuration(monHabit, 3, LocalDate.of(2026, 3, 18), "Bonus Wednesday session")
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        repository.habitSummaries.awaitMatch { summaries ->
+            summaries["h_mon"]?.todayTotalUnits?.toInt() == 3
+        }
         val updatedMonSummary = repository.loadHabitSummariesSync()["h_mon"]!!
         assertEquals(3, updatedMonSummary.todayTotalUnits.toInt())
         assertEquals(ProgressBand.GOAL_MET, updatedMonSummary.todayProgressBand)
@@ -771,6 +788,10 @@ class Phase2ImplementationTest {
 
         // Permanently delete habit via ViewModel -> must NOT create a HABIT_DELETION UndoToken or promise Undo
         viewModel.deleteHabit(habit.habitId)
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        repository.habits.awaitMatch { habits -> habits.none { it.habitId == habit.habitId } }
+        // The launch-body tail (route cleanup, user message) resumes unconfined after the IO work.
+        viewModel.userMessage.awaitMatch { it == "Habit permanently deleted" }
         assertTrue(repository.loadHabitsSync().none { it.habitId == habit.habitId })
         assertTrue(repository.habitVersions.value.none { it.habitId == habit.habitId })
         assertTrue(repository.habitEntries.value.none { it.habitId == habit.habitId })
@@ -864,6 +885,10 @@ class Phase2ImplementationTest {
         assertEquals(dormantTree.runId, unackedBefore!!.runId)
 
         viewModel.acknowledgeDormantTransition(dormantTree.runId)
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        repository.appSettings.awaitMatch { settings ->
+            settings["acknowledged_terminal_run_ids"]?.valueText?.contains(dormantTree.runId) == true
+        }
         val unackedAfter = viewModel.getUnacknowledgedDormantRunForHabit(habit.habitId)
         assertNull(unackedAfter)
     }
@@ -891,24 +916,46 @@ class Phase2ImplementationTest {
 
         // Take rest day today -> sets REST_DAY exception
         viewModel.takeRestDayToday(habit, "Resting eyes today")
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        viewModel.userMessage.awaitMatch { it != null && it.startsWith("Rest day taken for") }
         val afterRestSummary = repository.loadHabitSummariesSync()[habit.habitId]!!
         assertTrue(afterRestSummary.hasRestDayToday)
         assertEquals(DerivedDayStatus.REST_DAY, repository.evaluateDerivedDayStatus(habit.habitId, LocalDate.of(2026, 3, 18)))
 
         // Logging real activity on the same date clears REST_DAY automatically
         viewModel.logHabitQuantityOrDuration(habit, 3, LocalDate.of(2026, 3, 18), "Wrote three pages")
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        repository.habitSummaries.awaitMatch { summaries ->
+            summaries[habit.habitId]?.todayTotalUnits?.toInt() == 3
+        }
         val afterLogSummary = repository.loadHabitSummariesSync()[habit.habitId]!!
         assertFalse(afterLogSummary.hasRestDayToday)
         assertEquals(3, afterLogSummary.todayTotalUnits.toInt())
 
         // Pause -> Resume -> Complete -> Archive lifecycle transitions
         viewModel.updateHabitLifecycle(habit.habitId, HabitLifecycleState.PAUSED)
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        repository.habits.awaitMatch { habits ->
+            habits.single { it.habitId == habit.habitId }.lifecycleState == HabitLifecycleState.PAUSED
+        }
         assertEquals(HabitLifecycleState.PAUSED, repository.loadHabitsSync().single { it.habitId == habit.habitId }.lifecycleState)
         viewModel.updateHabitLifecycle(habit.habitId, HabitLifecycleState.ACTIVE)
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        repository.habits.awaitMatch { habits ->
+            habits.single { it.habitId == habit.habitId }.lifecycleState == HabitLifecycleState.ACTIVE
+        }
         assertEquals(HabitLifecycleState.ACTIVE, repository.loadHabitsSync().single { it.habitId == habit.habitId }.lifecycleState)
         viewModel.updateHabitLifecycle(habit.habitId, HabitLifecycleState.COMPLETED)
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        repository.habits.awaitMatch { habits ->
+            habits.single { it.habitId == habit.habitId }.lifecycleState == HabitLifecycleState.COMPLETED
+        }
         assertEquals(HabitLifecycleState.COMPLETED, repository.loadHabitsSync().single { it.habitId == habit.habitId }.lifecycleState)
         viewModel.updateHabitLifecycle(habit.habitId, HabitLifecycleState.ARCHIVED)
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        repository.habits.awaitMatch { habits ->
+            habits.single { it.habitId == habit.habitId }.lifecycleState == HabitLifecycleState.ARCHIVED
+        }
         assertEquals(HabitLifecycleState.ARCHIVED, repository.loadHabitsSync().single { it.habitId == habit.habitId }.lifecycleState)
     }
 
@@ -934,13 +981,22 @@ class Phase2ImplementationTest {
 
         // Two rapid taps within 100ms on the same quick action reuse deterministic idempotency key
         viewModel.logHabitQuantityOrDuration(habit, 10, LocalDate.of(2026, 3, 18))
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        repository.habitSummaries.awaitMatch { summaries ->
+            summaries[habit.habitId]?.todayTotalUnits?.toInt() == 10
+        }
         testClock.currentUtcMs += 100L
         viewModel.logHabitQuantityOrDuration(habit, 10, LocalDate.of(2026, 3, 18))
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
         assertEquals(10, repository.loadHabitSummariesSync()[habit.habitId]!!.todayTotalUnits.toInt())
 
         // Deliberate repeat tap after 500ms (> 350ms guard) logs a legitimate second session
         testClock.currentUtcMs += 500L
         viewModel.logHabitQuantityOrDuration(habit, 10, LocalDate.of(2026, 3, 18))
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        repository.habitSummaries.awaitMatch { summaries ->
+            summaries[habit.habitId]?.todayTotalUnits?.toInt() == 20
+        }
         assertEquals(20, repository.loadHabitSummariesSync()[habit.habitId]!!.todayTotalUnits.toInt())
         assertEquals(20, repository.loadHabitSummariesSync()[habit.habitId]!!.todayTotalUnits.toInt())
 
@@ -971,7 +1027,7 @@ class Phase2ImplementationTest {
             targetPeriod = TargetPeriod.DAY,
             targetValue = 20
         )
-        val saved1 = viewModel.saveHabit(habitFromToday)
+        val saved1 = runBlocking { viewModel.saveHabitAsync(habitFromToday) }
         assertNotNull(saved1)
         assertEquals(null, viewModel.currentSecondaryRoute.value)
         assertEquals(NavTab.TODAY, viewModel.selectedTab.value)
@@ -990,7 +1046,7 @@ class Phase2ImplementationTest {
             targetPeriod = TargetPeriod.DAY,
             targetValue = 15
         )
-        val saved2 = viewModel.saveHabit(habitFromHabits)
+        val saved2 = runBlocking { viewModel.saveHabitAsync(habitFromHabits) }
         assertNotNull(saved2)
         assertEquals(null, viewModel.currentSecondaryRoute.value)
         assertEquals(NavTab.HABITS, viewModel.selectedTab.value)
@@ -1001,7 +1057,7 @@ class Phase2ImplementationTest {
         viewModel.openEditHabit(habitFromHabits)
         assertTrue(viewModel.currentSecondaryRoute.value is SecondaryRoute.CreateEditHabit)
 
-        val savedEdit = viewModel.saveHabit(habitFromHabits.copy(description = "Read before sleep"))
+        val savedEdit = runBlocking { viewModel.saveHabitAsync(habitFromHabits.copy(description = "Read before sleep")) }
         assertNotNull(savedEdit)
         val routeAfterSave = viewModel.currentSecondaryRoute.value
         assertTrue(
@@ -1021,10 +1077,12 @@ class Phase2ImplementationTest {
         viewModel.openEditHabit(habitFromHabits)
         assertTrue(viewModel.currentSecondaryRoute.value is SecondaryRoute.CreateEditHabit)
 
-        val failedSave = viewModel.saveHabit(
-            habitFromHabits.copy(targetValue = 30),
-            applyTodayWhenLogged = true
-        )
+        val failedSave = runBlocking {
+            viewModel.saveHabitAsync(
+                habitFromHabits.copy(targetValue = 30),
+                applyTodayWhenLogged = true
+            )
+        }
         assertNull(failedSave)
         assertTrue(viewModel.currentSecondaryRoute.value is SecondaryRoute.CreateEditHabit)
         assertNotNull(viewModel.lastSaveError.value)
@@ -1033,10 +1091,12 @@ class Phase2ImplementationTest {
         // Clearing error and retrying with Apply Tomorrow succeeds and returns to HabitDetail
         viewModel.clearSaveError()
         assertNull(viewModel.lastSaveError.value)
-        val retrySave = viewModel.saveHabit(
-            habitFromHabits.copy(targetValue = 30),
-            applyTodayWhenLogged = false
-        )
+        val retrySave = runBlocking {
+            viewModel.saveHabitAsync(
+                habitFromHabits.copy(targetValue = 30),
+                applyTodayWhenLogged = false
+            )
+        }
         assertNotNull(retrySave)
         val routeAfterRetry = viewModel.currentSecondaryRoute.value
         assertTrue(routeAfterRetry is SecondaryRoute.HabitDetail && routeAfterRetry.habitId == habitFromHabits.habitId)
@@ -1045,6 +1105,10 @@ class Phase2ImplementationTest {
         viewModel.openEditHabit(habitFromHabits)
         assertEquals(2, viewModel.secondaryRouteStack.value.size)
         viewModel.deleteHabit(habitFromHabits.habitId)
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        repository.habits.awaitMatch { habits -> habits.none { it.habitId == habitFromHabits.habitId } }
+        // The launch-body tail (route cleanup, user message) resumes unconfined after the IO work.
+        viewModel.userMessage.awaitMatch { it == "Habit permanently deleted" }
         assertTrue(viewModel.secondaryRouteStack.value.isEmpty())
         assertEquals(null, viewModel.currentSecondaryRoute.value)
         assertEquals(NavTab.HABITS, viewModel.selectedTab.value)
@@ -1069,7 +1133,7 @@ class Phase2ImplementationTest {
         repository.logHabitEntrySync(positiveHabit.habitId, today, 5, null)
         assertTrue(repository.hasRecordedActivityForVersionLockOnDate(positiveHabit.habitId, today))
 
-        val rejectedPos = viewModel.saveHabit(positiveHabit.copy(targetValue = 12), applyTodayWhenLogged = true)
+        val rejectedPos = runBlocking { viewModel.saveHabitAsync(positiveHabit.copy(targetValue = 12), applyTodayWhenLogged = true) }
         assertNull(rejectedPos)
         assertNotNull(viewModel.lastSaveError.value)
         // Verify no silent retry created a tomorrow version
@@ -1092,7 +1156,7 @@ class Phase2ImplementationTest {
         assertFalse(repository.hasQualifyingActivityOnDate(zeroHabit.habitId, today))
         assertTrue(repository.hasRecordedActivityForVersionLockOnDate(zeroHabit.habitId, today))
 
-        val rejectedZero = viewModel.saveHabit(zeroHabit.copy(targetValue = 35), applyTodayWhenLogged = true)
+        val rejectedZero = runBlocking { viewModel.saveHabitAsync(zeroHabit.copy(targetValue = 35), applyTodayWhenLogged = true) }
         assertNull(rejectedZero)
         assertNotNull(viewModel.lastSaveError.value)
         assertEquals(20, repository.getEffectiveHabitVersion(zeroHabit.habitId, today)?.targetValue)
@@ -1113,13 +1177,13 @@ class Phase2ImplementationTest {
         repository.logHabitDayOutcomeSync(outcomeHabit.habitId, today, "COMPLETED", null)
         assertTrue(repository.hasRecordedActivityForVersionLockOnDate(outcomeHabit.habitId, today))
 
-        val rejectedOut = viewModel.saveHabit(outcomeHabit.copy(targetValue = 5), applyTodayWhenLogged = true)
+        val rejectedOut = runBlocking { viewModel.saveHabitAsync(outcomeHabit.copy(targetValue = 5), applyTodayWhenLogged = true) }
         assertNull(rejectedOut)
         assertNotNull(viewModel.lastSaveError.value)
         assertEquals(3, repository.getEffectiveHabitVersion(outcomeHabit.habitId, today)?.targetValue)
 
         // 4. Ordinary Daily Apply Tomorrow succeeds with effectiveFromLocalDate == tomorrow and preserves today's version/activity
-        val appliedTomorrowDaily = viewModel.saveHabit(zeroHabit.copy(targetValue = 35), applyTodayWhenLogged = false)
+        val appliedTomorrowDaily = runBlocking { viewModel.saveHabitAsync(zeroHabit.copy(targetValue = 35), applyTodayWhenLogged = false) }
         assertNotNull(appliedTomorrowDaily)
         assertEquals(tomorrow.toString(), appliedTomorrowDaily!!.effectiveFromLocalDate)
         assertEquals(20, repository.getEffectiveHabitVersion(zeroHabit.habitId, today)?.targetValue)
@@ -1127,24 +1191,28 @@ class Phase2ImplementationTest {
         assertEquals(0, repository.getEntriesForHabitOnDate(zeroHabit.habitId, today).single().valueUnits)
 
         // 5. Weekly same-unit target change takes effect tomorrow while current week retains frozen start-of-week version
-        val appliedTomorrowWeeklySameUnit = viewModel.saveHabit(
-            outcomeHabit.copy(targetValue = 5),
-            applyTodayWhenLogged = false
-        )
+        val appliedTomorrowWeeklySameUnit = runBlocking {
+            viewModel.saveHabitAsync(
+                outcomeHabit.copy(targetValue = 5),
+                applyTodayWhenLogged = false
+            )
+        }
         assertNotNull(appliedTomorrowWeeklySameUnit)
         assertEquals(tomorrow.toString(), appliedTomorrowWeeklySameUnit!!.effectiveFromLocalDate)
         val currentWeekSummary = repository.loadHabitSummariesSync()[outcomeHabit.habitId]!!
         assertEquals(BigInteger.valueOf(3), currentWeekSummary.weekTargetUnits)
 
         // 6. Weekly unit or tracking-mode change is deferred to the next weekly boundary (Monday 2026-03-23)
-        val weeklyModeChange = viewModel.saveHabit(
-            outcomeHabit.copy(
-                trackingMode = TrackingMode.DURATION,
-                unitCode = "min",
-                targetValue = 90
-            ),
-            applyTodayWhenLogged = false
-        )
+        val weeklyModeChange = runBlocking {
+            viewModel.saveHabitAsync(
+                outcomeHabit.copy(
+                    trackingMode = TrackingMode.DURATION,
+                    unitCode = "min",
+                    targetValue = 90
+                ),
+                applyTodayWhenLogged = false
+            )
+        }
         assertNotNull(weeklyModeChange)
         assertEquals("2026-03-23", weeklyModeChange!!.effectiveFromLocalDate)
     }
@@ -1567,6 +1635,10 @@ class Phase2ImplementationTest {
         viewModel.openHabitDetail(habitA.habitId, today)
         viewModel.openEditHabit(habitA)
         viewModel.deleteHabit(habitA.habitId)
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        repository.habits.awaitMatch { habits -> habits.none { it.habitId == habitA.habitId } }
+        // The launch-body tail (route cleanup, user message) resumes unconfined after the IO work.
+        viewModel.userMessage.awaitMatch { it == "Habit permanently deleted" }
 
         assertNull("UndoToken belonging to deleted habitA must be invalidated", viewModel.activeUndoToken.value)
         assertFalse(repository.executeUndoSync(tokenForA))
@@ -1587,6 +1659,8 @@ class Phase2ImplementationTest {
         assertEquals(tokenForB.tokenId, viewModel.activeUndoToken.value?.tokenId)
 
         viewModel.deleteHabit(habitC.habitId)
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        repository.habits.awaitMatch { habits -> habits.none { it.habitId == habitC.habitId } }
         assertFalse(repository.loadHabitsSync().any { it.habitId == habitC.habitId })
         assertEquals(
             "Unrelated pending UndoToken belonging to habitB must remain active when habitC is deleted",
@@ -1788,6 +1862,12 @@ class Phase2ImplementationTest {
             effortLevel = EffortLevel.TINY,
             note = "Backdated tiny effort"
         )
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        repository.habitDayOutcomes.awaitMatch { outcomes ->
+            outcomes.any {
+                it.habitId == evolvingHabit.habitId && it.localDate == "2026-03-15" && it.outcomeKind == "EFFORT_LOGGED"
+            }
+        }
         val outcomeOnMar15 = repository.habitDayOutcomes.value.single {
             it.habitId == evolvingHabit.habitId && it.localDate == "2026-03-15"
         }
@@ -1841,6 +1921,13 @@ class Phase2ImplementationTest {
             effortLevel = EffortLevel.EXTRA,
             note = "Midweek frozen effort save"
         )
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        repository.habitDayOutcomes.awaitMatch { outcomes ->
+            outcomes.any {
+                it.habitId == weeklyModeShiftHabit.habitId && it.localDate == "2026-03-18" &&
+                    it.outcomeKind == "EFFORT_LOGGED" && it.effortLevel == "EXTRA"
+            }
+        }
         val savedMidWeekOutcome = repository.habitDayOutcomes.value.single {
             it.habitId == weeklyModeShiftHabit.habitId && it.localDate == "2026-03-18"
         }
@@ -1863,7 +1950,7 @@ class Phase2ImplementationTest {
             scheduleDays = setOf(DayOfWeek.MONDAY, DayOfWeek.THURSDAY),
             createdAtUtcMs = testClock.nowUtcMs()
         )
-        assertNotNull(viewModel.saveHabit(flexWithPreferred))
+        assertNotNull(runBlocking { viewModel.saveHabitAsync(flexWithPreferred) })
         val savedWithPref = repository.loadHabitsSync().single { it.habitId == "h_f04_pref" }
         assertEquals(
             WeekdayMask.toMask(setOf(DayOfWeek.MONDAY, DayOfWeek.THURSDAY)),
@@ -1876,7 +1963,7 @@ class Phase2ImplementationTest {
             preferredWeekdaysMask = null,
             scheduleDays = emptySet()
         )
-        assertNotNull(viewModel.saveHabit(clearedPreferred))
+        assertNotNull(runBlocking { viewModel.saveHabitAsync(clearedPreferred) })
 
         val reloadedAfterClear = repository.loadHabitsSync().single { it.habitId == "h_f04_pref" }
         assertNull("Cleared preferred weekdays must persist as preferredWeekdaysMask = null", reloadedAfterClear.preferredWeekdaysMask)
@@ -1903,13 +1990,15 @@ class Phase2ImplementationTest {
         assertNull(SettingsSupport.parseStrictHhMm(""))
 
         // 4. F-05: Stale save errors clear cleanly via clearSaveError()
-        val failed = viewModel.saveHabit(
-            Habit(
-                habitId = "h_f05_err",
-                name = "   ",
-                trackingMode = TrackingMode.COMPLETION_ONLY
+        val failed = runBlocking {
+            viewModel.saveHabitAsync(
+                Habit(
+                    habitId = "h_f05_err",
+                    name = "   ",
+                    trackingMode = TrackingMode.COMPLETION_ONLY
+                )
             )
-        )
+        }
         assertNull(failed)
         assertNotNull(viewModel.lastSaveError.value)
         assertNotNull(viewModel.lastErrorMessage.value)

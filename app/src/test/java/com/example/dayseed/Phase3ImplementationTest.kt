@@ -24,6 +24,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -35,10 +36,15 @@ import java.time.LocalTime
 import java.time.YearMonth
 import java.time.ZoneId
 import java.util.UUID
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class Phase3ImplementationTest {
+
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
 
     private class MutableTestClock(
         var currentLocalDate: LocalDate = LocalDate.of(2026, 10, 14),
@@ -70,7 +76,9 @@ class Phase3ImplementationTest {
             clock = testClock,
             databaseName = dbName
         )
-        viewModel = DayseedViewModel(app, repository)
+        // Dispatchers.Unconfined (test-only, see Phase2 setup): mutation chains
+        // never return to the paused test Main, so awaits cannot deadlock.
+        viewModel = DayseedViewModel(app, repository, ioDispatcher = kotlinx.coroutines.Dispatchers.Unconfined)
     }
 
     @After
@@ -165,6 +173,8 @@ class Phase3ImplementationTest {
             primaryMoodCode = "FOCUSED"
         )
         viewModel.saveJournalEntry(candidateEntry, sourceDraftId = "draft_fail_retry")
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        viewModel.lastJournalSaveError.awaitMatch { it != null }
         // Save failed: editor stays open, error banner populated
         assertTrue(viewModel.isJournalEditorOpen.value)
         assertNotNull(viewModel.lastJournalSaveError.value)
@@ -184,6 +194,8 @@ class Phase3ImplementationTest {
         // Clear failure and retry Save: must reuse the exact same intendedJournalEntryId
         repository.injectedJournalSaveFailure = null
         viewModel.saveJournalEntry(candidateEntry, sourceDraftId = "draft_fail_retry")
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        viewModel.userMessage.awaitMatch { it == "Daily reflection saved ✍️" }
         // Retry succeeds: editor closes, no error, entry persisted
         assertFalse(viewModel.isJournalEditorOpen.value)
         assertNull(viewModel.lastJournalSaveError.value)
@@ -293,6 +305,8 @@ class Phase3ImplementationTest {
             body = "Temporary draft"
         )
         viewModel.discardJournalDraft("draft_to_discard")
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        viewModel.userMessage.awaitMatch { it == "Draft discarded" }
         assertEquals(0, repository.journalDrafts.value.size)
         assertNull(repository.activeUndoToken.value)
 
@@ -304,6 +318,8 @@ class Phase3ImplementationTest {
             )
         )
         viewModel.deleteJournalEntry(saved.journalEntryId)
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        viewModel.userMessage.awaitMatch { it == "Reflection deleted" }
         assertEquals(0, repository.journalEntries.value.size)
         assertNull(repository.activeUndoToken.value)
     }
@@ -776,6 +792,10 @@ class Phase3ImplementationTest {
             primaryMoodCode = "STRESSED"
         )
         viewModel.saveJournalEntry(staleCaller2Entry, sourceDraftId = "draft_vm_race")
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        // Re-promoting the already-promoted draft is a no-op success (returns
+        // Caller 1's existing entry); the ViewModel reports the normal save.
+        viewModel.userMessage.awaitMatch { it != null && it.startsWith("Daily reflection saved") }
 
         // Verify only 1 entry exists, with Caller 1's exact ID, body, title, mood, and timestamps preserved!
         assertEquals(1, repository.journalEntries.value.size)
