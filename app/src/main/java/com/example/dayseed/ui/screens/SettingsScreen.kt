@@ -29,6 +29,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -40,8 +41,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.dayseed.BuildConfig
 import com.example.dayseed.DayseedViewModel
 import com.example.dayseed.NavTab
 import com.example.dayseed.data.HabitLifecycleState
@@ -104,6 +108,13 @@ fun SettingsScreen(
             DayOfWeek.MONDAY
         }
     }
+    val appReducedMotionSetting = remember(appSettings) {
+        appSettings["reduced_motion_enabled"]?.valueText.equals("true", ignoreCase = true)
+    }
+    val systemReducedMotion = remember(appSettings) {
+        viewModel.isSystemReducedMotionActive()
+    }
+    val effectiveReducedMotion = appReducedMotionSetting || systemReducedMotion
 
     var activeSheet by remember { mutableStateOf<SettingsSheet?>(null) }
     var dataSubScreenFocus by remember { mutableStateOf<DataSubScreenSection?>(null) }
@@ -205,6 +216,52 @@ fun SettingsScreen(
                             currentWeekStart = currentWeekStart
                         )
                     }
+
+                    SettingsRowDivider()
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .testTag("settings_row_reduced_motion"),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 12.dp)
+                        ) {
+                            Text(
+                                text = "Reduce motion",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = if (systemReducedMotion) {
+                                    "Active via Android system accessibility settings"
+                                } else {
+                                    "Simplify theme transitions, botanical motion, and launch animations"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = effectiveReducedMotion,
+                            onCheckedChange = { enabled ->
+                                if (!systemReducedMotion) {
+                                    viewModel.setReducedMotionEnabled(enabled)
+                                }
+                            },
+                            enabled = !systemReducedMotion,
+                            modifier = Modifier
+                                .semantics { contentDescription = "Reduce motion" }
+                                .testTag("settings_reduced_motion_switch")
+                        )
+                    }
                 }
             }
 
@@ -298,7 +355,7 @@ fun SettingsScreen(
                     SettingsRowDivider()
                     SettingsRow(
                         label = "About Dayseed",
-                        summary = "Version 1.0.0 · Your progress is more than your streak",
+                        summary = "Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) · Your progress is more than your streak",
                         icon = Icons.Default.Info,
                         onClick = { activeSheet = SettingsSheet.ABOUT },
                         testTag = "settings_row_about"
@@ -368,15 +425,6 @@ fun SettingsScreen(
                             onNavigateToHabitEditors = {
                                 activeSheet = null
                                 viewModel.selectTab(NavTab.HABITS)
-                            }
-                        )
-                    SettingsSheet.JOURNAL_EXPORT ->
-                        JournalExportPanel(
-                            viewModel = viewModel,
-                            onPreview = { title, text ->
-                                exportedTitle = title
-                                exportedTextPreview = text
-                                activeSheet = null
                             }
                         )
                     SettingsSheet.PRIVACY -> PrivacyPanel()

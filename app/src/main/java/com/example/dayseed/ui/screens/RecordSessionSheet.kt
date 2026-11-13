@@ -47,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -283,9 +284,6 @@ fun RecordSessionSheet(
             )
         )
     }
-    var selectedEffort by remember {
-        mutableStateOf(EffortLevel.USUAL)
-    }
     var noteText by remember(existingEntry) {
         mutableStateOf(existingEntry?.entryNote ?: "")
     }
@@ -372,7 +370,7 @@ fun RecordSessionSheet(
         modifier = modifier
             .fillMaxSize()
             .testTag("record_session_sheet"),
-        color = MaterialTheme.colorScheme.background
+        color = Color.Transparent
     ) {
         Column(
             modifier = Modifier
@@ -609,8 +607,8 @@ fun RecordSessionSheet(
                                 onClick = { valueText = extra.toString() },
                                 label = {
                                     Text(
-                                        if (isWeeklySessionCount) "2 (Extra)"
-                                        else "$extra $unitLabel (Extra)"
+                                        if (isWeeklySessionCount) "2 sessions"
+                                        else "+$extra $unitLabel"
                                     )
                                 },
                                 modifier = Modifier
@@ -626,27 +624,16 @@ fun RecordSessionSheet(
                                     .heightIn(min = 48.dp)
                                     .testTag("preset_full_chip")
                             )
-                            if (effectiveMode == TrackingMode.EFFORT_AWARE && previewValueUnits >= 1) {
-                                FilterChip(
-                                    selected = selectedEffort == EffortLevel.TINY,
-                                    onClick = { selectedEffort = EffortLevel.TINY },
-                                    label = { Text("🌱 Tiny") },
-                                    modifier = Modifier.heightIn(min = 48.dp)
-                                )
-                                FilterChip(
-                                    selected = selectedEffort == EffortLevel.USUAL,
-                                    onClick = { selectedEffort = EffortLevel.USUAL },
-                                    label = { Text("🌿 Usual") },
-                                    modifier = Modifier.heightIn(min = 48.dp)
-                                )
-                                FilterChip(
-                                    selected = selectedEffort == EffortLevel.EXTRA,
-                                    onClick = { selectedEffort = EffortLevel.EXTRA },
-                                    label = { Text("🌳 Extra") },
-                                    modifier = Modifier.heightIn(min = 48.dp)
-                                )
-                            }
                         }
+                    }
+
+                    if (effectiveMode == TrackingMode.EFFORT_AWARE) {
+                        Text(
+                            text = "Legacy effort habit: records a completion check-in. Edit habit to switch to Quantity, Duration, or Simple Check-Off for target-based progress.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag("record_session_legacy_effort_notice")
+                        )
                     }
 
                     // Optional Session Note
@@ -813,7 +800,7 @@ fun RecordSessionSheet(
                                         habit = governedHabit,
                                         date = parsedDate,
                                         outcome = DailyOutcome.COMPLETED,
-                                        effortLevel = selectedEffort,
+                                        effortLevel = EffortLevel.STANDARD,
                                         note = noteText.trim()
                                     )
                                 }

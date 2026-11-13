@@ -10,13 +10,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import java.time.LocalTime
+
+val LocalDayseedLiveTime = compositionLocalOf<LocalTime> { LocalTime.now() }
 
 private val DarkColorScheme = darkColorScheme(
     primary = DarkBrand,
@@ -139,7 +143,7 @@ fun resolveDayseedColorScheme(
     localTime: LocalTime = LocalTime.now()
 ): Pair<ColorScheme, Boolean> {
     return when (themeMode) {
-        ThemeModeOption.LIGHT -> LightColorScheme.copy(surface = LightSurface) to false
+        ThemeModeOption.LIGHT -> LightColorScheme to false
         ThemeModeOption.DARK -> DarkColorScheme to true
         ThemeModeOption.SYSTEM -> if (systemDark) DarkColorScheme to true else LightColorScheme to false
         ThemeModeOption.SOFT_BOTANICAL_AUTO -> {
@@ -220,9 +224,11 @@ fun DayseedTheme(
         }
     }
 
-    MaterialTheme(
-        colorScheme = animatedColorScheme,
-        typography = DayseedTypography,
-        content = content
-    )
+    CompositionLocalProvider(LocalDayseedLiveTime provides localTime) {
+        MaterialTheme(
+            colorScheme = animatedColorScheme,
+            typography = DayseedTypography,
+            content = content
+        )
+    }
 }

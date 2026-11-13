@@ -128,7 +128,6 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 16.dp)
             .testTag("insights_screen"),
         verticalArrangement = Arrangement.spacedBy(20.dp)

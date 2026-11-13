@@ -742,3 +742,51 @@ All Phase 4 cases are **`NOT RUN`**. They require a physical Android device (And
   1. Enable Airplane mode before opening the app.
   2. Create/edit a habit, record progress, write and save a journal entry, browse history/insights, and open privacy/backup settings without exporting a file.
 - **Expected:** Core habit and journal use remains available offline; no sign-in or network connection is required.
+
+---
+
+## Canonical UI & Product-Behaviour Reconciliation — Human/Device Validation Cases (added 2026-11-13; D-233)
+
+All `P5-H*` cases below are **`NOT RUN`**. They require installing the upgraded APK (`versionName = "1.0.1"`, `versionCode = 2`) on the physical Android device and observing live device behaviour.
+
+### P5-H01 — In-place APK upgrade (`1.0` → `1.0.1`, build 2) and automatic `4c1187a` starter-data cleanup preserving user data
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. On a phone carrying the historical `4c1187a` starter data (`Gentle Movement`, `Quiet Reading`, `Drink Water`, and the starter journal entry) — or a synthetic mix of those starter items plus real user habits/entries — install the new `1.0.1` (`versionCode = 2`) APK as an in-place update without uninstalling.
+  2. Launch Dayseed and inspect `Today`, `Habits`, `Journal`, and `Settings → About Dayseed`.
+- **Expected:** The historical `4c1187a` starter habits and starter journal reflection are removed automatically once; if no real habits existed, the first-run onboarding welcome card is shown; if real user habits or edited starter habits existed, every user habit, entry, outcome, note, streak run, and journal entry remains intact. `Settings → About Dayseed` displays `Dayseed 1.0.1 (build 2)` and the build commit SHA.
+
+### P5-H02 — Evidence-derived habit recording without manual `Tiny`/`Usual`/`Extra` effort buttons
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Inspect active habit cards on `Today` and open `Record Session` and `Create / Edit Habit`.
+  2. Log partial, exact-target, and above-target values for `Duration` and `Quantity` habits, and log a `Simple Check-Off` habit.
+  3. Open an imported/historical `EFFORT_AWARE` habit on `Today`, in `Record Session`, and in `Edit Habit`.
+- **Expected:** No manual `🌱 Tiny`, `🌿 Usual`, or `🌳 Extra` effort-selection buttons or chips appear in `Today` cards, `Record Session`, or `Create / Edit Habit`. Progress bands (`Tiny` through `Huge`) and paired encouragement/motivation quotes derive automatically from recorded evidence relative to target. Legacy `EFFORT_AWARE` habits preserve historical records and show a calm conversion banner in `Edit Habit`.
+
+### P5-H03 — Shared `DaypartBackgroundLayer` across all primary tabs and secondary screens, plus `LIGHT` vs `SYSTEM`-light coherence
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Set appearance to `Time-of-day (Soft Botanical)` and navigate across `Today`, `Habits`, `Journal`, `Insights`, `Settings`, `Habit Detail`, `Create / Edit Habit`, and `Record Session`.
+  2. Switch between `Fixed Light` and `Match system` (while the device OS is in light mode) and compare card/screen surfaces.
+- **Expected:** The subtle daypart sky wash and horizon hills remain visible behind all primary tabs and secondary sheets/screens rather than disappearing outside `Today`; `Fixed Light` and `Match system` (light) render identical warm ivory card surfaces (`#F7F3EA`).
+
+### P5-H04 — Settings `Reduce motion` toggle and Android system animator scale compliance
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Open `Settings → Appearance & rhythm` (and the `Appearance` sheet) and toggle `Reduce motion` on and off.
+  2. With `Reduce motion` off in Dayseed, disable animations at the Android OS level (`Remove animations` / `Animator duration scale = off`) and return to Dayseed.
+- **Expected:** Enabling `Reduce motion` in Dayseed or disabling animations in Android system settings suppresses continuous botanical sway and daypart artwork blending across the app.
+
+### P5-H05 — Restrained cold-launch brand presentation and adaptive launcher icon on device
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Cold-launch Dayseed from the Android home screen launcher icon.
+  2. Observe the `dayseed_cold_launch_scene` card on `Today`, then switch tabs or dismiss it and return to `Today`.
+- **Expected:** The adaptive Dayseed seed-and-sprout launcher icon appears cleanly on the Android home screen; the opening brand lockup (`Dayseed` + `"Your progress is more than your streak."`) appears calmly once per cold launch without blocking interaction and does not reappear on subsequent tab switches within the same session.
+

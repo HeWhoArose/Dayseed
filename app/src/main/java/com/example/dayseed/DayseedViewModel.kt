@@ -173,6 +173,14 @@ class DayseedViewModel @JvmOverloads constructor(
     private val _todayNotScheduledExpanded = MutableStateFlow(false)
     val todayNotScheduledExpanded: StateFlow<Boolean> = _todayNotScheduledExpanded.asStateFlow()
 
+    // Cold-launch opening scene flag: shown at most once per ViewModel session, never replayed on tab switches.
+    private val _hasShownColdLaunchScene = MutableStateFlow(false)
+    val hasShownColdLaunchScene: StateFlow<Boolean> = _hasShownColdLaunchScene.asStateFlow()
+
+    fun markColdLaunchSceneShown() {
+        _hasShownColdLaunchScene.value = true
+    }
+
     private val _scrollPositions = MutableStateFlow<Map<String, Pair<Int, Int>>>(emptyMap())
     val scrollPositions: StateFlow<Map<String, Pair<Int, Int>>> = _scrollPositions.asStateFlow()
 
@@ -547,7 +555,7 @@ class DayseedViewModel @JvmOverloads constructor(
         habit: Habit,
         date: LocalDate = repository.clock.todayLocal(),
         outcome: DailyOutcome = DailyOutcome.COMPLETED,
-        effortLevel: EffortLevel = EffortLevel.USUAL,
+        effortLevel: EffortLevel = EffortLevel.STANDARD,
         note: String = "",
         idempotencyKey: String? = null
     ) {
@@ -578,7 +586,7 @@ class DayseedViewModel @JvmOverloads constructor(
                 val mode = (govVer?.trackingMode ?: habit.currentVersion?.trackingMode ?: habit.trackingMode).canonical()
 
                 try {
-                    if (mode == TrackingMode.COMPLETION_ONLY) {
+                    if (mode == TrackingMode.COMPLETION_ONLY || effortLevel == EffortLevel.STANDARD) {
                         repository.logHabitDayOutcome(
                             habitId = habit.habitId,
                             date = date,
@@ -908,11 +916,7 @@ class DayseedViewModel @JvmOverloads constructor(
 
     fun acknowledgeDormantTransition(runId: String) = acknowledgeDormantRun(runId)
 
-    fun isReducedMotionEnabled(): Boolean {
-        val appSetting = repository.getSettingString("reduced_motion_enabled", "false")
-        if (appSetting.equals("true", ignoreCase = true) || appSetting == "1") {
-            return true
-        }
+    fun isSystemReducedMotionActive(): Boolean {
         return try {
             val scale = Settings.Global.getFloat(
                 getApplication<Application>().contentResolver,
@@ -922,6 +926,23 @@ class DayseedViewModel @JvmOverloads constructor(
             scale == 0f
         } catch (_: Exception) {
             false
+        }
+    }
+
+    fun isReducedMotionEnabled(): Boolean {
+        val appSetting = repository.getSettingString("reduced_motion_enabled", "false")
+        if (appSetting.equals("true", ignoreCase = true) || appSetting == "1") {
+            return true
+        }
+        return isSystemReducedMotionActive()
+    }
+
+    fun setReducedMotionEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                repository.setSetting("reduced_motion_enabled", "BOOL", if (enabled) "true" else "false")
+                _userMessage.value = if (enabled) "Reduced motion enabled" else "Reduced motion disabled"
+            }
         }
     }
 

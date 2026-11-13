@@ -54,7 +54,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -76,6 +75,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.dayseed.BuildConfig
 import com.example.dayseed.DayseedViewModel
 import com.example.dayseed.data.BackupLimits
 import com.example.dayseed.data.ConflictResolution
@@ -91,12 +91,12 @@ import com.example.dayseed.ui.theme.DarkBrand
 import com.example.dayseed.ui.theme.DarkCanvas
 import com.example.dayseed.ui.theme.LightBrand
 import com.example.dayseed.ui.theme.LightCanvas
+import com.example.dayseed.ui.theme.LocalDayseedLiveTime
 import com.example.dayseed.ui.theme.NightGoldAccent
 import com.example.dayseed.ui.theme.SoftBotanicalThemeConfig
 import com.example.dayseed.ui.theme.ThemeModeOption
 import com.example.dayseed.ui.theme.resolveDayseedArtwork
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
 import java.time.DayOfWeek
 
 /**
@@ -105,7 +105,7 @@ import java.time.DayOfWeek
  * quick preferences and unifying Journal Export + Portable Backup into a cohesive Data sub-screen.
  */
 enum class SettingsSheet {
-    APPEARANCE, WEEK_START, QUIET_HOURS, REMINDERS, JOURNAL_EXPORT, PRIVACY, REMOVED_HABITS, ABOUT
+    APPEARANCE, WEEK_START, QUIET_HOURS, REMINDERS, PRIVACY, REMOVED_HABITS, ABOUT
 }
 
 enum class DataSubScreenSection {
@@ -143,18 +143,7 @@ fun InlineAppearanceSelector(
     modifier: Modifier = Modifier
 ) {
     val isSystemDark = isSystemInDarkTheme()
-    // Live local-time source: refreshes on a 30-second tick so the Settings preview stays in
-    // sync with the Today screen's app clock and never freezes at composition time.
-    val nowLocal by produceState(
-        initialValue = viewModel.repository.clock.nowLocalTime(),
-        key1 = currentThemeMode
-    ) {
-        value = viewModel.repository.clock.nowLocalTime()
-        while (true) {
-            delay(30_000L)
-            value = viewModel.repository.clock.nowLocalTime()
-        }
-    }
+    val nowLocal = LocalDayseedLiveTime.current
     val previewArtwork = remember(currentThemeMode, isSystemDark, nowLocal) {
         resolveDayseedArtwork(currentThemeMode, isSystemDark, nowLocal)
     }
@@ -315,6 +304,15 @@ fun AppearancePanel(
     viewModel: DayseedViewModel,
     currentThemeMode: ThemeModeOption
 ) {
+    val appSettings by viewModel.appSettings.collectAsState()
+    val appReducedMotionSetting = remember(appSettings) {
+        appSettings["reduced_motion_enabled"]?.valueText.equals("true", ignoreCase = true)
+    }
+    val systemReducedMotion = remember(appSettings) {
+        viewModel.isSystemReducedMotionActive()
+    }
+    val effectiveReducedMotion = appReducedMotionSetting || systemReducedMotion
+
     PanelTitle(
         "Appearance",
         "How Dayseed looks. Soft Botanical (Time of Day) shifts palette and illustration gradually " +
@@ -323,6 +321,41 @@ fun AppearancePanel(
     )
     Spacer(modifier = Modifier.height(12.dp))
     InlineAppearanceSelector(viewModel = viewModel, currentThemeMode = currentThemeMode)
+    Spacer(modifier = Modifier.height(14.dp))
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+            Text(
+                text = "Reduce motion",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = if (systemReducedMotion) {
+                    "Active via Android system accessibility settings"
+                } else {
+                    "Simplify theme transitions, botanical motion, and launch animations"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Switch(
+            checked = effectiveReducedMotion,
+            onCheckedChange = { enabled ->
+                if (!systemReducedMotion) {
+                    viewModel.setReducedMotionEnabled(enabled)
+                }
+            },
+            enabled = !systemReducedMotion,
+            modifier = Modifier.testTag("appearance_sheet_reduced_motion_switch")
+        )
+    }
     Spacer(modifier = Modifier.height(20.dp))
 }
 
@@ -1157,10 +1190,18 @@ fun AboutPanel() {
     )
     Spacer(modifier = Modifier.height(12.dp))
     Text(
-        text = "Dayseed 1.0.0",
+        text = "Dayseed ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})",
         style = MaterialTheme.typography.bodyMedium,
-        fontWeight = FontWeight.Medium
+        fontWeight = FontWeight.Medium,
+        modifier = Modifier.testTag("about_version_text")
     )
+    Text(
+        text = "Build: ${BuildConfig.BUILD_TYPE} · Commit: ${BuildConfig.GIT_COMMIT_SHA}",
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.testTag("about_build_provenance_text")
+    )
+    Spacer(modifier = Modifier.height(4.dp))
     Text(
         text = "Your progress is more than your streak.",
         style = MaterialTheme.typography.bodySmall,

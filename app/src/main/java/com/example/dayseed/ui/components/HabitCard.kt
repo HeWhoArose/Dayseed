@@ -690,37 +690,15 @@ private fun UnrecordedOutcomeActionRow(
 ) {
     val effVersion = summary?.effectiveVersion
     val mode = (effVersion?.trackingMode ?: habit.trackingMode).canonical()
-    if (mode == TrackingMode.EFFORT_AWARE) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            EffortButton(
-                symbol = "🌱",
-                title = "Tiny",
-                subtitle = effVersion?.tinyDescription ?: habit.tinyDescription,
-                color = TinySproutColor,
-                modifier = Modifier.weight(1f),
-                onClick = { onLog(DailyOutcome.COMPLETED, EffortLevel.TINY) }
-            )
-            EffortButton(
-                symbol = "🌿",
-                title = "Usual",
-                subtitle = effVersion?.usualDescription ?: habit.usualDescription,
-                color = UsualLeafColor,
-                modifier = Modifier.weight(1f),
-                onClick = { onLog(DailyOutcome.COMPLETED, EffortLevel.USUAL) }
-            )
-            EffortButton(
-                symbol = "🌳",
-                title = "Extra",
-                subtitle = effVersion?.extraDescription ?: habit.extraDescription,
-                color = ExtraBranchColor,
-                modifier = Modifier.weight(1f),
-                onClick = { onLog(DailyOutcome.COMPLETED, EffortLevel.EXTRA) }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (mode == TrackingMode.EFFORT_AWARE) {
+            Text(
+                text = "Legacy effort habit — Edit habit to set a Quantity, Duration, or Check-Off goal.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag("legacy_effort_mode_notice_${habit.id}")
             )
         }
-    } else {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -758,50 +736,3 @@ private fun UnrecordedOutcomeActionRow(
     }
 }
 
-@Composable
-private fun EffortButton(
-    symbol: String,
-    title: String,
-    subtitle: String,
-    color: Color,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Surface(
-        onClick = onClick,
-        modifier = modifier
-            .heightIn(min = 48.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .testTag("effort_btn_${title.lowercase()}"),
-        color = color.copy(alpha = 0.08f),
-        border = BorderStroke(1.dp, color.copy(alpha = 0.25f)),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 10.dp, horizontal = 6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(text = symbol, fontSize = 18.sp)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                color = color
-            )
-            if (subtitle.isNotBlank()) {
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontSize = 11.sp,
-                    maxLines = 1,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}

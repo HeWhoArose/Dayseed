@@ -45,6 +45,8 @@ class DayseedDatabaseHelper(
         const val TABLE_RESTORE_CONFLICTS = "restore_conflicts"
         const val TABLE_NOTIFICATION_CANCEL_OUTBOX = "notification_cancel_outbox"
 
+        const val SETTING_LEGACY_V1_DEMO_CLEANUP_COMPLETED = "legacy_v1_demo_cleanup_completed"
+
         val ALL_V3_TABLES = setOf(
             TABLE_HABITS,
             TABLE_HABIT_VERSIONS,
@@ -90,6 +92,7 @@ class DayseedDatabaseHelper(
         db.execSQL("PRAGMA foreign_keys = ON;")
         if (!db.isReadOnly && db.version == DATABASE_VERSION) {
             reconcileExistingV3SchemaIfNeeded(db)
+            cleanupLegacyV1DemoDataIfNeeded(db)
         }
     }
 
@@ -111,6 +114,7 @@ class DayseedDatabaseHelper(
         if (oldVersion < 3) {
             migrateV2ToV3FailClosed(db, migrationEvaluationDateProvider())
         }
+        cleanupLegacyV1DemoDataIfNeeded(db)
     }
 
     override fun onDowngrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -1617,6 +1621,282 @@ class DayseedDatabaseHelper(
         } finally {
             db.endTransaction()
         }
+    }
+
+    /**
+     * One-time, idempotent, transactional cleanup of the historical commit `4c1187a`
+     * starter demonstration records ("Gentle Movement", "Quiet Reading", "Drink Water",
+     * and the sample "Started Dayseed today..." journal entry).
+     *
+     * Matches records only when every attribute of the historical starter fingerprint matches
+     * (never by habit name or journal substring alone). Preserves all unrelated user habits,
+     * journal entries, history, and preferences.
+     */
+    fun cleanupLegacyV1DemoDataIfNeeded(
+        db: SQLiteDatabase,
+        forceRecheck: Boolean = false
+    ): Int {
+        if (!tableExists(db, TABLE_APP_SETTINGS) ||
+            !tableExists(db, TABLE_HABITS) ||
+            !tableExists(db, TABLE_HABIT_VERSIONS) ||
+            !tableExists(db, TABLE_JOURNAL_ENTRIES)
+        ) {
+            return 0
+        }
+
+        if (!forceRecheck) {
+            var alreadyCompleted = false
+            db.rawQuery(
+                "SELECT value_text FROM $TABLE_APP_SETTINGS WHERE setting_key = ? LIMIT 1",
+                arrayOf(SETTING_LEGACY_V1_DEMO_CLEANUP_COMPLETED)
+            ).use { c ->
+                if (c.moveToFirst() && !c.isNull(0)) {
+                    alreadyCompleted = c.getString(0).equals("true", ignoreCase = true)
+                }
+            }
+            if (alreadyCompleted) return 0
+        }
+
+        var removedCount = 0
+        db.beginTransaction()
+        try {
+            data class VersionFingerprintRow(
+                val habitId: String,
+                val name: String,
+                val description: String?,
+                val trackingMode: String,
+                val unitCode: String?,
+                val targetPeriod: String,
+                val targetValue: Int?,
+                val scheduleKind: String,
+                val scheduledMask: Int?,
+                val preferredMask: Int?,
+                val tinyDesc: String,
+                val usualDesc: String,
+                val extraDesc: String,
+                val colorHex: String
+            )
+
+            val versionsByHabit = mutableMapOf<String, MutableList<VersionFingerprintRow>>()
+            db.rawQuery(
+                """
+                SELECT habit_id, name, description, tracking_mode, unit_code,
+                       target_period, target_value, schedule_kind,
+                       scheduled_weekdays_mask, preferred_weekdays_mask,
+                       tiny_description, usual_description, extra_description, color_hex
+                FROM $TABLE_HABIT_VERSIONS
+                """.trimIndent(),
+                null
+            ).use { c ->
+                while (c.moveToNext()) {
+                    val row = VersionFingerprintRow(
+                        habitId = c.getString(0),
+                        name = c.getString(1),
+                        description = if (c.isNull(2)) null else c.getString(2),
+                        trackingMode = c.getString(3),
+                        unitCode = if (c.isNull(4)) null else c.getString(4),
+                        targetPeriod = c.getString(5),
+                        targetValue = if (c.isNull(6)) null else c.getInt(6),
+                        scheduleKind = c.getString(7),
+                        scheduledMask = if (c.isNull(8)) null else c.getInt(8),
+                        preferredMask = if (c.isNull(9)) null else c.getInt(9),
+                        tinyDesc = if (c.isNull(10)) "" else c.getString(10),
+                        usualDesc = if (c.isNull(11)) "" else c.getString(11),
+                        extraDesc = if (c.isNull(12)) "" else c.getString(12),
+                        colorHex = if (c.isNull(13)) "" else c.getString(13)
+                    )
+                    versionsByHabit.getOrPut(row.habitId) { mutableListOf() }.add(row)
+                }
+            }
+
+            fun matchesStarterHabitFingerprint(v: VersionFingerprintRow): Boolean {
+                val baseScheduleMatches = v.unitCode == null &&
+                    v.targetPeriod == "DAY" &&
+                    v.targetValue == null &&
+                    v.scheduleKind == "DAILY" &&
+                    v.scheduledMask == null &&
+                    v.preferredMask == null
+                if (!baseScheduleMatches) return false
+
+                val isGentleMovement = v.name == "Gentle Movement" &&
+                    v.description == "Move your body with kindness, no workout pressure" &&
+                    v.trackingMode in setOf("EFFORT_AWARE", "EFFORT_LEVELS") &&
+                    v.tinyDesc == "Roll shoulders or 1 deep stretch" &&
+                    v.usualDesc == "10-minute walk or gentle yoga" &&
+                    v.extraDesc == "25-minute walk in fresh air" &&
+                    v.colorHex.equals("#286143", ignoreCase = true)
+
+                val isQuietReading = v.name == "Quiet Reading" &&
+                    v.description == "Feed curiosity without finishing a whole book" &&
+                    v.trackingMode in setOf("EFFORT_AWARE", "EFFORT_LEVELS") &&
+                    v.tinyDesc == "Read 1 paragraph or sentence" &&
+                    v.usualDesc == "Read 1 chapter (10 mins)" &&
+                    v.extraDesc == "Read for 30 minutes in peace" &&
+                    v.colorHex.equals("#3B6955", ignoreCase = true)
+
+                val isDrinkWater = v.name == "Drink Water" &&
+                    v.description == "A cup of water to refresh your body" &&
+                    v.trackingMode in setOf("COMPLETION_ONLY", "BINARY") &&
+                    v.tinyDesc in setOf("", "Deliberately small action") &&
+                    v.usualDesc in setOf("", "The ordinary intended action") &&
+                    v.extraDesc in setOf("", "Optional stretch action") &&
+                    v.colorHex.equals("#4A7C59", ignoreCase = true)
+
+                return isGentleMovement || isQuietReading || isDrinkWater
+            }
+
+            val matchedDemoHabitIds = versionsByHabit.entries
+                .filter { (_, versions) ->
+                    versions.isNotEmpty() && versions.all { matchesStarterHabitFingerprint(it) }
+                }
+                .map { it.key }
+
+            for (habitId in matchedDemoHabitIds) {
+                if (tableExists(db, TABLE_NOTIFICATION_CANCEL_OUTBOX) && tableExists(db, TABLE_REMINDER_DELIVERIES)) {
+                    db.execSQL(
+                        """
+                        DELETE FROM $TABLE_NOTIFICATION_CANCEL_OUTBOX
+                        WHERE platform_notification_tag IN (
+                            SELECT platform_notification_tag FROM $TABLE_REMINDER_DELIVERIES
+                            WHERE habit_id = ? AND platform_notification_tag IS NOT NULL
+                        )
+                        """.trimIndent(),
+                        arrayOf(habitId)
+                    )
+                }
+                if (tableExists(db, TABLE_REMINDER_DELIVERIES)) {
+                    db.delete(TABLE_REMINDER_DELIVERIES, "habit_id = ?", arrayOf(habitId))
+                }
+                if (tableExists(db, TABLE_HABIT_STREAK_RUNS)) {
+                    db.delete(TABLE_HABIT_STREAK_RUNS, "habit_id = ?", arrayOf(habitId))
+                }
+                if (tableExists(db, TABLE_HABIT_DATE_EXCEPTIONS)) {
+                    db.delete(TABLE_HABIT_DATE_EXCEPTIONS, "habit_id = ?", arrayOf(habitId))
+                }
+                if (tableExists(db, TABLE_HABIT_DATE_NOTES)) {
+                    db.delete(TABLE_HABIT_DATE_NOTES, "habit_id = ?", arrayOf(habitId))
+                }
+                if (tableExists(db, TABLE_HABIT_DAY_OUTCOMES)) {
+                    db.delete(TABLE_HABIT_DAY_OUTCOMES, "habit_id = ?", arrayOf(habitId))
+                }
+                if (tableExists(db, TABLE_HABIT_ENTRIES)) {
+                    db.delete(TABLE_HABIT_ENTRIES, "habit_id = ?", arrayOf(habitId))
+                }
+                db.delete(TABLE_HABIT_VERSIONS, "habit_id = ?", arrayOf(habitId))
+                val deletedHabitRows = db.delete(TABLE_HABITS, "habit_id = ?", arrayOf(habitId))
+                removedCount += deletedHabitRows
+            }
+
+            val demoPrompt = "What is one small thing that went well today?"
+            val demoBody = "Started Dayseed today. Excited to track my habits with kindness and without streak anxiety."
+            val demoCombinedBody = "Prompt: $demoPrompt\n\n$demoBody"
+
+            val matchedDemoJournalIds = mutableListOf<String>()
+            db.rawQuery(
+                """
+                SELECT journal_entry_id, body, title, primary_mood_code, secondary_mood_code, prompt_id, linked_habit_id
+                FROM $TABLE_JOURNAL_ENTRIES
+                """.trimIndent(),
+                null
+            ).use { c ->
+                while (c.moveToNext()) {
+                    val id = c.getString(0)
+                    val body = if (c.isNull(1)) "" else c.getString(1)
+                    val title = if (c.isNull(2)) null else c.getString(2)
+                    val primaryMood = if (c.isNull(3)) null else c.getString(3)
+                    val secondaryMood = if (c.isNull(4)) null else c.getString(4)
+                    val promptId = if (c.isNull(5)) null else c.getString(5)
+                    val linkedHabitId = if (c.isNull(6)) null else c.getString(6)
+
+                    val metadataUntouched = title == null &&
+                        primaryMood == null &&
+                        secondaryMood == null &&
+                        linkedHabitId == null
+
+                    val bodyAndPromptMatch = (body == demoBody && promptId in setOf(demoPrompt, "p_small_win")) ||
+                        (body == demoCombinedBody && (promptId == null || promptId in setOf(demoPrompt, "p_small_win")))
+
+                    if (metadataUntouched && bodyAndPromptMatch) {
+                        matchedDemoJournalIds.add(id)
+                    }
+                }
+            }
+
+            for (journalId in matchedDemoJournalIds) {
+                if (tableExists(db, TABLE_JOURNAL_DRAFTS)) {
+                    db.delete(TABLE_JOURNAL_DRAFTS, "intended_journal_entry_id = ?", arrayOf(journalId))
+                }
+                val deletedJournals = db.delete(TABLE_JOURNAL_ENTRIES, "journal_entry_id = ?", arrayOf(journalId))
+                removedCount += deletedJournals
+            }
+
+            val nowMs = System.currentTimeMillis()
+            if (removedCount > 0) {
+                var remainingHabits = 0
+                db.rawQuery("SELECT COUNT(*) FROM $TABLE_HABITS", null).use { c ->
+                    if (c.moveToFirst()) remainingHabits = c.getInt(0)
+                }
+                if (remainingHabits == 0) {
+                    val onboardingCv = ContentValues().apply {
+                        put("setting_key", "onboarding_completed")
+                        put("value_type", "BOOL")
+                        put("value_text", "false")
+                        put("schema_version", 1)
+                        put("updated_at_utc_ms", nowMs)
+                    }
+                    db.insertWithOnConflict(
+                        TABLE_APP_SETTINGS,
+                        null,
+                        onboardingCv,
+                        SQLiteDatabase.CONFLICT_REPLACE
+                    )
+                }
+            }
+
+            val doneCv = ContentValues().apply {
+                put("setting_key", SETTING_LEGACY_V1_DEMO_CLEANUP_COMPLETED)
+                put("value_type", "BOOL")
+                put("value_text", "true")
+                put("schema_version", 1)
+                put("updated_at_utc_ms", nowMs)
+            }
+            db.insertWithOnConflict(
+                TABLE_APP_SETTINGS,
+                null,
+                doneCv,
+                SQLiteDatabase.CONFLICT_REPLACE
+            )
+
+            db.rawQuery("PRAGMA foreign_key_check;", null).use { c ->
+                if (c.moveToFirst()) {
+                    val tbl = c.getString(0)
+                    throw DayseedMigrationBlockedException(
+                        "PRAGMA foreign_key_check failed on table '$tbl' during legacy demo data cleanup."
+                    )
+                }
+            }
+            db.rawQuery("PRAGMA integrity_check;", null).use { c ->
+                if (c.moveToFirst()) {
+                    val res = c.getString(0)
+                    if (!res.equals("ok", ignoreCase = true)) {
+                        throw DayseedMigrationBlockedException(
+                            "PRAGMA integrity_check failed during legacy demo data cleanup: $res"
+                        )
+                    }
+                }
+            }
+
+            db.setTransactionSuccessful()
+        } catch (e: DayseedMigrationBlockedException) {
+            throw e
+        } catch (e: Exception) {
+            throw DayseedMigrationBlockedException(
+                "Legacy v1 demo data cleanup failed and rolled back: ${e.message}"
+            )
+        } finally {
+            db.endTransaction()
+        }
+        return removedCount
     }
 
     private fun getTableCreateSql(db: SQLiteDatabase, tableName: String): String? {

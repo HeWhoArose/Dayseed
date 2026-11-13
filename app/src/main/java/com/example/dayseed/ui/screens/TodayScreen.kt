@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,14 +39,15 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -62,7 +64,6 @@ import com.example.dayseed.data.TargetPeriod
 import com.example.dayseed.ui.components.CollectedMomentsSummaryCard
 import com.example.dayseed.ui.components.ComebackCard
 import com.example.dayseed.ui.components.DaypartArtwork
-import com.example.dayseed.ui.components.DaypartBackgroundLayer
 import com.example.dayseed.ui.components.DayseedLogoSymbol
 import com.example.dayseed.ui.components.DayseedOpeningBrandLockup
 import com.example.dayseed.ui.components.HabitCard
@@ -70,6 +71,7 @@ import com.example.dayseed.ui.components.ReflectionCard
 import com.example.dayseed.ui.components.TodayLongestStreakIndicator
 import com.example.dayseed.ui.theme.DayseedDateStyle
 import com.example.dayseed.ui.theme.DayseedGreetingStyle
+import com.example.dayseed.ui.theme.LocalDayseedLiveTime
 import com.example.dayseed.ui.theme.SoftBotanicalThemeConfig
 import com.example.dayseed.ui.theme.ThemeModeOption
 import com.example.dayseed.ui.theme.greetingFor
@@ -185,18 +187,13 @@ fun TodayScreen(
 
     var showMetricInfoDialog by remember { mutableStateOf(false) }
 
+    val hasShownColdLaunchScene by viewModel.hasShownColdLaunchScene.collectAsState()
     val themeMode = remember(appSettings) {
         ThemeModeOption.fromSetting(appSettings["theme_mode"]?.valueText)
     }
     val reducedMotion = remember(appSettings) { viewModel.isReducedMotionEnabled() }
     val isSystemDark = isSystemInDarkTheme()
-    val nowLocal by produceState(initialValue = viewModel.repository.clock.nowLocalTime(), key1 = today) {
-        value = viewModel.repository.clock.nowLocalTime()
-        while (true) {
-            delay(30_000L)
-            value = viewModel.repository.clock.nowLocalTime()
-        }
-    }
+    val nowLocal = LocalDayseedLiveTime.current
     val daypart = remember(nowLocal) {
         SoftBotanicalThemeConfig.resolveDaypart(nowLocal)
     }
@@ -204,8 +201,17 @@ fun TodayScreen(
         resolveDayseedArtworkBlend(themeMode, isSystemDark, nowLocal)
     }
 
+    LaunchedEffect(onboardingCompleted, hasShownColdLaunchScene, reducedMotion) {
+        if (onboardingCompleted && !hasShownColdLaunchScene) {
+            delay(if (reducedMotion) 400L else 1200L)
+            viewModel.markColdLaunchSceneShown()
+        }
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        containerColor = Color.Transparent,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { viewModel.openCreateEditHabit(null) },
@@ -222,12 +228,6 @@ fun TodayScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            DaypartBackgroundLayer(
-                artworkBlend = artworkBlend,
-                reducedMotion = reducedMotion,
-                modifier = Modifier.fillMaxSize()
-            )
-
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -287,6 +287,36 @@ fun TodayScreen(
                     )
                 }
 
+                // Cold-launch opening brand scene for returning users (shown once per cold launch)
+                if (onboardingCompleted && !hasShownColdLaunchScene) {
+                    item {
+                        Card(
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f)
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.markColdLaunchSceneShown() }
+                                .testTag("dayseed_cold_launch_scene")
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 14.dp, horizontal = 16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                DayseedOpeningBrandLockup(
+                                    emblemSize = 56.dp,
+                                    showMotto = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // First-run Onboarding Banner (D-015..D-021)
                 if (!onboardingCompleted) {
                     item {
@@ -301,11 +331,17 @@ fun TodayScreen(
                                 .testTag("onboarding_welcome_card")
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
-                                DayseedOpeningBrandLockup(
-                                    emblemSize = 64.dp,
-                                    showMotto = true,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("dayseed_cold_launch_scene")
+                                ) {
+                                    DayseedOpeningBrandLockup(
+                                        emblemSize = 64.dp,
+                                        showMotto = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(
                                     text = "Welcome to Dayseed",
@@ -323,6 +359,7 @@ fun TodayScreen(
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Button(
                                         onClick = {
+                                            viewModel.markColdLaunchSceneShown()
                                             viewModel.repository.setSettingSync("onboarding_completed", "BOOL", "true")
                                             viewModel.openCreateEditHabit(null)
                                         },
@@ -334,6 +371,7 @@ fun TodayScreen(
                                     }
                                     OutlinedButton(
                                         onClick = {
+                                            viewModel.markColdLaunchSceneShown()
                                             viewModel.repository.setSettingSync("onboarding_completed", "BOOL", "true")
                                         },
                                         modifier = Modifier

@@ -14,8 +14,35 @@ android {
         applicationId = "com.aistudio.dayseed.wkqmfl"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.1"
+
+        val resolvedGitSha: String = providers.gradleProperty("dayseedGitSha")
+            .orElse(providers.environmentVariable("DAYSEED_GIT_SHA"))
+            .orElse(providers.environmentVariable("GITHUB_SHA"))
+            .orNull
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?.take(7)
+            ?: runCatching {
+                val gitDir = File(rootDir, ".git")
+                if (gitDir.exists()) {
+                    val proc = ProcessBuilder("git", "rev-parse", "--short=7", "HEAD")
+                        .directory(rootDir)
+                        .redirectErrorStream(true)
+                        .start()
+                    val output = proc.inputStream.bufferedReader().readText().trim()
+                    if (proc.waitFor() == 0 && output.matches(Regex("^[0-9a-fA-F]{7,40}$"))) {
+                        output.take(7)
+                    } else {
+                        "unknown"
+                    }
+                } else {
+                    "unknown"
+                }
+            }.getOrDefault("unknown")
+
+        buildConfigField("String", "GIT_COMMIT_SHA", "\"$resolvedGitSha\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

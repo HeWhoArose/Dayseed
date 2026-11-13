@@ -306,7 +306,6 @@ fun CollectedMomentsDetailSheet(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 20.dp, vertical = 16.dp)
             .testTag("collected_moments_detail_screen"),
         verticalArrangement = Arrangement.spacedBy(16.dp)

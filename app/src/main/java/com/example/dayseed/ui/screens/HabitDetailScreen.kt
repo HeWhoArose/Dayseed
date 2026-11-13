@@ -106,7 +106,7 @@ fun HabitDetailScreen(
             modifier = modifier
                 .fillMaxSize()
                 .testTag("habit_detail_screen"),
-            color = MaterialTheme.colorScheme.background
+            color = Color.Transparent
         ) {
             Box(
                 modifier = Modifier
@@ -192,7 +192,7 @@ fun HabitDetailScreen(
         modifier = modifier
             .fillMaxSize()
             .testTag("habit_detail_screen"),
-        color = MaterialTheme.colorScheme.background
+        color = Color.Transparent
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),

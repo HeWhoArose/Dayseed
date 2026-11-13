@@ -111,7 +111,7 @@ fun CreateEditHabitScreen(
         modifier = modifier
             .fillMaxSize()
             .testTag("create_edit_habit_screen"),
-        color = MaterialTheme.colorScheme.background
+        color = Color.Transparent
     ) {
         CreateEditHabitFormContent(
             initialHabit = initialHabit,
@@ -478,7 +478,11 @@ fun CreateEditHabitFormContent(
                 )
                 val modes = if (isEditing && initialHabit?.trackingMode?.canonical() == TrackingMode.EFFORT_AWARE) {
                     listOf(
-                        Triple(TrackingMode.EFFORT_AWARE, "Effort-Aware (Legacy)", "Tiny, Usual, and Extra actions count")
+                        Triple(
+                            TrackingMode.EFFORT_AWARE,
+                            "Effort-Aware (Legacy — convert recommended)",
+                            "Historical records are preserved; choose Duration, Quantity, or Simple Check-Off to set a target"
+                        )
                     ) + creatableOptions
                 } else {
                     creatableOptions
@@ -583,47 +587,20 @@ fun CreateEditHabitFormContent(
                         }
                     }
                 } else if (trackingMode == TrackingMode.EFFORT_AWARE) {
-                    Text(
-                        text = "Customize Effort Definitions",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    OutlinedTextField(
-                        value = tinyDesc,
-                        onValueChange = {
-                            tinyDesc = it
-                            onClearSaveError()
-                        },
-                        label = { Text("🌱 Tiny effort (bare minimum that counts)") },
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .testTag("tiny_desc_input"),
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = usualDesc,
-                        onValueChange = {
-                            usualDesc = it
-                            onClearSaveError()
-                        },
-                        label = { Text("🌿 Usual effort (intended ordinary action)") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("usual_desc_input"),
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = extraDesc,
-                        onValueChange = {
-                            extraDesc = it
-                            onClearSaveError()
-                        },
-                        label = { Text("🌳 Extra effort (optional stretch)") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("extra_desc_input"),
-                        singleLine = true
-                    )
+                            .testTag("legacy_effort_conversion_banner")
+                    ) {
+                        Text(
+                            text = "Dayseed now derives Tiny, Partial, Goal Met, Extra, and Huge progress automatically from your recorded Quantity or Duration against your target. Select Duration, Quantity, or Simple Check-Off above to update this habit while keeping all past history intact.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
                 }
             }
         }
