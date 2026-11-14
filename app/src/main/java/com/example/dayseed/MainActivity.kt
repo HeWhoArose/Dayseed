@@ -35,6 +35,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.ime
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import com.example.dayseed.ui.components.CollectedMomentsDetailSheet
 import com.example.dayseed.ui.components.DaypartBackgroundLayer
@@ -147,95 +149,99 @@ fun DayseedApp(
         }
     }
 
+    val isImeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+
     CompositionLocalProvider(LocalDayseedLiveTime provides liveLocalTime) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             contentWindowInsets = WindowInsets.safeDrawing,
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.onSurface
-                ) {
-                    NavigationBarItem(
-                        selected = selectedTab == NavTab.TODAY && currentSecondaryRoute == null,
-                        onClick = {
-                            viewModel.markColdLaunchSceneShown()
-                            viewModel.selectTab(NavTab.TODAY)
-                        },
-                        icon = { Icon(Icons.Default.Spa, contentDescription = "Today") },
-                        label = { Text("Today") },
-                        modifier = Modifier.testTag("nav_today"),
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                if (!isImeVisible) {
+                    NavigationBar(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface
+                    ) {
+                        NavigationBarItem(
+                            selected = selectedTab == NavTab.TODAY && currentSecondaryRoute == null,
+                            onClick = {
+                                viewModel.markColdLaunchSceneShown()
+                                viewModel.selectTab(NavTab.TODAY)
+                            },
+                            icon = { Icon(Icons.Default.Spa, contentDescription = "Today") },
+                            label = { Text("Today") },
+                            modifier = Modifier.testTag("nav_today"),
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                            )
                         )
-                    )
 
-                    NavigationBarItem(
-                        selected = selectedTab == NavTab.HABITS && currentSecondaryRoute == null,
-                        onClick = {
-                            viewModel.markColdLaunchSceneShown()
-                            viewModel.selectTab(NavTab.HABITS)
-                        },
-                        icon = { Icon(Icons.Default.Checklist, contentDescription = "Habits") },
-                        label = { Text("Habits") },
-                        modifier = Modifier.testTag("nav_habits"),
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                        NavigationBarItem(
+                            selected = selectedTab == NavTab.HABITS && currentSecondaryRoute == null,
+                            onClick = {
+                                viewModel.markColdLaunchSceneShown()
+                                viewModel.selectTab(NavTab.HABITS)
+                            },
+                            icon = { Icon(Icons.Default.Checklist, contentDescription = "Habits") },
+                            label = { Text("Habits") },
+                            modifier = Modifier.testTag("nav_habits"),
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                            )
                         )
-                    )
 
-                    NavigationBarItem(
-                        selected = selectedTab == NavTab.JOURNAL && currentSecondaryRoute == null,
-                        onClick = {
-                            viewModel.markColdLaunchSceneShown()
-                            viewModel.selectTab(NavTab.JOURNAL)
-                        },
-                        icon = { Icon(Icons.Default.Book, contentDescription = "Journal") },
-                        label = { Text("Journal") },
-                        modifier = Modifier.testTag("nav_journal"),
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                        NavigationBarItem(
+                            selected = selectedTab == NavTab.JOURNAL && currentSecondaryRoute == null,
+                            onClick = {
+                                viewModel.markColdLaunchSceneShown()
+                                viewModel.selectTab(NavTab.JOURNAL)
+                            },
+                            icon = { Icon(Icons.Default.Book, contentDescription = "Journal") },
+                            label = { Text("Journal") },
+                            modifier = Modifier.testTag("nav_journal"),
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                            )
                         )
-                    )
 
-                    NavigationBarItem(
-                        selected = selectedTab == NavTab.INSIGHTS && currentSecondaryRoute == null,
-                        onClick = {
-                            viewModel.markColdLaunchSceneShown()
-                            viewModel.selectTab(NavTab.INSIGHTS)
-                        },
-                        icon = { Icon(Icons.Default.Eco, contentDescription = "Insights") },
-                        label = { Text("Insights") },
-                        modifier = Modifier.testTag("nav_insights"),
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                        NavigationBarItem(
+                            selected = selectedTab == NavTab.INSIGHTS && currentSecondaryRoute == null,
+                            onClick = {
+                                viewModel.markColdLaunchSceneShown()
+                                viewModel.selectTab(NavTab.INSIGHTS)
+                            },
+                            icon = { Icon(Icons.Default.Eco, contentDescription = "Insights") },
+                            label = { Text("Insights") },
+                            modifier = Modifier.testTag("nav_insights"),
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                            )
                         )
-                    )
 
-                    NavigationBarItem(
-                        selected = selectedTab == NavTab.SETTINGS && currentSecondaryRoute == null,
-                        onClick = {
-                            viewModel.markColdLaunchSceneShown()
-                            viewModel.selectTab(NavTab.SETTINGS)
-                        },
-                        icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-                        label = { Text("Settings") },
-                        modifier = Modifier.testTag("nav_settings"),
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                        NavigationBarItem(
+                            selected = selectedTab == NavTab.SETTINGS && currentSecondaryRoute == null,
+                            onClick = {
+                                viewModel.markColdLaunchSceneShown()
+                                viewModel.selectTab(NavTab.SETTINGS)
+                            },
+                            icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
+                            label = { Text("Settings") },
+                            modifier = Modifier.testTag("nav_settings"),
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                            )
                         )
-                    )
+                    }
                 }
             }
         ) { innerPadding ->

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
@@ -375,6 +376,7 @@ fun RecordSessionSheet(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -493,6 +495,7 @@ fun RecordSessionSheet(
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
+                            .bringIntoViewOnFocus()
                             .testTag("record_session_date_input")
                     )
                 }
@@ -548,6 +551,7 @@ fun RecordSessionSheet(
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
+                            .bringIntoViewOnFocus()
                             .testTag("record_session_value_input")
                     )
 
@@ -645,6 +649,7 @@ fun RecordSessionSheet(
                         maxLines = 3,
                         modifier = Modifier
                             .fillMaxWidth()
+                            .bringIntoViewOnFocus()
                             .testTag("record_session_note_input")
                     )
                 }

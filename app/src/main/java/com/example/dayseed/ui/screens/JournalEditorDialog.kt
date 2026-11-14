@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -210,6 +211,7 @@ fun JournalEditorDialog(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
+                .imePadding()
                 .padding(16.dp)
                 .heightIn(max = 700.dp)
                 .testTag("journal_editor_dialog"),
@@ -367,6 +369,7 @@ fun JournalEditorDialog(
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier
                         .fillMaxWidth()
+                        .bringIntoViewOnFocus()
                         .testTag("journal_title_input")
                 )
 
@@ -389,6 +392,7 @@ fun JournalEditorDialog(
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier
                         .fillMaxWidth()
+                        .bringIntoViewOnFocus()
                         .testTag("journal_content_input")
                 )
 

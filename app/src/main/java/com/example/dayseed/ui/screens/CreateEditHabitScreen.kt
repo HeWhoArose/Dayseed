@@ -1,9 +1,17 @@
 package com.example.dayseed.ui.screens
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import android.provider.Settings
+import android.text.format.DateFormat
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.toColorInt
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,10 +26,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -49,8 +60,10 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -58,6 +71,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -66,11 +80,14 @@ import com.example.dayseed.DayseedViewModel
 import com.example.dayseed.data.DurationNormalizer
 import com.example.dayseed.data.Habit
 import com.example.dayseed.data.HabitLifecycleState
+import com.example.dayseed.data.ReminderEngine
+import com.example.dayseed.data.ReminderNotifier
 import com.example.dayseed.data.ScheduleKind
 import com.example.dayseed.data.TargetPeriod
 import com.example.dayseed.data.TrackingMode
 import com.example.dayseed.data.WeekdayMask
 import java.time.DayOfWeek
+import java.time.LocalTime
 import java.util.UUID
 
 fun weeklyTargetSemanticsExplanation(trackingMode: TrackingMode, unitCode: String?): String {
@@ -92,9 +109,11 @@ fun CreateEditHabitScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val habits by viewModel.habits.collectAsState()
     val habitEntries by viewModel.habitEntries.collectAsState()
     val habitDayOutcomes by viewModel.habitDayOutcomes.collectAsState()
+    val appSettings by viewModel.appSettings.collectAsState()
     val saveError by viewModel.lastSaveError.collectAsState()
     val initialHabit = remember(habits, habitId) {
         habitId?.let { id -> habits.find { it.habitId == id } }
@@ -105,6 +124,35 @@ fun CreateEditHabitScreen(
     }
     val suggestedReminder = remember(initialHabit) {
         initialHabit?.let { viewModel.repository.getSuggestedReminderTimeForHabit(it.habitId) }
+    }
+
+    var permissionRefreshTick by remember { mutableIntStateOf(0) }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) {
+        permissionRefreshTick++
+    }
+
+    val is24HourFormat = remember(context, permissionRefreshTick) {
+        DateFormat.is24HourFormat(context)
+    }
+    val globalRemindersEnabled = remember(appSettings) {
+        val raw = appSettings["reminders_enabled"]?.valueText
+        raw.equals("true", ignoreCase = true) || raw == "1"
+    }
+    val quietHoursStart = remember(appSettings) {
+        appSettings["quiet_hours_start"]?.valueText ?: "22:00"
+    }
+    val quietHoursEnd = remember(appSettings) {
+        appSettings["quiet_hours_end"]?.valueText ?: "07:00"
+    }
+    val hasPostNotificationsPermission = remember(context, permissionRefreshTick) {
+        Build.VERSION.SDK_INT < 33 ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+    }
+    val isNotificationDeliveryAvailable = remember(context, permissionRefreshTick) {
+        ReminderNotifier.isNotificationDeliveryAvailable(context)
     }
 
     Surface(
@@ -118,6 +166,25 @@ fun CreateEditHabitScreen(
             alreadyLoggedToday = alreadyLoggedToday,
             suggestedReminderTime = suggestedReminder,
             isFullScreen = true,
+            is24HourFormat = is24HourFormat,
+            globalRemindersEnabled = globalRemindersEnabled,
+            hasPostNotificationsPermission = hasPostNotificationsPermission,
+            isNotificationDeliveryAvailable = isNotificationDeliveryAvailable,
+            quietHoursStart = quietHoursStart,
+            quietHoursEnd = quietHoursEnd,
+            onRequestNotificationPermission = {
+                if (Build.VERSION.SDK_INT >= 33 && !hasPostNotificationsPermission) {
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    runCatching {
+                        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(intent)
+                    }
+                }
+            },
             saveErrorMessage = saveError,
             onClearSaveError = { viewModel.clearSaveError() },
             onDismiss = onNavigateBack,
@@ -139,13 +206,20 @@ fun CreateEditHabitScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun CreateEditHabitFormContent(
     initialHabit: Habit?,
     alreadyLoggedToday: Boolean = false,
     suggestedReminderTime: String? = null,
     isFullScreen: Boolean = false,
+    is24HourFormat: Boolean = false,
+    globalRemindersEnabled: Boolean = false,
+    hasPostNotificationsPermission: Boolean = true,
+    isNotificationDeliveryAvailable: Boolean = true,
+    quietHoursStart: String = "22:00",
+    quietHoursEnd: String = "07:00",
+    onRequestNotificationPermission: (() -> Unit)? = null,
     saveErrorMessage: String? = null,
     onClearSaveError: () -> Unit = {},
     onDismiss: () -> Unit,
@@ -228,6 +302,15 @@ fun CreateEditHabitFormContent(
     var reminderTimeLocal by remember(initialHabit, suggestedReminderTime) {
         mutableStateOf(initialHabit?.reminderTimeLocal ?: suggestedReminderTime ?: "09:00")
     }
+    var selectedPeriodIsPm by remember(initialHabit, suggestedReminderTime) {
+        mutableStateOf(SettingsSupport.isPmTime(initialHabit?.reminderTimeLocal ?: suggestedReminderTime ?: "09:00"))
+    }
+    val reminderSectionBringIntoViewRequester = remember { BringIntoViewRequester() }
+    LaunchedEffect(reminderEnabled) {
+        if (reminderEnabled) {
+            runCatching { reminderSectionBringIntoViewRequester.bringIntoView() }
+        }
+    }
     var applyTodayWhenLogged by remember(alreadyLoggedToday) {
         mutableStateOf(!alreadyLoggedToday)
     }
@@ -267,6 +350,7 @@ fun CreateEditHabitFormContent(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .imePadding()
             .verticalScroll(rememberScrollState())
             .padding(if (isFullScreen) 18.dp else 20.dp)
             .testTag("add_edit_habit_dialog"),
@@ -347,6 +431,7 @@ fun CreateEditHabitFormContent(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
+                        .bringIntoViewOnFocus()
                         .testTag("habit_name_input"),
                     singleLine = true
                 )
@@ -361,6 +446,7 @@ fun CreateEditHabitFormContent(
                     placeholder = { Text("e.g. For peace of mind and clarity") },
                     modifier = Modifier
                         .fillMaxWidth()
+                        .bringIntoViewOnFocus()
                         .testTag("habit_desc_input"),
                     maxLines = 2
                 )
@@ -375,6 +461,7 @@ fun CreateEditHabitFormContent(
                     placeholder = { Text("e.g. Mindfulness, Movement, Reading") },
                     modifier = Modifier
                         .fillMaxWidth()
+                        .bringIntoViewOnFocus()
                         .testTag("habit_category_input"),
                     singleLine = true
                 )
@@ -414,6 +501,7 @@ fun CreateEditHabitFormContent(
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .bringIntoViewOnFocus()
                         .testTag("habit_lifetime_goal_input")
                 )
 
@@ -568,6 +656,7 @@ fun CreateEditHabitFormContent(
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
+                            .bringIntoViewOnFocus()
                             .testTag("habit_unit_code_input")
                     )
                     FlowRow(
@@ -704,6 +793,7 @@ fun CreateEditHabitFormContent(
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
+                            .bringIntoViewOnFocus()
                             .testTag("habit_target_value_input")
                     )
                 }
@@ -877,7 +967,7 @@ fun CreateEditHabitFormContent(
                         )
                         if (suggestedReminderTime != null) {
                             Text(
-                                text = "Suggested from your rhythm: $suggestedReminderTime",
+                                text = "Suggested from your rhythm: ${SettingsSupport.formatUnambiguousTimeDisplay(suggestedReminderTime, is24HourFormat)}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -895,31 +985,283 @@ fun CreateEditHabitFormContent(
                 }
 
                 if (reminderEnabled) {
-                    OutlinedTextField(
-                        value = reminderTimeLocal,
-                        onValueChange = {
-                            reminderTimeLocal = it
-                            reminderTimeError = null
-                            onClearSaveError()
-                        },
-                        label = { Text("Reminder Time (HH:mm)") },
-                        isError = reminderTimeError != null,
-                        supportingText = {
-                            if (reminderTimeError != null) {
-                                Text(
-                                    text = reminderTimeError!!,
-                                    color = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.testTag("habit_reminder_time_error")
-                                )
-                            } else {
-                                Text("24-hour local time, e.g. 08:30 or 19:00")
-                            }
-                        },
-                        singleLine = true,
+                    val resolvedReminderTime = remember(reminderTimeLocal, selectedPeriodIsPm) {
+                        SettingsSupport.parseFlexibleLocalTime(reminderTimeLocal, fallbackPeriodIsPm = selectedPeriodIsPm)
+                    }
+                    val resolvedCanonicalTimeStr = remember(resolvedReminderTime, reminderTimeLocal) {
+                        resolvedReminderTime?.let { SettingsSupport.formatQuietHours(it) } ?: reminderTimeLocal
+                    }
+                    val resolvedIsPm = resolvedReminderTime?.let { it.hour >= 12 } ?: selectedPeriodIsPm
+
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .testTag("habit_reminder_time_input")
-                    )
+                            .bringIntoViewRequester(reminderSectionBringIntoViewRequester),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = if (resolvedReminderTime != null) {
+                                        "Selected time: ${SettingsSupport.formatUnambiguousTimeDisplay(resolvedCanonicalTimeStr, is24HourFormat)}"
+                                    } else {
+                                        "Enter a valid time (e.g. 8:30 AM, 4:00 PM, or 16:00)"
+                                    },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .testTag("habit_reminder_resolved_time_preview")
+                                )
+                            }
+                        }
+
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            FilterChip(
+                                selected = !resolvedIsPm,
+                                onClick = {
+                                    selectedPeriodIsPm = false
+                                    reminderTimeLocal = SettingsSupport.switchTimeAmPm(
+                                        reminderTimeLocal,
+                                        toPm = false,
+                                        fallback = LocalTime.of(9, 0)
+                                    )
+                                    reminderTimeError = null
+                                    onClearSaveError()
+                                },
+                                label = { Text("AM (Morning)") },
+                                modifier = Modifier
+                                    .heightIn(min = 48.dp)
+                                    .testTag("habit_reminder_am_chip")
+                            )
+                            FilterChip(
+                                selected = resolvedIsPm,
+                                onClick = {
+                                    selectedPeriodIsPm = true
+                                    reminderTimeLocal = SettingsSupport.switchTimeAmPm(
+                                        reminderTimeLocal,
+                                        toPm = true,
+                                        fallback = LocalTime.of(16, 0)
+                                    )
+                                    reminderTimeError = null
+                                    onClearSaveError()
+                                },
+                                label = { Text("PM (Afternoon/Evening)") },
+                                modifier = Modifier
+                                    .heightIn(min = 48.dp)
+                                    .testTag("habit_reminder_pm_chip")
+                            )
+                            OutlinedButton(
+                                onClick = {
+                                    val next = SettingsSupport.stepQuietHours(
+                                        resolvedCanonicalTimeStr,
+                                        -30L,
+                                        fallback = LocalTime.of(9, 0)
+                                    )
+                                    reminderTimeLocal = next
+                                    selectedPeriodIsPm = SettingsSupport.isPmTime(next)
+                                    reminderTimeError = null
+                                    onClearSaveError()
+                                },
+                                modifier = Modifier
+                                    .heightIn(min = 48.dp)
+                                    .testTag("habit_reminder_step_minus_30")
+                            ) {
+                                Text("−30m")
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    val next = SettingsSupport.stepQuietHours(
+                                        resolvedCanonicalTimeStr,
+                                        30L,
+                                        fallback = LocalTime.of(9, 0)
+                                    )
+                                    reminderTimeLocal = next
+                                    selectedPeriodIsPm = SettingsSupport.isPmTime(next)
+                                    reminderTimeError = null
+                                    onClearSaveError()
+                                },
+                                modifier = Modifier
+                                    .heightIn(min = 48.dp)
+                                    .testTag("habit_reminder_step_plus_30")
+                            ) {
+                                Text("+30m")
+                            }
+                        }
+
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            val quickReminderPresets = listOf(
+                                Triple("0800", "08:00", "8:00 AM"),
+                                Triple("1200", "12:00", "12:00 PM"),
+                                Triple("1600", "16:00", "4:00 PM"),
+                                Triple("2000", "20:00", "8:00 PM")
+                            )
+                            for ((tagSuffix, canonical24, label12) in quickReminderPresets) {
+                                FilterChip(
+                                    selected = resolvedCanonicalTimeStr == canonical24,
+                                    onClick = {
+                                        reminderTimeLocal = canonical24
+                                        selectedPeriodIsPm = SettingsSupport.isPmTime(canonical24)
+                                        reminderTimeError = null
+                                        onClearSaveError()
+                                    },
+                                    label = { Text("$label12 ($canonical24)") },
+                                    modifier = Modifier.testTag("habit_reminder_preset_$tagSuffix")
+                                )
+                            }
+                        }
+
+                        OutlinedTextField(
+                            value = reminderTimeLocal,
+                            onValueChange = {
+                                reminderTimeLocal = it
+                                val parsed = SettingsSupport.parseFlexibleLocalTime(it, fallbackPeriodIsPm = null)
+                                if (parsed != null) {
+                                    val trimmed = it.trim()
+                                    val hasExplicitSuffix = trimmed.endsWith("AM", ignoreCase = true) ||
+                                        trimmed.endsWith("PM", ignoreCase = true)
+                                    val hasTwoDigitHour = trimmed.substringBefore(":").length >= 2
+                                    if (hasExplicitSuffix || hasTwoDigitHour || parsed.hour >= 12 || parsed.hour == 0) {
+                                        selectedPeriodIsPm = parsed.hour >= 12
+                                    }
+                                }
+                                reminderTimeError = null
+                                onClearSaveError()
+                            },
+                            label = { Text("Reminder Time (12h AM/PM or 24h HH:mm)") },
+                            isError = reminderTimeError != null,
+                            supportingText = {
+                                if (reminderTimeError != null) {
+                                    Text(
+                                        text = reminderTimeError!!,
+                                        color = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.testTag("habit_reminder_time_error")
+                                    )
+                                } else if (resolvedReminderTime != null) {
+                                    Text(
+                                        text = "Saves as ${SettingsSupport.formatTime12Hour(resolvedReminderTime)} (${SettingsSupport.formatTime24Hour(resolvedReminderTime)} local time)"
+                                    )
+                                } else {
+                                    Text("Examples: 8:30 AM, 4:00 PM, 08:30, or 16:00")
+                                }
+                            },
+                            singleLine = true,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .bringIntoViewOnFocus()
+                                .testTag("habit_reminder_time_input")
+                        )
+
+                        val fallsInsideQuietHours = resolvedReminderTime != null &&
+                            ReminderEngine.isWithinQuietHours(
+                                resolvedCanonicalTimeStr,
+                                quietHoursStart,
+                                quietHoursEnd
+                            )
+
+                        if (fallsInsideQuietHours && resolvedReminderTime != null) {
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.75f),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("habit_reminder_quiet_hours_warning")
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = "Falls inside Quiet Hours (${SettingsSupport.quietHoursUnambiguousSummary(quietHoursStart, quietHoursEnd, is24HourFormat)}): " +
+                                            "${SettingsSupport.formatUnambiguousTimeDisplay(resolvedCanonicalTimeStr, is24HourFormat)} will be silenced during Quiet Hours.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                    if (resolvedReminderTime.hour in 1..11) {
+                                        val pmEquivalent = SettingsSupport.formatQuietHours(resolvedReminderTime.plusHours(12))
+                                        OutlinedButton(
+                                            onClick = {
+                                                selectedPeriodIsPm = true
+                                                reminderTimeLocal = pmEquivalent
+                                                reminderTimeError = null
+                                                onClearSaveError()
+                                            },
+                                            modifier = Modifier
+                                                .heightIn(min = 48.dp)
+                                                .testTag("habit_reminder_switch_out_of_quiet_hours_btn")
+                                        ) {
+                                            Text("Switch to ${SettingsSupport.formatUnambiguousTimeDisplay(pmEquivalent, is24HourFormat)}")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("habit_reminder_status_notice")
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(10.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                val statusMessage = when {
+                                    !globalRemindersEnabled ->
+                                        "Saved with this habit, but global reminder delivery is currently off in Settings → Gentle Reminders (pending device verification). No notification or sound will fire while global reminders are off."
+                                    !hasPostNotificationsPermission || !isNotificationDeliveryAvailable ->
+                                        "Android notification permission or the Gentle Reminders channel is currently blocked. Allow notifications so this reminder can alert you with sound/banner."
+                                    else ->
+                                        "Active for ${SettingsSupport.formatUnambiguousTimeDisplay(resolvedCanonicalTimeStr, is24HourFormat)} on the Gentle Reminders notification channel."
+                                }
+                                Text(
+                                    text = statusMessage,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                                if ((!hasPostNotificationsPermission || !isNotificationDeliveryAvailable) &&
+                                    onRequestNotificationPermission != null
+                                ) {
+                                    OutlinedButton(
+                                        onClick = onRequestNotificationPermission,
+                                        modifier = Modifier
+                                            .heightIn(min = 48.dp)
+                                            .testTag("habit_reminder_request_permission_btn")
+                                    ) {
+                                        Text(
+                                            if (!hasPostNotificationsPermission) {
+                                                "Allow Notifications"
+                                            } else {
+                                                "Open Notification Settings"
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 if (hasMidWeekIncompatibleChange) {
@@ -1059,9 +1401,12 @@ fun CreateEditHabitFormContent(
                     }
 
                     val normalizedReminderTime = if (reminderEnabled) {
-                        val parsedTime = SettingsSupport.parseStrictHhMm(reminderTimeLocal)
+                        val parsedTime = SettingsSupport.parseFlexibleLocalTime(
+                            reminderTimeLocal,
+                            fallbackPeriodIsPm = selectedPeriodIsPm
+                        )
                         if (parsedTime == null) {
-                            reminderTimeError = "Enter a valid 24-hour time in HH:mm format (00:00–23:59)."
+                            reminderTimeError = "Enter a valid time in 12-hour (e.g. 4:00 PM) or 24-hour HH:mm format (00:00–23:59)."
                             return@Button
                         }
                         SettingsSupport.formatQuietHours(parsedTime)
@@ -1158,6 +1503,8 @@ fun CreateEditHabitFormContent(
                 Text("Save")
             }
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
     }
 
     if (showDeleteConfirmDialog && initialHabit != null && onDelete != null) {

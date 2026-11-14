@@ -1,5 +1,6 @@
 package com.example.dayseed.ui.screens
 
+import android.text.format.DateFormat
 import androidx.core.graphics.toColorInt
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
@@ -55,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -188,6 +191,9 @@ fun HabitDetailScreen(
         }
     }
 
+    val context = LocalContext.current
+    val is24HourFormat = remember(context) { DateFormat.is24HourFormat(context) }
+
     Surface(
         modifier = modifier
             .fillMaxSize()
@@ -195,7 +201,9 @@ fun HabitDetailScreen(
         color = Color.Transparent
     ) {
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .imePadding(),
             contentPadding = PaddingValues(18.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -361,6 +369,22 @@ fun HabitDetailScreen(
                             MetadataBadge("Mode: $modeLabel")
                             MetadataBadge("Target: ${summary?.formatTargetAndPeriodSummary() ?: habit.formatTargetAndPeriodSummary()}")
                             MetadataBadge("Schedule: ${summary?.formatScheduleSummary() ?: habit.formatScheduleSummary()}")
+                            val activeReminderMode = activeVersion?.reminderMode ?: habit.reminderMode
+                            val activeReminderTime = activeVersion?.reminderTimeLocal ?: habit.reminderTimeLocal
+                            if (activeReminderMode == "AT_TIME" && !activeReminderTime.isNullOrBlank()) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                                    modifier = Modifier.testTag("detail_reminder_badge")
+                                ) {
+                                    Text(
+                                        text = "Reminder: ${SettingsSupport.formatUnambiguousTimeDisplay(activeReminderTime, is24HourFormat)}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
                             if (activeVersion != null) {
                                 MetadataBadge("Rule effective from: ${activeVersion.effectiveFromLocalDate}")
                             }
@@ -598,12 +622,13 @@ fun HabitDetailScreen(
                             }
 
                             for (entry in entriesOnSelectedDate) {
-                                val timeFormatted = remember(entry.createdAtUtcMs) {
+                                val timeFormatted = remember(entry.createdAtUtcMs, is24HourFormat) {
                                     runCatching {
-                                        Instant.ofEpochMilli(entry.createdAtUtcMs)
+                                        val rawHhMm = Instant.ofEpochMilli(entry.createdAtUtcMs)
                                             .atZone(ZoneId.systemDefault())
                                             .toLocalTime()
                                             .format(DateTimeFormatter.ofPattern("HH:mm"))
+                                        SettingsSupport.formatUnambiguousTimeDisplay(rawHhMm, is24HourFormat)
                                     }.getOrDefault("")
                                 }
                                 val unitSuffix = habit.unitCode?.takeIf { it.isNotBlank() }?.let { " $it" } ?: ""
@@ -754,6 +779,7 @@ fun HabitDetailScreen(
                             maxLines = 3,
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .bringIntoViewOnFocus()
                                 .testTag("habit_detail_note_input")
                         )
                         Row(

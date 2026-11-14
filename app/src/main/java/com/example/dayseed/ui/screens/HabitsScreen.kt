@@ -58,10 +58,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import android.text.format.DateFormat
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -180,6 +182,7 @@ fun HabitsScreen(
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .bringIntoViewOnFocus()
                         .testTag("habits_search_input")
                 )
             }
@@ -283,6 +286,8 @@ private fun HabitDirectoryCard(
     onUpdateLifecycle: (HabitLifecycleState) -> Unit,
     indexInDisplayed: Int
 ) {
+    val context = LocalContext.current
+    val is24HourFormat = remember(context) { DateFormat.is24HourFormat(context) }
     var showMenu by remember { mutableStateOf(false) }
     val eff = summary?.effectiveVersion
     val mode = (eff?.trackingMode ?: habit.trackingMode).canonical()
@@ -296,6 +301,13 @@ private fun HabitDirectoryCard(
         ?: habit.targetValue?.let { "$it ${habit.unitCode ?: "units"}" }
         ?: "Daily check-off"
     val scheduleSummary = summary?.formatScheduleSummary() ?: habit.scheduleKind.name
+    val activeReminderMode = eff?.reminderMode ?: habit.reminderMode
+    val activeReminderTime = eff?.reminderTimeLocal ?: habit.reminderTimeLocal
+    val reminderSummarySuffix = if (activeReminderMode == "AT_TIME" && !activeReminderTime.isNullOrBlank()) {
+        " • Reminder ${SettingsSupport.formatUnambiguousTimeDisplay(activeReminderTime, is24HourFormat)}"
+    } else {
+        ""
+    }
 
     val streakUnitWord = if (summary?.streakUnit == StreakUnit.WEEKS) {
         if (summary.currentCompletedStreak == 1) "week" else "weeks"
@@ -518,7 +530,7 @@ private fun HabitDirectoryCard(
 
             // Metadata Summary Row
             Text(
-                text = "$modeLabel • $targetSummary • $scheduleSummary",
+                text = "$modeLabel • $targetSummary • $scheduleSummary$reminderSummarySuffix",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.testTag("habits_meta_${habit.habitId}")

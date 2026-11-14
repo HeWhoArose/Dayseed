@@ -99,6 +99,7 @@ object SettingsSupport {
 
     private val hhMm = Regex("^(\\d{1,2}):(\\d{2})$")
     private val strictHhMm = Regex("^(\\d{2}):(\\d{2})$")
+    private val amPmTimeRegex = Regex("^(\\d{1,2}):(\\d{2})\\s*([aApP][mM])$")
 
     /** Parses a quiet-hours time; returns null when malformed or outside 00:00–23:59. */
     fun parseQuietHours(raw: String): LocalTime? {
@@ -121,29 +122,133 @@ object SettingsSupport {
         return LocalTime.of(hour, minute)
     }
 
+    /**
+     * Parses user-entered time supporting both 24-hour (`HH:mm` / `H:mm`) and explicit 12-hour
+     * `h:mm AM/PM` (`12:00 AM` -> `00:00`, `12:01 AM` -> `00:01`, `4:00 AM` -> `04:00`,
+     * `12:00 PM` -> `12:00`, `4:00 PM` -> `16:00`, `11:59 PM` -> `23:59`).
+     *
+     * When [fallbackPeriodIsPm] is provided and the user enters a single-digit hour `1..12`
+     * without a leading zero or explicit AM/PM suffix (e.g. `"4:00"` while the `PM` chip is
+     * selected), applies the selected period so `"4:00"` with `PM` resolves to `16:00` (`4:00 PM`)
+     * and `"12:00"` with `AM` resolves to `00:00` (`12:00 AM`).
+     */
+    fun parseFlexibleLocalTime(raw: String?, fallbackPeriodIsPm: Boolean? = null): LocalTime? {
+        val trimmed = raw?.trim().orEmpty()
+        if (trimmed.isEmpty()) return null
+
+        val amPmMatch = amPmTimeRegex.matchEntire(trimmed)
+        if (amPmMatch != null) {
+            val hour12 = amPmMatch.groupValues[1].toInt()
+            val minute = amPmMatch.groupValues[2].toInt()
+            val isPm = amPmMatch.groupValues[3].equals("PM", ignoreCase = true)
+            if (hour12 !in 1..12 || minute !in 0..59) return null
+            val hour24 = when {
+                isPm && hour12 == 12 -> 12
+                isPm -> hour12 + 12
+                hour12 == 12 -> 0
+                else -> hour12
+            }
+            return LocalTime.of(hour24, minute)
+        }
+
+        val parsed = parseQuietHours(trimmed) ?: return null
+        if (fallbackPeriodIsPm != null) {
+            val hourToken = trimmed.substringBefore(":")
+            if (hourToken.length == 1 && parsed.hour in 1..11 && fallbackPeriodIsPm) {
+                return parsed.plusHours(12)
+            }
+        }
+        return parsed
+    }
+
+    /** Formats a [LocalTime] as explicit 12-hour `h:mm AM/PM` (`12:00 AM`, `4:00 AM`, `12:00 PM`, `4:00 PM`). */
+    fun formatTime12Hour(time: LocalTime): String {
+        val hour12 = when (val h = time.hour % 12) {
+            0 -> 12
+            else -> h
+        }
+        val period = if (time.hour < 12) "AM" else "PM"
+        return "%d:%02d %s".format(java.util.Locale.US, hour12, time.minute, period)
+    }
+
+    /** Formats a [LocalTime] as canonical two-digit 24-hour `HH:mm` (`00:00`..`23:59`). */
+    fun formatTime24Hour(time: LocalTime): String = formatQuietHours(time)
+
+    /**
+     * Formats a time string with both 12-hour `AM/PM` and 24-hour `HH:mm` so the user never has
+     * to guess whether `"04:00"` / `"4:00"` means morning or afternoon (`ODR-001`):
+     * - When [is24HourPreference] is `false` (12-hour clock): `"4:00 AM (04:00)"`, `"4:00 PM (16:00)"`,
+     *   `"12:00 AM (00:00)"`, `"12:00 PM (12:00)"`, `"11:59 PM (23:59)"`, `"12:01 AM (00:01)"`.
+     * - When [is24HourPreference] is `true` (24-hour clock): `"04:00 (4:00 AM)"`, `"16:00 (4:00 PM)"`,
+     *   `"00:00 (12:00 AM)"`, `"12:00 (12:00 PM)"`, `"23:59 (11:59 PM)"`, `"00:01 (12:01 AM)"`.
+     */
+    fun formatUnambiguousTimeDisplay(raw: String?, is24HourPreference: Boolean = false): String {
+        val parsed = parseFlexibleLocalTime(raw) ?: return raw?.trim().orEmpty()
+        val t12 = formatTime12Hour(parsed)
+        val t24 = formatTime24Hour(parsed)
+        return if (is24HourPreference) "$t24 ($t12)" else "$t12 ($t24)"
+    }
+
+    /**
+     * Switches a time string between AM (`00:00`..`11:59`) and PM (`12:00`..`23:59`) while
+     * preserving the 12-hour clock position and minutes, returning canonical 24-hour `"HH:mm"`.
+     * Example: `"04:00"` with `toPm = true` -> `"16:00"`; `"16:00"` with `toPm = false` -> `"04:00"`;
+     * `"00:00"` (`12:00 AM`) with `toPm = true` -> `"12:00"` (`12:00 PM`).
+     */
+    fun switchTimeAmPm(raw: String?, toPm: Boolean, fallback: LocalTime = LocalTime.of(9, 0)): String {
+        val parsed = parseFlexibleLocalTime(raw) ?: fallback
+        val adjusted = when {
+            toPm && parsed.hour < 12 -> parsed.plusHours(12)
+            !toPm && parsed.hour >= 12 -> parsed.minusHours(12)
+            else -> parsed
+        }
+        return formatQuietHours(adjusted)
+    }
+
+    /** Returns true when [raw] resolves to a PM hour (`12:00`..`23:59`). */
+    fun isPmTime(raw: String?, fallback: Boolean = false): Boolean {
+        val parsed = parseFlexibleLocalTime(raw) ?: return fallback
+        return parsed.hour >= 12
+    }
+
     /** Returns a short correction message, or null when the input is saveable. */
     fun quietHoursError(raw: String): String? {
         val trimmed = raw.trim()
         if (trimmed.isEmpty()) return "Enter a time, for example 21:00"
-        if (!hhMm.matchEntire(trimmed).let { it != null }) return "Use the 24-hour format HH:mm"
-        return if (parseQuietHours(trimmed) == null) {
-            "Hours run 00–23 and minutes 00–59"
-        } else {
-            null
+        if (parseFlexibleLocalTime(trimmed) == null) {
+            return if (!hhMm.matches(trimmed) && !amPmTimeRegex.matches(trimmed)) {
+                "Use 24-hour HH:mm (e.g. 21:00) or 12-hour h:mm AM/PM (e.g. 9:00 PM)"
+            } else {
+                "Hours run 00–23 (or 1–12 AM/PM) and minutes 00–59"
+            }
         }
+        return null
     }
 
     /** Formats a validated time as strict two-digit "HH:mm" for storage. */
     fun formatQuietHours(time: LocalTime): String =
-        "%02d:%02d".format(time.hour, time.minute)
+        "%02d:%02d".format(java.util.Locale.US, time.hour, time.minute)
 
     /**
-     * Steps a quiet-hours time string by [deltaMinutes] (e.g., -30 or +30), wrapping cleanly
+     * Steps a quiet-hours or reminder time string by [deltaMinutes] (e.g., -30 or +30), wrapping cleanly
      * across midnight. Falls back to [fallback] if [raw] is currently invalid.
      */
     fun stepQuietHours(raw: String, deltaMinutes: Long, fallback: LocalTime = LocalTime.of(21, 0)): String {
-        val base = parseQuietHours(raw) ?: fallback
+        val base = parseFlexibleLocalTime(raw) ?: fallback
         return formatQuietHours(base.plusMinutes(deltaMinutes))
+    }
+
+    /**
+     * Unambiguous quiet-hours window showing both 12-hour AM/PM and 24-hour HH:mm.
+     */
+    fun quietHoursUnambiguousSummary(
+        start: String?,
+        end: String?,
+        is24HourPreference: Boolean = false
+    ): String {
+        val s = start?.takeIf { it.isNotBlank() } ?: "21:00"
+        val e = end?.takeIf { it.isNotBlank() } ?: "08:00"
+        return "${formatUnambiguousTimeDisplay(s, is24HourPreference)} – ${formatUnambiguousTimeDisplay(e, is24HourPreference)}"
     }
 
     /**

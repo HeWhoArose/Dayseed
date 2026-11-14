@@ -71,6 +71,16 @@ internal object ReminderNotifier {
             context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return false
         ensureReminderChannel(context)
 
+        val openAppIntent = Intent(context, com.example.dayseed.MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val contentIntent = PendingIntent.getActivity(
+            context,
+            0,
+            openAppIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.star_on)
             .setContentTitle("Gentle nudge")
@@ -80,6 +90,8 @@ internal object ReminderNotifier {
                     .bigText("A gentle note for \"$habitName\". Scheduled reminders may be slightly " +
                         "delayed by Android battery saving.")
             )
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setContentIntent(contentIntent)
             .setAutoCancel(true)
             .build()
 
@@ -128,6 +140,7 @@ internal object ReminderNotifier {
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setContentIntent(contentIntent)
             .setAutoCancel(true)
             .build()

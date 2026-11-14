@@ -1373,6 +1373,20 @@ class DayseedRepository(
                 createdAtUtcMs = nowMs
             )
 
+            val onboardingCv = ContentValues().apply {
+                put("setting_key", "onboarding_completed")
+                put("value_type", "BOOL")
+                put("value_text", "true")
+                put("schema_version", 1)
+                put("updated_at_utc_ms", nowMs)
+            }
+            db.insertWithOnConflict(
+                DayseedDatabaseHelper.TABLE_APP_SETTINGS,
+                null,
+                onboardingCv,
+                SQLiteDatabase.CONFLICT_REPLACE
+            )
+
             db.setTransactionSuccessful()
         } finally {
             db.endTransaction()

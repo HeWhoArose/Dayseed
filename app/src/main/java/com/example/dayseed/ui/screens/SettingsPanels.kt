@@ -378,6 +378,8 @@ fun QuietHoursPanel(
     initialEnd: String,
     onSaved: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val is24HourFormat = remember(context) { android.text.format.DateFormat.is24HourFormat(context) }
     var startText by remember { mutableStateOf(initialStart) }
     var endText by remember { mutableStateOf(initialEnd) }
     val startError = SettingsSupport.quietHoursError(startText)
@@ -425,12 +427,19 @@ fun QuietHoursPanel(
             OutlinedTextField(
                 value = startText,
                 onValueChange = { startText = it },
-                label = { Text("Start (24h)") },
-                supportingText = { startError?.let { Text(it) } },
+                label = { Text("Start (12h or 24h)") },
+                supportingText = {
+                    if (startError != null) {
+                        Text(startError)
+                    } else {
+                        Text(SettingsSupport.formatUnambiguousTimeDisplay(startText, is24HourFormat))
+                    }
+                },
                 isError = startError != null,
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .bringIntoViewOnFocus()
                     .testTag("quiet_hours_start_input")
             )
             Row(
@@ -455,12 +464,19 @@ fun QuietHoursPanel(
             OutlinedTextField(
                 value = endText,
                 onValueChange = { endText = it },
-                label = { Text("End (24h)") },
-                supportingText = { endError?.let { Text(it) } },
+                label = { Text("End (12h or 24h)") },
+                supportingText = {
+                    if (endError != null) {
+                        Text(endError)
+                    } else {
+                        Text(SettingsSupport.formatUnambiguousTimeDisplay(endText, is24HourFormat))
+                    }
+                },
                 isError = endError != null,
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .bringIntoViewOnFocus()
                     .testTag("quiet_hours_end_input")
             )
             Row(
@@ -501,7 +517,7 @@ fun QuietHoursPanel(
             )
             Spacer(modifier = Modifier.width(10.dp))
             Text(
-                text = "Per-habit reminders default to 09:00 when turned on inside a habit. " +
+                text = "Per-habit reminders default to 9:00 AM (09:00) when turned on inside a habit. " +
                     "Android battery saver or Do Not Disturb can delay or silence reminders outside Dayseed.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -512,8 +528,8 @@ fun QuietHoursPanel(
     Spacer(modifier = Modifier.height(14.dp))
     Button(
         onClick = {
-            val start = SettingsSupport.parseQuietHours(startText)
-            val end = SettingsSupport.parseQuietHours(endText)
+            val start = SettingsSupport.parseFlexibleLocalTime(startText)
+            val end = SettingsSupport.parseFlexibleLocalTime(endText)
             if (start != null && end != null) {
                 viewModel.setQuietHours(
                     SettingsSupport.formatQuietHours(start),
@@ -1368,6 +1384,7 @@ fun BackupRestorePanel(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .imePadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 18.dp, vertical = 12.dp)
     ) {
@@ -1466,6 +1483,7 @@ fun BackupRestorePanel(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
+                        .bringIntoViewOnFocus()
                         .testTag("backup_password_input")
                 )
                 if (backupPassword.isNotBlank()) {
@@ -1488,6 +1506,7 @@ fun BackupRestorePanel(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
+                            .bringIntoViewOnFocus()
                             .testTag("backup_password_confirm_input")
                     )
                 }
@@ -1785,6 +1804,7 @@ fun BackupRestorePanel(
                         isError = restoreError != null,
                         modifier = Modifier
                             .fillMaxWidth()
+                            .bringIntoViewOnFocus()
                             .testTag("restore_json_input")
                     )
                 }

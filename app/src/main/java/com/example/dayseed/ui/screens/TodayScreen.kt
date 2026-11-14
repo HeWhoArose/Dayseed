@@ -1,5 +1,10 @@
 package com.example.dayseed.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -34,6 +39,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -46,17 +52,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.example.dayseed.DayseedViewModel
+import com.example.dayseed.NavTab
 import com.example.dayseed.data.Habit
 import com.example.dayseed.data.HabitDateException
 import com.example.dayseed.data.HabitDateExceptionKind
@@ -83,6 +93,7 @@ import com.example.dayseed.ui.theme.greetingFor
 import com.example.dayseed.ui.theme.resolveDayseedArtworkBlend
 import kotlinx.coroutines.delay
 import java.math.BigInteger
+import java.time.DayOfWeek
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
@@ -184,6 +195,27 @@ fun TodayScreen(
     }
     val longestActiveStreak = remember(habitSummaries, habits) {
         viewModel.selectLongestActiveRun()
+    }
+
+    val context = LocalContext.current
+    var notifPermissionTick by remember { mutableIntStateOf(0) }
+    val onboardingPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) {
+        notifPermissionTick++
+    }
+    val hasPostNotificationsPermission = remember(context, notifPermissionTick) {
+        Build.VERSION.SDK_INT < 33 ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+    }
+    val currentWeekStartDay = remember(appSettings, today) {
+        val raw = appSettings["week_start"]?.valueText
+        if (raw.equals("SUNDAY", ignoreCase = true) || raw == "7") {
+            DayOfWeek.SUNDAY
+        } else {
+            DayOfWeek.MONDAY
+        }
     }
 
     val onboardingCompleted = remember(appSettings, habits) {
@@ -325,11 +357,11 @@ fun TodayScreen(
                     }
                 }
 
-                // First-run Onboarding Banner (D-015..D-021)
+                // First-run Onboarding Banner & New-Phone Setup Checklist (D-015..D-021, ODR-003)
                 if (!onboardingCompleted) {
                     item {
                         Card(
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
                             ),
@@ -339,63 +371,135 @@ fun TodayScreen(
                                 .testTag("onboarding_welcome_card")
                         ) {
                             Column(
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalArrangement = Arrangement.spacedBy(3.dp)
                             ) {
                                 Row(
-                                    modifier = if (!hasShownColdLaunchScene) {
+                                    modifier = (if (!hasShownColdLaunchScene) {
                                         Modifier.testTag("dayseed_cold_launch_scene")
                                     } else {
                                         Modifier
-                                    },
+                                    }).fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     DayseedLogoSymbol(
-                                        size = 28.dp,
+                                        size = 18.dp,
                                         contentDesc = null
                                     )
                                     Text(
-                                        text = "Welcome to Dayseed",
-                                        style = MaterialTheme.typography.titleMedium,
+                                        text = "Welcome to Dayseed — offline & private",
+                                        style = MaterialTheme.typography.labelLarge,
                                         fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        maxLines = 1
                                     )
                                 }
-                                Text(
-                                    text = "100% private and offline. No accounts, no cloud tracking, and no streak penalties. Tiny actions and partial progress always count.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f)
-                                )
-                                FlowRow(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("onboarding_setup_checklist"),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Button(
-                                        onClick = {
-                                            viewModel.markColdLaunchSceneShown()
-                                            viewModel.repository.setSettingSync("onboarding_completed", "BOOL", "true")
-                                            viewModel.openCreateEditHabit(null)
-                                        },
-                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                                    Text(
+                                        text = "Week: ${if (currentWeekStartDay == DayOfWeek.MONDAY) "Mon" else "Sun"} (tap)",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        maxLines = 1,
                                         modifier = Modifier
-                                            .heightIn(min = 48.dp)
+                                            .clickable {
+                                                val nextDay = if (currentWeekStartDay == DayOfWeek.MONDAY) {
+                                                    DayOfWeek.SUNDAY
+                                                } else {
+                                                    DayOfWeek.MONDAY
+                                                }
+                                                viewModel.repository.setSettingSync("week_start", "ENUM", nextDay.name)
+                                            }
+                                            .testTag("onboarding_week_start_toggle_btn")
+                                    )
+                                    Text(
+                                        text = if (hasPostNotificationsPermission) {
+                                            "Alerts: Ready"
+                                        } else {
+                                            "Alerts: Off"
+                                        },
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
+                                        maxLines = 1,
+                                        modifier = Modifier.testTag("onboarding_notification_status_text")
+                                    )
+                                    if (Build.VERSION.SDK_INT >= 33 && !hasPostNotificationsPermission) {
+                                        Text(
+                                            text = "Allow",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            maxLines = 1,
+                                            modifier = Modifier
+                                                .clickable {
+                                                    onboardingPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                                }
+                                                .testTag("onboarding_request_notifications_btn")
+                                        )
+                                    }
+                                }
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier
+                                            .clickable {
+                                                viewModel.markColdLaunchSceneShown()
+                                                viewModel.openCreateEditHabit(null)
+                                            }
                                             .testTag("onboarding_create_first_habit_btn")
                                     ) {
-                                        Text("Plant First Habit")
+                                        Text(
+                                            text = "Create First Habit",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        )
                                     }
-                                    OutlinedButton(
-                                        onClick = {
-                                            viewModel.markColdLaunchSceneShown()
-                                            viewModel.repository.setSettingSync("onboarding_completed", "BOOL", "true")
-                                        },
-                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
                                         modifier = Modifier
-                                            .heightIn(min = 48.dp)
-                                            .testTag("onboarding_dismiss_btn")
+                                            .clickable {
+                                                viewModel.markColdLaunchSceneShown()
+                                                viewModel.selectTab(NavTab.SETTINGS)
+                                            }
+                                            .testTag("onboarding_restore_backup_btn")
                                     ) {
-                                        Text("Explore First")
+                                        Text(
+                                            text = "Restore Backup",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        )
                                     }
+                                    Text(
+                                        text = "Explore First",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier
+                                            .clickable {
+                                                viewModel.markColdLaunchSceneShown()
+                                                viewModel.repository.setSettingSync("onboarding_completed", "BOOL", "true")
+                                            }
+                                            .padding(horizontal = 4.dp, vertical = 4.dp)
+                                            .testTag("onboarding_dismiss_btn")
+                                    )
                                 }
                             }
                         }
