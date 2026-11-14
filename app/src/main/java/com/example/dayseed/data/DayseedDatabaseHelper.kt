@@ -1628,9 +1628,22 @@ class DayseedDatabaseHelper(
      * starter demonstration records ("Gentle Movement", "Quiet Reading", "Drink Water",
      * and the sample "Started Dayseed today..." journal entry).
      *
-     * Matches records only when every attribute of the historical starter fingerprint matches
-     * (never by habit name or journal substring alone). Preserves all unrelated user habits,
-     * journal entries, history, and preferences.
+     * Safety & Data-Preservation Contract:
+     * 1. Matches habits only when every attribute of the historical `4c1187a` starter
+     *    fingerprint (or its deterministic v1->v2->v3 migration form) matches, the habit
+     *    has only its single initial version row, and habit-level metadata (`category`,
+     *    `lifetime_goal_days`) is untouched. Never matches by habit name alone.
+     * 2. Before removing a matched demo habit, verifies whether the habit has any
+     *    associated user activity or dependent records (`habit_entries`, `habit_day_outcomes`,
+     *    `habit_date_notes`, `habit_date_exceptions`, `habit_streak_runs`, linked
+     *    `journal_entries` / `journal_drafts`, `reminder_deliveries`, or `restore_conflicts`).
+     *    If any genuine activity or dependent record exists, the habit and all of its
+     *    history are preserved untouched.
+     * 3. Removes the starter journal record only when its identifying fields match the
+     *    exact unedited historical starter record (`created_at_utc_ms == updated_at_utc_ms`,
+     *    no title, mood, or habit link, and no active draft targeting it).
+     * 4. Resets `onboarding_completed = "false"` only when the resulting database genuinely
+     *    has zero habits after cleanup.
      */
     fun cleanupLegacyV1DemoDataIfNeeded(
         db: SQLiteDatabase,
@@ -1658,8 +1671,24 @@ class DayseedDatabaseHelper(
         }
 
         var removedCount = 0
+        var removedHabitCount = 0
         db.beginTransaction()
         try {
+            val uneditedHabitIds = mutableSetOf<String>()
+            db.rawQuery(
+                "SELECT habit_id, category, lifetime_goal_days FROM $TABLE_HABITS",
+                null
+            ).use { c ->
+                while (c.moveToNext()) {
+                    val hId = c.getString(0)
+                    val category = if (c.isNull(1)) null else c.getString(1)
+                    val lifetimeGoal = if (c.isNull(2)) null else c.getInt(2)
+                    if (category == null && lifetimeGoal == null) {
+                        uneditedHabitIds.add(hId)
+                    }
+                }
+            }
+
             data class VersionFingerprintRow(
                 val habitId: String,
                 val name: String,
@@ -1671,6 +1700,9 @@ class DayseedDatabaseHelper(
                 val scheduleKind: String,
                 val scheduledMask: Int?,
                 val preferredMask: Int?,
+                val lifecycleState: String,
+                val reminderMode: String,
+                val reminderTimeLocal: String?,
                 val tinyDesc: String,
                 val usualDesc: String,
                 val extraDesc: String,
@@ -1683,6 +1715,7 @@ class DayseedDatabaseHelper(
                 SELECT habit_id, name, description, tracking_mode, unit_code,
                        target_period, target_value, schedule_kind,
                        scheduled_weekdays_mask, preferred_weekdays_mask,
+                       lifecycle_state, reminder_mode, reminder_time_local,
                        tiny_description, usual_description, extra_description, color_hex
                 FROM $TABLE_HABIT_VERSIONS
                 """.trimIndent(),
@@ -1700,24 +1733,31 @@ class DayseedDatabaseHelper(
                         scheduleKind = c.getString(7),
                         scheduledMask = if (c.isNull(8)) null else c.getInt(8),
                         preferredMask = if (c.isNull(9)) null else c.getInt(9),
-                        tinyDesc = if (c.isNull(10)) "" else c.getString(10),
-                        usualDesc = if (c.isNull(11)) "" else c.getString(11),
-                        extraDesc = if (c.isNull(12)) "" else c.getString(12),
-                        colorHex = if (c.isNull(13)) "" else c.getString(13)
+                        lifecycleState = if (c.isNull(10)) "" else c.getString(10),
+                        reminderMode = if (c.isNull(11)) "" else c.getString(11),
+                        reminderTimeLocal = if (c.isNull(12)) null else c.getString(12),
+                        tinyDesc = if (c.isNull(13)) "" else c.getString(13),
+                        usualDesc = if (c.isNull(14)) "" else c.getString(14),
+                        extraDesc = if (c.isNull(15)) "" else c.getString(15),
+                        colorHex = if (c.isNull(16)) "" else c.getString(16)
                     )
                     versionsByHabit.getOrPut(row.habitId) { mutableListOf() }.add(row)
                 }
             }
 
             fun matchesStarterHabitFingerprint(v: VersionFingerprintRow): Boolean {
-                val baseScheduleMatches = v.unitCode == null &&
+                val baseScheduleAndLifecycleMatches = v.unitCode == null &&
                     v.targetPeriod == "DAY" &&
                     v.targetValue == null &&
                     v.scheduleKind == "DAILY" &&
                     v.scheduledMask == null &&
-                    v.preferredMask == null
-                if (!baseScheduleMatches) return false
+                    v.preferredMask == null &&
+                    v.lifecycleState == "ACTIVE" &&
+                    v.reminderMode == "OFF" &&
+                    v.reminderTimeLocal == null
+                if (!baseScheduleAndLifecycleMatches) return false
 
+                // 1. Gentle Movement: original v1 mode EFFORT_LEVELS -> migrated v2/v3 mode EFFORT_AWARE
                 val isGentleMovement = v.name == "Gentle Movement" &&
                     v.description == "Move your body with kindness, no workout pressure" &&
                     v.trackingMode in setOf("EFFORT_AWARE", "EFFORT_LEVELS") &&
@@ -1726,6 +1766,7 @@ class DayseedDatabaseHelper(
                     v.extraDesc == "25-minute walk in fresh air" &&
                     v.colorHex.equals("#286143", ignoreCase = true)
 
+                // 2. Quiet Reading: original v1 mode EFFORT_LEVELS -> migrated v2/v3 mode EFFORT_AWARE
                 val isQuietReading = v.name == "Quiet Reading" &&
                     v.description == "Feed curiosity without finishing a whole book" &&
                     v.trackingMode in setOf("EFFORT_AWARE", "EFFORT_LEVELS") &&
@@ -1734,6 +1775,8 @@ class DayseedDatabaseHelper(
                     v.extraDesc == "Read for 30 minutes in peace" &&
                     v.colorHex.equals("#3B6955", ignoreCase = true)
 
+                // 3. Drink Water: original v1 mode COMPLETION_ONLY with empty tiny/usual/extra strings ->
+                //    migrated v2/v3 mode COMPLETION_ONLY with schema default descriptions
                 val isDrinkWater = v.name == "Drink Water" &&
                     v.description == "A cup of water to refresh your body" &&
                     v.trackingMode in setOf("COMPLETION_ONLY", "BINARY") &&
@@ -1745,45 +1788,74 @@ class DayseedDatabaseHelper(
                 return isGentleMovement || isQuietReading || isDrinkWater
             }
 
-            val matchedDemoHabitIds = versionsByHabit.entries
-                .filter { (_, versions) ->
-                    versions.isNotEmpty() && versions.all { matchesStarterHabitFingerprint(it) }
+            fun hasGenuineActivityOrDependentRecords(habitId: String): Boolean {
+                val habitScopedTables = listOf(
+                    TABLE_HABIT_ENTRIES,
+                    TABLE_HABIT_DAY_OUTCOMES,
+                    TABLE_HABIT_DATE_NOTES,
+                    TABLE_HABIT_DATE_EXCEPTIONS,
+                    TABLE_HABIT_STREAK_RUNS,
+                    TABLE_REMINDER_DELIVERIES
+                )
+                for (table in habitScopedTables) {
+                    if (tableExists(db, table)) {
+                        db.rawQuery(
+                            "SELECT 1 FROM $table WHERE habit_id = ? LIMIT 1",
+                            arrayOf(habitId)
+                        ).use { c ->
+                            if (c.moveToFirst()) return true
+                        }
+                    }
+                }
+                if (tableExists(db, TABLE_JOURNAL_ENTRIES)) {
+                    db.rawQuery(
+                        "SELECT 1 FROM $TABLE_JOURNAL_ENTRIES WHERE linked_habit_id = ? LIMIT 1",
+                        arrayOf(habitId)
+                    ).use { c ->
+                        if (c.moveToFirst()) return true
+                    }
+                }
+                if (tableExists(db, TABLE_JOURNAL_DRAFTS)) {
+                    db.rawQuery(
+                        "SELECT 1 FROM $TABLE_JOURNAL_DRAFTS WHERE linked_habit_id = ? LIMIT 1",
+                        arrayOf(habitId)
+                    ).use { c ->
+                        if (c.moveToFirst()) return true
+                    }
+                }
+                if (tableExists(db, TABLE_RESTORE_CONFLICTS)) {
+                    val likePattern = "%\"$habitId\"%"
+                    db.rawQuery(
+                        """
+                        SELECT 1 FROM $TABLE_RESTORE_CONFLICTS
+                        WHERE record_key = ? OR current_payload_json LIKE ? OR backup_payload_json LIKE ?
+                        LIMIT 1
+                        """.trimIndent(),
+                        arrayOf(habitId, likePattern, likePattern)
+                    ).use { c ->
+                        if (c.moveToFirst()) return true
+                    }
+                }
+                return false
+            }
+
+            val candidateDemoHabitIds = versionsByHabit.entries
+                .filter { (habitId, versions) ->
+                    habitId in uneditedHabitIds &&
+                        versions.size == 1 &&
+                        matchesStarterHabitFingerprint(versions.single())
                 }
                 .map { it.key }
 
-            for (habitId in matchedDemoHabitIds) {
-                if (tableExists(db, TABLE_NOTIFICATION_CANCEL_OUTBOX) && tableExists(db, TABLE_REMINDER_DELIVERIES)) {
-                    db.execSQL(
-                        """
-                        DELETE FROM $TABLE_NOTIFICATION_CANCEL_OUTBOX
-                        WHERE platform_notification_tag IN (
-                            SELECT platform_notification_tag FROM $TABLE_REMINDER_DELIVERIES
-                            WHERE habit_id = ? AND platform_notification_tag IS NOT NULL
-                        )
-                        """.trimIndent(),
-                        arrayOf(habitId)
-                    )
-                }
-                if (tableExists(db, TABLE_REMINDER_DELIVERIES)) {
-                    db.delete(TABLE_REMINDER_DELIVERIES, "habit_id = ?", arrayOf(habitId))
-                }
-                if (tableExists(db, TABLE_HABIT_STREAK_RUNS)) {
-                    db.delete(TABLE_HABIT_STREAK_RUNS, "habit_id = ?", arrayOf(habitId))
-                }
-                if (tableExists(db, TABLE_HABIT_DATE_EXCEPTIONS)) {
-                    db.delete(TABLE_HABIT_DATE_EXCEPTIONS, "habit_id = ?", arrayOf(habitId))
-                }
-                if (tableExists(db, TABLE_HABIT_DATE_NOTES)) {
-                    db.delete(TABLE_HABIT_DATE_NOTES, "habit_id = ?", arrayOf(habitId))
-                }
-                if (tableExists(db, TABLE_HABIT_DAY_OUTCOMES)) {
-                    db.delete(TABLE_HABIT_DAY_OUTCOMES, "habit_id = ?", arrayOf(habitId))
-                }
-                if (tableExists(db, TABLE_HABIT_ENTRIES)) {
-                    db.delete(TABLE_HABIT_ENTRIES, "habit_id = ?", arrayOf(habitId))
+            for (habitId in candidateDemoHabitIds) {
+                // CRITICAL SAFETY GUARD: Never delete a matched demo habit if the user has logged
+                // any activity, notes, exceptions, streak runs, reminders, or linked journal entries against it.
+                if (hasGenuineActivityOrDependentRecords(habitId)) {
+                    continue
                 }
                 db.delete(TABLE_HABIT_VERSIONS, "habit_id = ?", arrayOf(habitId))
                 val deletedHabitRows = db.delete(TABLE_HABITS, "habit_id = ?", arrayOf(habitId))
+                removedHabitCount += deletedHabitRows
                 removedCount += deletedHabitRows
             }
 
@@ -1794,7 +1866,8 @@ class DayseedDatabaseHelper(
             val matchedDemoJournalIds = mutableListOf<String>()
             db.rawQuery(
                 """
-                SELECT journal_entry_id, body, title, primary_mood_code, secondary_mood_code, prompt_id, linked_habit_id
+                SELECT journal_entry_id, body, title, primary_mood_code, secondary_mood_code,
+                       prompt_id, linked_habit_id, created_at_utc_ms, updated_at_utc_ms
                 FROM $TABLE_JOURNAL_ENTRIES
                 """.trimIndent(),
                 null
@@ -1807,31 +1880,42 @@ class DayseedDatabaseHelper(
                     val secondaryMood = if (c.isNull(4)) null else c.getString(4)
                     val promptId = if (c.isNull(5)) null else c.getString(5)
                     val linkedHabitId = if (c.isNull(6)) null else c.getString(6)
+                    val createdAt = if (c.isNull(7)) 0L else c.getLong(7)
+                    val updatedAt = if (c.isNull(8)) -1L else c.getLong(8)
 
                     val metadataUntouched = title == null &&
                         primaryMood == null &&
                         secondaryMood == null &&
-                        linkedHabitId == null
+                        linkedHabitId == null &&
+                        createdAt == updatedAt
 
-                    val bodyAndPromptMatch = (body == demoBody && promptId in setOf(demoPrompt, "p_small_win")) ||
-                        (body == demoCombinedBody && (promptId == null || promptId in setOf(demoPrompt, "p_small_win")))
+                    val bodyAndPromptMatch = (body == demoBody && promptId == demoPrompt) ||
+                        (body == demoCombinedBody && (promptId == null || promptId == demoPrompt))
 
                     if (metadataUntouched && bodyAndPromptMatch) {
-                        matchedDemoJournalIds.add(id)
+                        var hasActiveDraft = false
+                        if (tableExists(db, TABLE_JOURNAL_DRAFTS)) {
+                            db.rawQuery(
+                                "SELECT 1 FROM $TABLE_JOURNAL_DRAFTS WHERE intended_journal_entry_id = ? LIMIT 1",
+                                arrayOf(id)
+                            ).use { dc ->
+                                if (dc.moveToFirst()) hasActiveDraft = true
+                            }
+                        }
+                        if (!hasActiveDraft) {
+                            matchedDemoJournalIds.add(id)
+                        }
                     }
                 }
             }
 
             for (journalId in matchedDemoJournalIds) {
-                if (tableExists(db, TABLE_JOURNAL_DRAFTS)) {
-                    db.delete(TABLE_JOURNAL_DRAFTS, "intended_journal_entry_id = ?", arrayOf(journalId))
-                }
                 val deletedJournals = db.delete(TABLE_JOURNAL_ENTRIES, "journal_entry_id = ?", arrayOf(journalId))
                 removedCount += deletedJournals
             }
 
             val nowMs = System.currentTimeMillis()
-            if (removedCount > 0) {
+            if (removedHabitCount > 0) {
                 var remainingHabits = 0
                 db.rawQuery("SELECT COUNT(*) FROM $TABLE_HABITS", null).use { c ->
                     if (c.moveToFirst()) remainingHabits = c.getInt(0)

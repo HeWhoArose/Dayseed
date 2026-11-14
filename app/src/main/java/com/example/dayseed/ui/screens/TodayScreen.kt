@@ -6,6 +6,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -21,11 +24,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Spa
-import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -36,6 +39,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -50,6 +54,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.dayseed.DayseedViewModel
 import com.example.dayseed.data.Habit
@@ -120,6 +125,7 @@ fun computeTendedTodayCount(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TodayScreen(
     viewModel: DayseedViewModel,
@@ -201,15 +207,17 @@ fun TodayScreen(
         resolveDayseedArtworkBlend(themeMode, isSystemDark, nowLocal)
     }
 
-    LaunchedEffect(onboardingCompleted, hasShownColdLaunchScene, reducedMotion) {
-        if (onboardingCompleted && !hasShownColdLaunchScene) {
+    LaunchedEffect(hasShownColdLaunchScene, reducedMotion) {
+        if (!hasShownColdLaunchScene) {
             delay(if (reducedMotion) 400L else 1200L)
             viewModel.markColdLaunchSceneShown()
         }
     }
 
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .imePadding(),
         containerColor = Color.Transparent,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
@@ -232,8 +240,8 @@ fun TodayScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .testTag("today_screen_list"),
-                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Element 1 & Element 2: Date, time-aware greeting, and Daypart Artwork (§5.1)
                 item {
@@ -256,10 +264,10 @@ fun TodayScreen(
                                 style = DayseedGreetingStyle,
                                 color = MaterialTheme.colorScheme.onBackground
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = "Your progress is more than your streak.",
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -269,7 +277,7 @@ fun TodayScreen(
                             secondaryArtwork = artworkBlend.secondaryArtwork,
                             blendFraction = artworkBlend.blendFraction,
                             reducedMotion = reducedMotion,
-                            modifier = Modifier.size(width = 132.dp, height = 112.dp)
+                            modifier = Modifier.size(width = 104.dp, height = 84.dp)
                         )
                     }
                 }
@@ -304,11 +312,11 @@ fun TodayScreen(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 14.dp, horizontal = 16.dp),
+                                    .padding(vertical = 10.dp, horizontal = 14.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 DayseedOpeningBrandLockup(
-                                    emblemSize = 56.dp,
+                                    emblemSize = 40.dp,
                                     showMotto = true,
                                     modifier = Modifier.fillMaxWidth()
                                 )
@@ -330,39 +338,46 @@ fun TodayScreen(
                                 .fillMaxWidth()
                                 .testTag("onboarding_welcome_card")
                         ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .testTag("dayseed_cold_launch_scene")
+                            Column(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Row(
+                                    modifier = if (!hasShownColdLaunchScene) {
+                                        Modifier.testTag("dayseed_cold_launch_scene")
+                                    } else {
+                                        Modifier
+                                    },
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    DayseedOpeningBrandLockup(
-                                        emblemSize = 64.dp,
-                                        showMotto = true,
-                                        modifier = Modifier.fillMaxWidth()
+                                    DayseedLogoSymbol(
+                                        size = 28.dp,
+                                        contentDesc = null
+                                    )
+                                    Text(
+                                        text = "Welcome to Dayseed",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text(
-                                    text = "Welcome to Dayseed",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = "100% private and offline. No accounts, no cloud tracking, and no streak penalties. Tiny actions and partial progress always count.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f)
                                 )
-                                Spacer(modifier = Modifier.height(10.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FlowRow(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
                                     Button(
                                         onClick = {
                                             viewModel.markColdLaunchSceneShown()
                                             viewModel.repository.setSettingSync("onboarding_completed", "BOOL", "true")
                                             viewModel.openCreateEditHabit(null)
                                         },
+                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
                                         modifier = Modifier
                                             .heightIn(min = 48.dp)
                                             .testTag("onboarding_create_first_habit_btn")
@@ -374,6 +389,7 @@ fun TodayScreen(
                                             viewModel.markColdLaunchSceneShown()
                                             viewModel.repository.setSettingSync("onboarding_completed", "BOOL", "true")
                                         },
+                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
                                         modifier = Modifier
                                             .heightIn(min = 48.dp)
                                             .testTag("onboarding_dismiss_btn")
@@ -416,7 +432,7 @@ fun TodayScreen(
                                         .heightIn(min = 48.dp)
                                         .testTag("undo_action_btn")
                                 ) {
-                                    Icon(Icons.Default.Undo, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null, modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text("Undo", fontWeight = FontWeight.Bold)
                                 }
@@ -455,30 +471,41 @@ fun TodayScreen(
 
                 // Element 4: Today's Scheduled Habits Header & List (§5.1)
                 item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    val tendedToday = computeTendedTodayCount(
+                        scheduledTodayHabits = scheduledTodayHabits,
+                        habitSummaries = habitSummaries,
+                        todayOutcomes = todayOutcomes,
+                        todayEntries = todayEntries,
+                        todayExceptions = todayExceptions
+                    )
+                    FlowRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(end = 84.dp)
+                            .testTag("today_seeds_section_header"),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.Center
                     ) {
                         Text(
                             text = "Today's Seeds",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.testTag("today_seeds_heading_text")
                         )
-                        val tendedToday = computeTendedTodayCount(
-                            scheduledTodayHabits = scheduledTodayHabits,
-                            habitSummaries = habitSummaries,
-                            todayOutcomes = todayOutcomes,
-                            todayEntries = todayEntries,
-                            todayExceptions = todayExceptions
-                        )
-                        Text(
-                            text = "$tendedToday of ${scheduledTodayHabits.size} tended",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.testTag("today_tended_count_text")
-                        )
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
+                        ) {
+                            Text(
+                                text = "$tendedToday of ${scheduledTodayHabits.size} tended",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                                    .testTag("today_tended_count_text")
+                            )
+                        }
                     }
                 }
 
@@ -656,9 +683,9 @@ fun TodayScreen(
                     )
                 }
 
-                // Bottom breathing room for FAB
+                // Bottom breathing room so final items scroll completely clear of the FAB
                 item {
-                    Spacer(modifier = Modifier.height(64.dp))
+                    Spacer(modifier = Modifier.height(96.dp))
                 }
             }
         }
@@ -697,41 +724,55 @@ fun TodayScreen(
 
 @Composable
 private fun EmptyHabitsCard(onAddHabit: () -> Unit) {
-    Column(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .testTag("today_empty_habits_card"),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
     ) {
-        DayseedLogoSymbol(
-            size = 56.dp,
-            contentDesc = null
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = "No habits scheduled for today",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = "Enjoy your rest day, or plant a new habit seed anytime.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(
-            onClick = onAddHabit,
-            modifier = Modifier.heightIn(min = 48.dp),
-            shape = MaterialTheme.shapes.medium,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("Create a Habit")
+            DayseedLogoSymbol(
+                size = 32.dp,
+                contentDesc = null
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = "No habits scheduled for today",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Enjoy your rest day, or plant a new habit seed anytime.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Button(
+                onClick = onAddHabit,
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                modifier = Modifier.heightIn(min = 48.dp),
+                shape = MaterialTheme.shapes.medium,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            ) {
+                Text("Create a Habit")
+            }
         }
     }
 }

@@ -5,7 +5,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -47,8 +51,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.dayseed.DayseedViewModel
 import com.example.dayseed.data.DurationNormalizer
 import com.example.dayseed.data.MoodCatalog
@@ -60,6 +66,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.util.Locale
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun InsightsScreen(viewModel: DayseedViewModel) {
     val habits by viewModel.habits.collectAsState()
@@ -171,87 +178,164 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
                         fontWeight = FontWeight.Bold
                     )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        OverviewStatBox(
-                            label = "Habit-Active Dates",
-                            value = growthMetrics.habitActiveDatesCount.toString(),
-                            subtitle = "Dates with habit logs",
-                            testTag = "overview_habit_active_dates",
-                            modifier = Modifier.weight(1f)
-                        )
-                        OverviewStatBox(
-                            label = "Journal Reflections",
-                            value = growthMetrics.journalEntriesCount.toString(),
-                            subtitle = "${growthMetrics.journalActiveDatesCount} journal dates",
-                            testTag = "overview_journal_entries_count",
-                            modifier = Modifier.weight(1f)
-                        )
+                    val dailyRateText = if (growthMetrics.scheduledDailyOpportunitiesCount > 0) {
+                        "${growthMetrics.habitDaysMetCount} / ${growthMetrics.scheduledDailyOpportunitiesCount}"
+                    } else {
+                        "0 / 0"
+                    }
+                    val weeklyRateText = if (growthMetrics.flexibleWeeklyOpportunitiesTotalCount > 0) {
+                        "${growthMetrics.flexibleWeeklyOpportunitiesMetCount} / ${growthMetrics.flexibleWeeklyOpportunitiesTotalCount}"
+                    } else {
+                        "0 / 0"
+                    }
+                    val weeklySub = if (growthMetrics.flexibleWeeklyInProgressCount > 0) {
+                        "${growthMetrics.flexibleWeeklyInProgressCount} week in progress"
+                    } else {
+                        "Completed weekly targets"
                     }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        val dailyRateText = if (growthMetrics.scheduledDailyOpportunitiesCount > 0) {
-                            "${growthMetrics.habitDaysMetCount} / ${growthMetrics.scheduledDailyOpportunitiesCount}"
+                    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                        val useSingleColumn = maxWidth < 260.dp
+                        if (useSingleColumn) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                OverviewStatBox(
+                                    label = "Habit-Active Dates",
+                                    value = growthMetrics.habitActiveDatesCount.toString(),
+                                    subtitle = "Dates with habit logs",
+                                    testTag = "overview_habit_active_dates",
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                OverviewStatBox(
+                                    label = "Journal Reflections",
+                                    value = growthMetrics.journalEntriesCount.toString(),
+                                    subtitle = "${growthMetrics.journalActiveDatesCount} journal dates",
+                                    testTag = "overview_journal_entries_count",
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                OverviewStatBox(
+                                    label = "Daily Targets Met",
+                                    value = dailyRateText,
+                                    subtitle = "Scheduled daily opportunities",
+                                    testTag = "overview_daily_opportunities_met",
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                OverviewStatBox(
+                                    label = "Weekly Targets Met",
+                                    value = weeklyRateText,
+                                    subtitle = weeklySub,
+                                    testTag = "overview_weekly_opportunities_met",
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                OverviewStatBox(
+                                    label = "Unique Habits Met",
+                                    value = growthMetrics.uniqueHabitsCompletedCount.toString(),
+                                    subtitle = "Distinct habits achieving target",
+                                    testTag = "overview_unique_habits_completed",
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                OverviewStatBox(
+                                    label = "Planned Rest Days",
+                                    value = growthMetrics.plannedRestCount.toString(),
+                                    subtitle = "Honest rest exceptions",
+                                    testTag = "overview_planned_rest_count",
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
                         } else {
-                            "0 / 0"
-                        }
-                        OverviewStatBox(
-                            label = "Daily Targets Met",
-                            value = dailyRateText,
-                            subtitle = "Scheduled daily opportunities",
-                            testTag = "overview_daily_opportunities_met",
-                            modifier = Modifier.weight(1f)
-                        )
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(IntrinsicSize.Min),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    OverviewStatBox(
+                                        label = "Habit-Active Dates",
+                                        value = growthMetrics.habitActiveDatesCount.toString(),
+                                        subtitle = "Dates with habit logs",
+                                        testTag = "overview_habit_active_dates",
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxHeight()
+                                    )
+                                    OverviewStatBox(
+                                        label = "Journal Reflections",
+                                        value = growthMetrics.journalEntriesCount.toString(),
+                                        subtitle = "${growthMetrics.journalActiveDatesCount} journal dates",
+                                        testTag = "overview_journal_entries_count",
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxHeight()
+                                    )
+                                }
 
-                        val weeklyRateText = if (growthMetrics.flexibleWeeklyOpportunitiesTotalCount > 0) {
-                            "${growthMetrics.flexibleWeeklyOpportunitiesMetCount} / ${growthMetrics.flexibleWeeklyOpportunitiesTotalCount}"
-                        } else {
-                            "0 / 0"
-                        }
-                        val weeklySub = if (growthMetrics.flexibleWeeklyInProgressCount > 0) {
-                            "${growthMetrics.flexibleWeeklyInProgressCount} week in progress"
-                        } else {
-                            "Completed weekly targets"
-                        }
-                        OverviewStatBox(
-                            label = "Weekly Targets Met",
-                            value = weeklyRateText,
-                            subtitle = weeklySub,
-                            testTag = "overview_weekly_opportunities_met",
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(IntrinsicSize.Min),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    OverviewStatBox(
+                                        label = "Daily Targets Met",
+                                        value = dailyRateText,
+                                        subtitle = "Scheduled daily opportunities",
+                                        testTag = "overview_daily_opportunities_met",
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxHeight()
+                                    )
+                                    OverviewStatBox(
+                                        label = "Weekly Targets Met",
+                                        value = weeklyRateText,
+                                        subtitle = weeklySub,
+                                        testTag = "overview_weekly_opportunities_met",
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxHeight()
+                                    )
+                                }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        OverviewStatBox(
-                            label = "Unique Habits Met",
-                            value = growthMetrics.uniqueHabitsCompletedCount.toString(),
-                            subtitle = "Distinct habits achieving target",
-                            testTag = "overview_unique_habits_completed",
-                            modifier = Modifier.weight(1f)
-                        )
-                        OverviewStatBox(
-                            label = "Planned Rest Days",
-                            value = growthMetrics.plannedRestCount.toString(),
-                            subtitle = "Honest rest exceptions",
-                            testTag = "overview_planned_rest_count",
-                            modifier = Modifier.weight(1f)
-                        )
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(IntrinsicSize.Min),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    OverviewStatBox(
+                                        label = "Unique Habits Met",
+                                        value = growthMetrics.uniqueHabitsCompletedCount.toString(),
+                                        subtitle = "Distinct habits achieving target",
+                                        testTag = "overview_unique_habits_completed",
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxHeight()
+                                    )
+                                    OverviewStatBox(
+                                        label = "Planned Rest Days",
+                                        value = growthMetrics.plannedRestCount.toString(),
+                                        subtitle = "Honest rest exceptions",
+                                        testTag = "overview_planned_rest_count",
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxHeight()
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                    Row(
+                    FlowRow(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
                             text = "Numeric/Duration Sessions: ${growthMetrics.numericDurationSessionsCount}",
@@ -285,7 +369,11 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 8.dp)
+                    ) {
                         Text(
                             text = "2. Habits",
                             style = MaterialTheme.typography.titleLarge,
@@ -299,7 +387,9 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
                     }
                     TextButton(
                         onClick = { viewModel.openDayDetail(selectedDate) },
-                        modifier = Modifier.testTag("insights_open_selected_day_detail")
+                        modifier = Modifier
+                            .defaultMinSize(minHeight = 48.dp)
+                            .testTag("insights_open_selected_day_detail")
                     ) {
                         Text("Day Detail ($selectedDate)")
                     }
@@ -391,7 +481,10 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
                                 Text(
                                     text = "${band.displayName} (${band.rangeLabel})",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(end = 8.dp)
                                 )
                                 Text(
                                     text = "$combined ($dailyCount daily • $weeklyCount weekly)",
@@ -493,7 +586,11 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
                             text = "${moodInsights.totalEntriesWithPrimaryMood} entries with primary mood (prev: ${moodInsights.previousPeriodTotalEntries})",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.testTag("mood_total_entries_text")
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 6.dp)
+                                .testTag("mood_total_entries_text")
                         )
                         IconButton(
                             onClick = {
@@ -741,7 +838,11 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
                                 )
                             }
                             Spacer(modifier = Modifier.width(14.dp))
-                            Column {
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(end = 10.dp)
+                            ) {
                                 Text(
                                     text = "Living Grove",
                                     style = MaterialTheme.typography.titleMedium,
@@ -757,7 +858,9 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
                         Button(
                             onClick = { viewModel.openLivingGrove() },
                             shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.testTag("insights_open_grove_btn")
+                            modifier = Modifier
+                                .defaultMinSize(minHeight = 48.dp)
+                                .testTag("insights_open_grove_btn")
                         ) {
                             Text("Explore")
                         }
@@ -781,33 +884,37 @@ private fun OverviewStatBox(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        modifier = modifier.testTag(testTag),
+        modifier = modifier
+            .defaultMinSize(minHeight = 92.dp)
+            .testTag(testTag),
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+                .fillMaxSize()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                lineHeight = 15.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

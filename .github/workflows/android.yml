@@ -42,8 +42,6 @@ jobs:
         run: bash scripts/bootstrap-debug-keystore.sh
 
       - name: Unit tests, lint and debug APK
-        env:
-          DAYSEED_GIT_SHA: ${{ github.sha }}
         run: >
           ./gradlew --no-daemon --stacktrace
           :app:testDebugUnitTest
@@ -68,11 +66,4 @@ jobs:
             app/build/reports/lint-results-debug.xml
           if-no-files-found: warn
 
-      - name: Upload debug APK
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
 

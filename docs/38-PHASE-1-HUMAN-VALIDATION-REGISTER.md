@@ -749,13 +749,13 @@ All Phase 4 cases are **`NOT RUN`**. They require a physical Android device (And
 
 All `P5-H*` cases below are **`NOT RUN`**. They require installing the upgraded APK (`versionName = "1.0.1"`, `versionCode = 2`) on the physical Android device and observing live device behaviour.
 
-### P5-H01 — In-place APK upgrade (`1.0` → `1.0.1`, build 2) and automatic `4c1187a` starter-data cleanup preserving user data
+### P5-H01 — In-place APK upgrade (`1.0` → `1.0.1`, build 2) and activity-safe `4c1187a` starter-data cleanup preserving user data
 
 - **Status:** `NOT RUN`
 - **Procedure:**
-  1. On a phone carrying the historical `4c1187a` starter data (`Gentle Movement`, `Quiet Reading`, `Drink Water`, and the starter journal entry) — or a synthetic mix of those starter items plus real user habits/entries — install the new `1.0.1` (`versionCode = 2`) APK as an in-place update without uninstalling.
+  1. On a phone carrying the historical `4c1187a` starter data (`Gentle Movement`, `Quiet Reading`, `Drink Water`, and the starter journal entry) — or a synthetic mix of untouched starter items, a starter habit with logged user activity, and custom user habits/entries — install the new `1.0.1` (`versionCode = 2`) APK as an in-place update without uninstalling.
   2. Launch Dayseed and inspect `Today`, `Habits`, `Journal`, and `Settings → About Dayseed`.
-- **Expected:** The historical `4c1187a` starter habits and starter journal reflection are removed automatically once; if no real habits existed, the first-run onboarding welcome card is shown; if real user habits or edited starter habits existed, every user habit, entry, outcome, note, streak run, and journal entry remains intact. `Settings → About Dayseed` displays `Dayseed 1.0.1 (build 2)` and the build commit SHA.
+- **Expected:** Untouched historical `4c1187a` starter habits and the unedited starter journal reflection are removed automatically once; if a starter habit had genuine user activity logged against it, that habit and all of its history remain intact; if 0 habits remain after cleanup, the first-run onboarding welcome card is shown; if any user habits or active starter habits remain, every habit, entry, outcome, note, streak run, and journal entry remains intact. `Settings → About Dayseed` displays `Dayseed 1.0.1 (build 2)` and the build commit SHA.
 
 ### P5-H02 — Evidence-derived habit recording without manual `Tiny`/`Usual`/`Extra` effort buttons
 

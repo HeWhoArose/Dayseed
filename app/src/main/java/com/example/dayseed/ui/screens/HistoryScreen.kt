@@ -4,13 +4,18 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -59,6 +64,7 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HistoryScreen(viewModel: DayseedViewModel) {
     val journalEntries by viewModel.journalEntries.collectAsState()
@@ -109,55 +115,146 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
+            .imePadding()
             .padding(horizontal = 16.dp)
             .testTag("journal_screen"),
+        contentPadding = PaddingValues(top = 8.dp, bottom = 28.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Journal",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.testTag("journal_header_title")
-                    )
-                    Text(
-                        text = "${journalEntries.size} saved ${if (journalEntries.size == 1) "reflection" else "reflections"}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val useCompactStackedHeader = maxWidth < 520.dp
+                val reflectionCountText = "${journalEntries.size} saved ${if (journalEntries.size == 1) "reflection" else "reflections"}"
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
-                        onClick = { isDateJumpExpanded = !isDateJumpExpanded },
-                        modifier = Modifier
-                            .defaultMinSize(minHeight = 48.dp)
-                            .testTag("journal_date_jump_toggle")
+                if (useCompactStackedHeader) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(imageVector = Icons.Default.DateRange, contentDescription = "Toggle date jump calendar")
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(if (isDateJumpExpanded) "Hide Calendar" else "Date Jump")
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            Text(
+                                text = "Journal",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                softWrap = false,
+                                modifier = Modifier.testTag("journal_header_title")
+                            )
+                            Text(
+                                text = reflectionCountText,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            OutlinedButton(
+                                onClick = { isDateJumpExpanded = !isDateJumpExpanded },
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .defaultMinSize(minHeight = 48.dp)
+                                    .testTag("journal_date_jump_toggle")
+                            ) {
+                                Icon(imageVector = Icons.Default.DateRange, contentDescription = "Toggle date jump calendar")
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (isDateJumpExpanded) "Hide Calendar" else "Date Jump",
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
+
+                            Button(
+                                onClick = {
+                                    val targetDate = if (isDateFilterActive) selectedDate else referenceToday
+                                    viewModel.openJournalEditor(entry = null, forDate = targetDate)
+                                },
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .defaultMinSize(minHeight = 48.dp)
+                                    .testTag("journal_add_entry_fab")
+                            ) {
+                                Icon(imageVector = Icons.Default.Add, contentDescription = null)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Write",
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
+                        }
                     }
-
-                    Button(
-                        onClick = {
-                            val targetDate = if (isDateFilterActive) selectedDate else referenceToday
-                            viewModel.openJournalEditor(entry = null, forDate = targetDate)
-                        },
-                        modifier = Modifier
-                            .defaultMinSize(minHeight = 48.dp)
-                            .testTag("journal_add_entry_fab")
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = null)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Write")
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 12.dp)
+                        ) {
+                            Text(
+                                text = "Journal",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                softWrap = false,
+                                modifier = Modifier.testTag("journal_header_title")
+                            )
+                            Text(
+                                text = reflectionCountText,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = { isDateJumpExpanded = !isDateJumpExpanded },
+                                modifier = Modifier
+                                    .defaultMinSize(minHeight = 48.dp)
+                                    .testTag("journal_date_jump_toggle")
+                            ) {
+                                Icon(imageVector = Icons.Default.DateRange, contentDescription = "Toggle date jump calendar")
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (isDateJumpExpanded) "Hide Calendar" else "Date Jump",
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
+
+                            Button(
+                                onClick = {
+                                    val targetDate = if (isDateFilterActive) selectedDate else referenceToday
+                                    viewModel.openJournalEditor(entry = null, forDate = targetDate)
+                                },
+                                modifier = Modifier
+                                    .defaultMinSize(minHeight = 48.dp)
+                                    .testTag("journal_add_entry_fab")
+                            ) {
+                                Icon(imageVector = Icons.Default.Add, contentDescription = null)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Write",
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -196,21 +293,25 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
                         testTagPrefix = "journal_date_jump"
                     )
 
-                    Row(
+                    FlowRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalArrangement = Arrangement.Center
                     ) {
                         TextButton(
                             onClick = { viewModel.openDayDetail(selectedDate) },
-                            modifier = Modifier.testTag("journal_open_day_detail_button")
+                            modifier = Modifier
+                                .defaultMinSize(minHeight = 48.dp)
+                                .testTag("journal_open_day_detail_button")
                         ) {
                             Text("Inspect Full Day Detail ($selectedDate)")
                         }
                         if (isDateFilterActive) {
                             TextButton(
                                 onClick = { isDateFilterActive = false },
-                                modifier = Modifier.testTag("journal_clear_date_filter")
+                                modifier = Modifier
+                                    .defaultMinSize(minHeight = 48.dp)
+                                    .testTag("journal_clear_date_filter")
                             ) {
                                 Text("Show All Dates")
                             }
@@ -526,6 +627,7 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun JournalArchiveCard(
     entry: JournalEntry,
@@ -553,10 +655,10 @@ private fun JournalArchiveCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Row(
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

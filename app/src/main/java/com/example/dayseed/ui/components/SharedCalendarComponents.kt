@@ -578,7 +578,7 @@ fun WeeklyHabitBoard(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Spacer(modifier = Modifier.width(104.dp))
+                Spacer(modifier = Modifier.width(56.dp))
                 boardModel.days.forEach { day ->
                     val isToday = day == referenceToday
                     val mood = boardModel.primaryMoodByDate[day]
@@ -694,7 +694,7 @@ fun WeeklyHabitBoard(
                                     text = row.effectiveVersion.targetPeriod.name.lowercase().replaceFirstChar { it.uppercase() },
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.width(104.dp)
+                                    modifier = Modifier.width(56.dp)
                                 )
                                 row.cells.forEach { cell ->
                                     val (cellBg, cellFg, cellBorder) = calendarColorsForState(
