@@ -87,21 +87,19 @@ Discovered while inspecting the rebuilt screenshot: the `+0.37 litres` chips in 
 | Check | Command | Result |
 | --- | --- | --- |
 | Kotlin compile | `./gradlew --no-daemon :app:compileDebugKotlin` | **BUILD SUCCESSFUL** in 4m 48s |
-| Unit + Robolectric tests | `./gradlew --no-daemon :app:testDebugUnitTest` | **294 executed, 291 passed, 3 failed, 0 errors, 0 skipped** |
+| Unit + Robolectric tests | `./gradlew --no-daemon :app:testDebugUnitTest` | **294 executed, 293 passed, 1 failed, 0 errors, 0 skipped** |
 | Lint | `./gradlew --no-daemon :app:lintDebug` | **0 errors, 21 warnings** |
-| Debug APK | `./gradlew --no-daemon :app:assembleDebug` | **SUCCESS**, `app-debug.apk` 19,344,513 bytes |
+| Debug APK | `./gradlew --no-daemon :app:assembleDebug` | **SUCCESS**, `app-debug.apk` 18,683,223 bytes |
 | Release APK | `./gradlew --no-daemon :app:assembleRelease` | **SUCCESS**, `app-release.apk` 12,118,583 bytes — **debug-signed, installation testing only** |
 | Doc links | `bash scripts/check-doc-links.sh` | 341 targets checked, **0 broken** |
 
 New regression coverage: `app/src/test/java/com/example/dayseed/FreebuffHandoffRegressionTest.kt` — 14 JVM tests for currency identity, spelled-out currency aliases, naira preservation, formatter symbols, fractional round-trip, whole-item counts, accumulation, storage-limit rejection, the rejection message, parser overflow flagging, friendly increments, currency increments and hidden increments for tiny targets.
 
-### The three failing tests (all pre-existing)
+### Follow-up: the three failures present at the handover baseline
 
-1. `CanonicalUiAndBehaviourReconciliationTest.runtimeComposeUiLaunchesNavigatesTabsAndVerifiesScreensAndControls` — "Legacy EFFORT_AWARE habit editor must render conversion banner".
-2. `ProgressiveDisclosureAndSmartHabitTest.createEditHabitScreen_collapsesInterpretationControlsByDefaultAndRevealsOnAdjustInterpretation` — "Summary must show Quantity measurement type".
-3. `ProgressiveDisclosureAndSmartHabitTest.recordSessionSheet_startsEmptyForNewEntryValidatesInputsAndSupportsEditAndDelete` — "Save Progress must be enabled when valid positive amount '2' is entered".
-
-Attribution evidence: with every change on this branch stashed, tests 1 and 2 fail identically on the untouched `1ce65ea` tree, so they were introduced during the AI Studio window (which last recorded 276/276 passing) rather than by this branch (`2 tests completed, 2 failed`). They render `CreateEditHabitScreen` directly and do not touch any modified code path. Test 3 is order-dependent: it passed in an isolated run and fails in full-suite runs; `RecordSessionSheet`'s new-entry contract itself still behaves as documented (see evidence `03_record_session_incremental_progress.png`). These were **not** introduced by this branch and were **not** fixed here; they are recorded as outstanding defects rather than reported as passes.
+1. **Legacy EFFORT_AWARE conversion banner — FIXED (product defect).** `legacy_effort_conversion_banner` existed only in the test: the banner D-233 records was lost when the AI Studio rewrite replaced the editor body. It is rendered again when editing a habit whose initial mode is `EFFORT_AWARE`, explaining that Dayseed derives progress from recorded evidence and asking for a Quantity, Duration or check-off goal. `CanonicalUiAndBehaviourReconciliationTest.runtimeComposeUiLaunchesNavigatesTabsAndVerifiesScreensAndControls` **passes**.
+2. **Record Session save-enabled assertion — FIXED (test harness).** Three harness faults combined: `setTextTag` never settled a second recomposition, an intermediate version requested focus and leaked an IME session into the next test, and every test called `controller.destroy()`, which cancels the shared Compose frame clock so later tests in the class read a never-recomposed tree. The helper now sets text without taking focus and settles twice (falling back to `InsertTextAtCursor`), `clickTag` lays out at the requested viewport before looking a control up, and activities are paused/stopped instead of destroyed. `recordSessionSheet_startsEmptyForNewEntryValidatesInputsAndSupportsEditAndDelete` **passes** in the class and in the full suite.
+3. **Quantity summary badge — STILL FAILING, order-dependent.** With the other two fixed the failure count dropped from three to one. This test passes alone, with any single predecessor, and as the last of two; it fails only once four or more Compose activities have accumulated in the same JVM, where the shared Recomposer stops producing frames and the semantics tree stays stale (the habit field reads blank and "Try an example:" stays rendered even after `SetText`). The production behaviour is correct — the same screen, parser and summary render the Quantity badge in isolated runs and in `FreebuffHandoffRegressionTest` — so this is recorded as an outstanding **harness** limitation, not as a silent pass and not as a product defect.
 
 ## 9. Updated evidence
 
