@@ -879,3 +879,22 @@ One consolidated list of every outstanding human/device case, reconciled against
 | Build/bootstrap | `./scripts/bootstrap-debug-keystore.sh` (POSIX) or `.\scripts\bootstrap-debug-keystore.ps1` (Windows, **not executed in this environment**) |
 
 The release APK is signed with the debug keystore by design; it must never be presented as a production-signed release, and production signing material requires an owner decision.
+
+## Freebuff handoff continuation — currencies, precision, quick increments, first-use scene (2026-11-15)
+
+Continuation of the AI Studio implementation from `main` at `1ce65ea1acd508de82d526edceba26860538ceca`, on branch `fix/freebuff-handoff-ux-verification`. Full report: [docs/45-FREEBUFF-HANDOFF-CONTINUATION-2026-11-15.md](45-FREEBUFF-HANDOFF-CONTINUATION-2026-11-15.md).
+
+**Preserved from AI Studio:** fixed-point `@scale` storage with no schema migration, scale-aware summaries across Models/HabitCard/HabitDetail/DayDetail/Repository, the empty-by-default progress entry, collapsed interpretation controls and updated Phase 2 / Progressive Disclosure tests. No AI Studio commit was reverted, reset or replaced.
+
+**Corrected:**
+1. `gradlew` recorded `100644` (the cause of Actions run `43715833932` failing before Gradle started); the index is now `100755` with the identical blob.
+2. KES, UGX and TZS no longer collapse onto one `shillings`/`KSh` spec, and `rand`/`shillings`/`kes`/`ugx`/`tzs` were missing from the formatter's symbol map entirely. Each currency now has its own canonical code and symbol; a bare "shillings" phrase asks the user instead of guessing.
+3. Out-of-range targets are rejected with a clear message (`describeTargetInputProblem`) instead of being silently shrunk by `.min(Int.MAX_VALUE)`; the natural-language parser flags an oversized phrase with an explicit reason.
+4. Quick increments divided the stored integer by four, producing `+0.37 litres` for a 1.5 L target. Both surfaces (`HabitCard` **and** `RecordSessionSheet`, which the handoff screenshot actually showed) now use `UnitFormatter.quickIncrementStoredUnits` → `+0.25` / `+0.5 litres`, `+2` / `+5 pages`, and hide the chips for targets too small to support one.
+5. The empty Today state is now a full-height first-use scene (identity block, larger reused daypart artwork, "Your garden starts here.", Plant Your First Habit, quieter Explore Dayseed, Set Up Dayseed, "Private by design · Offline · Yours") instead of a small card at the top of an empty screen, scroll-friendly on short viewports.
+
+**Executed evidence (2026-11-15, this workspace, Temurin JDK 21.0.13 — `JAVA_HOME` overridden per command because the system default is JDK 17 and the project targets Java 21):** `:app:testDebugUnitTest` → **294 executed, 291 passed, 3 failed, 0 errors, 0 skipped**; `:app:lintDebug` → **0 errors, 21 warnings**; `:app:assembleDebug` → success (19,344,513 bytes); `:app:assembleRelease` → success (12,118,583 bytes, **debug-signed, installation testing only**); `bash scripts/check-doc-links.sh` → 341 targets, 0 broken. New coverage: `FreebuffHandoffRegressionTest` (14 tests).
+
+**The three failures are pre-existing at `1ce65ea`, not caused by this branch:** `CanonicalUiAndBehaviourReconciliationTest.runtimeComposeUiLaunchesNavigatesTabsAndVerifiesScreensAndControls` (legacy EFFORT_AWARE conversion banner) and `ProgressiveDisclosureAndSmartHabitTest.createEditHabitScreen_collapsesInterpretationControlsByDefaultAndRevealsOnAdjustInterpretation` (Quantity summary badge) fail identically on the untouched tree with this branch's changes stashed; `ProgressiveDisclosureAndSmartHabitTest.recordSessionSheet_startsEmptyForNewEntryValidatesInputsAndSupportsEditAndDelete` is order-dependent (passes in isolation). They are recorded as outstanding defects, not as passes, and were not fixed here.
+
+**Regenerated evidence:** `docs/evidence/01`, `02`, `03`, `04`, `08` (plus new `05`, `06`) from the Robolectric suite — automated evidence, **not** physical-device proof. Inspected directly: 01, 03, 04, 08. All physical-device cases remain `NOT RUN`; Stage C and Stage D remain `NOT OPEN`.
