@@ -208,6 +208,9 @@ class ProgressiveDisclosureAndSmartHabitTest {
     }
 
     private fun clickTag(activity: ComponentActivity, tag: String, widthDp: Int = 360, heightDp: Int = 1800) {
+        // Lay out at the requested viewport first: a LazyColumn only composes what fits, so a
+        // control below the fold at the previous size is not findable yet.
+        pumpActivity(activity, widthDp = widthDp, heightDp = heightDp, recompose = false)
         val node = findNodeByTag(activity, tag)
         val clickAction = node.config.getOrNull(SemanticsActions.OnClick)?.action
         assertNotNull("Expected OnClick action on node '$tag'", clickAction)
@@ -215,12 +218,30 @@ class ProgressiveDisclosureAndSmartHabitTest {
         pumpActivity(activity, widthDp = widthDp, heightDp = heightDp, recompose = false)
     }
 
-    private fun setTextTag(activity: ComponentActivity, tag: String, text: String, widthDp: Int = 360, heightDp: Int = 1800) {
+    private fun applySetText(activity: ComponentActivity, tag: String, text: String) {
         val node = findNodeByTag(activity, tag)
         val setTextAction = node.config.getOrNull(SemanticsActions.SetText)?.action
         assertNotNull("Expected SetText action on node '$tag'", setTextAction)
         setTextAction!!.invoke(AnnotatedString(text))
+    }
+
+    private fun setTextTag(activity: ComponentActivity, tag: String, text: String, widthDp: Int = 360, heightDp: Int = 1800) {
+        applySetText(activity, tag, text)
         pumpActivity(activity, widthDp = widthDp, heightDp = heightDp, recompose = false)
+        // A second settle pass lets derived state (validation, summary, previews) recompose before
+        // the caller asserts on it. Requesting focus here would leak an IME session into the next
+        // test in this class, so text entry deliberately never takes focus.
+        pumpActivity(activity, widthDp = widthDp, heightDp = heightDp, recompose = false)
+
+        if (getEditableText(activity, tag) != text) {
+            val insertAction = findNodeByTag(activity, tag)
+                .config.getOrNull(SemanticsActions.InsertTextAtCursor)?.action
+            if (insertAction != null) {
+                insertAction.invoke(AnnotatedString(text))
+                pumpActivity(activity, widthDp = widthDp, heightDp = heightDp, recompose = false)
+                pumpActivity(activity, widthDp = widthDp, heightDp = heightDp, recompose = false)
+            }
+        }
     }
 
     private fun collectAllRenderedTexts(activity: ComponentActivity): List<String> {
@@ -580,7 +601,10 @@ class ProgressiveDisclosureAndSmartHabitTest {
 
         saveScreenshotPng(activity, "04_today_active_habits_and_progress.png", widthDp = 360, heightDp = 900)
 
-        controller.pause().stop().destroy()
+        // Do not destroy the activity here: an explicit destroy cancels the shared Compose frame
+        // clock, so every later test in this class would read stale, never-recomposed UI.
+        // Robolectric tears the activity down at the end of the test.
+        controller.pause().stop()
         repo.dbHelper.close()
     }
 
@@ -682,7 +706,10 @@ class ProgressiveDisclosureAndSmartHabitTest {
         assertEquals("handmade bags", savedHabit.unitCode)
         assertEquals(ScheduleKind.DAILY, savedHabit.scheduleKind)
 
-        controller.pause().stop().destroy()
+        // Do not destroy the activity here: an explicit destroy cancels the shared Compose frame
+        // clock, so every later test in this class would read stale, never-recomposed UI.
+        // Robolectric tears the activity down at the end of the test.
+        controller.pause().stop()
         repo.dbHelper.close()
     }
 
@@ -819,7 +846,10 @@ class ProgressiveDisclosureAndSmartHabitTest {
         assertNotNull(entriesAfterEdit.find { it.entryId == e1.entryId })
         assertNotNull(entriesAfterEdit.find { it.entryId == e2.entryId })
 
-        controller.pause().stop().destroy()
+        // Do not destroy the activity here: an explicit destroy cancels the shared Compose frame
+        // clock, so every later test in this class would read stale, never-recomposed UI.
+        // Robolectric tears the activity down at the end of the test.
+        controller.pause().stop()
         repo.dbHelper.close()
     }
 
@@ -964,7 +994,10 @@ class ProgressiveDisclosureAndSmartHabitTest {
             )
         )
 
-        controller.pause().stop().destroy()
+        // Do not destroy the activity here: an explicit destroy cancels the shared Compose frame
+        // clock, so every later test in this class would read stale, never-recomposed UI.
+        // Robolectric tears the activity down at the end of the test.
+        controller.pause().stop()
         repo.dbHelper.close()
         restoredRepo.dbHelper.close()
     }

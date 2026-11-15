@@ -126,8 +126,16 @@ object HabitNaturalLanguageParser {
         CurrencySpec("yen", "¥", setOf("yen", "jpy", "¥")),
         CurrencySpec("rupees", "₹", setOf("rupee", "rupees", "inr", "₹")),
         CurrencySpec("cedis", "₵", setOf("cedi", "cedis", "ghs", "₵")),
-        CurrencySpec("shillings", "KSh", setOf("shilling", "shillings", "kes", "ksh", "ugx", "tzs")),
-        CurrencySpec("rand", "R", setOf("rand", "zar"))
+        // KES, UGX and TZS are three different currencies. They must never collapse onto a
+        // single "shillings"/KSh specification, or a Ugandan goal would be stored and displayed
+        // as Kenyan shillings.
+        CurrencySpec("kes", "KSh", setOf("kes", "ksh", "kshs", "kenyan shilling", "kenyan shillings")),
+        CurrencySpec("ugx", "USh", setOf("ugx", "ush", "ugandan shilling", "ugandan shillings")),
+        CurrencySpec("tzs", "TSh", setOf("tzs", "tsh", "tanzanian shilling", "tanzanian shillings")),
+        CurrencySpec("rand", "R", setOf("rand", "zar", "south african rand")),
+        // The bare word "shillings" is genuinely ambiguous across KES/UGX/TZS and is flagged for
+        // confirmation when it is the only currency evidence in the phrase.
+        CurrencySpec("shillings", "KSh", setOf("shilling", "shillings"))
     )
 
     private val DURATION_MINUTE_UNITS = setOf(
@@ -279,12 +287,16 @@ object HabitNaturalLanguageParser {
             }
             val minutesStripped = minutesExactDecimal.stripTrailingZeros()
             val minutesHasFraction = minutesStripped.scale() > 0 && unitLower !in DURATION_SECOND_UNITS
-            val targetMinutes = minutesExactDecimal.setScale(0, RoundingMode.HALF_UP)
-                .min(BigDecimal.valueOf(Int.MAX_VALUE.toLong()))
+            val roundedMinutes = minutesExactDecimal.setScale(0, RoundingMode.HALF_UP)
+            val minutesExceedStorageLimit = roundedMinutes > UnitFormatter.maxSupportedWholeValue(0)
+            val targetMinutes = roundedMinutes
+                .min(UnitFormatter.maxSupportedWholeValue(0))
                 .toInt()
                 .coerceAtLeast(1)
 
             val ambiguity = when {
+                minutesExceedStorageLimit ->
+                    "$rawNumStr $rawUnitPhrase is longer than the largest target Dayseed can store ($targetMinutes min). Enter a smaller value."
                 hasMultipleNumbers -> "Multiple numbers found — using $targetMinutes min as the target."
                 minutesHasFraction -> "Converted $rawNumStr $rawUnitPhrase to $targetMinutes min."
                 else -> null
@@ -320,7 +332,12 @@ object HabitNaturalLanguageParser {
                 parsedDecimal = parsedDecimal,
                 hasDecimalPoint = hasDecimalPoint,
                 hasMultipleNumbers = hasMultipleNumbers,
-                schedule = scheduleExtraction
+                schedule = scheduleExtraction,
+                extraAmbiguity = if (matchedCurrency.canonicalUnitCode == "shillings") {
+                    "'shillings' is used by several currencies (KES, UGX, TZS) — tap Adjust interpretation to choose one."
+                } else {
+                    null
+                }
             )
         }
 
@@ -333,13 +350,17 @@ object HabitNaturalLanguageParser {
             // Determine scale (2 for up to 2 decimal places, 3 for 3 decimal places)
             val rawScale = parsedDecimal.stripTrailingZeros().scale().coerceIn(1, 3)
             val effectiveScale = if (rawScale <= 2) 2 else 3
-            val maxUnscaled = BigDecimal.valueOf(Int.MAX_VALUE.toLong()).movePointLeft(effectiveScale)
-            val clampedDecimal = parsedDecimal.min(maxUnscaled).setScale(effectiveScale, RoundingMode.HALF_UP)
-            val scaledTargetInt = clampedDecimal.movePointRight(effectiveScale).toInt().coerceAtLeast(1)
-            val cleanAmountText = clampedDecimal.stripTrailingZeros().toPlainString()
+            val maxUnscaled = UnitFormatter.maxSupportedWholeValue(effectiveScale)
+            val roundedDecimal = parsedDecimal.setScale(effectiveScale, RoundingMode.HALF_UP)
+            val exceedsStorageLimit = roundedDecimal > maxUnscaled
+            val safeDecimal = if (exceedsStorageLimit) maxUnscaled else roundedDecimal
+            val scaledTargetInt = safeDecimal.movePointRight(effectiveScale).toInt().coerceAtLeast(1)
+            val cleanAmountText = safeDecimal.stripTrailingZeros().toPlainString()
             val encodedStorageUnit = UnitFormatter.encodeUnitWithScale(resolvedUnit, effectiveScale)
 
             val ambiguity = when {
+                exceedsStorageLimit ->
+                    "$rawNumStr $resolvedUnit is larger than the largest target Dayseed can store ($cleanAmountText $resolvedUnit). Enter a smaller value."
                 hasMultipleNumbers ->
                     "Multiple numbers detected — using $cleanAmountText $resolvedUnit as the target."
                 isKnownWholeCountable ->
@@ -368,11 +389,15 @@ object HabitNaturalLanguageParser {
             )
         }
 
-        val targetInt = parsedDecimal.setScale(0, RoundingMode.HALF_UP)
-            .min(BigDecimal.valueOf(Int.MAX_VALUE.toLong()))
+        val roundedTarget = parsedDecimal.setScale(0, RoundingMode.HALF_UP)
+        val exceedsStorageLimit = roundedTarget > UnitFormatter.maxSupportedWholeValue(0)
+        val targetInt = roundedTarget
+            .min(UnitFormatter.maxSupportedWholeValue(0))
             .toInt()
             .coerceAtLeast(1)
         val ambiguity = when {
+            exceedsStorageLimit ->
+                "$rawNumStr is larger than the largest target Dayseed can store ($targetInt $resolvedUnit). Enter a smaller value."
             hasMultipleNumbers -> "Multiple numbers detected — using $targetInt $resolvedUnit as the target."
             rawUnitPhrase.isBlank() -> "No unit specified after $targetInt — using '$resolvedUnit'."
             else -> null
@@ -438,19 +463,24 @@ object HabitNaturalLanguageParser {
         parsedDecimal: BigDecimal,
         hasDecimalPoint: Boolean,
         hasMultipleNumbers: Boolean,
-        schedule: ScheduleExtraction
+        schedule: ScheduleExtraction,
+        extraAmbiguity: String? = null
     ): SmartHabitInterpretation {
         if (hasDecimalPoint) {
             val effectiveScale = 2
-            val maxUnscaled = BigDecimal.valueOf(Int.MAX_VALUE.toLong()).movePointLeft(effectiveScale)
-            val clampedDecimal = parsedDecimal.min(maxUnscaled).setScale(effectiveScale, RoundingMode.HALF_UP)
-            val scaledTargetInt = clampedDecimal.movePointRight(effectiveScale).toInt().coerceAtLeast(1)
-            val formattedDecimalPlain = clampedDecimal.toPlainString()
+            val maxUnscaled = UnitFormatter.maxSupportedWholeValue(effectiveScale)
+            val roundedDecimal = parsedDecimal.setScale(effectiveScale, RoundingMode.HALF_UP)
+            val exceedsStorageLimit = roundedDecimal > maxUnscaled
+            val safeDecimal = if (exceedsStorageLimit) maxUnscaled else roundedDecimal
+            val scaledTargetInt = safeDecimal.movePointRight(effectiveScale).toInt().coerceAtLeast(1)
+            val formattedDecimalPlain = safeDecimal.toPlainString()
             val encodedUnit = UnitFormatter.encodeUnitWithScale(spec.canonicalUnitCode, effectiveScale)
-            val ambiguity = if (hasMultipleNumbers) {
-                "Multiple numbers detected — using ${spec.symbol}$formattedDecimalPlain ${spec.canonicalUnitCode}."
-            } else {
-                null
+            val ambiguity = when {
+                exceedsStorageLimit ->
+                    "${spec.symbol}${parsedDecimal.toPlainString()} is larger than the largest target Dayseed can store (${spec.symbol}$formattedDecimalPlain). Enter a smaller value."
+                hasMultipleNumbers ->
+                    "Multiple numbers detected — using ${spec.symbol}$formattedDecimalPlain ${spec.canonicalUnitCode}."
+                else -> extraAmbiguity
             }
             return SmartHabitInterpretation(
                 rawInput = rawInput,
@@ -472,14 +502,18 @@ object HabitNaturalLanguageParser {
             )
         }
 
-        val targetInt = parsedDecimal.setScale(0, RoundingMode.HALF_UP)
-            .min(BigDecimal.valueOf(Int.MAX_VALUE.toLong()))
+        val roundedTarget = parsedDecimal.setScale(0, RoundingMode.HALF_UP)
+        val exceedsStorageLimit = roundedTarget > UnitFormatter.maxSupportedWholeValue(0)
+        val targetInt = roundedTarget
+            .min(UnitFormatter.maxSupportedWholeValue(0))
             .toInt()
             .coerceAtLeast(1)
-        val ambiguity = if (hasMultipleNumbers) {
-            "Multiple numbers detected — using ${spec.symbol}$targetInt ${spec.canonicalUnitCode}."
-        } else {
-            null
+        val ambiguity = when {
+            exceedsStorageLimit ->
+                "${spec.symbol}${parsedDecimal.toPlainString()} is larger than the largest target Dayseed can store ($targetInt). Enter a smaller value."
+            hasMultipleNumbers ->
+                "Multiple numbers detected — using ${spec.symbol}$targetInt ${spec.canonicalUnitCode}."
+            else -> extraAmbiguity
         }
         return SmartHabitInterpretation(
             rawInput = rawInput,
@@ -661,12 +695,32 @@ object UnitFormatter {
         "cedi" to "₵",
         "cedis" to "₵",
         "ghs" to "₵",
-        "₵" to "₵"
+        "₵" to "₵",
+        // East and Southern African currencies stay distinct: KES ≠ UGX ≠ TZS ≠ ZAR.
+        "kes" to "KSh",
+        "ksh" to "KSh",
+        "kshs" to "KSh",
+        "kenyan shilling" to "KSh",
+        "kenyan shillings" to "KSh",
+        "ugx" to "USh",
+        "ush" to "USh",
+        "ugandan shilling" to "USh",
+        "ugandan shillings" to "USh",
+        "tzs" to "TSh",
+        "tsh" to "TSh",
+        "tanzanian shilling" to "TSh",
+        "tanzanian shillings" to "TSh",
+        "shilling" to "KSh",
+        "shillings" to "KSh",
+        "rand" to "R",
+        "zar" to "R",
+        "south african rand" to "R"
     )
 
     private val INVARIANT_UNITS = setOf(
         "min", "mins", "hr", "hrs", "sec", "secs", "ml", "l", "g", "kg", "km", "m", "cm", "oz", "lb", "lbs",
-        "naira", "yen", "rand", "currency", "water", "sleep", "focus", "money", "savings"
+        "naira", "yen", "rand", "zar", "kes", "ugx", "tzs", "shillings", "currency", "water", "sleep",
+        "focus", "money", "savings"
     )
 
     private val FRACTIONAL_MEASUREMENT_UNITS = setOf(
@@ -700,6 +754,82 @@ object UnitFormatter {
         val raw = rawUnitCode?.trim().orEmpty()
         val match = SCALE_SUFFIX_REGEX.find(raw) ?: return 0
         return match.groupValues[2].toIntOrNull()?.coerceIn(0, 3) ?: 0
+    }
+
+    /**
+     * Largest whole-number value that still fits the `Int` storage column once encoded at
+     * `scale` decimal places (for example scale 2 allows up to 21,474,836.47).
+     */
+    fun maxSupportedWholeValue(scale: Int): BigDecimal {
+        val clamped = scale.coerceIn(0, 3)
+        return BigDecimal.valueOf(Int.MAX_VALUE.toLong())
+            .movePointLeft(clamped)
+            .setScale(clamped, RoundingMode.DOWN)
+    }
+
+    /**
+     * Picks human-friendly quick increments for a stored target.
+     *
+     * Returns `(quarterStep, halfStep)` in stored units, or `null` when the target is too small to
+     * offer a meaningful increment. Steps are always exact at the stored precision, so a 1.5 litre
+     * target (150 at scale 2) suggests +0.25 / +0.5 rather than the old engine artefact +0.37.
+     */
+    fun quickIncrementStoredUnits(targetUnits: Int, rawUnitCode: String?): Pair<Int, Int>? {
+        if (targetUnits <= 0) return null
+        val scale = extractScale(rawUnitCode)
+        val unitStep = when (scale) {
+            0 -> 1L
+            1 -> 10L
+            2 -> 100L
+            else -> 1000L
+        }
+        val candidates = LinkedHashSet<Long>()
+        if (scale >= 2) {
+            candidates.add(unitStep / 4)
+            candidates.add(unitStep / 2)
+        }
+        var decade = 1L
+        repeat(7) {
+            candidates.add(decade * unitStep)
+            candidates.add(2 * decade * unitStep)
+            candidates.add(5 * decade * unitStep)
+            decade *= 10
+        }
+        val maxStored = Int.MAX_VALUE.toLong()
+        val sorted = candidates.filter { it in 1..maxStored }.sorted()
+        val quarter = targetUnits / 4L
+        val half = targetUnits / 2L
+        val small = sorted.lastOrNull { it <= quarter } ?: return null
+        val large = sorted.lastOrNull { it <= half } ?: small
+        return small.toInt() to large.toInt()
+    }
+
+    /**
+     * Explains why a typed target on Create/Edit Habit cannot be stored, or `null` when it can.
+     * Used instead of silently shrinking an out-of-range target to a different goal.
+     */
+    fun describeTargetInputProblem(
+        targetInput: String,
+        isCurrency: Boolean,
+        isDuration: Boolean
+    ): String? {
+        val cleaned = targetInput.trim().replace(",", "")
+        if (cleaned.isEmpty()) return "Enter a target value."
+        val bd = cleaned.toBigDecimalOrNull() ?: return "Enter a valid number."
+        if (bd <= BigDecimal.ZERO) return "Target must be a positive number."
+        val scale = when {
+            isDuration -> 0
+            isCurrency -> 2
+            bd.stripTrailingZeros().scale() <= 2 -> 2
+            else -> 3
+        }
+        val maxValue = maxSupportedWholeValue(scale)
+        val rounded = bd.setScale(scale, RoundingMode.HALF_UP)
+        return if (rounded > maxValue) {
+            "That target is larger than Dayseed can store. Enter a value up to ${maxValue.toPlainString()}."
+        } else {
+            null
+        }
     }
 
     fun cleanUnitCode(rawUnitCode: String?): String {
@@ -831,23 +961,21 @@ object UnitFormatter {
         val stripped = bd.stripTrailingZeros()
         val hasFraction = stripped.scale() > 0
         if (isDuration) {
-            val mins = bd.setScale(0, RoundingMode.HALF_UP)
-                .min(BigDecimal.valueOf(Int.MAX_VALUE.toLong()))
-                .toInt()
-                .coerceAtLeast(1)
-            return Triple(mins, "min", 0)
+            val roundedMinutes = bd.setScale(0, RoundingMode.HALF_UP)
+            // Reject rather than clamp: a silently shortened target is a different goal.
+            if (roundedMinutes > maxSupportedWholeValue(0)) return null
+            return Triple(roundedMinutes.toInt().coerceAtLeast(1), "min", 0)
         }
         if (!hasFraction) {
             val whole = bd.setScale(0, RoundingMode.HALF_UP)
-                .min(BigDecimal.valueOf(Int.MAX_VALUE.toLong()))
-                .toInt()
-                .coerceAtLeast(1)
-            return Triple(whole, cleanUnitCode(cleanUnit), 0)
+            if (whole > maxSupportedWholeValue(0)) return null
+            return Triple(whole.toInt().coerceAtLeast(1), cleanUnitCode(cleanUnit), 0)
         }
         val scale = if (isCurrency) 2 else if (stripped.scale() <= 2) 2 else 3
-        val maxUnscaled = BigDecimal.valueOf(Int.MAX_VALUE.toLong()).movePointLeft(scale)
-        val clamped = bd.min(maxUnscaled).setScale(scale, RoundingMode.HALF_UP)
-        val storedInt = clamped.movePointRight(scale).toInt().coerceAtLeast(1)
+        val maxUnscaled = maxSupportedWholeValue(scale)
+        val rounded = bd.setScale(scale, RoundingMode.HALF_UP)
+        if (rounded > maxUnscaled) return null
+        val storedInt = rounded.movePointRight(scale).toInt().coerceAtLeast(1)
         val encodedUnit = encodeUnitWithScale(cleanUnit, scale) ?: cleanUnit
         return Triple(storedInt, encodedUnit, scale)
     }

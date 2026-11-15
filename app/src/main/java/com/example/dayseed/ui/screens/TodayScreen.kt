@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -28,6 +29,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
@@ -283,6 +286,62 @@ fun TodayScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            // First-use scene: the whole Today surface is composed as one intentional, vertically
+            // balanced scene. Once at least one habit exists this branch disappears and the normal
+            // Today list takes over, so a new user never feels stuck inside onboarding.
+            if (activeHabits.isEmpty()) {
+                FirstUseScene(
+                    onboardingCompleted = onboardingCompleted,
+                    showSetupChecklist = onboardingSetupExpanded,
+                    onToggleSetupChecklist = {
+                        viewModel.setOnboardingSetupExpanded(!onboardingSetupExpanded)
+                    },
+                    currentWeekStartDay = currentWeekStartDay,
+                    hasPostNotificationsPermission = hasPostNotificationsPermission,
+                    onCreateFirstHabit = {
+                        viewModel.markColdLaunchSceneShown()
+                        viewModel.openCreateEditHabit(null)
+                    },
+                    onRestoreBackup = {
+                        viewModel.markColdLaunchSceneShown()
+                        viewModel.selectTab(NavTab.SETTINGS)
+                    },
+                    onToggleWeekStart = {
+                        val nextDay = if (currentWeekStartDay == DayOfWeek.MONDAY) {
+                            DayOfWeek.SUNDAY
+                        } else {
+                            DayOfWeek.MONDAY
+                        }
+                        viewModel.repository.setSettingSync("week_start", "ENUM", nextDay.name)
+                    },
+                    onRequestNotifications = {
+                        if (Build.VERSION.SDK_INT >= 33) {
+                            onboardingPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    },
+                    onExploreDayseed = {
+                        viewModel.markColdLaunchSceneShown()
+                        viewModel.repository.setSettingSync("onboarding_completed", "BOOL", "true")
+                    },
+                    dateLabel = today.format(DateTimeFormatter.ofPattern("EEEE, MMMM d")),
+                    greeting = greetingFor(daypart),
+                    showColdLaunchTag = !hasShownColdLaunchScene,
+                    onUndo = if (activeUndoToken != null) {
+                        { viewModel.triggerUndo() }
+                    } else {
+                        null
+                    },
+                    illustration = {
+                        DaypartArtwork(
+                            artwork = artworkBlend.primaryArtwork,
+                            secondaryArtwork = artworkBlend.secondaryArtwork,
+                            blendFraction = artworkBlend.blendFraction,
+                            reducedMotion = reducedMotion,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                )
+            } else {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -378,47 +437,6 @@ fun TodayScreen(
                     }
                 }
 
-                if (activeHabits.isEmpty()) {
-                    // Progressive Disclosure First-Use State (0 active habits):
-                    // Only show the concise first-use welcome/action card with compact Set Up Dayseed toggle.
-                    // Do NOT show Daily Reflection, Collected Moments, zero counters, or Longest Active Rhythm.
-                    item {
-                        FirstUseWelcomeCard(
-                            onboardingCompleted = onboardingCompleted,
-                            showSetupChecklist = onboardingSetupExpanded,
-                            onToggleSetupChecklist = {
-                                viewModel.setOnboardingSetupExpanded(!onboardingSetupExpanded)
-                            },
-                            currentWeekStartDay = currentWeekStartDay,
-                            hasPostNotificationsPermission = hasPostNotificationsPermission,
-                            onCreateFirstHabit = {
-                                viewModel.markColdLaunchSceneShown()
-                                viewModel.openCreateEditHabit(null)
-                            },
-                            onRestoreBackup = {
-                                viewModel.markColdLaunchSceneShown()
-                                viewModel.selectTab(NavTab.SETTINGS)
-                            },
-                            onToggleWeekStart = {
-                                val nextDay = if (currentWeekStartDay == DayOfWeek.MONDAY) {
-                                    DayOfWeek.SUNDAY
-                                } else {
-                                    DayOfWeek.MONDAY
-                                }
-                                viewModel.repository.setSettingSync("week_start", "ENUM", nextDay.name)
-                            },
-                            onRequestNotifications = {
-                                if (Build.VERSION.SDK_INT >= 33) {
-                                    onboardingPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                }
-                            },
-                            onExploreDayseed = {
-                                viewModel.markColdLaunchSceneShown()
-                                viewModel.repository.setSettingSync("onboarding_completed", "BOOL", "true")
-                            }
-                        )
-                    }
-                } else {
                     // Habits exist: reveal Longest Active Rhythm only when a meaningful active streak exists
                     if (longestActiveStreak != null) {
                         item {
@@ -689,7 +707,7 @@ fun TodayScreen(
                     item {
                         Spacer(modifier = Modifier.height(96.dp))
                     }
-                }
+            }
             }
         }
     }
@@ -725,6 +743,146 @@ fun TodayScreen(
     }
 }
 
+/**
+ * Intentional first-use scene shown only while the user has no active habits.
+ *
+ * The composition is deliberately not a single card floating at the top of an empty screen: the
+ * identity block sits at the top, a larger botanical illustration claims the middle, and the
+ * welcome actions anchor the bottom. On short screens the whole scene scrolls instead of clipping.
+ */
+@Composable
+private fun FirstUseScene(
+    onboardingCompleted: Boolean,
+    showSetupChecklist: Boolean,
+    onToggleSetupChecklist: () -> Unit,
+    currentWeekStartDay: DayOfWeek,
+    hasPostNotificationsPermission: Boolean,
+    onCreateFirstHabit: () -> Unit,
+    onRestoreBackup: () -> Unit,
+    onToggleWeekStart: () -> Unit,
+    onRequestNotifications: () -> Unit,
+    onExploreDayseed: () -> Unit,
+    dateLabel: String,
+    greeting: String,
+    showColdLaunchTag: Boolean,
+    onUndo: (() -> Unit)?,
+    illustration: @Composable () -> Unit
+) {
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .then(
+                if (showColdLaunchTag) {
+                    Modifier.testTag("dayseed_cold_launch_scene")
+                } else {
+                    Modifier
+                }
+            )
+    ) {
+        val viewportHeight = maxHeight
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = viewportHeight)
+                    .padding(horizontal = 20.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = dateLabel,
+                        style = DayseedDateStyle,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = greeting,
+                        style = DayseedGreetingStyle,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = "Your progress is more than your streak.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                if (onUndo != null) {
+                    Card(
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 2.dp)
+                            .testTag("undo_action_banner")
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Recent change recorded (8s undo window)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            TextButton(
+                                onClick = onUndo,
+                                modifier = Modifier
+                                    .heightIn(min = 48.dp)
+                                    .testTag("undo_action_btn")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Undo,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Undo", fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                            }
+                        }
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .padding(vertical = 10.dp)
+                        .size(width = 236.dp, height = 188.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    illustration()
+                }
+
+                FirstUseWelcomeCard(
+                    onboardingCompleted = onboardingCompleted,
+                    showSetupChecklist = showSetupChecklist,
+                    onToggleSetupChecklist = onToggleSetupChecklist,
+                    currentWeekStartDay = currentWeekStartDay,
+                    hasPostNotificationsPermission = hasPostNotificationsPermission,
+                    onCreateFirstHabit = onCreateFirstHabit,
+                    onRestoreBackup = onRestoreBackup,
+                    onToggleWeekStart = onToggleWeekStart,
+                    onRequestNotifications = onRequestNotifications,
+                    onExploreDayseed = onExploreDayseed
+                )
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FirstUseWelcomeCard(
@@ -755,31 +913,23 @@ private fun FirstUseWelcomeCard(
                 .padding(horizontal = 18.dp, vertical = 18.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                DayseedLogoSymbol(
-                    size = 28.dp,
-                    contentDesc = null
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = if (!onboardingCompleted) "Welcome to Dayseed" else "Start your first habit",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Calm, offline & private habit tracking",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-
+            // Eyebrow + hero heading. The time-aware greeting and the canonical motto belong to
+            // the surrounding first-use scene, so they are intentionally not repeated here.
             Text(
-                text = "Plant a daily or weekly habit in plain words — whether checking off a routine, reading pages, tending seeds, or saving money — and record progress at your own pace.",
+                text = if (!onboardingCompleted) "Welcome to Dayseed" else "Your garden is waiting",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.testTag("onboarding_welcome_eyebrow")
+            )
+            Text(
+                text = "Your garden starts here.",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.testTag("onboarding_welcome_heading")
+            )
+            Text(
+                text = "Choose one small thing you'd like to nurture in your everyday life.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -798,7 +948,7 @@ private fun FirstUseWelcomeCard(
             ) {
                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Create Your First Habit", fontWeight = FontWeight.SemiBold)
+                Text("Plant Your First Habit", fontWeight = FontWeight.SemiBold, maxLines = 1)
             }
 
             FlowRow(
@@ -838,6 +988,13 @@ private fun FirstUseWelcomeCard(
                     }
                 }
             }
+
+            Text(
+                text = "Private by design · Offline · Yours",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag("onboarding_reassurance_text")
+            )
 
             if (showSetupChecklist) {
                 Surface(
