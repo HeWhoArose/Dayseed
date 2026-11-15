@@ -466,9 +466,16 @@ class OwnerReportedDefectsRemediationTest {
         vm.markColdLaunchSceneShown()
         pumpActivity(activity, widthDp = 360, heightDp = 1200, recompose = true)
 
-        // 1. Fresh install shows onboarding_welcome_card and onboarding_setup_checklist
+        // 1. Fresh install shows onboarding_welcome_card and progressive-disclosure Set Up Dayseed button
         assertEquals("false", repo.getSettingString("onboarding_completed", "false"))
         assertNotNull(findNodeByTagOrNull(activity, "onboarding_welcome_card"))
+        assertNotNull(findNodeByTagOrNull(activity, "onboarding_setup_toggle_btn"))
+        assertNull(
+            "Setup checklist should be collapsed by default until Set Up Dayseed is tapped",
+            findNodeByTagOrNull(activity, "onboarding_setup_checklist")
+        )
+        clickTag(activity, "onboarding_setup_toggle_btn", widthDp = 360, heightDp = 1200)
+        pumpActivity(activity, widthDp = 360, heightDp = 1200, recompose = true)
         assertNotNull(findNodeByTagOrNull(activity, "onboarding_setup_checklist"))
         assertNotNull(findNodeByTagOrNull(activity, "onboarding_restore_backup_btn"))
         assertNotNull(findNodeByTagOrNull(activity, "onboarding_week_start_toggle_btn"))

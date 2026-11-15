@@ -8,8 +8,7 @@ import android.provider.Settings
 import android.text.format.DateFormat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
-import androidx.core.graphics.toColorInt
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -40,8 +39,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -55,6 +59,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -73,18 +78,25 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.toColorInt
 import com.example.dayseed.DayseedViewModel
 import com.example.dayseed.data.DurationNormalizer
 import com.example.dayseed.data.Habit
 import com.example.dayseed.data.HabitLifecycleState
+import com.example.dayseed.data.HabitMeasurementKind
+import com.example.dayseed.data.HabitNaturalLanguageParser
 import com.example.dayseed.data.ReminderEngine
 import com.example.dayseed.data.ReminderNotifier
 import com.example.dayseed.data.ScheduleKind
+import com.example.dayseed.data.SmartHabitInterpretation
 import com.example.dayseed.data.TargetPeriod
 import com.example.dayseed.data.TrackingMode
+import com.example.dayseed.data.UnitFormatter
 import com.example.dayseed.data.WeekdayMask
 import java.time.DayOfWeek
 import java.time.LocalTime
@@ -189,9 +201,6 @@ fun CreateEditHabitScreen(
             onClearSaveError = { viewModel.clearSaveError() },
             onDismiss = onNavigateBack,
             onSave = { habit, applyTodayWhenLogged ->
-                // saveHabit is fire-and-forget; navigation after a successful save is
-                // performed by the ViewModel (closeAddEditHabit). The Boolean return
-                // of onSave was always a constant true and is never inspected.
                 viewModel.saveHabit(habit, applyTodayWhenLogged)
                 true
             },
@@ -229,13 +238,32 @@ fun CreateEditHabitFormContent(
 ) {
     val isEditing = initialHabit != null
 
+    val initialMeasurementKind = remember(initialHabit) {
+        when {
+            initialHabit == null -> HabitMeasurementKind.SIMPLE_CHECK_OFF
+            initialHabit.trackingMode.canonical() == TrackingMode.DURATION -> HabitMeasurementKind.DURATION
+            initialHabit.trackingMode.canonical() == TrackingMode.QUANTITY &&
+                UnitFormatter.isCurrencyUnit(initialHabit.unitCode) -> HabitMeasurementKind.AMOUNT_CURRENCY
+            initialHabit.trackingMode.canonical() == TrackingMode.QUANTITY -> HabitMeasurementKind.QUANTITY
+            else -> HabitMeasurementKind.SIMPLE_CHECK_OFF
+        }
+    }
+
     var name by remember(initialHabit) { mutableStateOf(initialHabit?.name ?: "") }
+    var interpretedActivityName by remember(initialHabit) { mutableStateOf(initialHabit?.name ?: "") }
+    var userEditedActivityOverride by remember(initialHabit) { mutableStateOf(isEditing) }
+    var userOverrodeMeasurement by remember(initialHabit) { mutableStateOf(isEditing) }
+    var userOverrodeSchedule by remember(initialHabit) { mutableStateOf(isEditing) }
+
     var description by remember(initialHabit) { mutableStateOf(initialHabit?.description ?: "") }
     var category by remember(initialHabit) { mutableStateOf(initialHabit?.category ?: "") }
     var lifetimeGoalText by remember(initialHabit) {
         mutableStateOf(initialHabit?.lifetimeGoalDays?.toString() ?: "")
     }
 
+    var selectedMeasurementKind by remember(initialHabit) {
+        mutableStateOf(initialMeasurementKind)
+    }
     var trackingMode by remember(initialHabit) {
         mutableStateOf((initialHabit?.trackingMode ?: TrackingMode.COMPLETION_ONLY).canonical())
     }
@@ -315,6 +343,17 @@ fun CreateEditHabitFormContent(
         mutableStateOf(!alreadyLoggedToday)
     }
 
+    // Collapsible More Options / Advanced Settings (collapsed by default for new habits)
+    var showAdvancedOptions by remember(initialHabit) {
+        mutableStateOf(
+            isEditing && (
+                !initialHabit?.description.isNullOrBlank() ||
+                    !initialHabit?.category.isNullOrBlank() ||
+                    initialHabit?.lifetimeGoalDays != null
+                )
+        )
+    }
+
     var nameError by remember { mutableStateOf<String?>(null) }
     var targetValueError by remember { mutableStateOf<String?>(null) }
     var lifetimeGoalError by remember { mutableStateOf<String?>(null) }
@@ -323,7 +362,70 @@ fun CreateEditHabitFormContent(
 
     val colorOptions = listOf("#286143", "#3B6955", "#4A7C59", "#708D81", "#8D6B94", "#C08552")
     val categorySuggestions = listOf("Mindfulness", "Movement", "Reading", "Health", "Focus")
-    val quantityUnitPresets = listOf("pages", "reps", "glasses", "km", "sessions")
+    val quantityUnitPresets = listOf("pages", "seeds", "words", "reps", "glasses", "km", "sessions")
+    val currencyUnitPresets = listOf("naira", "dollars", "pounds", "euros", "cedis", "shillings")
+    val promptExamples = listOf(
+        "Read 10 pages of a book",
+        "Walk for 30 minutes",
+        "Meditate daily",
+        "Save ₦5,000"
+    )
+
+    val parsedInterpretation = remember(name) {
+        HabitNaturalLanguageParser.parse(name)
+    }
+
+    fun applyNaturalLanguageInput(newInput: String) {
+        name = newInput
+        if (newInput.isNotBlank()) nameError = null
+        onClearSaveError()
+
+        val interpretation = HabitNaturalLanguageParser.parse(newInput)
+        if (!userEditedActivityOverride) {
+            interpretedActivityName = if (interpretation.extractedMeasurementFromPrompt || interpretation.extractedScheduleFromPrompt) {
+                interpretation.activityName.ifBlank { newInput.trim() }
+            } else {
+                newInput.trim()
+            }
+        }
+
+        if (!userOverrodeMeasurement) {
+            if (interpretation.extractedMeasurementFromPrompt) {
+                selectedMeasurementKind = interpretation.measurementKind
+                trackingMode = interpretation.trackingMode
+                targetValueText = (interpretation.targetValue ?: 1).toString()
+                unitCode = interpretation.unitCode ?: when (interpretation.trackingMode) {
+                    TrackingMode.DURATION -> "min"
+                    TrackingMode.QUANTITY -> "pages"
+                    else -> ""
+                }
+                targetValueError = null
+            } else {
+                selectedMeasurementKind = HabitMeasurementKind.SIMPLE_CHECK_OFF
+                trackingMode = TrackingMode.COMPLETION_ONLY
+            }
+        }
+
+        if (!userOverrodeSchedule && interpretation.extractedScheduleFromPrompt) {
+            scheduleKind = interpretation.scheduleKind
+            targetPeriod = interpretation.targetPeriod
+            if (interpretation.scheduledWeekdaysMask != null) {
+                selectedDays = WeekdayMask.fromMask(interpretation.scheduledWeekdaysMask)
+            } else if (interpretation.scheduleKind == ScheduleKind.DAILY) {
+                selectedDays = DayOfWeek.values().toSet()
+            }
+        }
+    }
+
+    val resolvedHabitName = remember(name, interpretedActivityName, parsedInterpretation, userEditedActivityOverride) {
+        if (userEditedActivityOverride && interpretedActivityName.isNotBlank()) {
+            interpretedActivityName.trim()
+        } else if (parsedInterpretation.extractedMeasurementFromPrompt || parsedInterpretation.extractedScheduleFromPrompt) {
+            interpretedActivityName.trim().ifBlank { parsedInterpretation.activityName.ifBlank { name.trim() } }
+        } else {
+            name.trim()
+        }
+    }
 
     val hasMidWeekIncompatibleChange = remember(
         isEditing,
@@ -394,7 +496,7 @@ fun CreateEditHabitFormContent(
             }
         }
 
-        // SECTION 1: Identity & Category
+        // STEP 1: Primary Natural-Language Input ("What would you like to do?")
         Card(
             shape = RoundedCornerShape(14.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -406,27 +508,29 @@ fun CreateEditHabitFormContent(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    text = "1. Identity & Category",
+                    text = if (isEditing) "Habit Name or Goal" else "What would you like to do?",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
 
+                Text(
+                    text = "Describe your habit naturally — with or without a number, unit, or schedule.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
                 OutlinedTextField(
                     value = name,
-                    onValueChange = {
-                        name = it
-                        if (it.isNotBlank()) nameError = null
-                        onClearSaveError()
-                    },
-                    label = { Text("Habit name *") },
-                    placeholder = { Text("e.g. Read, Gentle Stretch, Hydrate") },
+                    onValueChange = { applyNaturalLanguageInput(it) },
+                    label = { Text(if (isEditing) "Habit name *" else "What would you like to do? *") },
+                    placeholder = { Text("e.g. Read 10 pages of a book") },
                     isError = nameError != null,
                     supportingText = {
                         if (nameError != null) {
                             Text(nameError!!, color = MaterialTheme.colorScheme.error)
                         } else {
-                            Text("${name.trim().length}/80 characters")
+                            Text("${name.length}/80 characters")
                         }
                     },
                     modifier = Modifier
@@ -436,187 +540,291 @@ fun CreateEditHabitFormContent(
                     singleLine = true
                 )
 
-                OutlinedTextField(
-                    value = description,
-                    onValueChange = {
-                        description = it
-                        onClearSaveError()
-                    },
-                    label = { Text("Purpose or note (optional)") },
-                    placeholder = { Text("e.g. For peace of mind and clarity") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .bringIntoViewOnFocus()
-                        .testTag("habit_desc_input"),
-                    maxLines = 2
-                )
-
-                OutlinedTextField(
-                    value = category,
-                    onValueChange = {
-                        category = it
-                        onClearSaveError()
-                    },
-                    label = { Text("Category (optional)") },
-                    placeholder = { Text("e.g. Mindfulness, Movement, Reading") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .bringIntoViewOnFocus()
-                        .testTag("habit_category_input"),
-                    singleLine = true
-                )
-
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    for (cat in categorySuggestions) {
-                        FilterChip(
-                            selected = category.equals(cat, ignoreCase = true),
-                            onClick = {
-                                category = if (category.equals(cat, ignoreCase = true)) "" else cat
-                                onClearSaveError()
-                            },
-                            label = { Text(cat) }
-                        )
-                    }
-                }
-
-                OutlinedTextField(
-                    value = lifetimeGoalText,
-                    onValueChange = {
-                        lifetimeGoalText = it.filter { ch -> ch.isDigit() }
-                        lifetimeGoalError = null
-                        onClearSaveError()
-                    },
-                    label = { Text("Lifetime goal active days (optional, 1–36500)") },
-                    placeholder = { Text("e.g. 90 or 365") },
-                    isError = lifetimeGoalError != null,
-                    supportingText = {
-                        if (lifetimeGoalError != null) {
-                            Text(lifetimeGoalError!!, color = MaterialTheme.colorScheme.error)
+                if (!isEditing && name.isBlank()) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        for (example in promptExamples) {
+                            SuggestionChip(
+                                onClick = {
+                                    userEditedActivityOverride = false
+                                    userOverrodeMeasurement = false
+                                    userOverrodeSchedule = false
+                                    applyNaturalLanguageInput(example)
+                                },
+                                label = { Text(example, style = MaterialTheme.typography.labelSmall) }
+                            )
                         }
-                    },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .bringIntoViewOnFocus()
-                        .testTag("habit_lifetime_goal_input")
-                )
-
-                Text(
-                    text = "Habit Color",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    for (hex in colorOptions) {
-                        val c = try {
-                            Color(hex.toColorInt())
-                        } catch (_: Exception) {
-                            Color.Green
-                        }
-                        val isPicked = selectedColor.equals(hex, ignoreCase = true)
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(c)
-                                .clickable {
-                                    selectedColor = hex
-                                    onClearSaveError()
-                                }
-                                .then(
-                                    if (isPicked) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
-                                    else Modifier
-                                )
-                        )
                     }
                 }
             }
         }
 
-        // SECTION 2: Measurement Mode & Units
+        // STEP 2: "Here's what we understood" Confirmation & Measurement Adjustment Card
         Card(
             shape = RoundedCornerShape(14.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("smart_habit_interpretation_card")
         ) {
             Column(
                 modifier = Modifier.padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text(
-                    text = "2. Measurement Mode & Units",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-
-                val creatableOptions = listOf(
-                    Triple(TrackingMode.COMPLETION_ONLY, "Simple Check-Off", "Simple done check-in"),
-                    Triple(TrackingMode.DURATION, "Duration", "Track minutes or hours toward a goal"),
-                    Triple(TrackingMode.QUANTITY, "Quantity", "Track counts (pages, glasses, sessions) toward a goal")
-                )
-                val modes = if (isEditing && initialHabit?.trackingMode?.canonical() == TrackingMode.EFFORT_AWARE) {
-                    listOf(
-                        Triple(
-                            TrackingMode.EFFORT_AWARE,
-                            "Effort-Aware (Legacy — convert recommended)",
-                            "Historical records are preserved; choose Duration, Quantity, or Simple Check-Off to set a target"
-                        )
-                    ) + creatableOptions
-                } else {
-                    creatableOptions
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "Here's what we understood:",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
 
-                for ((m, title, sub) in modes) {
+                // Live interpreted summary box
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        SummaryRow(
+                            label = "Activity",
+                            value = resolvedHabitName.ifBlank { "—" },
+                            testTag = "smart_summary_activity"
+                        )
+                        SummaryRow(
+                            label = "Measurement type",
+                            value = selectedMeasurementKind.label,
+                            testTag = "smart_summary_measurement_type"
+                        )
+                        if (trackingMode in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION) ||
+                            targetPeriod == TargetPeriod.WEEK
+                        ) {
+                            val targetNumeric = targetValueText.trim().toIntOrNull() ?: 1
+                            val targetSummaryDisplay = if (trackingMode in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION)) {
+                                val effectiveUnit = unitCode.ifBlank {
+                                    if (trackingMode == TrackingMode.DURATION) "min" else "units"
+                                }
+                                UnitFormatter.formatValueWithUnit(targetNumeric, effectiveUnit)
+                            } else {
+                                targetValueText.ifBlank { "1" }
+                            }
+                            SummaryRow(
+                                label = "Target",
+                                value = targetSummaryDisplay,
+                                testTag = "smart_summary_target"
+                            )
+                        }
+                        if (trackingMode in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION)) {
+                            SummaryRow(
+                                label = "Unit",
+                                value = unitCode.ifBlank { if (trackingMode == TrackingMode.DURATION) "min" else "units" },
+                                testTag = "smart_summary_unit"
+                            )
+                        }
+                        SummaryRow(
+                            label = "Schedule",
+                            value = when (scheduleKind) {
+                                ScheduleKind.DAILY -> "Daily"
+                                ScheduleKind.FLEXIBLE_WEEKLY_TARGET -> "Weekly"
+                                ScheduleKind.SELECTED_WEEKDAYS ->
+                                    SmartHabitInterpretation.formatWeekdaysMask(WeekdayMask.toMask(selectedDays))
+                            },
+                            testTag = "smart_summary_schedule"
+                        )
+                    }
+                }
+
+                // Ambiguity notice when multiple numbers or decimal conversion occurred
+                if (parsedInterpretation.needsUserConfirmation && !parsedInterpretation.ambiguityReason.isNullOrBlank()) {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.65f),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("smart_habit_ambiguity_notice")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = parsedInterpretation.ambiguityReason,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    }
+                }
+
+                // Editable Activity Name field when a natural-language sentence was parsed
+                if (parsedInterpretation.extractedMeasurementFromPrompt ||
+                    parsedInterpretation.extractedScheduleFromPrompt ||
+                    userEditedActivityOverride
+                ) {
+                    OutlinedTextField(
+                        value = interpretedActivityName,
+                        onValueChange = {
+                            interpretedActivityName = it
+                            userEditedActivityOverride = true
+                            nameError = null
+                            onClearSaveError()
+                        },
+                        label = { Text("Activity display name") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bringIntoViewOnFocus()
+                            .testTag("smart_interpreted_activity_input")
+                    )
+                }
+
+                // Measurement Mode Options (Simple Check-Off, Quantity, Duration, Amount / Currency, plus Legacy if editing)
+                val creatableOptions = listOf(
+                    Triple(
+                        HabitMeasurementKind.SIMPLE_CHECK_OFF,
+                        "Simple Check-Off",
+                        "Simple done check-in"
+                    ),
+                    Triple(
+                        HabitMeasurementKind.DURATION,
+                        "Duration",
+                        "Track minutes or hours toward a goal"
+                    ),
+                    Triple(
+                        HabitMeasurementKind.QUANTITY,
+                        "Quantity",
+                        "Track any custom unit (pages, seeds, bags, animals, words) toward a goal"
+                    ),
+                    Triple(
+                        HabitMeasurementKind.AMOUNT_CURRENCY,
+                        "Amount / Currency",
+                        "Track money saved or spent (e.g. ₦5,000 naira, $50)"
+                    )
+                )
+
+                if (isEditing && initialHabit?.trackingMode?.canonical() == TrackingMode.EFFORT_AWARE) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                trackingMode = m
-                                if (m == TrackingMode.DURATION && !DurationNormalizer.isSupportedDurationUnit(unitCode)) {
+                                userOverrodeMeasurement = true
+                                trackingMode = TrackingMode.EFFORT_AWARE
+                                targetValueError = null
+                                onClearSaveError()
+                            }
+                            .testTag("mode_option_effort_aware"),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = trackingMode == TrackingMode.EFFORT_AWARE,
+                            onClick = {
+                                userOverrodeMeasurement = true
+                                trackingMode = TrackingMode.EFFORT_AWARE
+                                targetValueError = null
+                                onClearSaveError()
+                            }
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Column {
+                            Text(
+                                "Effort-Aware (Legacy — convert recommended)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                "Historical records are preserved; choose Duration, Quantity, or Simple Check-Off to set a target",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                for ((kind, title, sub) in creatableOptions) {
+                    val tag = when (kind) {
+                        HabitMeasurementKind.SIMPLE_CHECK_OFF -> "mode_option_completion_only"
+                        HabitMeasurementKind.DURATION -> "mode_option_duration"
+                        HabitMeasurementKind.QUANTITY -> "mode_option_quantity"
+                        HabitMeasurementKind.AMOUNT_CURRENCY -> "mode_option_amount_currency"
+                    }
+                    val isSelected = trackingMode != TrackingMode.EFFORT_AWARE && selectedMeasurementKind == kind
+
+                    val selectKindAction = {
+                        userOverrodeMeasurement = true
+                        selectedMeasurementKind = kind
+                        when (kind) {
+                            HabitMeasurementKind.SIMPLE_CHECK_OFF -> {
+                                trackingMode = TrackingMode.COMPLETION_ONLY
+                                if (targetPeriod == TargetPeriod.WEEK) {
+                                    val currentVal = targetValueText.toIntOrNull() ?: 3
+                                    if (currentVal !in 1..7) targetValueText = "3"
+                                }
+                            }
+                            HabitMeasurementKind.DURATION -> {
+                                trackingMode = TrackingMode.DURATION
+                                if (!DurationNormalizer.isSupportedDurationUnit(unitCode)) {
                                     unitCode = "min"
                                     if (targetValueText.toIntOrNull() == null || targetValueText == "1") {
                                         targetValueText = "15"
                                     }
-                                } else if (m == TrackingMode.QUANTITY && unitCode.isBlank()) {
+                                }
+                            }
+                            HabitMeasurementKind.QUANTITY -> {
+                                trackingMode = TrackingMode.QUANTITY
+                                if (unitCode.isBlank() || DurationNormalizer.isSupportedDurationUnit(unitCode) || UnitFormatter.isCurrencyUnit(unitCode)) {
                                     unitCode = "pages"
                                     if (targetValueText.toIntOrNull() == null || targetValueText == "1") {
                                         targetValueText = "10"
                                     }
-                                } else if (m == TrackingMode.COMPLETION_ONLY && targetPeriod == TargetPeriod.WEEK) {
-                                    val currentVal = targetValueText.toIntOrNull() ?: 3
-                                    if (currentVal !in 1..7) targetValueText = "3"
                                 }
-                                targetValueError = null
-                                onClearSaveError()
                             }
-                            .testTag("mode_option_${m.name.lowercase()}"),
+                            HabitMeasurementKind.AMOUNT_CURRENCY -> {
+                                trackingMode = TrackingMode.QUANTITY
+                                if (!UnitFormatter.isCurrencyUnit(unitCode)) {
+                                    unitCode = "naira"
+                                    if (targetValueText.toIntOrNull() == null || targetValueText == "1" || targetValueText == "10") {
+                                        targetValueText = "5000"
+                                    }
+                                }
+                            }
+                        }
+                        targetValueError = null
+                        onClearSaveError()
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = selectKindAction)
+                            .testTag(tag),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
-                            selected = trackingMode == m,
-                            onClick = {
-                                trackingMode = m
-                                if (m == TrackingMode.DURATION && !DurationNormalizer.isSupportedDurationUnit(unitCode)) {
-                                    unitCode = "min"
-                                } else if (m == TrackingMode.QUANTITY && unitCode.isBlank()) {
-                                    unitCode = "pages"
-                                } else if (m == TrackingMode.COMPLETION_ONLY && targetPeriod == TargetPeriod.WEEK) {
-                                    val currentVal = targetValueText.toIntOrNull() ?: 3
-                                    if (currentVal !in 1..7) targetValueText = "3"
-                                }
-                                targetValueError = null
-                                onClearSaveError()
-                            }
+                            selected = isSelected,
+                            onClick = selectKindAction
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Column {
@@ -637,6 +845,7 @@ fun CreateEditHabitFormContent(
                             FilterChip(
                                 selected = unitCode == u,
                                 onClick = {
+                                    userOverrodeMeasurement = true
                                     unitCode = u
                                     onClearSaveError()
                                 },
@@ -649,24 +858,48 @@ fun CreateEditHabitFormContent(
                     OutlinedTextField(
                         value = unitCode,
                         onValueChange = {
+                            userOverrodeMeasurement = true
                             unitCode = it
                             onClearSaveError()
                         },
-                        label = { Text("Unit") },
+                        label = {
+                            Text(
+                                if (selectedMeasurementKind == HabitMeasurementKind.AMOUNT_CURRENCY) {
+                                    "Currency or Amount Unit"
+                                } else {
+                                    "Unit (any custom word or phrase)"
+                                }
+                            )
+                        },
+                        placeholder = {
+                            Text(
+                                if (selectedMeasurementKind == HabitMeasurementKind.AMOUNT_CURRENCY) {
+                                    "e.g. naira, dollars, pounds"
+                                } else {
+                                    "e.g. pages, seeds, handmade bags, animals"
+                                }
+                            )
+                        },
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
                             .bringIntoViewOnFocus()
                             .testTag("habit_unit_code_input")
                     )
+                    val activePresets = if (selectedMeasurementKind == HabitMeasurementKind.AMOUNT_CURRENCY) {
+                        currencyUnitPresets
+                    } else {
+                        quantityUnitPresets
+                    }
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        for (preset in quantityUnitPresets) {
+                        for (preset in activePresets) {
                             FilterChip(
                                 selected = unitCode.equals(preset, ignoreCase = true),
                                 onClick = {
+                                    userOverrodeMeasurement = true
                                     unitCode = preset
                                     onClearSaveError()
                                 },
@@ -691,67 +924,6 @@ fun CreateEditHabitFormContent(
                         )
                     }
                 }
-            }
-        }
-
-        // SECTION 3: Target & Period
-        Card(
-            shape = RoundedCornerShape(14.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "3. Target & Period",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = targetPeriod == TargetPeriod.DAY,
-                        onClick = {
-                            targetPeriod = TargetPeriod.DAY
-                            if (scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET) {
-                                scheduleKind = ScheduleKind.DAILY
-                                if (selectedDays.isEmpty()) {
-                                    selectedDays = DayOfWeek.values().toSet()
-                                }
-                            }
-                            targetValueError = null
-                            onClearSaveError()
-                        },
-                        label = { Text("Per Day") },
-                        modifier = Modifier
-                            .heightIn(min = 48.dp)
-                            .testTag("target_period_day_chip")
-                    )
-                    FilterChip(
-                        selected = targetPeriod == TargetPeriod.WEEK,
-                        onClick = {
-                            targetPeriod = TargetPeriod.WEEK
-                            scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET
-                            if (selectedDays.size == 7) {
-                                selectedDays = emptySet()
-                            }
-                            if (trackingMode == TrackingMode.COMPLETION_ONLY) {
-                                val v = targetValueText.toIntOrNull() ?: 3
-                                if (v !in 1..7) targetValueText = "3"
-                            }
-                            targetValueError = null
-                            onClearSaveError()
-                        },
-                        label = { Text("Per Week") },
-                        modifier = Modifier
-                            .heightIn(min = 48.dp)
-                            .testTag("target_period_week_chip")
-                    )
-                }
 
                 val showTargetValueField = trackingMode in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION) ||
                     targetPeriod == TargetPeriod.WEEK
@@ -769,6 +941,7 @@ fun CreateEditHabitFormContent(
                     OutlinedTextField(
                         value = targetValueText,
                         onValueChange = {
+                            userOverrodeMeasurement = true
                             targetValueText = it.filter { ch -> ch.isDigit() }
                             targetValueError = null
                             onClearSaveError()
@@ -800,7 +973,7 @@ fun CreateEditHabitFormContent(
             }
         }
 
-        // SECTION 4: Schedule
+        // STEP 3: Simple Schedule Choice
         Card(
             shape = RoundedCornerShape(14.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -812,7 +985,7 @@ fun CreateEditHabitFormContent(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "4. Schedule",
+                    text = "Schedule",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -822,6 +995,7 @@ fun CreateEditHabitFormContent(
                     FilterChip(
                         selected = scheduleKind == ScheduleKind.DAILY,
                         onClick = {
+                            userOverrodeSchedule = true
                             scheduleKind = ScheduleKind.DAILY
                             targetPeriod = TargetPeriod.DAY
                             selectedDays = DayOfWeek.values().toSet()
@@ -835,6 +1009,7 @@ fun CreateEditHabitFormContent(
                     FilterChip(
                         selected = scheduleKind == ScheduleKind.SELECTED_WEEKDAYS,
                         onClick = {
+                            userOverrodeSchedule = true
                             scheduleKind = ScheduleKind.SELECTED_WEEKDAYS
                             targetPeriod = TargetPeriod.DAY
                             if (selectedDays.isEmpty()) {
@@ -850,6 +1025,7 @@ fun CreateEditHabitFormContent(
                     FilterChip(
                         selected = scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET,
                         onClick = {
+                            userOverrodeSchedule = true
                             scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET
                             targetPeriod = TargetPeriod.WEEK
                             if (selectedDays.size == 7) {
@@ -887,6 +1063,7 @@ fun CreateEditHabitFormContent(
                         if (scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET && selectedDays.isNotEmpty()) {
                             TextButton(
                                 onClick = {
+                                    userOverrodeSchedule = true
                                     selectedDays = emptySet()
                                     onClearSaveError()
                                 },
@@ -914,6 +1091,7 @@ fun CreateEditHabitFormContent(
                             FilterChip(
                                 selected = isSelected,
                                 onClick = {
+                                    userOverrodeSchedule = true
                                     selectedDays = if (isSelected) {
                                         if (scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET || selectedDays.size > 1) {
                                             selectedDays - d
@@ -936,7 +1114,7 @@ fun CreateEditHabitFormContent(
             }
         }
 
-        // SECTION 5: Reminder & Effective-Date Policy (D-194 & U-12)
+        // STEP 4: Simple Reminder Toggle (expands ODR-001/ODR-002 time controls only when enabled)
         Card(
             shape = RoundedCornerShape(14.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -945,15 +1123,8 @@ fun CreateEditHabitFormContent(
         ) {
             Column(
                 modifier = Modifier.padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = "5. Reminder & Effective Timing",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -961,13 +1132,13 @@ fun CreateEditHabitFormContent(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Gentle Daily Reminder",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold
+                            text = "Gentle Reminder",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
                         )
-                        if (suggestedReminderTime != null) {
+                        if (suggestedReminderTime != null && !reminderEnabled) {
                             Text(
-                                text = "Suggested from your rhythm: ${SettingsSupport.formatUnambiguousTimeDisplay(suggestedReminderTime, is24HourFormat)}",
+                                text = "Suggested from your habit rhythm: ${SettingsSupport.formatUnambiguousTimeDisplay(suggestedReminderTime, is24HourFormat)}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -977,7 +1148,6 @@ fun CreateEditHabitFormContent(
                         checked = reminderEnabled,
                         onCheckedChange = {
                             reminderEnabled = it
-                            if (!it) reminderTimeError = null
                             onClearSaveError()
                         },
                         modifier = Modifier.testTag("habit_reminder_switch")
@@ -1330,6 +1500,221 @@ fun CreateEditHabitFormContent(
             }
         }
 
+        // STEP 5: Collapsible More Options / Advanced Settings (Category, Purpose, Lifetime Goal, Color, Target Period)
+        Card(
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable(role = Role.Button) { showAdvancedOptions = !showAdvancedOptions }
+                        .testTag("habit_advanced_options_toggle")
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Tune,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Column {
+                            Text(
+                                text = "More Options",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "Category, colour, purpose note & lifetime goal",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Icon(
+                        imageVector = if (showAdvancedOptions) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = if (showAdvancedOptions) "Collapse more options" else "Expand more options",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                AnimatedVisibility(visible = showAdvancedOptions) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 6.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = description,
+                            onValueChange = {
+                                description = it
+                                onClearSaveError()
+                            },
+                            label = { Text("Purpose or note (optional)") },
+                            placeholder = { Text("e.g. For peace of mind and clarity") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .bringIntoViewOnFocus()
+                                .testTag("habit_desc_input"),
+                            maxLines = 2
+                        )
+
+                        OutlinedTextField(
+                            value = category,
+                            onValueChange = {
+                                category = it
+                                onClearSaveError()
+                            },
+                            label = { Text("Category (optional)") },
+                            placeholder = { Text("e.g. Mindfulness, Movement, Reading") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .bringIntoViewOnFocus()
+                                .testTag("habit_category_input"),
+                            singleLine = true
+                        )
+
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            for (cat in categorySuggestions) {
+                                FilterChip(
+                                    selected = category.equals(cat, ignoreCase = true),
+                                    onClick = {
+                                        category = if (category.equals(cat, ignoreCase = true)) "" else cat
+                                        onClearSaveError()
+                                    },
+                                    label = { Text(cat) }
+                                )
+                            }
+                        }
+
+                        OutlinedTextField(
+                            value = lifetimeGoalText,
+                            onValueChange = {
+                                lifetimeGoalText = it.filter { ch -> ch.isDigit() }
+                                lifetimeGoalError = null
+                                onClearSaveError()
+                            },
+                            label = { Text("Lifetime goal active days (optional, 1–36500)") },
+                            placeholder = { Text("e.g. 90 or 365") },
+                            isError = lifetimeGoalError != null,
+                            supportingText = {
+                                if (lifetimeGoalError != null) {
+                                    Text(lifetimeGoalError!!, color = MaterialTheme.colorScheme.error)
+                                }
+                            },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .bringIntoViewOnFocus()
+                                .testTag("habit_lifetime_goal_input")
+                        )
+
+                        Text(
+                            text = "Target Period",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChip(
+                                selected = targetPeriod == TargetPeriod.DAY,
+                                onClick = {
+                                    userOverrodeSchedule = true
+                                    targetPeriod = TargetPeriod.DAY
+                                    if (scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET) {
+                                        scheduleKind = ScheduleKind.DAILY
+                                        if (selectedDays.isEmpty()) {
+                                            selectedDays = DayOfWeek.values().toSet()
+                                        }
+                                    }
+                                    targetValueError = null
+                                    onClearSaveError()
+                                },
+                                label = { Text("Per Day") },
+                                modifier = Modifier
+                                    .heightIn(min = 48.dp)
+                                    .testTag("target_period_day_chip")
+                            )
+                            FilterChip(
+                                selected = targetPeriod == TargetPeriod.WEEK,
+                                onClick = {
+                                    userOverrodeSchedule = true
+                                    targetPeriod = TargetPeriod.WEEK
+                                    scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET
+                                    if (selectedDays.size == 7) {
+                                        selectedDays = emptySet()
+                                    }
+                                    if (trackingMode == TrackingMode.COMPLETION_ONLY) {
+                                        val v = targetValueText.toIntOrNull() ?: 3
+                                        if (v !in 1..7) targetValueText = "3"
+                                    }
+                                    targetValueError = null
+                                    onClearSaveError()
+                                },
+                                label = { Text("Per Week") },
+                                modifier = Modifier
+                                    .heightIn(min = 48.dp)
+                                    .testTag("target_period_week_chip")
+                            )
+                        }
+
+                        Text(
+                            text = "Habit Color",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            for (hex in colorOptions) {
+                                val c = try {
+                                    Color(hex.toColorInt())
+                                } catch (_: Exception) {
+                                    Color.Green
+                                }
+                                val isPicked = selectedColor.equals(hex, ignoreCase = true)
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(c)
+                                        .clickable {
+                                            selectedColor = hex
+                                            onClearSaveError()
+                                        }
+                                        .then(
+                                            if (isPicked) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                                            else Modifier
+                                        )
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         if (!saveErrorMessage.isNullOrBlank()) {
             Card(
                 shape = RoundedCornerShape(12.dp),
@@ -1383,9 +1768,9 @@ fun CreateEditHabitFormContent(
             Button(
                 onClick = {
                     onClearSaveError()
-                    val trimmedName = name.trim()
+                    val trimmedName = resolvedHabitName.trim()
                     if (trimmedName.isEmpty() || trimmedName.length > 80) {
-                        nameError = "Please enter a habit name (1–80 characters)."
+                        nameError = "Please enter what you would like to do (1–80 characters)."
                         return@Button
                     }
 
@@ -1395,6 +1780,7 @@ fun CreateEditHabitFormContent(
                         val goal = lifetimeGoalText.toIntOrNull()
                         if (goal == null || goal !in 1..36500) {
                             lifetimeGoalError = "Lifetime goal must be between 1 and 36,500 days."
+                            showAdvancedOptions = true
                             return@Button
                         }
                         goal
@@ -1500,7 +1886,7 @@ fun CreateEditHabitFormContent(
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
-                Text("Save")
+                Text(if (isEditing) "Save" else "Create Habit")
             }
         }
 
@@ -1547,6 +1933,33 @@ fun CreateEditHabitFormContent(
                 }
             },
             modifier = Modifier.testTag("create_edit_delete_confirm_dialog")
+        )
+    }
+}
+
+@Composable
+private fun SummaryRow(
+    label: String,
+    value: String,
+    testTag: String
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(testTag),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "$label:",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }

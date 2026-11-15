@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
@@ -26,6 +27,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -64,6 +66,7 @@ import com.example.dayseed.data.ScheduleKind
 import com.example.dayseed.data.StreakAndGroveEngine
 import com.example.dayseed.data.TargetPeriod
 import com.example.dayseed.data.TrackingMode
+import com.example.dayseed.data.UnitFormatter
 import com.example.dayseed.data.WeekBoundaryHelper
 import com.example.dayseed.data.WeekStartPolicyEntry
 import java.time.Instant
@@ -72,15 +75,7 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 /**
- * Resolves the governing [HabitVersion] for [evaluationDate] in RecordSessionSheet (Phase 2 F-03, U-12 Option B):
- * 1. Resolves the effective version on [evaluationDate] using `StreakAndGroveEngine.resolveEffectiveVersion`
- *    (falling back to [fallbackVersion]).
- * 2. Resolves the week-start policy for [evaluationDate] using `WeekBoundaryHelper.resolveWeekStartPolicyForDate`
- *    and computes `(weekStart, weekEnd)` via `WeekBoundaryHelper.weekBounds`.
- * 3. Resolves the version at `weekStart` via `StreakAndGroveEngine.resolveEffectiveVersion(versions, weekStart) ?: dateVersion`.
- * 4. If either `weekStartVersion.targetPeriod == TargetPeriod.WEEK` or `dateVersion.targetPeriod == TargetPeriod.WEEK`,
- *    returns `StreakAndGroveEngine.resolveFrozenWeekVersion(versions, weekStart, weekEnd, dateVersion)`.
- * 5. Otherwise (daily habit), returns `dateVersion`.
+ * Resolves the governing [HabitVersion] for [evaluationDate] in RecordSessionSheet (Phase 2 F-03, U-12 Option B).
  */
 fun resolveRecordSessionGoverningVersion(
     versions: List<HabitVersion>,
@@ -192,8 +187,9 @@ fun RecordSessionSheet(
         return
     }
 
-    val existingEntry = remember(entries, entryId) {
-        entryId?.let { id -> entries.find { it.entryId == id } }
+    var activeEntryId by remember(entryId) { mutableStateOf(entryId) }
+    val existingEntry = remember(entries, activeEntryId) {
+        activeEntryId?.let { id -> entries.find { it.entryId == id } }
     }
     val isEditing = existingEntry != null
     val today = viewModel.repository.clock.todayLocal()
@@ -293,13 +289,15 @@ fun RecordSessionSheet(
     val parsedValueUnits = valueText.trim().toIntOrNull()
     val previewValueUnits = (parsedValueUnits ?: 0).coerceAtLeast(0)
 
-    // Compute live preview for selected date & week
-    val existingEntriesOnDate = remember(entries, habit.habitId, effectiveDate, existingEntry) {
+    val allEntriesOnDate = remember(entries, habit.habitId, effectiveDate) {
         entries.filter {
-            it.habitId == habit.habitId &&
-                it.localDate == effectiveDate.toString() &&
-                it.entryId != existingEntry?.entryId
+            it.habitId == habit.habitId && it.localDate == effectiveDate.toString()
         }
+    }
+
+    // Compute live preview for selected date & week
+    val existingEntriesOnDate = remember(allEntriesOnDate, existingEntry) {
+        allEntriesOnDate.filter { it.entryId != existingEntry?.entryId }
     }
     val projectedDailyTotal = computeRecordSessionDailyPreviewTotal(
         existingEntriesOnDate = existingEntriesOnDate,
@@ -367,6 +365,8 @@ fun RecordSessionSheet(
             .filter { !it.isBefore(earliestEffectiveDate) }
     }
 
+    val isMeasuredMode = effectiveMode in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION)
+
     Surface(
         modifier = modifier
             .fillMaxSize()
@@ -402,7 +402,11 @@ fun RecordSessionSheet(
                     Spacer(modifier = Modifier.width(4.dp))
                     Column {
                         Text(
-                            text = if (isEditing) "Edit Session" else "Record Session",
+                            text = when {
+                                isEditing -> "Edit Session"
+                                isMeasuredMode -> "Add Progress"
+                                else -> "Record Session"
+                            },
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground
@@ -515,7 +519,7 @@ fun RecordSessionSheet(
                     val unitLabel = effectiveUnitCode?.takeIf { it.isNotBlank() }
                         ?: if (effectiveMode == TrackingMode.DURATION) "min" else "units"
                     Text(
-                        text = if (effectiveMode in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION)) {
+                        text = if (isMeasuredMode) {
                             "Amount ($unitLabel)"
                         } else {
                             "Check-In Value"
@@ -532,13 +536,22 @@ fun RecordSessionSheet(
                         },
                         label = {
                             Text(
-                                if (effectiveMode in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION)) {
+                                if (isMeasuredMode) {
                                     "Session $unitLabel (0 or more)"
                                 } else {
                                     "Sessions (1 = completed, 0 = honest check-in)"
                                 }
                             )
                         },
+                        suffix = if (isMeasuredMode) {
+                            {
+                                Text(
+                                    text = UnitFormatter.formatUnitForCount(previewValueUnits.coerceAtLeast(1), unitLabel),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        } else null,
                         isError = valueError != null,
                         supportingText = {
                             if (valueError != null) {
@@ -569,7 +582,7 @@ fun RecordSessionSheet(
                                 .testTag("preset_zero_chip")
                         )
 
-                        if (effectiveMode in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION)) {
+                        if (isMeasuredMode) {
                             val quarter = if (isWeeklySessionCount) 1 else (dailyTarget / 4).coerceAtLeast(1)
                             val half = if (isWeeklySessionCount) 1 else (dailyTarget / 2).coerceAtLeast(1)
                             val full = if (isWeeklySessionCount) 1 else dailyTarget
@@ -579,7 +592,7 @@ fun RecordSessionSheet(
                                 FilterChip(
                                     selected = previewValueUnits == quarter,
                                     onClick = { valueText = quarter.toString() },
-                                    label = { Text("+$quarter $unitLabel") },
+                                    label = { Text("+$quarter ${UnitFormatter.formatUnitForCount(quarter, unitLabel)}") },
                                     modifier = Modifier
                                         .heightIn(min = 48.dp)
                                         .testTag("preset_quarter_chip")
@@ -587,7 +600,7 @@ fun RecordSessionSheet(
                                 FilterChip(
                                     selected = previewValueUnits == half,
                                     onClick = { valueText = half.toString() },
-                                    label = { Text("+$half $unitLabel") },
+                                    label = { Text("+$half ${UnitFormatter.formatUnitForCount(half, unitLabel)}") },
                                     modifier = Modifier
                                         .heightIn(min = 48.dp)
                                         .testTag("preset_half_chip")
@@ -612,7 +625,7 @@ fun RecordSessionSheet(
                                 label = {
                                     Text(
                                         if (isWeeklySessionCount) "2 sessions"
-                                        else "+$extra $unitLabel"
+                                        else "+$extra ${UnitFormatter.formatUnitForCount(extra, unitLabel)}"
                                     )
                                 },
                                 modifier = Modifier
@@ -698,8 +711,13 @@ fun RecordSessionSheet(
                     }
 
                     val unitSuffix = effectiveUnitCode?.let { " $it" } ?: ""
+                    val dailyTotalLine = if (isMeasuredMode && !isWeeklyHabit) {
+                        "Resulting daily total on $effectiveDate: $projectedDailyTotal / $dailyTarget$unitSuffix ($previewPercentage%)"
+                    } else {
+                        "Resulting daily total on $effectiveDate: $projectedDailyTotal$unitSuffix"
+                    }
                     Text(
-                        text = "Resulting daily total on $effectiveDate: $projectedDailyTotal$unitSuffix",
+                        text = dailyTotalLine,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.testTag("record_session_preview_daily_total")
@@ -755,6 +773,8 @@ fun RecordSessionSheet(
                     Text("Cancel")
                 }
 
+                val latestExistingEntry by androidx.compose.runtime.rememberUpdatedState(existingEntry)
+
                 Button(
                     onClick = {
                         if (dateValidationError != null || parsedDate == null) {
@@ -778,9 +798,10 @@ fun RecordSessionSheet(
                             preferredWeekdaysMask = governingVersion.preferredWeekdaysMask
                         )
 
-                        if (isEditing && existingEntry != null) {
+                        val editingTarget = activeEntryId?.let { id -> entries.find { it.entryId == id } }
+                        if (editingTarget != null) {
                             viewModel.updateHabitEntry(
-                                entryId = existingEntry.entryId,
+                                entryId = editingTarget.entryId,
                                 newValueUnits = units,
                                 newEntryNote = noteText.trim().ifBlank { null }
                             )
@@ -823,7 +844,123 @@ fun RecordSessionSheet(
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
-                    Text(if (isEditing) "Save Changes" else "Record Session")
+                    Text(
+                        when {
+                            isEditing -> "Save Changes"
+                            isMeasuredMode -> "Save Progress"
+                            else -> "Record Session"
+                        }
+                    )
+                }
+            }
+
+            // Recorded entries on this date (allows inspecting, editing, or deleting individual progress steps)
+            if (allEntriesOnDate.isNotEmpty()) {
+                val unitLabel = effectiveUnitCode?.takeIf { it.isNotBlank() }
+                    ?: if (effectiveMode == TrackingMode.DURATION) "min" else "units"
+                val recordedSum = allEntriesOnDate.sumOf { it.valueUnits }
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("record_session_existing_entries_card")
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Recorded on $effectiveDate",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            val recordedPct = ((recordedSum.toDouble() / dailyTarget.toDouble()) * 100.0).toInt()
+                            Text(
+                                text = "${UnitFormatter.formatProgressRatio(recordedSum, dailyTarget, unitLabel)} ($recordedPct%)",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+
+                        allEntriesOnDate.forEach { item ->
+                            val formattedAmount = UnitFormatter.formatValueWithUnit(item.valueUnits, unitLabel)
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("record_session_entry_row_${item.entryId}")
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "+$formattedAmount",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        if (!item.entryNote.isNullOrBlank()) {
+                                            Text(
+                                                text = item.entryNote,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                    Row {
+                                        IconButton(
+                                            onClick = {
+                                                activeEntryId = item.entryId
+                                                valueText = item.valueUnits.toString()
+                                                noteText = item.entryNote ?: ""
+                                            },
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .testTag("record_session_edit_entry_${item.entryId}")
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Edit,
+                                                contentDescription = "Edit entry",
+                                                modifier = Modifier.size(18.dp),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                        IconButton(
+                                            onClick = {
+                                                viewModel.deleteHabitEntry(item.entryId)
+                                                if (activeEntryId == item.entryId) {
+                                                    activeEntryId = null
+                                                }
+                                            },
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .testTag("record_session_delete_entry_${item.entryId}")
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Delete entry",
+                                                modifier = Modifier.size(18.dp),
+                                                tint = MaterialTheme.colorScheme.error
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

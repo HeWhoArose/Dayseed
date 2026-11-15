@@ -173,6 +173,9 @@ class DayseedViewModel @JvmOverloads constructor(
     private val _todayNotScheduledExpanded = MutableStateFlow(false)
     val todayNotScheduledExpanded: StateFlow<Boolean> = _todayNotScheduledExpanded.asStateFlow()
 
+    private val _onboardingSetupExpanded = MutableStateFlow(false)
+    val onboardingSetupExpanded: StateFlow<Boolean> = _onboardingSetupExpanded.asStateFlow()
+
     // Cold-launch opening scene flag: shown at most once per ViewModel session, never replayed on tab switches.
     private val _hasShownColdLaunchScene = MutableStateFlow(false)
     val hasShownColdLaunchScene: StateFlow<Boolean> = _hasShownColdLaunchScene.asStateFlow()
@@ -525,6 +528,10 @@ class DayseedViewModel @JvmOverloads constructor(
 
     fun setTodayNotScheduledExpanded(expanded: Boolean) {
         _todayNotScheduledExpanded.value = expanded
+    }
+
+    fun setOnboardingSetupExpanded(expanded: Boolean) {
+        _onboardingSetupExpanded.value = expanded
     }
 
     fun selectLongestActiveRun(): LongestActiveStreakSelection? {

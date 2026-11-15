@@ -1281,38 +1281,29 @@ class CanonicalUiAndBehaviourReconciliationTest {
         val viewportWidthsDp = listOf(320, 360, 411)
 
         for (widthDp in viewportWidthsDp) {
-            // 1. TODAY SCREEN (0 habits empty state): FAB must never overlap Today's Seeds heading,
-            //    0 of 0 tended progress indicator, or EmptyHabitsCard.
+            // 1. TODAY SCREEN (0 habits empty state): Progressive disclosure shows only the
+            //    FirstUseWelcomeCard without redundant FAB, Today's Seeds 0/0 header, ReflectionCard,
+            //    or CollectedMomentsSummaryCard, and never overlaps the bottom NavigationBar.
             vm.selectTab(NavTab.TODAY)
             pumpViewport(widthDp = widthDp, heightDp = 680, recompose = true)
 
-            val fabNode = findNodeByTag("add_habit_fab")
-            val seedsHeaderNode = findNodeByTag("today_seeds_section_header")
-            val seedsHeadingNode = findNodeByTag("today_seeds_heading_text")
-            val tendedCountNode = findNodeByTag("today_tended_count_text")
-            val emptyCardNode = findNodeByTag("today_empty_habits_card")
+            val welcomeCardNode = findNodeByTag("onboarding_welcome_card")
+            val createFirstHabitBtnNode = findNodeByTag("onboarding_create_first_habit_btn")
+            val setupToggleBtnNode = findNodeByTag("onboarding_setup_toggle_btn")
             val navBarTodayNode = findNodeByTag("nav_today")
 
-            val fabBounds = fabNode.boundsInRoot
+            val allZeroHabitTags = collectAllNodes().mapNotNull { it.config.getOrNull(SemanticsProperties.TestTag) }.toSet()
+            assertFalse("At ${widthDp}dp (0 habits), Today's Seeds header must be hidden", "today_seeds_section_header" in allZeroHabitTags)
+            assertFalse("At ${widthDp}dp (0 habits), ReflectionCard must be hidden", "reflection_card" in allZeroHabitTags)
+            assertFalse("At ${widthDp}dp (0 habits), CollectedMomentsSummaryCard must be hidden", "growth_mark_summary_card" in allZeroHabitTags)
+
             assertFalse(
-                "At ${widthDp}dp (0 habits), add_habit_fab ($fabBounds) must NOT overlap Today's Seeds header (${seedsHeaderNode.boundsInRoot})",
-                fabBounds.overlaps(seedsHeaderNode.boundsInRoot)
-            )
-            assertFalse(
-                "At ${widthDp}dp (0 habits), add_habit_fab ($fabBounds) must NOT overlap Today's Seeds heading text (${seedsHeadingNode.boundsInRoot})",
-                fabBounds.overlaps(seedsHeadingNode.boundsInRoot)
-            )
-            assertFalse(
-                "At ${widthDp}dp (0 habits), add_habit_fab ($fabBounds) must NOT overlap tended progress indicator (${tendedCountNode.boundsInRoot})",
-                fabBounds.overlaps(tendedCountNode.boundsInRoot)
-            )
-            assertFalse(
-                "At ${widthDp}dp (0 habits), add_habit_fab ($fabBounds) must NOT overlap EmptyHabitsCard (${emptyCardNode.boundsInRoot})",
-                fabBounds.overlaps(emptyCardNode.boundsInRoot)
+                "At ${widthDp}dp (0 habits), Create First Habit button must NOT overlap Set Up Dayseed button",
+                createFirstHabitBtnNode.boundsInRoot.overlaps(setupToggleBtnNode.boundsInRoot)
             )
             assertTrue(
-                "At ${widthDp}dp, add_habit_fab bottom (${fabBounds.bottom}) must stay above bottom NavigationBar top (${navBarTodayNode.boundsInRoot.top})",
-                fabBounds.bottom <= navBarTodayNode.boundsInRoot.top
+                "At ${widthDp}dp, onboarding_welcome_card bottom (${welcomeCardNode.boundsInRoot.bottom}) must stay above bottom NavigationBar top (${navBarTodayNode.boundsInRoot.top})",
+                welcomeCardNode.boundsInRoot.bottom <= navBarTodayNode.boundsInRoot.top
             )
 
             // 2. JOURNAL SCREEN: "Journal" heading must render on a single line (lineCount == 1)
