@@ -539,6 +539,38 @@ fun CreateEditHabitScreen(
                 }
             }
 
+            // Legacy EFFORT_AWARE conversion guidance (D-233). Dayseed no longer asks for manual
+            // Tiny/Usual/Extra check-ins; the banner explains how the habit maps onto an
+            // evidence-derived goal without discarding its history.
+            if (isEditing && initialMode == TrackingMode.EFFORT_AWARE) {
+                item {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("legacy_effort_conversion_banner")
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "This habit uses the older Tiny / Usual / Extra check-in",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Text(
+                                text = "Dayseed now derives progress from what you record. Pick a Quantity, Duration or Simple check-off goal below to keep this habit's history and carry on without manual effort chips.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    }
+                }
+            }
+
             // STEP 2: Concise Interpretation Summary Card & "Adjust interpretation" Progressive Disclosure
             item {
                 Card(
