@@ -529,30 +529,49 @@ private fun QuantityOrDurationSection(
         }
 
         // Separate Quick Complete / Quick Add actions and detailed Add Progress action
-        val stepSmall = if (isSessionCountHabit) 1 else (target / 4).coerceAtLeast(1)
-        val stepHalf = if (isSessionCountHabit) 1 else (target / 2).coerceAtLeast(1)
-        val stepSmallLabel = if (UnitFormatter.extractScale(unitLabel) > 0) {
-            "+${UnitFormatter.formatValueWithUnit(stepSmall, unitLabel)}"
+        // Quick increments must be natural values at the stored precision. Dividing the stored
+        // integer straight into quarters produced artefacts such as +0.37 litres for a 1.5 litre
+        // target; the helper returns friendly steps (+0.25 / +0.5) or null when the target is too
+        // small to support a meaningful increment.
+        val quickIncrements = if (isSessionCountHabit) {
+            1 to 1
         } else {
-            "+$stepSmall ${UnitFormatter.formatUnitForCount(stepSmall, unitLabel)}"
+            UnitFormatter.quickIncrementStoredUnits(target, unitLabel)
         }
-        val stepHalfLabel = if (UnitFormatter.extractScale(unitLabel) > 0) {
-            "+${UnitFormatter.formatValueWithUnit(stepHalf, unitLabel)}"
-        } else {
-            "+$stepHalf ${UnitFormatter.formatUnitForCount(stepHalf, unitLabel)}"
+        val stepSmall = quickIncrements?.first
+        val stepHalf = quickIncrements?.second
+        val stepSmallLabel = stepSmall?.let { step ->
+            if (UnitFormatter.extractScale(unitLabel) > 0) {
+                "+${UnitFormatter.formatValueWithUnit(step, unitLabel)}"
+            } else {
+                "+$step ${UnitFormatter.formatUnitForCount(step, unitLabel)}"
+            }
+        }
+        val stepHalfLabel = stepHalf?.let { step ->
+            if (UnitFormatter.extractScale(unitLabel) > 0) {
+                "+${UnitFormatter.formatValueWithUnit(step, unitLabel)}"
+            } else {
+                "+$step ${UnitFormatter.formatUnitForCount(step, unitLabel)}"
+            }
         }
 
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            if (!isSessionCountHabit) {
+            val smallStep = stepSmall
+            val halfStep = stepHalf
+            val smallStepLabel = stepSmallLabel
+            val halfStepLabel = stepHalfLabel
+            if (!isSessionCountHabit && smallStep != null && halfStep != null &&
+                smallStepLabel != null && halfStepLabel != null
+            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     OutlinedButton(
-                        onClick = { onAddEntry(stepSmall, null) },
+                        onClick = { onAddEntry(smallStep, null) },
                         modifier = Modifier
                             .weight(1f)
                             .heightIn(min = 48.dp)
@@ -561,14 +580,14 @@ private fun QuantityOrDurationSection(
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
                     ) {
                         Text(
-                            text = stepSmallLabel,
+                            text = smallStepLabel,
                             fontSize = 12.sp,
                             maxLines = 1
                         )
                     }
-                    if (stepHalf != stepSmall) {
+                    if (halfStep != smallStep) {
                         OutlinedButton(
-                            onClick = { onAddEntry(stepHalf, null) },
+                            onClick = { onAddEntry(halfStep, null) },
                             modifier = Modifier
                                 .weight(1f)
                                 .heightIn(min = 48.dp)
@@ -577,7 +596,7 @@ private fun QuantityOrDurationSection(
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
                         ) {
                             Text(
-                                text = stepHalfLabel,
+                                text = halfStepLabel,
                                 fontSize = 12.sp,
                                 maxLines = 1
                             )

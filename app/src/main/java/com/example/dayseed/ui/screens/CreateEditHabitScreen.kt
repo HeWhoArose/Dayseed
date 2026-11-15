@@ -1388,7 +1388,14 @@ fun CreateEditHabitScreen(
                                 TrackingMode.QUANTITY, TrackingMode.DURATION -> {
                                     if (parsedTargetTriple == null || parsedTargetTriple.first <= 0) {
                                         showAdjustInterpretation = true
-                                        validationError = "Target must be a positive number."
+                                        // Distinguish "too large to store" from "not a positive number" so an
+                                        // out-of-range target is rejected with a clear message instead of
+                                        // being silently shrunk to a different goal.
+                                        validationError = UnitFormatter.describeTargetInputProblem(
+                                            targetInput = targetValueText,
+                                            isCurrency = selectedMeasurementKind == HabitMeasurementKind.AMOUNT_CURRENCY,
+                                            isDuration = selectedMeasurementKind == HabitMeasurementKind.DURATION
+                                        ) ?: "Target must be a positive number."
                                         return@Button
                                     }
                                     finalTargetValue = parsedTargetTriple.first

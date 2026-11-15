@@ -519,18 +519,28 @@ fun RecordSessionSheet(
                         )
 
                         if (isMeasuredMode) {
-                            val stepQuarter = (effectiveTarget / 4).coerceAtLeast(1)
-                            val stepHalf = (effectiveTarget / 2).coerceAtLeast(1)
+                            // Friendly, scale-exact increments (for example +0.25 / +0.5 litres for a
+                            // 1.5 litre target) instead of the old quarter-division artefact +0.37.
+                            val quickIncrements = UnitFormatter.quickIncrementStoredUnits(
+                                effectiveTarget,
+                                effectiveUnitCode
+                            )
+                            val stepQuarter = quickIncrements?.first
+                            val stepHalf = quickIncrements?.second
                             val scale = UnitFormatter.extractScale(effectiveUnitCode)
-                            val quarterChipLabel = if (scale > 0 || UnitFormatter.isCurrencyUnit(effectiveUnitCode)) {
-                                "+${UnitFormatter.formatValueWithUnit(stepQuarter, effectiveUnitCode)}"
-                            } else {
-                                "+$stepQuarter ${UnitFormatter.formatUnitForCount(stepQuarter, effectiveUnitCode)}"
+                            val quarterChipLabel = stepQuarter?.let { step ->
+                                if (scale > 0 || UnitFormatter.isCurrencyUnit(effectiveUnitCode)) {
+                                    "+${UnitFormatter.formatValueWithUnit(step, effectiveUnitCode)}"
+                                } else {
+                                    "+$step ${UnitFormatter.formatUnitForCount(step, effectiveUnitCode)}"
+                                }
                             }
-                            val halfChipLabel = if (scale > 0 || UnitFormatter.isCurrencyUnit(effectiveUnitCode)) {
-                                "+${UnitFormatter.formatValueWithUnit(stepHalf, effectiveUnitCode)}"
-                            } else {
-                                "+$stepHalf ${UnitFormatter.formatUnitForCount(stepHalf, effectiveUnitCode)}"
+                            val halfChipLabel = stepHalf?.let { step ->
+                                if (scale > 0 || UnitFormatter.isCurrencyUnit(effectiveUnitCode)) {
+                                    "+${UnitFormatter.formatValueWithUnit(step, effectiveUnitCode)}"
+                                } else {
+                                    "+$step ${UnitFormatter.formatUnitForCount(step, effectiveUnitCode)}"
+                                }
                             }
                             val targetChipLabel = "${UnitFormatter.formatValueWithUnit(effectiveTarget, effectiveUnitCode)} (Target)"
 
@@ -538,30 +548,36 @@ fun RecordSessionSheet(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                OutlinedButton(
-                                    onClick = {
-                                        val current = (parsedStoredUnits ?: 0).coerceAtLeast(0)
-                                        valueText = UnitFormatter.formatStoredUnitsForInput(current + stepQuarter, effectiveUnitCode)
-                                        valueError = null
-                                    },
-                                    modifier = Modifier
-                                        .heightIn(min = 48.dp)
-                                        .testTag("record_session_quick_inc_quarter")
-                                ) {
-                                    Text(quarterChipLabel)
-                                }
-                                if (stepHalf != stepQuarter) {
+                                val quarterStep = stepQuarter
+                                val halfStep = stepHalf
+                                val quarterLabel = quarterChipLabel
+                                val halfLabel = halfChipLabel
+                                if (quarterStep != null && quarterLabel != null) {
                                     OutlinedButton(
                                         onClick = {
                                             val current = (parsedStoredUnits ?: 0).coerceAtLeast(0)
-                                            valueText = UnitFormatter.formatStoredUnitsForInput(current + stepHalf, effectiveUnitCode)
+                                            valueText = UnitFormatter.formatStoredUnitsForInput(current + quarterStep, effectiveUnitCode)
+                                            valueError = null
+                                        },
+                                        modifier = Modifier
+                                            .heightIn(min = 48.dp)
+                                            .testTag("record_session_quick_inc_quarter")
+                                    ) {
+                                        Text(quarterLabel)
+                                    }
+                                }
+                                if (halfStep != null && halfLabel != null && halfStep != quarterStep) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            val current = (parsedStoredUnits ?: 0).coerceAtLeast(0)
+                                            valueText = UnitFormatter.formatStoredUnitsForInput(current + halfStep, effectiveUnitCode)
                                             valueError = null
                                         },
                                         modifier = Modifier
                                             .heightIn(min = 48.dp)
                                             .testTag("record_session_quick_inc_half")
                                     ) {
-                                        Text(halfChipLabel)
+                                        Text(halfLabel)
                                     }
                                 }
                                 OutlinedButton(
