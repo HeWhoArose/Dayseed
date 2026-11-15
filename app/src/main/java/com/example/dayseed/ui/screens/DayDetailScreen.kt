@@ -49,6 +49,7 @@ import com.example.dayseed.data.JournalEntry
 import com.example.dayseed.data.MoodCatalog
 import com.example.dayseed.data.TargetPeriod
 import com.example.dayseed.data.TrackingMode
+import com.example.dayseed.data.UnitFormatter
 import java.math.BigInteger
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -398,20 +399,30 @@ private fun DayDetailHabitCard(
 
             if (!isFutureDate) {
                 if (item.effectiveVersion.targetPeriod == TargetPeriod.WEEK) {
-                    val contributionUnitLabel = when (item.effectiveVersion.trackingMode.canonical()) {
-                        TrackingMode.QUANTITY, TrackingMode.DURATION ->
-                            item.effectiveVersion.unitCode?.ifBlank { "units" } ?: "units"
+                    val rawUnit = item.effectiveVersion.unitCode?.ifBlank { "units" } ?: "units"
+                    val cleanContributionUnitLabel = when (item.effectiveVersion.trackingMode.canonical()) {
+                        TrackingMode.QUANTITY, TrackingMode.DURATION -> UnitFormatter.cleanUnitCode(rawUnit)
                         else -> if (item.totalUnits == BigInteger.ONE) "day" else "days"
+                    }
+                    val formattedSelectedContribution = when (item.effectiveVersion.trackingMode.canonical()) {
+                        TrackingMode.QUANTITY, TrackingMode.DURATION -> {
+                            if (UnitFormatter.extractScale(rawUnit) > 0 || UnitFormatter.isCurrencyUnit(rawUnit)) {
+                                UnitFormatter.formatValueWithUnitBig(item.totalUnits, rawUnit)
+                            } else {
+                                "${item.totalUnits} $cleanContributionUnitLabel"
+                            }
+                        }
+                        else -> "${item.totalUnits} $cleanContributionUnitLabel"
                     }
                     val recordedEffort = item.outcomes.firstOrNull()?.effortLevel
                     val contributionText = when {
                         item.dayRecordState == DayRecordState.EXPLICIT_ZERO ->
-                            "Selected date contribution: 0 $contributionUnitLabel (explicit 0 check-in)"
+                            "Selected date contribution: 0 $cleanContributionUnitLabel (explicit 0 check-in)"
                         item.effectiveVersion.trackingMode.canonical() in listOf(TrackingMode.EFFORT_AWARE, TrackingMode.EFFORT_LEVELS) &&
                             item.outcomes.isNotEmpty() && item.totalUnits == BigInteger.ZERO ->
-                            "Selected date contribution: 0 $contributionUnitLabel (${recordedEffort ?: "TINY"} effort recorded)"
+                            "Selected date contribution: 0 $cleanContributionUnitLabel (${recordedEffort ?: "TINY"} effort recorded)"
                         else ->
-                            "Selected date contribution: ${item.totalUnits} $contributionUnitLabel"
+                            "Selected date contribution: $formattedSelectedContribution"
                     }
                     Text(
                         text = contributionText,
@@ -430,9 +441,14 @@ private fun DayDetailHabitCard(
                         )
                     }
                 } else {
-                    val unitLabel = item.effectiveVersion.unitCode ?: "sessions"
+                    val rawUnitLabel = item.effectiveVersion.unitCode ?: "sessions"
+                    val ratioText = if (UnitFormatter.extractScale(rawUnitLabel) > 0 || UnitFormatter.isCurrencyUnit(rawUnitLabel)) {
+                        UnitFormatter.formatProgressRatioBig(item.totalUnits, item.targetUnits, rawUnitLabel)
+                    } else {
+                        "${item.totalUnits} / ${item.targetUnits} ${UnitFormatter.cleanUnitCode(rawUnitLabel)}"
+                    }
                     Text(
-                        text = "${item.totalUnits} / ${item.targetUnits} $unitLabel • ${item.progressBand.displayName} (${item.progressBand.rangeLabel})",
+                        text = "$ratioText • ${item.progressBand.displayName} (${item.progressBand.rangeLabel})",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.testTag("day_detail_habit_band_${item.habit.habitId}")
@@ -454,7 +470,8 @@ private fun DayDetailHabitCard(
             }
 
             item.entries.forEach { entry ->
-                val unit = item.effectiveVersion.unitCode ?: "units"
+                val rawUnit = item.effectiveVersion.unitCode ?: "units"
+                val cleanUnit = UnitFormatter.cleanUnitCode(rawUnit)
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -473,9 +490,11 @@ private fun DayDetailHabitCard(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = if (entry.valueUnits == 0) {
-                                    "0 $unit logged (explicit check-in)"
+                                    "0 $cleanUnit logged (explicit check-in)"
+                                } else if (UnitFormatter.extractScale(rawUnit) > 0 || UnitFormatter.isCurrencyUnit(rawUnit)) {
+                                    UnitFormatter.formatValueWithUnit(entry.valueUnits, rawUnit)
                                 } else {
-                                    "${entry.valueUnits} $unit"
+                                    "${entry.valueUnits} $cleanUnit"
                                 },
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium

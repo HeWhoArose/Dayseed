@@ -1,5 +1,6 @@
 package com.example.dayseed.ui.screens
 
+import android.text.format.DateFormat
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,18 +19,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -51,14 +51,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.dayseed.DayseedViewModel
-import com.example.dayseed.data.DailyOutcome
-import com.example.dayseed.data.EffortLevel
 import com.example.dayseed.data.HabitEntry
 import com.example.dayseed.data.HabitVersion
 import com.example.dayseed.data.ProgressBandClassifier
@@ -69,30 +68,35 @@ import com.example.dayseed.data.TrackingMode
 import com.example.dayseed.data.UnitFormatter
 import com.example.dayseed.data.WeekBoundaryHelper
 import com.example.dayseed.data.WeekStartPolicyEntry
+import java.math.BigInteger
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneOffset
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /**
- * Resolves the governing [HabitVersion] for [evaluationDate] in RecordSessionSheet (Phase 2 F-03, U-12 Option B).
+ * Resolves the governing [HabitVersion] for a session recorded on [evaluationDate]:
+ * - Weekly habits (`targetPeriod == TargetPeriod.WEEK` or `scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET`)
+ *   use the frozen start-of-week version under U-12 Option B (`StreakAndGroveEngine.resolveFrozenWeekVersion`).
+ * - Daily habits use the effective version on [evaluationDate] (`StreakAndGroveEngine.resolveEffectiveVersion`).
  */
-fun resolveRecordSessionGoverningVersion(
+internal fun resolveRecordSessionGoverningVersion(
     versions: List<HabitVersion>,
     weekStartHistory: List<WeekStartPolicyEntry>,
     evaluationDate: LocalDate,
     fallbackVersion: HabitVersion
 ): HabitVersion {
-    val nonEmptyVersions = versions.ifEmpty { listOf(fallbackVersion) }
-    val dateVersion = StreakAndGroveEngine.resolveEffectiveVersion(nonEmptyVersions, evaluationDate)
+    if (versions.isEmpty()) return fallbackVersion
+    val dateVersion = StreakAndGroveEngine.resolveEffectiveVersion(versions, evaluationDate)
+        ?: versions.minWithOrNull(compareBy<HabitVersion> { it.effectiveFromLocalDate }.thenBy { it.createdAtUtcMs })
         ?: fallbackVersion
-    val firstHabitDate = nonEmptyVersions
+    val firstHabitDate = versions
         .mapNotNull { runCatching { LocalDate.parse(it.effectiveFromLocalDate) }.getOrNull() }
         .minOrNull() ?: evaluationDate
     val weekStartIso = WeekBoundaryHelper.resolveWeekStartPolicyForDate(evaluationDate, weekStartHistory)
     val (weekStart, _) = WeekBoundaryHelper.weekBounds(evaluationDate, weekStartIso)
     val anchorDate = if (firstHabitDate.isAfter(weekStart)) firstHabitDate else weekStart
-    val weekStartVersion = StreakAndGroveEngine.resolveEffectiveVersion(nonEmptyVersions, anchorDate)
+    val weekStartVersion = StreakAndGroveEngine.resolveEffectiveVersion(versions, anchorDate)
         ?: dateVersion
     return if (
         weekStartVersion.targetPeriod == TargetPeriod.WEEK ||
@@ -101,54 +105,78 @@ fun resolveRecordSessionGoverningVersion(
         dateVersion.scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET
     ) {
         StreakAndGroveEngine.resolveFrozenWeekVersion(
-            sortedVersions = nonEmptyVersions,
+            sortedVersions = versions,
             weekStart = weekStart,
             firstHabitDate = firstHabitDate,
             fallbackDate = evaluationDate,
-            fallbackVersion = dateVersion
+            fallbackVersion = fallbackVersion
         ) ?: dateVersion
     } else {
         dateVersion
     }
 }
 
-fun defaultRecordSessionValueText(
-    existingEntry: HabitEntry?,
-    effectiveMode: TrackingMode,
-    effectiveTargetPeriod: TargetPeriod,
-    effectiveUnitCode: String?,
-    effectiveTargetValue: Int?
-): String {
-    val isWeeklySessionCount = StreakAndGroveEngine.isWeeklySessionCountHabit(
-        trackingMode = effectiveMode.canonical(),
-        targetPeriod = effectiveTargetPeriod,
-        unitCode = effectiveUnitCode
-    )
-    return when {
-        existingEntry != null -> existingEntry.valueUnits.toString()
-        effectiveMode.canonical() == TrackingMode.COMPLETION_ONLY ||
-            effectiveMode.canonical() == TrackingMode.EFFORT_AWARE -> "1"
-        isWeeklySessionCount -> "1"
-        else -> (effectiveTargetValue ?: 10).toString()
-    }
-}
-
-fun computeRecordSessionDailyPreviewTotal(
+/**
+ * Computes the daily preview total on [RecordSessionSheet], distinguishing session-count weekly
+ * habits (`unitCode == "sessions"`) from cumulative quantity/duration habits.
+ */
+internal fun computeRecordSessionDailyPreviewTotal(
     existingEntriesOnDate: List<HabitEntry>,
     previewValueUnits: Int,
     effectiveMode: TrackingMode,
     effectiveTargetPeriod: TargetPeriod,
     effectiveUnitCode: String?
 ): Int {
-    val isWeeklySessionCount = StreakAndGroveEngine.isWeeklySessionCountHabit(
-        trackingMode = effectiveMode.canonical(),
-        targetPeriod = effectiveTargetPeriod,
-        unitCode = effectiveUnitCode
-    )
+    val isWeeklySessionCount = effectiveTargetPeriod == TargetPeriod.WEEK &&
+        effectiveMode.canonical() == TrackingMode.QUANTITY &&
+        UnitFormatter.cleanUnitCode(effectiveUnitCode).equals("sessions", ignoreCase = true)
     return if (isWeeklySessionCount) {
-        existingEntriesOnDate.count { it.valueUnits > 0 } + (if (previewValueUnits > 0) 1 else 0)
+        val existingSessions = existingEntriesOnDate.count { it.valueUnits > 0 }
+        val newSession = if (previewValueUnits > 0) 1 else 0
+        existingSessions + newSession
     } else {
-        existingEntriesOnDate.sumOf { it.valueUnits } + previewValueUnits
+        existingEntriesOnDate.sumOf { it.valueUnits } + previewValueUnits.coerceAtLeast(0)
+    }
+}
+
+/**
+ * Pure helper for RecordSessionSheet initial value text.
+ *
+ * - Editing an existing entry (`existingEntry != null`): pre-populates the original recorded value
+ *   (formatted in user-facing units, preserving decimal precision where applicable).
+ * - New Simple Check-Off (`COMPLETION_ONLY` / `EFFORT_AWARE`): defaults to `"1"`.
+ * - New Quantity or Duration entry (`existingEntry == null`): starts with an empty input (`""`)
+ *   so the user never sees or accidentally submits an assumed full-target amount.
+ */
+internal fun defaultRecordSessionValueText(
+    existingEntry: HabitEntry?,
+    effectiveMode: TrackingMode,
+    effectiveTargetPeriod: TargetPeriod = TargetPeriod.DAY,
+    effectiveUnitCode: String? = null,
+    effectiveTargetValue: Int? = null
+): String {
+    if (existingEntry != null) {
+        return UnitFormatter.formatStoredUnitsForInput(existingEntry.valueUnits, effectiveUnitCode)
+    }
+    return when (effectiveMode.canonical()) {
+        TrackingMode.COMPLETION_ONLY, TrackingMode.EFFORT_AWARE, TrackingMode.EFFORT_LEVELS -> "1"
+        TrackingMode.QUANTITY, TrackingMode.DURATION -> ""
+    }
+}
+
+/**
+ * Pure helper for RecordSessionSheet date selection validation (D-193: future dates rejected).
+ */
+internal fun validateRecordSessionDate(
+    selectedDate: LocalDate,
+    today: LocalDate,
+    habitCreatedDate: LocalDate
+): String? {
+    return when {
+        selectedDate.isAfter(today) -> "Future dates cannot be logged (D-193)."
+        selectedDate.isBefore(habitCreatedDate) ->
+            "Date is before this habit was created ($habitCreatedDate)."
+        else -> null
     }
 }
 
@@ -164,76 +192,74 @@ fun RecordSessionSheet(
 ) {
     val habits by viewModel.habits.collectAsState()
     val habitVersions by viewModel.habitVersions.collectAsState()
-    val entries by viewModel.habitEntries.collectAsState()
-    val outcomes by viewModel.habitDayOutcomes.collectAsState()
     val weekStartHistory by viewModel.weekStartHistory.collectAsState()
+    val entries by viewModel.habitEntries.collectAsState()
+    val summaries by viewModel.habitSummaries.collectAsState()
 
     val habit = habits.find { it.habitId == habitId }
     if (habit == null) {
-        Box(
+        Surface(
             modifier = modifier
                 .fillMaxSize()
-                .padding(24.dp),
-            contentAlignment = Alignment.Center
+                .testTag("record_session_sheet"),
+            color = Color.Transparent
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Habit not found.", style = MaterialTheme.typography.titleMedium)
-                Spacer(modifier = Modifier.height(12.dp))
-                Button(onClick = onNavigateBack) {
-                    Text("Go Back")
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Habit not found.", style = MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = onNavigateBack,
+                        modifier = Modifier.testTag("secondary_back_btn")
+                    ) {
+                        Text("Back")
+                    }
                 }
             }
         }
         return
     }
 
-    var activeEntryId by remember(entryId) { mutableStateOf(entryId) }
-    val existingEntry = remember(entries, activeEntryId) {
-        activeEntryId?.let { id -> entries.find { it.entryId == id } }
-    }
-    val isEditing = existingEntry != null
     val today = viewModel.repository.clock.todayLocal()
+    var activeEditingEntryId by remember(entryId) { mutableStateOf(entryId) }
+    val existingEntry = remember(entries, activeEditingEntryId) {
+        activeEditingEntryId?.let { id -> entries.find { it.entryId == id } }
+    }
+
+    var selectedDateStr by remember(initialLocalDate, existingEntry) {
+        mutableStateOf(existingEntry?.localDate ?: initialLocalDate)
+    }
+    val selectedDate = remember(selectedDateStr) {
+        runCatching { LocalDate.parse(selectedDateStr) }.getOrDefault(today)
+    }
 
     val versionsForHabit = remember(habitVersions, habit.habitId) {
         habitVersions.filter { it.habitId == habit.habitId }
+            .sortedBy { it.effectiveFromLocalDate }
     }
 
-    val earliestEffectiveDate: LocalDate = remember(versionsForHabit, habit.createdAtUtcMs) {
-        val minVerDate = versionsForHabit.minByOrNull { it.effectiveFromLocalDate }?.effectiveFromLocalDate
-        if (minVerDate != null) {
-            runCatching { LocalDate.parse(minVerDate) }.getOrElse {
-                Instant.ofEpochMilli(habit.createdAtUtcMs).atZone(ZoneOffset.UTC).toLocalDate()
+    val habitCreatedDate = remember(versionsForHabit, habit.createdAtUtcMs, today) {
+        versionsForHabit.minOfOrNull { it.effectiveFromLocalDate }
+            ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+            ?: if (habit.createdAtUtcMs > 0L) {
+                Instant.ofEpochMilli(habit.createdAtUtcMs).atZone(ZoneId.systemDefault()).toLocalDate()
+            } else {
+                today.minusDays(30)
             }
-        } else {
-            Instant.ofEpochMilli(habit.createdAtUtcMs).atZone(ZoneOffset.UTC).toLocalDate()
-        }
     }
 
-    var dateInputText by remember(existingEntry, initialLocalDate) {
-        mutableStateOf(existingEntry?.localDate ?: initialLocalDate)
-    }
-
-    val parsedDate = remember(dateInputText) {
-        runCatching { LocalDate.parse(dateInputText.trim()) }.getOrNull()
-    }
-
-    val dateValidationError = remember(parsedDate, today, earliestEffectiveDate) {
-        when {
-            parsedDate == null -> "Enter a valid date in YYYY-MM-DD format."
-            parsedDate.isAfter(today) -> "Future dates cannot be logged (D-188). Select today ($today) or an earlier date."
-            parsedDate.isBefore(earliestEffectiveDate) -> "Cannot log before this habit's creation date ($earliestEffectiveDate)."
-            else -> null
-        }
-    }
-
-    val effectiveDate = parsedDate?.takeIf { dateValidationError == null } ?: today
-    val fallbackVer = remember(habit, earliestEffectiveDate) {
-        habit.currentVersion ?: HabitVersion(
+    // Resolve governing HabitVersion on selectedDate (supporting U-12 Option B frozen weekly rules)
+    val effectiveVersion = remember(versionsForHabit, weekStartHistory, habit.habitId, selectedDate, habitCreatedDate) {
+        val fallback = versionsForHabit.lastOrNull() ?: HabitVersion(
             versionId = "fallback_${habit.habitId}",
             habitId = habit.habitId,
-            effectiveFromLocalDate = earliestEffectiveDate.toString(),
+            effectiveFromLocalDate = habitCreatedDate.toString(),
             name = habit.name,
-            description = habit.description,
             trackingMode = habit.trackingMode,
             unitCode = habit.unitCode,
             targetPeriod = habit.targetPeriod,
@@ -241,131 +267,120 @@ fun RecordSessionSheet(
             scheduleKind = habit.scheduleKind,
             scheduledWeekdaysMask = habit.scheduledWeekdaysMask,
             preferredWeekdaysMask = habit.preferredWeekdaysMask,
+            reminderMode = habit.reminderMode,
+            reminderTimeLocal = habit.reminderTimeLocal,
             lifecycleState = habit.lifecycleState,
             createdAtUtcMs = habit.createdAtUtcMs
         )
-    }
-    val governingVersion = remember(habit.habitId, effectiveDate, versionsForHabit, weekStartHistory, fallbackVer) {
         resolveRecordSessionGoverningVersion(
             versions = versionsForHabit,
             weekStartHistory = weekStartHistory,
-            evaluationDate = effectiveDate,
-            fallbackVersion = fallbackVer
+            evaluationDate = selectedDate,
+            fallbackVersion = fallback
         )
     }
-    val effectiveMode = governingVersion.trackingMode.canonical()
-    val effectiveTargetPeriod = governingVersion.targetPeriod
-    val effectiveUnitCode = governingVersion.unitCode
-    val effectiveTargetValue = governingVersion.targetValue
-    val isWeeklyHabit = effectiveTargetPeriod == TargetPeriod.WEEK
-    val isWeeklySessionCount = StreakAndGroveEngine.isWeeklySessionCountHabit(governingVersion)
 
-    var valueText by remember(
-        existingEntry,
-        habit.habitId,
-        effectiveDate,
-        governingVersion.versionId,
-        isWeeklySessionCount,
-        effectiveMode,
-        effectiveTargetPeriod,
-        effectiveUnitCode,
-        effectiveTargetValue
-    ) {
+    val effectiveMode = effectiveVersion.trackingMode.canonical()
+    val effectiveTarget = (effectiveVersion.targetValue ?: habit.targetValue ?: 1).coerceAtLeast(1)
+    val effectiveTargetPeriod = effectiveVersion.targetPeriod
+    val effectiveUnitCode = effectiveVersion.unitCode ?: habit.unitCode
+        ?: if (effectiveMode == TrackingMode.DURATION) "min" else "units"
+    val cleanUnitLabel = UnitFormatter.cleanUnitCode(effectiveUnitCode).ifBlank {
+        if (effectiveMode == TrackingMode.DURATION) "min" else "units"
+    }
+    val isMeasuredMode = effectiveMode == TrackingMode.QUANTITY || effectiveMode == TrackingMode.DURATION
+
+    var valueText by remember(existingEntry, effectiveVersion.versionId, effectiveMode, effectiveTarget, effectiveUnitCode) {
         mutableStateOf(
             defaultRecordSessionValueText(
                 existingEntry = existingEntry,
                 effectiveMode = effectiveMode,
                 effectiveTargetPeriod = effectiveTargetPeriod,
                 effectiveUnitCode = effectiveUnitCode,
-                effectiveTargetValue = effectiveTargetValue
+                effectiveTargetValue = effectiveTarget
             )
         )
     }
-    var noteText by remember(existingEntry) {
+    var entryNote by remember(existingEntry) {
         mutableStateOf(existingEntry?.entryNote ?: "")
     }
     var valueError by remember { mutableStateOf<String?>(null) }
+    var hasSubmitted by remember { mutableStateOf(false) }
 
-    val parsedValueUnits = valueText.trim().toIntOrNull()
-    val previewValueUnits = (parsedValueUnits ?: 0).coerceAtLeast(0)
-
-    val allEntriesOnDate = remember(entries, habit.habitId, effectiveDate) {
-        entries.filter {
-            it.habitId == habit.habitId && it.localDate == effectiveDate.toString()
-        }
+    val recentDates = remember(today, habitCreatedDate) {
+        (0..13).map { today.minusDays(it.toLong()) }
+            .filter { !it.isBefore(habitCreatedDate) }
     }
 
-    // Compute live preview for selected date & week
-    val existingEntriesOnDate = remember(allEntriesOnDate, existingEntry) {
-        allEntriesOnDate.filter { it.entryId != existingEntry?.entryId }
+    val dateValidationError = remember(selectedDate, today, habitCreatedDate) {
+        validateRecordSessionDate(selectedDate, today, habitCreatedDate)
     }
-    val projectedDailyTotal = computeRecordSessionDailyPreviewTotal(
-        existingEntriesOnDate = existingEntriesOnDate,
-        previewValueUnits = previewValueUnits,
-        effectiveMode = effectiveMode,
-        effectiveTargetPeriod = effectiveTargetPeriod,
-        effectiveUnitCode = effectiveUnitCode
-    )
-    val dailyTarget = (effectiveTargetValue ?: 1).coerceAtLeast(1)
 
-    val projectedWeeklySnapshot = remember(
-        habit,
-        versionsForHabit,
-        entries,
-        outcomes,
-        weekStartHistory,
-        effectiveDate,
-        previewValueUnits,
-        existingEntry,
-        governingVersion,
-        isWeeklyHabit
-    ) {
-        if (!isWeeklyHabit) {
-            null
+    // Existing entries on selectedDate
+    val entriesOnSelectedDate = remember(entries, habitId, selectedDateStr) {
+        entries.filter { it.habitId == habitId && it.localDate == selectedDateStr }
+            .sortedBy { it.createdAtUtcMs }
+    }
+    val otherEntriesOnDate = remember(entriesOnSelectedDate, existingEntry) {
+        entriesOnSelectedDate.filter { it.entryId != existingEntry?.entryId }
+    }
+
+    val parsedStoredUnits = remember(valueText, effectiveUnitCode) {
+        UnitFormatter.parseUserValueToStoredUnits(valueText, effectiveUnitCode)
+    }
+    val hasValidPositiveInput = parsedStoredUnits != null && parsedStoredUnits > 0
+    val previewValueUnits = if (hasValidPositiveInput) parsedStoredUnits!! else 0
+    val previewValueBig = BigInteger.valueOf(previewValueUnits.toLong())
+
+    val existingRecordedDateTotal = remember(entriesOnSelectedDate) {
+        ProgressBandClassifier.sumUnitsExact(entriesOnSelectedDate.map { it.valueUnits })
+    }
+    val existingDateTotalExcludingCurrent = remember(otherEntriesOnDate) {
+        ProgressBandClassifier.sumUnitsExact(otherEntriesOnDate.map { it.valueUnits })
+    }
+    val projectedDailyTotal = if (existingEntry != null) {
+        if (hasValidPositiveInput) {
+            existingDateTotalExcludingCurrent.add(previewValueBig)
         } else {
-            val simulatedEntry = HabitEntry(
-                entryId = existingEntry?.entryId ?: "preview_entry",
-                habitId = habit.habitId,
-                localDate = effectiveDate.toString(),
-                valueUnits = previewValueUnits,
-                entryNote = noteText.ifBlank { null },
-                createdAtUtcMs = System.currentTimeMillis(),
-                updatedAtUtcMs = System.currentTimeMillis(),
-                idempotencyKey = "preview_key"
-            )
-            val simulatedEntries = entries
-                .filter { it.habitId == habit.habitId && it.entryId != existingEntry?.entryId } + simulatedEntry
-            val habitOutcomes = outcomes.filter { it.habitId == habit.habitId }
-            StreakAndGroveEngine.computeWeeklyProgressSnapshot(
-                versions = versionsForHabit.ifEmpty { listOf(governingVersion) },
-                entries = simulatedEntries,
-                outcomes = habitOutcomes,
-                weekStartHistory = weekStartHistory,
-                evaluationDate = effectiveDate,
-                fallbackVersion = governingVersion
-            )
+            existingRecordedDateTotal
         }
-    }
-
-    val previewBand = if (isWeeklyHabit && projectedWeeklySnapshot != null) {
-        projectedWeeklySnapshot.weekProgressBand
     } else {
-        ProgressBandClassifier.classify(projectedDailyTotal, dailyTarget)
+        existingRecordedDateTotal.add(previewValueBig)
     }
 
-    val previewPercentage = if (isWeeklyHabit && projectedWeeklySnapshot != null) {
-        projectedWeeklySnapshot.weekPercentage
+    val summary = summaries[habitId]
+    val isWeeklyTarget = effectiveTargetPeriod == TargetPeriod.WEEK
+    val targetUnitsBig = BigInteger.valueOf(effectiveTarget.toLong())
+
+    val existingActiveTotal = if (isWeeklyTarget && summary != null) {
+        summary.weekTotalUnits
     } else {
-        ((projectedDailyTotal.toDouble() / dailyTarget.toDouble()) * 100.0).toInt()
+        existingRecordedDateTotal
     }
 
-    val recentSelectableDates = remember(today, earliestEffectiveDate) {
-        (0..13)
-            .map { today.minusDays(it.toLong()) }
-            .filter { !it.isBefore(earliestEffectiveDate) }
+    val projectedActiveTotal = if (isWeeklyTarget && summary != null) {
+        val prevEntryVal = BigInteger.valueOf((existingEntry?.valueUnits ?: 0).toLong())
+        if (existingEntry != null && !hasValidPositiveInput) {
+            summary.weekTotalUnits
+        } else {
+            summary.weekTotalUnits.subtract(prevEntryVal).max(BigInteger.ZERO).add(previewValueBig)
+        }
+    } else {
+        projectedDailyTotal
     }
 
-    val isMeasuredMode = effectiveMode in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION)
+    val existingBand = ProgressBandClassifier.classify(existingActiveTotal, targetUnitsBig)
+    val existingPct = ProgressBandClassifier.displayPercentage(existingActiveTotal, targetUnitsBig)
+    val projectedBand = ProgressBandClassifier.classify(projectedActiveTotal, targetUnitsBig)
+    val projectedPct = ProgressBandClassifier.displayPercentage(projectedActiveTotal, targetUnitsBig)
+
+    val context = LocalContext.current
+    val is24HourFormat = remember(context) { DateFormat.is24HourFormat(context) }
+
+    val canSave = valueText.isNotBlank() &&
+        hasValidPositiveInput &&
+        dateValidationError == null &&
+        !hasSubmitted
 
     Surface(
         modifier = modifier
@@ -373,21 +388,19 @@ fun RecordSessionSheet(
             .testTag("record_session_sheet"),
         color = Color.Transparent
     ) {
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .imePadding()
-                .verticalScroll(rememberScrollState())
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .imePadding(),
+            contentPadding = PaddingValues(18.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Top Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            // Top Bar
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     IconButton(
                         onClick = onNavigateBack,
                         modifier = Modifier
@@ -399,476 +412,263 @@ fun RecordSessionSheet(
                             contentDescription = "Back"
                         )
                     }
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Column {
                         Text(
-                            text = when {
-                                isEditing -> "Edit Session"
-                                isMeasuredMode -> "Add Progress"
-                                else -> "Record Session"
-                            },
+                            text = if (existingEntry != null) "Edit Progress Entry" else "Add Progress",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
-                            text = "${governingVersion.name} • ${governingVersion.formatTargetAndPeriodSummary()}",
+                            text = "${habit.name} • ${summary?.formatTargetAndPeriodSummary() ?: habit.formatTargetAndPeriodSummary()}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.testTag("record_session_header_subtitle")
-                        )
-                    }
-                }
-
-                if (isEditing && existingEntry != null) {
-                    IconButton(
-                        onClick = {
-                            viewModel.deleteHabitEntry(existingEntry.entryId)
-                            onNavigateBack()
-                        },
-                        modifier = Modifier
-                            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
-                            .testTag("record_session_delete_btn")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete session",
-                            tint = MaterialTheme.colorScheme.error
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
             }
 
-            // Date Selection Section
-            Card(
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+            // 1. Date Selection Strip (Today or recent past dates; future dates blocked per D-193)
+            item {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = "Session Date",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            text = "Session Date",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Selected: $selectedDateStr" + if (selectedDate == today) " (Today)" else "",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.testTag("record_session_selected_date")
+                        )
 
-                    if (recentSelectableDates.isNotEmpty()) {
                         LazyRow(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            contentPadding = PaddingValues(vertical = 2.dp)
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            items(recentSelectableDates, key = { it.toString() }) { d ->
-                                val isPicked = dateInputText.trim() == d.toString()
-                                val label = when (d) {
-                                    today -> "Today"
-                                    today.minusDays(1) -> "Yesterday"
-                                    else -> d.format(DateTimeFormatter.ofPattern("MMM d"))
-                                }
+                            items(recentDates, key = { it.toString() }) { d ->
+                                val dStr = d.toString()
+                                val isSelected = dStr == selectedDateStr
                                 FilterChip(
-                                    selected = isPicked,
-                                    onClick = { dateInputText = d.toString() },
-                                    label = { Text(label) },
-                                    modifier = Modifier
-                                        .heightIn(min = 48.dp)
-                                        .testTag("record_session_date_chip_$d")
+                                    selected = isSelected,
+                                    onClick = {
+                                        selectedDateStr = dStr
+                                        activeEditingEntryId = null
+                                        valueError = null
+                                    },
+                                    label = {
+                                        val labelText = if (d == today) {
+                                            "Today (${d.format(DateTimeFormatter.ofPattern("MMM d"))})"
+                                        } else {
+                                            d.format(DateTimeFormatter.ofPattern("EEE, MMM d"))
+                                        }
+                                        Text(labelText)
+                                    },
+                                    modifier = Modifier.testTag("record_session_date_chip_$dStr")
                                 )
                             }
                         }
-                    }
 
-                    OutlinedTextField(
-                        value = dateInputText,
-                        onValueChange = { dateInputText = it },
-                        label = { Text("Date (YYYY-MM-DD)") },
-                        isError = dateValidationError != null,
-                        supportingText = {
-                            if (dateValidationError != null) {
-                                Text(
-                                    text = dateValidationError,
-                                    color = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.testTag("record_session_date_error")
-                                )
-                            } else {
-                                Text("Allowed range: $earliestEffectiveDate to $today")
-                            }
-                        },
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .bringIntoViewOnFocus()
-                            .testTag("record_session_date_input")
-                    )
+                        if (dateValidationError != null) {
+                            Text(
+                                text = dateValidationError,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.testTag("record_session_date_error")
+                            )
+                        }
+                    }
                 }
             }
 
-            // Value / Effort Input Section
-            Card(
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+            // 2. Value Entry & Quick Increment Chips
+            item {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    val unitLabel = effectiveUnitCode?.takeIf { it.isNotBlank() }
-                        ?: if (effectiveMode == TrackingMode.DURATION) "min" else "units"
-                    Text(
-                        text = if (isMeasuredMode) {
-                            "Amount ($unitLabel)"
-                        } else {
-                            "Check-In Value"
-                        },
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-
-                    OutlinedTextField(
-                        value = valueText,
-                        onValueChange = {
-                            valueText = it.filter { ch -> ch.isDigit() || ch == '-' }
-                            valueError = null
-                        },
-                        label = {
-                            Text(
-                                if (isMeasuredMode) {
-                                    "Session $unitLabel (0 or more)"
-                                } else {
-                                    "Sessions (1 = completed, 0 = honest check-in)"
-                                }
-                            )
-                        },
-                        suffix = if (isMeasuredMode) {
-                            {
-                                Text(
-                                    text = UnitFormatter.formatUnitForCount(previewValueUnits.coerceAtLeast(1), unitLabel),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        } else null,
-                        isError = valueError != null,
-                        supportingText = {
-                            if (valueError != null) {
-                                Text(valueError!!, color = MaterialTheme.colorScheme.error)
-                            } else {
-                                Text("Logging 0 records an honest check-in without shame.")
-                            }
-                        },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .bringIntoViewOnFocus()
-                            .testTag("record_session_value_input")
-                    )
-
-                    // Quick Preset Chips
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        FilterChip(
-                            selected = previewValueUnits == 0,
-                            onClick = { valueText = "0" },
-                            label = { Text("0 (Honest check-in)") },
-                            modifier = Modifier
-                                .heightIn(min = 48.dp)
-                                .testTag("preset_zero_chip")
+                        Text(
+                            text = if (isMeasuredMode) {
+                                if (existingEntry != null) {
+                                    "Updated Amount ($cleanUnitLabel)"
+                                } else {
+                                    "Amount to Add ($cleanUnitLabel)"
+                                }
+                            } else {
+                                "Check-Off Count"
+                            },
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
                         )
 
                         if (isMeasuredMode) {
-                            val quarter = if (isWeeklySessionCount) 1 else (dailyTarget / 4).coerceAtLeast(1)
-                            val half = if (isWeeklySessionCount) 1 else (dailyTarget / 2).coerceAtLeast(1)
-                            val full = if (isWeeklySessionCount) 1 else dailyTarget
-                            val extra = if (isWeeklySessionCount) 2 else ((dailyTarget * 5) / 4).coerceAtLeast(full + 1)
-
-                            if (!isWeeklySessionCount) {
-                                FilterChip(
-                                    selected = previewValueUnits == quarter,
-                                    onClick = { valueText = quarter.toString() },
-                                    label = { Text("+$quarter ${UnitFormatter.formatUnitForCount(quarter, unitLabel)}") },
-                                    modifier = Modifier
-                                        .heightIn(min = 48.dp)
-                                        .testTag("preset_quarter_chip")
-                                )
-                                FilterChip(
-                                    selected = previewValueUnits == half,
-                                    onClick = { valueText = half.toString() },
-                                    label = { Text("+$half ${UnitFormatter.formatUnitForCount(half, unitLabel)}") },
-                                    modifier = Modifier
-                                        .heightIn(min = 48.dp)
-                                        .testTag("preset_half_chip")
-                                )
-                            }
-                            FilterChip(
-                                selected = previewValueUnits == full,
-                                onClick = { valueText = full.toString() },
-                                label = {
-                                    Text(
-                                        if (isWeeklySessionCount) "1 session"
-                                        else "$full $unitLabel (Target)"
-                                    )
-                                },
-                                modifier = Modifier
-                                    .heightIn(min = 48.dp)
-                                    .testTag("preset_full_chip")
-                            )
-                            FilterChip(
-                                selected = previewValueUnits == extra,
-                                onClick = { valueText = extra.toString() },
-                                label = {
-                                    Text(
-                                        if (isWeeklySessionCount) "2 sessions"
-                                        else "+$extra ${UnitFormatter.formatUnitForCount(extra, unitLabel)}"
-                                    )
-                                },
-                                modifier = Modifier
-                                    .heightIn(min = 48.dp)
-                                    .testTag("preset_extra_chip")
-                            )
-                        } else {
-                            FilterChip(
-                                selected = previewValueUnits >= 1,
-                                onClick = { valueText = "1" },
-                                label = { Text("1 (Completed)") },
-                                modifier = Modifier
-                                    .heightIn(min = 48.dp)
-                                    .testTag("preset_full_chip")
-                            )
-                        }
-                    }
-
-                    if (effectiveMode == TrackingMode.EFFORT_AWARE) {
-                        Text(
-                            text = "Legacy effort habit: records a completion check-in. Edit habit to switch to Quantity, Duration, or Simple Check-Off for target-based progress.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.testTag("record_session_legacy_effort_notice")
-                        )
-                    }
-
-                    // Optional Session Note
-                    OutlinedTextField(
-                        value = noteText,
-                        onValueChange = { noteText = it },
-                        label = { Text("Session note (optional)") },
-                        placeholder = { Text("Any brief context about this session...") },
-                        maxLines = 3,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .bringIntoViewOnFocus()
-                            .testTag("record_session_note_input")
-                    )
-                }
-            }
-
-            // Live Preview Card (Daily Total, Weekly Aggregate, D-040 Progress Band & Dual Quotes)
-            Card(
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
-                ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("record_session_live_preview")
-            ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Live Progress Preview",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                        ) {
-                            Text(
-                                text = "${previewBand.label} (${previewBand.shortBadge})",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                                    .testTag("record_session_preview_band")
-                            )
-                        }
-                    }
-
-                    val unitSuffix = effectiveUnitCode?.let { " $it" } ?: ""
-                    val dailyTotalLine = if (isMeasuredMode && !isWeeklyHabit) {
-                        "Resulting daily total on $effectiveDate: $projectedDailyTotal / $dailyTarget$unitSuffix ($previewPercentage%)"
-                    } else {
-                        "Resulting daily total on $effectiveDate: $projectedDailyTotal$unitSuffix"
-                    }
-                    Text(
-                        text = dailyTotalLine,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.testTag("record_session_preview_daily_total")
-                    )
-
-                    if (isWeeklyHabit && projectedWeeklySnapshot != null) {
-                        Text(
-                            text = "Resulting week total (${projectedWeeklySnapshot.weekStartLocalDate}..${projectedWeeklySnapshot.weekEndLocalDate}): " +
-                                "${projectedWeeklySnapshot.weekTotalUnits} / ${projectedWeeklySnapshot.weekTargetUnits}$unitSuffix ($previewPercentage%)",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.testTag("record_session_preview_weekly_total")
-                        )
-                    }
-
-                    LinearProgressIndicator(
-                        progress = { (previewPercentage / 100f).coerceIn(0f, 1f) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(RoundedCornerShape(4.dp)),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                    )
-
-                    Text(
-                        text = previewBand.encouragementQuote,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = previewBand.motivationQuote,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontStyle = FontStyle.Italic,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            // Action Buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onNavigateBack,
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 48.dp)
-                        .testTag("record_session_cancel_btn")
-                ) {
-                    Text("Cancel")
-                }
-
-                val latestExistingEntry by androidx.compose.runtime.rememberUpdatedState(existingEntry)
-
-                Button(
-                    onClick = {
-                        if (dateValidationError != null || parsedDate == null) {
-                            return@Button
-                        }
-                        val units = valueText.trim().toIntOrNull()
-                        if (units == null || units < 0) {
-                            valueError = "Please enter a non-negative integer (0 or more)."
-                            return@Button
-                        }
-
-                        val governedHabit = habit.copy(
-                            currentVersion = governingVersion,
-                            name = governingVersion.name,
-                            trackingMode = governingVersion.trackingMode,
-                            unitCode = governingVersion.unitCode,
-                            targetPeriod = governingVersion.targetPeriod,
-                            targetValue = governingVersion.targetValue,
-                            scheduleKind = governingVersion.scheduleKind,
-                            scheduledWeekdaysMask = governingVersion.scheduledWeekdaysMask,
-                            preferredWeekdaysMask = governingVersion.preferredWeekdaysMask
-                        )
-
-                        val editingTarget = activeEntryId?.let { id -> entries.find { it.entryId == id } }
-                        if (editingTarget != null) {
-                            viewModel.updateHabitEntry(
-                                entryId = editingTarget.entryId,
-                                newValueUnits = units,
-                                newEntryNote = noteText.trim().ifBlank { null }
-                            )
-                        } else {
-                            if (effectiveMode in listOf(TrackingMode.QUANTITY, TrackingMode.DURATION)) {
-                                viewModel.logHabitQuantityOrDuration(
-                                    habit = governedHabit,
-                                    valueUnits = units,
-                                    date = parsedDate,
-                                    entryNote = noteText.trim().ifBlank { null }
-                                )
+                            val stepQuarter = (effectiveTarget / 4).coerceAtLeast(1)
+                            val stepHalf = (effectiveTarget / 2).coerceAtLeast(1)
+                            val scale = UnitFormatter.extractScale(effectiveUnitCode)
+                            val quarterChipLabel = if (scale > 0 || UnitFormatter.isCurrencyUnit(effectiveUnitCode)) {
+                                "+${UnitFormatter.formatValueWithUnit(stepQuarter, effectiveUnitCode)}"
                             } else {
-                                if (units == 0) {
-                                    viewModel.logHabitQuantityOrDuration(
-                                        habit = governedHabit,
-                                        valueUnits = 0,
-                                        date = parsedDate,
-                                        entryNote = noteText.trim().ifBlank { null }
-                                    )
-                                } else {
-                                    viewModel.logHabit(
-                                        habit = governedHabit,
-                                        date = parsedDate,
-                                        outcome = DailyOutcome.COMPLETED,
-                                        effortLevel = EffortLevel.STANDARD,
-                                        note = noteText.trim()
-                                    )
+                                "+$stepQuarter ${UnitFormatter.formatUnitForCount(stepQuarter, effectiveUnitCode)}"
+                            }
+                            val halfChipLabel = if (scale > 0 || UnitFormatter.isCurrencyUnit(effectiveUnitCode)) {
+                                "+${UnitFormatter.formatValueWithUnit(stepHalf, effectiveUnitCode)}"
+                            } else {
+                                "+$stepHalf ${UnitFormatter.formatUnitForCount(stepHalf, effectiveUnitCode)}"
+                            }
+                            val targetChipLabel = "${UnitFormatter.formatValueWithUnit(effectiveTarget, effectiveUnitCode)} (Target)"
+
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = {
+                                        val current = (parsedStoredUnits ?: 0).coerceAtLeast(0)
+                                        valueText = UnitFormatter.formatStoredUnitsForInput(current + stepQuarter, effectiveUnitCode)
+                                        valueError = null
+                                    },
+                                    modifier = Modifier
+                                        .heightIn(min = 48.dp)
+                                        .testTag("record_session_quick_inc_quarter")
+                                ) {
+                                    Text(quarterChipLabel)
+                                }
+                                if (stepHalf != stepQuarter) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            val current = (parsedStoredUnits ?: 0).coerceAtLeast(0)
+                                            valueText = UnitFormatter.formatStoredUnitsForInput(current + stepHalf, effectiveUnitCode)
+                                            valueError = null
+                                        },
+                                        modifier = Modifier
+                                            .heightIn(min = 48.dp)
+                                            .testTag("record_session_quick_inc_half")
+                                    ) {
+                                        Text(halfChipLabel)
+                                    }
+                                }
+                                OutlinedButton(
+                                    onClick = {
+                                        valueText = UnitFormatter.formatStoredUnitsForInput(effectiveTarget, effectiveUnitCode)
+                                        valueError = null
+                                    },
+                                    modifier = Modifier
+                                        .heightIn(min = 48.dp)
+                                        .testTag("record_session_quick_set_target")
+                                ) {
+                                    Text(targetChipLabel)
                                 }
                             }
                         }
-                        onNavigateBack()
-                    },
-                    enabled = dateValidationError == null,
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 48.dp)
-                        .testTag("record_session_save_btn"),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                ) {
-                    Text(
-                        when {
-                            isEditing -> "Save Changes"
-                            isMeasuredMode -> "Save Progress"
-                            else -> "Record Session"
+
+                        val scale = UnitFormatter.extractScale(effectiveUnitCode)
+                        val placeholderExample = if (scale > 0) {
+                            UnitFormatter.formatStoredUnitsForInput((effectiveTarget / 2).coerceAtLeast(1), effectiveUnitCode)
+                        } else {
+                            "e.g. 2"
                         }
-                    )
+
+                        OutlinedTextField(
+                            value = valueText,
+                            onValueChange = { raw ->
+                                valueText = raw.filter { ch -> ch.isDigit() || ch == '-' || ch == '.' }
+                                valueError = null
+                            },
+                            label = {
+                                Text(
+                                    if (existingEntry != null) {
+                                        "Entry amount ($cleanUnitLabel)"
+                                    } else {
+                                        "Amount to add ($cleanUnitLabel)"
+                                    }
+                                )
+                            },
+                            placeholder = {
+                                Text(placeholderExample)
+                            },
+                            singleLine = true,
+                            isError = valueError != null,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = if (scale > 0) KeyboardType.Decimal else KeyboardType.Number
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .bringIntoViewOnFocus()
+                                .testTag("record_session_value_input")
+                        )
+
+                        if (valueError != null) {
+                            Text(
+                                text = valueError!!,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.testTag("record_session_value_error")
+                            )
+                        }
+
+                        OutlinedTextField(
+                            value = entryNote,
+                            onValueChange = { entryNote = it },
+                            label = { Text("Session note (optional)") },
+                            placeholder = { Text("What did you focus on in this session?") },
+                            maxLines = 3,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .bringIntoViewOnFocus()
+                                .testTag("record_session_note_input")
+                        )
+                    }
                 }
             }
 
-            // Recorded entries on this date (allows inspecting, editing, or deleting individual progress steps)
-            if (allEntriesOnDate.isNotEmpty()) {
-                val unitLabel = effectiveUnitCode?.takeIf { it.isNotBlank() }
-                    ?: if (effectiveMode == TrackingMode.DURATION) "min" else "units"
-                val recordedSum = allEntriesOnDate.sumOf { it.valueUnits }
+            // 3. Clear Progress State Preview (Existing vs New Entry vs Projected Daily Total & D-040 Band)
+            item {
+                val formattedExistingRatio = UnitFormatter.formatProgressRatioBig(
+                    existingRecordedDateTotal,
+                    targetUnitsBig,
+                    effectiveUnitCode
+                )
+                val formattedProjectedDailyRatio = UnitFormatter.formatProgressRatioBig(
+                    projectedDailyTotal,
+                    targetUnitsBig,
+                    effectiveUnitCode
+                )
+                val newEntrySummaryText = when {
+                    valueText.isBlank() -> "Enter an amount above to preview new total"
+                    !hasValidPositiveInput -> "Invalid amount"
+                    existingEntry != null -> "Updating entry to: ${UnitFormatter.formatValueWithUnit(previewValueUnits, effectiveUnitCode)}"
+                    else -> "New entry: +${UnitFormatter.formatValueWithUnit(previewValueUnits, effectiveUnitCode)}"
+                }
+
                 Card(
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .testTag("record_session_existing_entries_card")
+                        .testTag("record_session_preview_card")
                 ) {
                     Column(
-                        modifier = Modifier.padding(14.dp),
+                        modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Row(
@@ -877,89 +677,283 @@ fun RecordSessionSheet(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Recorded on $effectiveDate",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold
+                                text = "Progress Summary",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
                             )
-                            val recordedPct = ((recordedSum.toDouble() / dailyTarget.toDouble()) * 100.0).toInt()
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer
+                            ) {
+                                Text(
+                                    text = "${projectedBand.label} (${projectedBand.shortBadge})",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                        .testTag("record_session_preview_band")
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = "Existing progress on $selectedDateStr: $formattedExistingRatio ($existingPct%)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag("record_session_preview_existing")
+                        )
+
+                        Text(
+                            text = newEntrySummaryText,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = if (hasValidPositiveInput) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            modifier = Modifier.testTag("record_session_preview_new_entry")
+                        )
+
+                        Text(
+                            text = "Resulting daily total on $selectedDateStr: $formattedProjectedDailyRatio ($projectedPct%)",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.testTag("record_session_preview_daily_total")
+                        )
+
+                        if (isWeeklyTarget) {
+                            val formattedWeeklyRatio = UnitFormatter.formatProgressRatioBig(
+                                projectedActiveTotal,
+                                targetUnitsBig,
+                                effectiveUnitCode
+                            )
                             Text(
-                                text = "${UnitFormatter.formatProgressRatio(recordedSum, dailyTarget, unitLabel)} ($recordedPct%)",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.SemiBold
+                                text = "Resulting weekly total: $formattedWeeklyRatio ($projectedPct%)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.testTag("record_session_preview_weekly_total")
                             )
                         }
 
-                        allEntriesOnDate.forEach { item ->
-                            val formattedAmount = UnitFormatter.formatValueWithUnit(item.valueUnits, unitLabel)
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("record_session_entry_row_${item.entryId}")
-                            ) {
-                                Row(
+                        LinearProgressIndicator(
+                            progress = { (projectedPct / 100f).coerceIn(0f, 1f) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(4.dp)),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        )
+
+                        if (projectedActiveTotal > BigInteger.ZERO) {
+                            Text(
+                                text = projectedBand.encouragementQuote,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = projectedBand.motivationQuote,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontStyle = FontStyle.Italic,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else {
+                            Text(
+                                text = existingBand.encouragementQuote,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 4. Existing Progress Entries on Selected Date (Inline Edit & Delete)
+            if (entriesOnSelectedDate.isNotEmpty()) {
+                item {
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("record_session_existing_entries_card")
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = "Recorded on $selectedDateStr (${entriesOnSelectedDate.size})",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            for (entry in entriesOnSelectedDate) {
+                                val isBeingEdited = entry.entryId == activeEditingEntryId
+                                val timeFormatted = remember(entry.createdAtUtcMs, is24HourFormat) {
+                                    runCatching {
+                                        val rawHhMm = Instant.ofEpochMilli(entry.createdAtUtcMs)
+                                            .atZone(ZoneId.systemDefault())
+                                            .toLocalTime()
+                                            .format(DateTimeFormatter.ofPattern("HH:mm"))
+                                        SettingsSupport.formatUnambiguousTimeDisplay(rawHhMm, is24HourFormat)
+                                    }.getOrDefault("")
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = if (isBeingEdited) {
+                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                                    },
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .testTag("record_session_entry_row_${entry.entryId}")
                                 ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = "+$formattedAmount",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                        if (!item.entryNote.isNullOrBlank()) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = item.entryNote,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                text = UnitFormatter.formatValueWithUnit(entry.valueUnits, effectiveUnitCode) +
+                                                    if (timeFormatted.isNotBlank()) " • $timeFormatted" else "",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.SemiBold
                                             )
+                                            if (!entry.entryNote.isNullOrBlank()) {
+                                                Text(
+                                                    text = entry.entryNote,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
                                         }
-                                    }
-                                    Row {
-                                        IconButton(
-                                            onClick = {
-                                                activeEntryId = item.entryId
-                                                valueText = item.valueUnits.toString()
-                                                noteText = item.entryNote ?: ""
-                                            },
-                                            modifier = Modifier
-                                                .size(40.dp)
-                                                .testTag("record_session_edit_entry_${item.entryId}")
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Edit,
-                                                contentDescription = "Edit entry",
-                                                modifier = Modifier.size(18.dp),
-                                                tint = MaterialTheme.colorScheme.primary
-                                            )
-                                        }
-                                        IconButton(
-                                            onClick = {
-                                                viewModel.deleteHabitEntry(item.entryId)
-                                                if (activeEntryId == item.entryId) {
-                                                    activeEntryId = null
-                                                }
-                                            },
-                                            modifier = Modifier
-                                                .size(40.dp)
-                                                .testTag("record_session_delete_entry_${item.entryId}")
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Delete,
-                                                contentDescription = "Delete entry",
-                                                modifier = Modifier.size(18.dp),
-                                                tint = MaterialTheme.colorScheme.error
-                                            )
+                                        Row {
+                                            IconButton(
+                                                onClick = {
+                                                    activeEditingEntryId = entry.entryId
+                                                    valueText = UnitFormatter.formatStoredUnitsForInput(
+                                                        entry.valueUnits,
+                                                        effectiveUnitCode
+                                                    )
+                                                    entryNote = entry.entryNote ?: ""
+                                                    valueError = null
+                                                },
+                                                modifier = Modifier
+                                                    .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                                                    .testTag("record_session_edit_entry_${entry.entryId}")
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Edit,
+                                                    contentDescription = "Edit entry",
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                            IconButton(
+                                                onClick = {
+                                                    if (activeEditingEntryId == entry.entryId) {
+                                                        activeEditingEntryId = null
+                                                        valueText = defaultRecordSessionValueText(
+                                                            existingEntry = null,
+                                                            effectiveMode = effectiveMode,
+                                                            effectiveTargetValue = effectiveTarget,
+                                                            effectiveUnitCode = effectiveUnitCode
+                                                        )
+                                                        entryNote = ""
+                                                    }
+                                                    viewModel.deleteHabitEntry(entry.entryId)
+                                                },
+                                                modifier = Modifier
+                                                    .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                                                    .testTag("record_session_delete_entry_${entry.entryId}")
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Delete,
+                                                    contentDescription = "Delete entry",
+                                                    tint = MaterialTheme.colorScheme.error,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
+                    }
+                }
+            }
+
+            // 5. Save / Cancel Buttons
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onNavigateBack,
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 48.dp)
+                            .testTag("record_session_cancel_btn")
+                    ) {
+                        Text("Cancel")
+                    }
+
+                    Button(
+                        onClick = {
+                            if (hasSubmitted) return@Button
+                            val trimmed = valueText.trim()
+                            if (trimmed.isEmpty()) {
+                                valueError = "Please enter an amount to record."
+                                return@Button
+                            }
+                            val parsed = UnitFormatter.parseUserValueToStoredUnits(trimmed, effectiveUnitCode)
+                            if (parsed == null) {
+                                val bd = trimmed.replace(",", "").toBigDecimalOrNull()
+                                valueError = if (bd != null && UnitFormatter.extractScale(effectiveUnitCode) == 0) {
+                                    "Whole-number amount required for $cleanUnitLabel."
+                                } else {
+                                    "Please enter a valid positive amount."
+                                }
+                                return@Button
+                            }
+                            if (parsed <= 0) {
+                                valueError = "Amount must be greater than 0."
+                                return@Button
+                            }
+                            if (dateValidationError != null) {
+                                return@Button
+                            }
+                            hasSubmitted = true
+                            val cleanNote = entryNote.trim().ifBlank { null }
+                            if (existingEntry != null) {
+                                viewModel.updateHabitEntry(existingEntry.entryId, parsed, cleanNote)
+                            } else {
+                                viewModel.logHabitQuantityOrDuration(
+                                    habit = habit,
+                                    valueUnits = parsed,
+                                    date = selectedDate,
+                                    entryNote = cleanNote
+                                )
+                            }
+                            onNavigateBack()
+                        },
+                        enabled = canSave,
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 48.dp)
+                            .testTag("record_session_save_btn")
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(if (existingEntry != null) "Update Entry" else "Save Progress")
                     }
                 }
             }

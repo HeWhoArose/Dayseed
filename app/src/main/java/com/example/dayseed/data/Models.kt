@@ -454,9 +454,13 @@ data class HabitVersion(
         return when (mode) {
             TrackingMode.QUANTITY, TrackingMode.DURATION -> {
                 val target = (targetValue ?: 1).coerceAtLeast(1)
-                val unit = unitCode?.ifBlank { if (mode == TrackingMode.DURATION) "min" else "units" }
+                val rawUnit = unitCode?.ifBlank { if (mode == TrackingMode.DURATION) "min" else "units" }
                     ?: if (mode == TrackingMode.DURATION) "min" else "units"
-                "$target $unit / $periodSuffix"
+                if (UnitFormatter.extractScale(rawUnit) > 0) {
+                    "${UnitFormatter.formatValueWithUnit(target, rawUnit)} / $periodSuffix"
+                } else {
+                    "${target} ${UnitFormatter.cleanUnitCode(rawUnit)} / $periodSuffix"
+                }
             }
             TrackingMode.COMPLETION_ONLY -> {
                 if (targetPeriod == TargetPeriod.WEEK) {
@@ -529,9 +533,13 @@ data class Habit(
         return when (mode) {
             TrackingMode.QUANTITY, TrackingMode.DURATION -> {
                 val target = (targetValue ?: 1).coerceAtLeast(1)
-                val unit = unitCode?.ifBlank { if (mode == TrackingMode.DURATION) "min" else "units" }
+                val rawUnit = unitCode?.ifBlank { if (mode == TrackingMode.DURATION) "min" else "units" }
                     ?: if (mode == TrackingMode.DURATION) "min" else "units"
-                "$target $unit / $periodSuffix"
+                if (UnitFormatter.extractScale(rawUnit) > 0) {
+                    "${UnitFormatter.formatValueWithUnit(target, rawUnit)} / $periodSuffix"
+                } else {
+                    "${target} ${UnitFormatter.cleanUnitCode(rawUnit)} / $periodSuffix"
+                }
             }
             TrackingMode.COMPLETION_ONLY -> {
                 if (targetPeriod == TargetPeriod.WEEK) {
@@ -807,9 +815,13 @@ data class HabitSummary(
         return when (mode) {
             TrackingMode.QUANTITY, TrackingMode.DURATION -> {
                 val target = (v.targetValue ?: 1).coerceAtLeast(1)
-                val unit = v.unitCode?.ifBlank { if (mode == TrackingMode.DURATION) "min" else "units" }
+                val rawUnit = v.unitCode?.ifBlank { if (mode == TrackingMode.DURATION) "min" else "units" }
                     ?: if (mode == TrackingMode.DURATION) "min" else "units"
-                "$target $unit / $periodSuffix"
+                if (UnitFormatter.extractScale(rawUnit) > 0) {
+                    "${UnitFormatter.formatValueWithUnit(target, rawUnit)} / $periodSuffix"
+                } else {
+                    "${target} ${UnitFormatter.cleanUnitCode(rawUnit)} / $periodSuffix"
+                }
             }
             TrackingMode.COMPLETION_ONLY -> {
                 if (v.targetPeriod == TargetPeriod.WEEK) {

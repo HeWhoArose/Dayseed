@@ -211,6 +211,48 @@ object SettingsSupport {
         return parsed.hour >= 12
     }
 
+    /**
+     * Parses a 24-hour or flexible time string into `(hour12, minute, isPm)` where `hour12` is `1..12`.
+     */
+    fun parseTwentyFourHourToTwelveHour(raw: String?): Triple<Int, Int, Boolean>? {
+        val parsed = parseFlexibleLocalTime(raw) ?: return null
+        val isPm = parsed.hour >= 12
+        val hour12 = when (val h = parsed.hour % 12) {
+            0 -> 12
+            else -> h
+        }
+        return Triple(hour12, parsed.minute, isPm)
+    }
+
+    /**
+     * Converts `(hour12, minute, isPm)` where `hour12` is `1..12` and `minute` is `0..59`
+     * into a canonical 24-hour `"HH:mm"` string, or returns `null` if out of range.
+     */
+    fun formatTwelveHourToTwentyFourHour(hour12: Int, minute: Int, isPm: Boolean): String? {
+        if (hour12 !in 1..12 || minute !in 0..59) return null
+        val hour24 = when {
+            isPm && hour12 == 12 -> 12
+            isPm -> hour12 + 12
+            hour12 == 12 -> 0
+            else -> hour12
+        }
+        return formatQuietHours(LocalTime.of(hour24, minute))
+    }
+
+    /**
+     * Returns true if [candidateRaw] falls within the quiet-hours window `[quietStartRaw, quietEndRaw)`.
+     */
+    fun isTimeWithinQuietHours(
+        candidateRaw: String?,
+        quietStartRaw: String?,
+        quietEndRaw: String?
+    ): Boolean {
+        val candidate = parseFlexibleLocalTime(candidateRaw) ?: return false
+        val startStr = quietStartRaw?.takeIf { it.isNotBlank() } ?: "22:00"
+        val endStr = quietEndRaw?.takeIf { it.isNotBlank() } ?: "07:00"
+        return com.example.dayseed.data.ReminderEngine.isWithinQuietHours(formatQuietHours(candidate), startStr, endStr)
+    }
+
     /** Returns a short correction message, or null when the input is saveable. */
     fun quietHoursError(raw: String): String? {
         val trimmed = raw.trim()

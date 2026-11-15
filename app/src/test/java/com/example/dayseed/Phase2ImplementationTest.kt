@@ -1712,7 +1712,8 @@ class Phase2ImplementationTest {
         )
         assertEquals("v1_daily", resolvedBeforeChange.versionId)
         assertEquals("pages", resolvedBeforeChange.unitCode)
-        assertEquals("10", defaultRecordSessionValueText(null, resolvedBeforeChange.trackingMode, resolvedBeforeChange.targetPeriod, resolvedBeforeChange.unitCode, resolvedBeforeChange.targetValue))
+        assertEquals(10, resolvedBeforeChange.targetValue)
+        assertEquals("", defaultRecordSessionValueText(null, resolvedBeforeChange.trackingMode, resolvedBeforeChange.targetPeriod, resolvedBeforeChange.unitCode, resolvedBeforeChange.targetValue))
 
         val resolvedOnOrAfterChange = resolveRecordSessionGoverningVersion(
             versions = dailyVersions,
@@ -1722,7 +1723,8 @@ class Phase2ImplementationTest {
         )
         assertEquals("v2_daily", resolvedOnOrAfterChange.versionId)
         assertEquals("min", resolvedOnOrAfterChange.unitCode)
-        assertEquals("25", defaultRecordSessionValueText(null, resolvedOnOrAfterChange.trackingMode, resolvedOnOrAfterChange.targetPeriod, resolvedOnOrAfterChange.unitCode, resolvedOnOrAfterChange.targetValue))
+        assertEquals(25, resolvedOnOrAfterChange.targetValue)
+        assertEquals("", defaultRecordSessionValueText(null, resolvedOnOrAfterChange.trackingMode, resolvedOnOrAfterChange.targetPeriod, resolvedOnOrAfterChange.unitCode, resolvedOnOrAfterChange.targetValue))
 
         // 2. Weekly habit edited mid-week (U-12 Option B):
         //    Week 1 (2026-03-09..2026-03-15): 2 sessions/week
@@ -1789,7 +1791,7 @@ class Phase2ImplementationTest {
         assertEquals("sessions", resolvedCurrentWeekFrozen.unitCode)
         assertEquals(3, resolvedCurrentWeekFrozen.targetValue)
         assertEquals(
-            "1",
+            "",
             defaultRecordSessionValueText(
                 existingEntry = null,
                 effectiveMode = resolvedCurrentWeekFrozen.trackingMode,
@@ -1822,7 +1824,7 @@ class Phase2ImplementationTest {
         assertEquals("pages", resolvedNextWeek.unitCode)
         assertEquals(50, resolvedNextWeek.targetValue)
         assertEquals(
-            "50",
+            "",
             defaultRecordSessionValueText(
                 existingEntry = null,
                 effectiveMode = resolvedNextWeek.trackingMode,

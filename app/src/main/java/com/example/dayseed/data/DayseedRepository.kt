@@ -7216,8 +7216,13 @@ class DayseedRepository(
                         effectiveEvalVersion.unitCode?.ifBlank { "units" } ?: "units"
                     else -> "days"
                 }
+                val weekRatioText = if (UnitFormatter.extractScale(unitLabel) > 0) {
+                    UnitFormatter.formatProgressRatioBig(weekSnapshot.weekTotalUnits, weekSnapshot.weekTargetUnits, unitLabel)
+                } else {
+                    "${weekSnapshot.weekTotalUnits} / ${weekSnapshot.weekTargetUnits} ${UnitFormatter.cleanUnitCode(unitLabel)}"
+                }
                 val weekSummary = if (!isFuture) {
-                    "Week progress: ${weekSnapshot.weekTotalUnits} / ${weekSnapshot.weekTargetUnits} $unitLabel • ${weekSnapshot.weekProgressBand.displayName} (${weekSnapshot.weekProgressBand.rangeLabel})"
+                    "Week progress: $weekRatioText • ${weekSnapshot.weekProgressBand.displayName} (${weekSnapshot.weekProgressBand.rangeLabel})"
                 } else {
                     null
                 }

@@ -70,6 +70,7 @@ import com.example.dayseed.data.ProgressBand
 import com.example.dayseed.data.StreakUnit
 import com.example.dayseed.data.TargetPeriod
 import com.example.dayseed.data.TrackingMode
+import com.example.dayseed.data.UnitFormatter
 import com.example.dayseed.ui.components.DormantTransitionBanner
 import com.example.dayseed.ui.components.HabitBranchCanvas
 import com.example.dayseed.ui.components.formatTerminalReasonLabel
@@ -401,7 +402,13 @@ fun HabitDetailScreen(
                 val targetUnits = summary?.activeTargetUnits
                     ?: BigInteger.valueOf((habit.targetValue ?: 1).coerceAtLeast(1).toLong())
                 val pct = summary?.activePercentage ?: 0
-                val unitLabel = habit.unitCode?.let { " $it" } ?: ""
+                val rawUnit = activeVersion?.unitCode ?: habit.unitCode
+                val ratioDisplay = if (rawUnit != null && (UnitFormatter.extractScale(rawUnit) > 0 || UnitFormatter.isCurrencyUnit(rawUnit))) {
+                    UnitFormatter.formatProgressRatioBig(currentUnits, targetUnits, rawUnit)
+                } else {
+                    val unitLabel = rawUnit?.let { " ${UnitFormatter.cleanUnitCode(it)}" } ?: ""
+                    "$currentUnits / $targetUnits$unitLabel"
+                }
 
                 Card(
                     shape = RoundedCornerShape(16.dp),
@@ -442,9 +449,9 @@ fun HabitDetailScreen(
                         }
 
                         val progressLabel = if (isWeekly && !summary?.weekStartLocalDate.isNullOrBlank()) {
-                            "This week (${summary?.weekStartLocalDate}..${summary?.weekEndLocalDate}): $currentUnits / $targetUnits$unitLabel ($pct%)"
+                            "This week (${summary?.weekStartLocalDate}..${summary?.weekEndLocalDate}): $ratioDisplay ($pct%)"
                         } else {
-                            "Today: $currentUnits / $targetUnits$unitLabel ($pct%)"
+                            "Today: $ratioDisplay ($pct%)"
                         }
                         Text(
                             text = progressLabel,
@@ -631,7 +638,13 @@ fun HabitDetailScreen(
                                         SettingsSupport.formatUnambiguousTimeDisplay(rawHhMm, is24HourFormat)
                                     }.getOrDefault("")
                                 }
-                                val unitSuffix = habit.unitCode?.takeIf { it.isNotBlank() }?.let { " $it" } ?: ""
+                                val rawUnit = activeVersion?.unitCode ?: habit.unitCode
+                                val entryValDisplay = if (rawUnit != null && (UnitFormatter.extractScale(rawUnit) > 0 || UnitFormatter.isCurrencyUnit(rawUnit))) {
+                                    UnitFormatter.formatValueWithUnit(entry.valueUnits, rawUnit)
+                                } else {
+                                    val unitSuffix = rawUnit?.takeIf { it.isNotBlank() }?.let { " ${UnitFormatter.cleanUnitCode(it)}" } ?: ""
+                                    "${entry.valueUnits}$unitSuffix"
+                                }
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
                                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
@@ -648,7 +661,7 @@ fun HabitDetailScreen(
                                     ) {
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = "${entry.valueUnits}$unitSuffix" +
+                                                text = entryValDisplay +
                                                     if (timeFormatted.isNotBlank()) " • $timeFormatted" else "",
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 fontWeight = FontWeight.SemiBold

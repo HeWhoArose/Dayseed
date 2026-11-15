@@ -453,8 +453,8 @@ private fun QuantityOrDurationSection(
     val band = ProgressBandClassifier.classify(activeUnitsBig, targetBig)
     val pct = ProgressBandClassifier.displayPercentage(activeUnitsBig, targetBig)
 
-    val formattedRatio = if (UnitFormatter.isCurrencyUnit(unitLabel)) {
-        UnitFormatter.formatProgressRatio(activeUnitsInt, target, unitLabel)
+    val formattedRatio = if (UnitFormatter.isCurrencyUnit(unitLabel) || UnitFormatter.extractScale(unitLabel) > 0) {
+        UnitFormatter.formatProgressRatioBig(activeUnitsBig, targetBig, unitLabel)
     } else {
         val pluralOrNaturalUnit = UnitFormatter.formatUnitForCount(target, unitLabel)
         "$activeUnitsBig / $target $pluralOrNaturalUnit"
@@ -491,8 +491,13 @@ private fun QuantityOrDurationSection(
         }
 
         if (isWeekly && todayUnitsBig > BigInteger.ZERO) {
+            val todayFormatted = if (UnitFormatter.extractScale(unitLabel) > 0) {
+                UnitFormatter.formatValueWithUnitBig(todayUnitsBig, unitLabel)
+            } else {
+                "$todayUnitsBig ${UnitFormatter.cleanUnitCode(unitLabel)}"
+            }
             Text(
-                text = "Today: +$todayUnitsBig $unitLabel",
+                text = "Today: +$todayFormatted",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -526,8 +531,16 @@ private fun QuantityOrDurationSection(
         // Separate Quick Complete / Quick Add actions and detailed Add Progress action
         val stepSmall = if (isSessionCountHabit) 1 else (target / 4).coerceAtLeast(1)
         val stepHalf = if (isSessionCountHabit) 1 else (target / 2).coerceAtLeast(1)
-        val stepSmallUnitLabel = UnitFormatter.formatUnitForCount(stepSmall, unitLabel)
-        val stepHalfUnitLabel = UnitFormatter.formatUnitForCount(stepHalf, unitLabel)
+        val stepSmallLabel = if (UnitFormatter.extractScale(unitLabel) > 0) {
+            "+${UnitFormatter.formatValueWithUnit(stepSmall, unitLabel)}"
+        } else {
+            "+$stepSmall ${UnitFormatter.formatUnitForCount(stepSmall, unitLabel)}"
+        }
+        val stepHalfLabel = if (UnitFormatter.extractScale(unitLabel) > 0) {
+            "+${UnitFormatter.formatValueWithUnit(stepHalf, unitLabel)}"
+        } else {
+            "+$stepHalf ${UnitFormatter.formatUnitForCount(stepHalf, unitLabel)}"
+        }
 
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -548,7 +561,7 @@ private fun QuantityOrDurationSection(
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
                     ) {
                         Text(
-                            text = "+$stepSmall $stepSmallUnitLabel",
+                            text = stepSmallLabel,
                             fontSize = 12.sp,
                             maxLines = 1
                         )
@@ -564,7 +577,7 @@ private fun QuantityOrDurationSection(
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
                         ) {
                             Text(
-                                text = "+$stepHalf $stepHalfUnitLabel",
+                                text = stepHalfLabel,
                                 fontSize = 12.sp,
                                 maxLines = 1
                             )
