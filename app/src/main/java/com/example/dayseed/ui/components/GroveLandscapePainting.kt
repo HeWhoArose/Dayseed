@@ -1,15 +1,14 @@
 package com.example.dayseed.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -34,18 +33,17 @@ import androidx.compose.material.icons.filled.Eco
 import androidx.compose.material.icons.filled.FilterCenterFocus
 import androidx.compose.material.icons.filled.Forest
 import androidx.compose.material.icons.filled.Spa
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,6 +67,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
@@ -133,7 +132,9 @@ fun buildBotanicalLandscapeSpecimens(
     val plants = mutableListOf<PaintedBotanicalPlant>()
 
     // 1. Active habits (or habits with an active streak run / newly planted habits)
-    val visibleHabits = habits.filter { it.lifecycleState != HabitLifecycleState.ARCHIVED || summaries[it.habitId]?.activeRun != null }
+    val visibleHabits = habits.filter {
+        it.lifecycleState != HabitLifecycleState.ARCHIVED || summaries[it.habitId]?.activeRun != null
+    }
 
     // Golden-ratio horizontal distribution slots flanking the central winding footpath
     val foregroundSlotsX = listOf(0.62f, 0.31f, 0.77f, 0.20f, 0.42f, 0.85f, 0.14f, 0.54f, 0.69f)
@@ -155,7 +156,6 @@ fun buildBotanicalLandscapeSpecimens(
                 span < 14 -> BotanicalPaintingStage.ESTABLISHED_TREE
                 else -> BotanicalPaintingStage.MATURE_WOODLAND_TREE
             }
-            // Place larger growing trees slightly grounded in the rich mid-foreground meadow
             val depthLayer = if (stage == BotanicalPaintingStage.EARLY_SAPLING) 2 else 1
             val terrainY = evaluateMeadowGroundNormY(clampedX, depthLayer)
             val scale = when (stage) {
@@ -308,6 +308,7 @@ private fun parseHabitBotanicalTint(colorHex: String?): Color {
 /**
  * The primary evolving botanical landscape painting for the Living Grove screen.
  * Keeps the painting dominant and uncrowded; interactive controls appear ONLY when a leaf/plant is touched.
+ * Uses Compose [Animatable] to drive a subtle "popping up from soil" entry animation when a new habit sapling is created.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -320,12 +321,56 @@ fun LivingGroveLandscapeSection(
     onTouchPlant: (String?) -> Unit,
     onSelectHabitFilter: (String?) -> Unit,
     onInspectHabit: (String) -> Unit,
+    newlyCreatedHabitIds: Set<String> = emptySet(),
+    reducedMotion: Boolean = false,
+    onConsumeSaplingAnimation: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val plants = remember(habits, summaries, allRuns) {
         buildBotanicalLandscapeSpecimens(habits, summaries, allRuns)
     }
+
+    // Track which habit IDs were already present on first composition vs newly added habits
+    val seenHabitIds = remember { habits.map { it.habitId }.toMutableSet() }
+    val saplingAnimatables = remember { mutableStateMapOf<String, Animatable<Float, AnimationVector1D>>() }
+
+    plants.forEach { plant ->
+        val isSaplingOrSeed = plant.stage == BotanicalPaintingStage.SEED_MOUND ||
+            plant.stage == BotanicalPaintingStage.EARLY_SAPLING
+        if (isSaplingOrSeed) {
+            val shouldAnimatePopUp = !reducedMotion &&
+                (plant.habitId in newlyCreatedHabitIds || plant.habitId !in seenHabitIds)
+            val animatable = saplingAnimatables.getOrPut(plant.id) {
+                Animatable(if (shouldAnimatePopUp) 0f else 1f)
+            }
+            LaunchedEffect(plant.id, shouldAnimatePopUp, reducedMotion) {
+                seenHabitIds.add(plant.habitId)
+                if (reducedMotion) {
+                    animatable.snapTo(1f)
+                    if (plant.habitId in newlyCreatedHabitIds) {
+                        onConsumeSaplingAnimation(plant.habitId)
+                    }
+                } else if (shouldAnimatePopUp || animatable.value < 1f) {
+                    if (shouldAnimatePopUp && animatable.value >= 1f) {
+                        animatable.snapTo(0f)
+                    }
+                    animatable.animateTo(
+                        targetValue = 1f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioLowBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        )
+                    )
+                    if (plant.habitId in newlyCreatedHabitIds) {
+                        onConsumeSaplingAnimation(plant.habitId)
+                    }
+                }
+            }
+        }
+    }
+
+    val saplingEmergenceProgress: Map<String, Float> = saplingAnimatables.mapValues { it.value.value }
 
     val touchedPlant = remember(plants, touchedPlantId) {
         plants.find { it.id == touchedPlantId }
@@ -422,6 +467,7 @@ fun LivingGroveLandscapeSection(
                     ) {
                         drawBotanicalStorybookLandscape(
                             plants = plants,
+                            saplingEmergenceProgress = saplingEmergenceProgress,
                             touchedPlantId = touchedPlantId,
                             selectedHabitFilter = selectedHabitFilter,
                             isDark = isDark
@@ -446,6 +492,12 @@ fun LivingGroveLandscapeSection(
                             BotanicalPaintingStage.MATURE_WOODLAND_TREE -> "mature woodland tree, ${plant.elapsedActiveSpanCount} active span days"
                             BotanicalPaintingStage.DORMANT_AUTUMN_TREE -> "preserved dormant autumn tree, ${plant.elapsedActiveSpanCount} active span days"
                         }
+                        val emergenceVal = saplingEmergenceProgress[plant.id] ?: 1f
+                        val emergenceStateDesc = if (emergenceVal < 0.99f) {
+                            "Popping up from soil (${(emergenceVal.coerceIn(0f, 1f) * 100).roundToInt()}%)"
+                        } else {
+                            "Sprouted"
+                        }
 
                         Box(
                             modifier = Modifier
@@ -461,6 +513,7 @@ fun LivingGroveLandscapeSection(
                                 .semantics {
                                     role = Role.Button
                                     contentDescription = "Touch leaves of ${plant.habitName} ($stageDesc)"
+                                    stateDescription = emergenceStateDesc
                                 }
                         )
                     }
@@ -680,6 +733,7 @@ private fun TouchedLeafControlsCard(
  */
 internal fun DrawScope.drawBotanicalStorybookLandscape(
     plants: List<PaintedBotanicalPlant>,
+    saplingEmergenceProgress: Map<String, Float> = emptyMap(),
     touchedPlantId: String?,
     selectedHabitFilter: String?,
     isDark: Boolean
@@ -891,6 +945,7 @@ internal fun DrawScope.drawBotanicalStorybookLandscape(
     plants.filter { it.depthLayer == 0 }.forEach { plant ->
         drawSingleBotanicalSpecimen(
             plant = plant,
+            emergenceProgress = saplingEmergenceProgress[plant.id] ?: 1f,
             isTouched = plant.id == touchedPlantId,
             isDeemphasized = selectedHabitFilter != null && selectedHabitFilter != plant.habitId,
             isDark = isDark
@@ -939,6 +994,7 @@ internal fun DrawScope.drawBotanicalStorybookLandscape(
     plants.filter { it.depthLayer == 1 }.forEach { plant ->
         drawSingleBotanicalSpecimen(
             plant = plant,
+            emergenceProgress = saplingEmergenceProgress[plant.id] ?: 1f,
             isTouched = plant.id == touchedPlantId,
             isDeemphasized = selectedHabitFilter != null && selectedHabitFilter != plant.habitId,
             isDark = isDark
@@ -989,6 +1045,7 @@ internal fun DrawScope.drawBotanicalStorybookLandscape(
     plants.filter { it.depthLayer == 2 }.forEach { plant ->
         drawSingleBotanicalSpecimen(
             plant = plant,
+            emergenceProgress = saplingEmergenceProgress[plant.id] ?: 1f,
             isTouched = plant.id == touchedPlantId,
             isDeemphasized = selectedHabitFilter != null && selectedHabitFilter != plant.habitId,
             isDark = isDark
@@ -1281,6 +1338,7 @@ private fun DrawScope.drawMeadowBotanicalGroundcover(
  */
 private fun DrawScope.drawSingleBotanicalSpecimen(
     plant: PaintedBotanicalPlant,
+    emergenceProgress: Float = 1f,
     isTouched: Boolean,
     isDeemphasized: Boolean,
     isDark: Boolean
@@ -1318,7 +1376,8 @@ private fun DrawScope.drawSingleBotanicalSpecimen(
                 rootY = rootY,
                 scale = plant.scaleFactor,
                 alpha = alphaMultiplier,
-                isDark = isDark
+                isDark = isDark,
+                emergenceProgress = emergenceProgress
             )
         }
         BotanicalPaintingStage.EARLY_SAPLING -> {
@@ -1330,7 +1389,8 @@ private fun DrawScope.drawSingleBotanicalSpecimen(
                 scale = plant.scaleFactor,
                 alpha = alphaMultiplier,
                 seedHash = plant.seedHash,
-                isDark = isDark
+                isDark = isDark,
+                emergenceProgress = emergenceProgress
             )
         }
         BotanicalPaintingStage.ESTABLISHED_TREE -> {
@@ -1373,19 +1433,27 @@ private fun DrawScope.drawSingleBotanicalSpecimen(
     }
 }
 
+/**
+ * Stage 1: Newly Planted Seed Mound (0 active streak days).
+ * Supports [emergenceProgress] driven by Compose [Animatable] so the sprout pops up from the soil when created.
+ */
 private fun DrawScope.drawStage1SeedMound(
     rootX: Float,
     rootY: Float,
     scale: Float,
     alpha: Float,
-    isDark: Boolean
+    isDark: Boolean,
+    emergenceProgress: Float = 1f
 ) {
-    val moundW = 36.dp.toPx() * scale
-    val moundH = 11.dp.toPx() * scale
+    val p = emergenceProgress.coerceAtLeast(0f)
+    val moundRipple = 1f + 0.14f * sin(p.coerceIn(0f, 1f) * PI.toFloat())
+    val moundW = 36.dp.toPx() * scale * (0.45f + 0.55f * p.coerceAtMost(1f)) * moundRipple
+    val moundH = 11.dp.toPx() * scale * (0.50f + 0.50f * p.coerceAtMost(1f))
+    val soilColor = (if (isDark) Color(0xFF4B3828) else Color(0xFF725339)).copy(alpha = alpha)
 
     // Ground shadow
     drawOval(
-        color = Color.Black.copy(alpha = 0.18f * alpha),
+        color = Color.Black.copy(alpha = 0.18f * alpha * p.coerceIn(0f, 1f)),
         topLeft = Offset(rootX - moundW * 0.55f, rootY - moundH * 0.2f),
         size = Size(moundW * 1.1f, moundH * 0.85f)
     )
@@ -1401,44 +1469,76 @@ private fun DrawScope.drawStage1SeedMound(
     }
     drawPath(
         path = moundPath,
-        color = (if (isDark) Color(0xFF4B3828) else Color(0xFF725339)).copy(alpha = alpha)
+        color = soilColor
     )
-    // Tiny emerging pale-green cotyledon bud
-    val stemTopY = rootY - 12.dp.toPx() * scale
-    val stemPath = Path().apply {
-        moveTo(rootX, rootY - 2.dp.toPx())
-        quadraticTo(rootX - 2.dp.toPx(), rootY - 8.dp.toPx() * scale, rootX + 1.dp.toPx(), stemTopY)
+
+    // Displaced soil crumbs lifting while the sprout pops through the earth
+    if (p in 0.05f..0.95f) {
+        val crumbLift = sin(p.coerceIn(0f, 1f) * PI.toFloat()) * 4.dp.toPx() * scale
+        drawCircle(
+            color = soilColor,
+            radius = 2.2.dp.toPx() * scale,
+            center = Offset(rootX - 6.dp.toPx() * scale, rootY - 3.dp.toPx() * scale - crumbLift)
+        )
+        drawCircle(
+            color = soilColor,
+            radius = 1.8.dp.toPx() * scale,
+            center = Offset(rootX + 6.dp.toPx() * scale, rootY - 2.5.dp.toPx() * scale - crumbLift * 0.8f)
+        )
     }
-    drawPath(
-        path = stemPath,
-        color = Color(0xFF7CB35B).copy(alpha = alpha),
-        style = Stroke(width = 2.2.dp.toPx() * scale, cap = StrokeCap.Round)
-    )
-    drawPointedBotanicalLeaf(
-        baseX = rootX + 1.dp.toPx(),
-        baseY = stemTopY,
-        length = 9.dp.toPx() * scale,
-        width = 4.8.dp.toPx() * scale,
-        angleDegrees = -135f,
-        baseColor = Color(0xFF6BA34D).copy(alpha = alpha),
-        highlightColor = Color(0xFFA8D474).copy(alpha = alpha),
-        veinColor = Color(0xFFD7EEAF).copy(alpha = 0.7f * alpha)
-    )
-    drawPointedBotanicalLeaf(
-        baseX = rootX + 1.dp.toPx(),
-        baseY = stemTopY,
-        length = 8.dp.toPx() * scale,
-        width = 4.4.dp.toPx() * scale,
-        angleDegrees = -45f,
-        baseColor = Color(0xFF5D9341).copy(alpha = alpha),
-        highlightColor = Color(0xFF98C767).copy(alpha = alpha),
-        veinColor = Color(0xFFD7EEAF).copy(alpha = 0.7f * alpha)
-    )
+
+    // Emerging pale-green cotyledon bud popping up from the soil line
+    val shootProgress = ((p - 0.12f) / 0.88f).coerceAtLeast(0f)
+    if (shootProgress > 0.02f) {
+        val stemHeight = 12.dp.toPx() * scale * shootProgress
+        val stemTopY = rootY - stemHeight
+        val stemPath = Path().apply {
+            moveTo(rootX, rootY - 1.5.dp.toPx())
+            quadraticTo(
+                rootX - 2.dp.toPx() * shootProgress.coerceAtMost(1f),
+                rootY - stemHeight * 0.65f,
+                rootX + 1.dp.toPx(),
+                stemTopY
+            )
+        }
+        drawPath(
+            path = stemPath,
+            color = Color(0xFF7CB35B).copy(alpha = alpha),
+            style = Stroke(width = 2.2.dp.toPx() * scale, cap = StrokeCap.Round)
+        )
+
+        val leafUnfurl = ((shootProgress - 0.15f) / 0.85f).coerceAtLeast(0f)
+        if (leafUnfurl > 0.02f) {
+            val leftAngle = -90f + (-135f - (-90f)) * leafUnfurl.coerceAtMost(1.08f)
+            val rightAngle = -90f + (-45f - (-90f)) * leafUnfurl.coerceAtMost(1.08f)
+            drawPointedBotanicalLeaf(
+                baseX = rootX + 1.dp.toPx(),
+                baseY = stemTopY,
+                length = 9.dp.toPx() * scale * leafUnfurl,
+                width = 4.8.dp.toPx() * scale * leafUnfurl,
+                angleDegrees = leftAngle,
+                baseColor = Color(0xFF6BA34D).copy(alpha = alpha),
+                highlightColor = Color(0xFFA8D474).copy(alpha = alpha),
+                veinColor = Color(0xFFD7EEAF).copy(alpha = 0.7f * alpha)
+            )
+            drawPointedBotanicalLeaf(
+                baseX = rootX + 1.dp.toPx(),
+                baseY = stemTopY,
+                length = 8.dp.toPx() * scale * leafUnfurl,
+                width = 4.4.dp.toPx() * scale * leafUnfurl,
+                angleDegrees = rightAngle,
+                baseColor = Color(0xFF5D9341).copy(alpha = alpha),
+                highlightColor = Color(0xFF98C767).copy(alpha = alpha),
+                veinColor = Color(0xFFD7EEAF).copy(alpha = 0.7f * alpha)
+            )
+        }
+    }
 }
 
 /**
  * Stage 2: Active Sapling (1..6 elapsedActiveSpanCount).
  * Renders a supple S-curved stem rising from rich soil with 2..6 pointed, veined botanical leaves.
+ * Supports [emergenceProgress] driven by Compose [Animatable] to create a 'popping up from soil' effect.
  */
 private fun DrawScope.drawStage2BotanicalSapling(
     rootX: Float,
@@ -1448,41 +1548,71 @@ private fun DrawScope.drawStage2BotanicalSapling(
     scale: Float,
     alpha: Float,
     seedHash: Int,
-    isDark: Boolean
+    isDark: Boolean,
+    emergenceProgress: Float = 1f
 ) {
+    val p = emergenceProgress.coerceAtLeast(0f)
     val clampedDays = spanDays.coerceIn(1, 6)
-    val stemHeight = (34f + clampedDays * 6.5f).dp.toPx() * scale
+    val fullStemHeight = (34f + clampedDays * 6.5f).dp.toPx() * scale
     val curveDir = if (seedHash % 2 == 0) 1f else -1f
 
-    // Root shadow & earthen mound
-    val moundW = 30.dp.toPx() * scale
-    val moundH = 8.dp.toPx() * scale
+    // Root shadow & earthen mound (swells horizontally as the sapling pops up through the soil)
+    val moundRipple = 1f + 0.15f * sin(p.coerceIn(0f, 1f) * PI.toFloat())
+    val moundW = 30.dp.toPx() * scale * (0.45f + 0.55f * p.coerceAtMost(1f)) * moundRipple
+    val moundH = 8.dp.toPx() * scale * (0.50f + 0.50f * p.coerceAtMost(1f))
+    val soilColor = (if (isDark) Color(0xFF473628) else Color(0xFF6B4F37)).copy(alpha = alpha)
+
     drawOval(
-        color = Color.Black.copy(alpha = 0.20f * alpha),
+        color = Color.Black.copy(alpha = 0.20f * alpha * p.coerceIn(0f, 1f)),
         topLeft = Offset(rootX - moundW * 0.55f, rootY - moundH * 0.3f),
         size = Size(moundW * 1.1f, moundH)
     )
     drawOval(
-        color = (if (isDark) Color(0xFF473628) else Color(0xFF6B4F37)).copy(alpha = alpha),
+        color = soilColor,
         topLeft = Offset(rootX - moundW * 0.45f, rootY - moundH * 0.45f),
         size = Size(moundW * 0.9f, moundH * 0.8f)
     )
 
-    val tipX = rootX + curveDir * 4.dp.toPx() * scale
+    // Small parted soil clods lifting around the stem during emergence
+    if (p in 0.05f..0.95f) {
+        val clodLift = sin(p.coerceIn(0f, 1f) * PI.toFloat()) * 4.5.dp.toPx() * scale
+        drawCircle(
+            color = soilColor,
+            radius = 2.4.dp.toPx() * scale,
+            center = Offset(rootX - 7.dp.toPx() * scale, rootY - 2.dp.toPx() * scale - clodLift)
+        )
+        drawCircle(
+            color = soilColor,
+            radius = 2.0.dp.toPx() * scale,
+            center = Offset(rootX + 7.5.dp.toPx() * scale, rootY - 2.dp.toPx() * scale - clodLift * 0.85f)
+        )
+    }
+
+    val shootEmergence = ((p - 0.08f) / 0.92f).coerceAtLeast(0f)
+    if (shootEmergence <= 0.02f) return
+
+    val stemHeight = fullStemHeight * shootEmergence
+    val tipX = rootX + curveDir * 4.dp.toPx() * scale * shootEmergence.coerceAtMost(1.05f)
     val tipY = rootY - stemHeight
 
-    // Tapered organic stem
+    // Tapered organic stem popping upward from rootY
     val stemPath = Path().apply {
         moveTo(rootX - 2.2.dp.toPx() * scale, rootY)
         cubicTo(
-            rootX - curveDir * 7.dp.toPx() * scale, rootY - stemHeight * 0.35f,
-            rootX + curveDir * 8.dp.toPx() * scale, rootY - stemHeight * 0.70f,
-            tipX, tipY
+            rootX - curveDir * 7.dp.toPx() * scale * shootEmergence.coerceAtMost(1f),
+            rootY - stemHeight * 0.35f,
+            rootX + curveDir * 8.dp.toPx() * scale * shootEmergence.coerceAtMost(1f),
+            rootY - stemHeight * 0.70f,
+            tipX,
+            tipY
         )
         cubicTo(
-            rootX + curveDir * 10.dp.toPx() * scale, rootY - stemHeight * 0.70f,
-            rootX - curveDir * 4.dp.toPx() * scale, rootY - stemHeight * 0.35f,
-            rootX + 2.2.dp.toPx() * scale, rootY
+            rootX + curveDir * 10.dp.toPx() * scale * shootEmergence.coerceAtMost(1f),
+            rootY - stemHeight * 0.70f,
+            rootX - curveDir * 4.dp.toPx() * scale * shootEmergence.coerceAtMost(1f),
+            rootY - stemHeight * 0.35f,
+            rootX + 2.2.dp.toPx() * scale,
+            rootY
         )
         close()
     }
@@ -1494,9 +1624,12 @@ private fun DrawScope.drawStage2BotanicalSapling(
     val stemHighlight = Path().apply {
         moveTo(rootX, rootY)
         cubicTo(
-            rootX - curveDir * 5.dp.toPx() * scale, rootY - stemHeight * 0.35f,
-            rootX + curveDir * 8.dp.toPx() * scale, rootY - stemHeight * 0.70f,
-            tipX, tipY
+            rootX - curveDir * 5.dp.toPx() * scale * shootEmergence.coerceAtMost(1f),
+            rootY - stemHeight * 0.35f,
+            rootX + curveDir * 8.dp.toPx() * scale * shootEmergence.coerceAtMost(1f),
+            rootY - stemHeight * 0.70f,
+            tipX,
+            tipY
         )
     }
     drawPath(
@@ -1505,25 +1638,30 @@ private fun DrawScope.drawStage2BotanicalSapling(
         style = Stroke(width = 1.4.dp.toPx() * scale, cap = StrokeCap.Round)
     )
 
-    // Individual pointed ovate botanical leaves along the stem (2 to 6 leaves based on active span days)
+    // Individual pointed ovate botanical leaves unfurling sequentially along the emerging stem
     val leafCount = (clampedDays + 1).coerceIn(2, 6)
     val leafBaseColor = lerp(tintColor, Color(0xFF3E7840), 0.45f).copy(alpha = alpha)
     val leafHighlightColor = lerp(leafBaseColor, Color(0xFFA7D46F), 0.55f).copy(alpha = alpha)
     val veinColor = Color(0xFFDDF0B5).copy(alpha = 0.75f * alpha)
 
     for (i in 0 until leafCount) {
+        val leafStart = 0.18f + (i.toFloat() / leafCount.toFloat()) * 0.36f
+        val leafPop = ((p - leafStart) / (1f - leafStart)).coerceAtLeast(0f)
+        if (leafPop <= 0.02f) continue
+
         val progress = 0.32f + (i.toFloat() / leafCount.toFloat()) * 0.64f
         val nodeY = rootY - stemHeight * progress
-        val nodeX = rootX + sin(progress * PI.toFloat()) * curveDir * 3.dp.toPx() * scale
+        val nodeX = rootX + sin(progress * PI.toFloat()) * curveDir * 3.dp.toPx() * scale * shootEmergence.coerceAtMost(1f)
         val side = if (i % 2 == 0) -1f else 1f
-        val leafLen = (13f + (i % 3) * 2.5f).dp.toPx() * scale
+        val leafLen = (13f + (i % 3) * 2.5f).dp.toPx() * scale * leafPop
         val leafWid = leafLen * 0.46f
-        val angle = if (side < 0f) -142f + i * 5f else -38f - i * 5f
+        val targetAngle = if (side < 0f) -142f + i * 5f else -38f - i * 5f
+        val angle = -90f + (targetAngle - (-90f)) * leafPop.coerceAtMost(1.06f)
 
         // Delicate petiole stalk connecting stem to leaf blade
         val petioleEnd = Offset(
-            nodeX + side * 4.dp.toPx() * scale,
-            nodeY - 2.dp.toPx() * scale
+            nodeX + side * 4.dp.toPx() * scale * leafPop.coerceAtMost(1f),
+            nodeY - 2.dp.toPx() * scale * leafPop.coerceAtMost(1f)
         )
         drawLine(
             color = Color(0xFF6A944E).copy(alpha = alpha),
@@ -1546,16 +1684,19 @@ private fun DrawScope.drawStage2BotanicalSapling(
     }
 
     // Apical bud leaf at the very crown tip
-    drawPointedBotanicalLeaf(
-        baseX = tipX,
-        baseY = tipY,
-        length = 12.dp.toPx() * scale,
-        width = 5.4.dp.toPx() * scale,
-        angleDegrees = -88f + curveDir * 8f,
-        baseColor = leafBaseColor,
-        highlightColor = Color(0xFFB7E07B).copy(alpha = alpha),
-        veinColor = veinColor
-    )
+    val apicalPop = ((p - 0.45f) / 0.55f).coerceAtLeast(0f)
+    if (apicalPop > 0.02f) {
+        drawPointedBotanicalLeaf(
+            baseX = tipX,
+            baseY = tipY,
+            length = 12.dp.toPx() * scale * apicalPop,
+            width = 5.4.dp.toPx() * scale * apicalPop,
+            angleDegrees = -88f + curveDir * 8f * apicalPop.coerceAtMost(1f),
+            baseColor = leafBaseColor,
+            highlightColor = Color(0xFFB7E07B).copy(alpha = alpha),
+            veinColor = veinColor
+        )
+    }
 }
 
 /**
@@ -1785,14 +1926,12 @@ private fun DrawScope.drawStage3Or4WoodlandTree(
 
     for (i in 0 until totalLeaves) {
         val hash = (seedHash * 31 + i * 97) and 0x7FFFFFFF
-        // Golden-angle spiral distribution within the elliptical crown
         val normIdx = (i + 0.5f) / totalLeaves.toFloat()
         val radial = kotlin.math.sqrt(normIdx)
         val theta = i * 2.3999631f + (seedHash % 17) * 0.1f
         val lx = crownCenterX + cos(theta) * (crownW * 0.47f) * radial
         val ly = crownCenterY + sin(theta) * (crownH * 0.42f) * radial
 
-        // Determine tonal tier from vertical & horizontal position relative to upper-left sun
         val sunFactor = ((crownCenterY - ly) / (crownH * 0.5f)) + ((crownCenterX - lx) / (crownW * 0.7f))
         val leafBase = when {
             sunFactor > 0.35f -> sunlitCanopyColor
@@ -1981,7 +2120,7 @@ private fun DrawScope.drawStage5DormantAutumnTree(
 }
 
 /**
- * Draws an organic multi-lobed scalloped foliage bough mass using connected cubic Bezier curves.
+ * Draws an organic multi-lobed scalloped foliage bough mass using connected quadratic Bezier curves.
  */
 private fun DrawScope.drawScallopedFoliageMass(
     centerX: Float,
@@ -2038,7 +2177,6 @@ internal fun DrawScope.drawPointedBotanicalLeaf(
     val rad = angleDegrees * (PI.toFloat() / 180f)
     val cosA = cos(rad)
     val sinA = sin(rad)
-    // Perpendicular vector for leaf blade width
     val perpX = -sinA
     val perpY = cosA
 
@@ -2113,7 +2251,8 @@ internal fun DrawScope.drawHabitGladeVignette(
     habitName: String,
     activeRun: HabitStreakRun?,
     groveRuns: List<HabitStreakRun>,
-    isDark: Boolean
+    isDark: Boolean,
+    saplingEmergenceProgress: Float = 1f
 ) {
     val w = size.width
     val h = size.height
@@ -2214,7 +2353,8 @@ internal fun DrawScope.drawHabitGladeVignette(
                 scale = 0.74f,
                 alpha = 1f,
                 seedHash = seedHash,
-                isDark = isDark
+                isDark = isDark,
+                emergenceProgress = saplingEmergenceProgress
             )
         }
     } else {
@@ -2223,7 +2363,8 @@ internal fun DrawScope.drawHabitGladeVignette(
             rootY = heroY,
             scale = 0.72f,
             alpha = 1f,
-            isDark = isDark
+            isDark = isDark,
+            emergenceProgress = saplingEmergenceProgress
         )
     }
 }

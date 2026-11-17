@@ -1,5 +1,8 @@
 package com.example.dayseed.ui.components
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -38,6 +41,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -171,10 +175,37 @@ fun HabitBranchCanvas(
     activeRun: HabitStreakRun?,
     groveRuns: List<HabitStreakRun>,
     reducedMotion: Boolean = false,
+    isNewlyCreatedSapling: Boolean = false,
+    onConsumeSaplingAnimation: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val activeState = activeRun?.treeState
+    val isSeedOrSapling = activeState == null || activeState == GroveTreeState.SAPLING_ACTIVE
+    val saplingEmergence = remember(habitName) {
+        Animatable(if (isNewlyCreatedSapling && isSeedOrSapling && !reducedMotion) 0f else 1f)
+    }
+    LaunchedEffect(habitName, isNewlyCreatedSapling, reducedMotion) {
+        if (reducedMotion || !isSeedOrSapling) {
+            saplingEmergence.snapTo(1f)
+            if (isNewlyCreatedSapling) {
+                onConsumeSaplingAnimation()
+            }
+        } else if (isNewlyCreatedSapling) {
+            if (saplingEmergence.value >= 0.99f) {
+                saplingEmergence.snapTo(0f)
+            }
+            saplingEmergence.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                )
+            )
+            onConsumeSaplingAnimation()
+        }
+    }
+
     val stateLabel = when (activeState) {
         GroveTreeState.GROWING_TREE -> "Growing Tree (7+ active span days)"
         GroveTreeState.SAPLING_ACTIVE -> "Active Sapling (1–6 active span days)"
@@ -230,7 +261,8 @@ fun HabitBranchCanvas(
                 habitName = habitName,
                 activeRun = activeRun,
                 groveRuns = groveRuns,
-                isDark = isDark
+                isDark = isDark,
+                saplingEmergenceProgress = saplingEmergence.value
             )
         }
 
@@ -349,6 +381,7 @@ fun LivingGroveScreen(
     val growthMetrics by viewModel.growthMetrics.collectAsState()
     val appSettings by viewModel.appSettings.collectAsState()
     val touchedPlantId by viewModel.touchedGrovePlantId.collectAsState()
+    val newlyCreatedHabitIds by viewModel.newlyCreatedSaplingHabitIds.collectAsState()
 
     var selectedHabitFilter by remember(initialHabitId) { mutableStateOf(initialHabitId) }
 
@@ -463,6 +496,9 @@ fun LivingGroveScreen(
                 allRuns = allRuns,
                 selectedHabitFilter = selectedHabitFilter,
                 touchedPlantId = touchedPlantId,
+                newlyCreatedHabitIds = newlyCreatedHabitIds,
+                reducedMotion = reducedMotion,
+                onConsumeSaplingAnimation = { viewModel.consumeSaplingEntryAnimation(it) },
                 onTouchPlant = { viewModel.setTouchedGrovePlantId(it) },
                 onSelectHabitFilter = { selectedHabitFilter = it },
                 onInspectHabit = { habitId -> viewModel.openHabitDetail(habitId) }
@@ -495,6 +531,8 @@ fun LivingGroveScreen(
                 summary = summary,
                 highlightedRunId = highlightedRunId,
                 reducedMotion = reducedMotion,
+                isNewlyCreatedSapling = habit.habitId in newlyCreatedHabitIds,
+                onConsumeSaplingAnimation = { viewModel.consumeSaplingEntryAnimation(habit.habitId) },
                 onOpenHabitDetail = { viewModel.openHabitDetail(habit.habitId) }
             )
         }
@@ -624,6 +662,8 @@ private fun HabitGroveCard(
     summary: HabitSummary?,
     highlightedRunId: String?,
     reducedMotion: Boolean,
+    isNewlyCreatedSapling: Boolean = false,
+    onConsumeSaplingAnimation: () -> Unit = {},
     onOpenHabitDetail: () -> Unit
 ) {
     val activeRun = summary?.activeRun
@@ -682,7 +722,9 @@ private fun HabitGroveCard(
                 habitName = habit.name,
                 activeRun = activeRun,
                 groveRuns = qualifiedGroveRuns,
-                reducedMotion = reducedMotion
+                reducedMotion = reducedMotion,
+                isNewlyCreatedSapling = isNewlyCreatedSapling,
+                onConsumeSaplingAnimation = onConsumeSaplingAnimation
             )
 
             // Permanent Qualified Grove Trees (>= 7 active span days)

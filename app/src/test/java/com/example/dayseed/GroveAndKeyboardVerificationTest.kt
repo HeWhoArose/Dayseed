@@ -459,4 +459,83 @@ class GroveAndKeyboardVerificationTest {
         controller.pause().stop()
         repo.dbHelper.close()
     }
+
+    @Test
+    fun saplingEntryAnimation_animatesPoppingUpFromSoilWhenNewHabitIsCreated() {
+        val dbName = "test_sapling_entry_anim_${System.nanoTime()}.db"
+        val repo = newRepository(dbName)
+        val vm = newViewModel(repo)
+        val today = testClock.todayLocal()
+
+        // Pre-existing habit before opening Grove should already be fully sprouted (no entry animation)
+        repo.saveHabitSync(
+            Habit(
+                habitId = "h_existing_sapling",
+                name = "Morning Stretch",
+                description = "",
+                trackingMode = TrackingMode.COMPLETION_ONLY,
+                targetPeriod = TargetPeriod.DAY,
+                targetValue = 1,
+                scheduleKind = ScheduleKind.DAILY,
+                colorHex = "#3E7A4B"
+            ),
+            effectiveDateOverride = today.minusDays(2)
+        )
+        repo.logHabitDayOutcomeSync("h_existing_sapling", today.minusDays(2), "COMPLETED", null)
+        repo.logHabitDayOutcomeSync("h_existing_sapling", today.minusDays(1), "COMPLETED", null)
+        repo.logHabitDayOutcomeSync("h_existing_sapling", today, "COMPLETED", null)
+
+        val controller = Robolectric.buildActivity(ComponentActivity::class.java).setup()
+        val activity = controller.get()
+        activity.setContent {
+            DayseedTheme {
+                LivingGroveScreen(
+                    viewModel = vm,
+                    onBack = {}
+                )
+            }
+        }
+
+        pumpActivity(activity, widthDp = 360, heightDp = 860)
+        val existingNode = findNodeByTag(activity, "grove_leaf_target_h_existing_sapling")
+        assertEquals(
+            "Sprouted",
+            existingNode.config.getOrNull(SemanticsProperties.StateDescription)
+        )
+
+        // Create a brand new habit via ViewModel.saveHabit -> triggers 'popping up from soil' Animatable entry animation
+        val newHabit = Habit(
+            habitId = "h_new_sapling",
+            name = "Evening Tea Ritual",
+            description = "Unwind with herbal tea",
+            trackingMode = TrackingMode.COMPLETION_ONLY,
+            targetPeriod = TargetPeriod.DAY,
+            targetValue = 1,
+            scheduleKind = ScheduleKind.DAILY,
+            colorHex = "#4C8547"
+        )
+        vm.saveHabit(newHabit)
+        assertTrue(
+            "Saving a new habit must queue sapling entry animation in ViewModel",
+            "h_new_sapling" in vm.newlyCreatedSaplingHabitIds.value
+        )
+
+        // Advance frame clock enough to complete the spring Animatable and verify it settles to Sprouted
+        for (step in 1..25) {
+            pumpActivity(activity, widthDp = 360, heightDp = 860, recompose = false)
+        }
+        val sproutedNode = findNodeByTag(activity, "grove_leaf_target_h_new_sapling")
+        assertEquals(
+            "Sprouted",
+            sproutedNode.config.getOrNull(SemanticsProperties.StateDescription)
+        )
+        assertTrue(
+            "Completed sapling entry animation must consume pending habitId flag",
+            "h_new_sapling" !in vm.newlyCreatedSaplingHabitIds.value
+        )
+
+        controller.pause().stop()
+        repo.dbHelper.close()
+    }
 }
+

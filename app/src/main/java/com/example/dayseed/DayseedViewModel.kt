@@ -793,6 +793,9 @@ class DayseedViewModel @JvmOverloads constructor(
     ) {
         if (_isSaveInFlight.value) return
         _isSaveInFlight.value = true
+        if (repository.habits.value.none { it.habitId == habit.habitId }) {
+            markSaplingEntryAnimationPending(habit.habitId)
+        }
         viewModelScope.launch {
             try {
                 saveHabitAsync(habit, applyTodayWhenLogged, policy)
@@ -814,6 +817,10 @@ class DayseedViewModel @JvmOverloads constructor(
         policy: HabitConfigEffectivePolicy? = null
     ): HabitVersion? {
         _lastSaveError.value = null
+        val isNewHabit = repository.habits.value.none { it.habitId == habit.habitId }
+        if (isNewHabit) {
+            markSaplingEntryAnimationPending(habit.habitId)
+        }
         return withContext(ioDispatcher) {
             try {
                 val savedVer = repository.saveHabit(
@@ -825,6 +832,9 @@ class DayseedViewModel @JvmOverloads constructor(
                 _userMessage.value = "Habit saved (effective ${savedVer.effectiveFromLocalDate})"
                 savedVer
             } catch (e: Exception) {
+                if (isNewHabit) {
+                    consumeSaplingEntryAnimation(habit.habitId)
+                }
                 val msg = e.message ?: "Unable to save habit"
                 _lastSaveError.value = msg
                 _userMessage.value = msg
@@ -928,6 +938,17 @@ class DayseedViewModel @JvmOverloads constructor(
 
     fun setTouchedGrovePlantId(plantId: String?) {
         _touchedGrovePlantId.value = plantId
+    }
+
+    private val _newlyCreatedSaplingHabitIds = MutableStateFlow<Set<String>>(emptySet())
+    val newlyCreatedSaplingHabitIds: StateFlow<Set<String>> = _newlyCreatedSaplingHabitIds.asStateFlow()
+
+    fun markSaplingEntryAnimationPending(habitId: String) {
+        _newlyCreatedSaplingHabitIds.value = _newlyCreatedSaplingHabitIds.value + habitId
+    }
+
+    fun consumeSaplingEntryAnimation(habitId: String) {
+        _newlyCreatedSaplingHabitIds.value = _newlyCreatedSaplingHabitIds.value - habitId
     }
 
     fun isSystemReducedMotionActive(): Boolean {
