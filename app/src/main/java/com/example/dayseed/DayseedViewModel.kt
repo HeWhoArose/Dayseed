@@ -923,6 +923,13 @@ class DayseedViewModel @JvmOverloads constructor(
 
     fun acknowledgeDormantTransition(runId: String) = acknowledgeDormantRun(runId)
 
+    private val _touchedGrovePlantId = MutableStateFlow<String?>(null)
+    val touchedGrovePlantId: StateFlow<String?> = _touchedGrovePlantId.asStateFlow()
+
+    fun setTouchedGrovePlantId(plantId: String?) {
+        _touchedGrovePlantId.value = plantId
+    }
+
     fun isSystemReducedMotionActive(): Boolean {
         return try {
             val scale = Settings.Global.getFloat(

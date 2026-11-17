@@ -27,20 +27,21 @@ import kotlinx.coroutines.delay
  * window resize animation (`adjustResize` / `WindowInsets.ime`) completes.
  */
 @OptIn(ExperimentalFoundationApi::class)
-fun Modifier.bringIntoViewOnFocus(extraBottomClearance: Dp = 28.dp): Modifier = composed {
+fun Modifier.bringIntoViewOnFocus(extraBottomClearance: Dp = 14.dp): Modifier = composed {
     val requester = remember { BringIntoViewRequester() }
     var isFocused by remember { mutableStateOf(false) }
     var fieldSize by remember { mutableStateOf(IntSize.Zero) }
     val density = LocalDensity.current
     val imeBottomPx = WindowInsets.ime.getBottom(density)
     val extraBottomPx = with(density) { extraBottomClearance.toPx() }
+    val topLabelClearancePx = with(density) { 8.dp.toPx() }
 
     LaunchedEffect(isFocused, imeBottomPx) {
         if (isFocused) {
             val targetRect = if (fieldSize.width > 0 && fieldSize.height > 0) {
                 Rect(
                     left = 0f,
-                    top = 0f,
+                    top = -topLabelClearancePx,
                     right = fieldSize.width.toFloat(),
                     bottom = fieldSize.height.toFloat() + extraBottomPx
                 )
@@ -49,8 +50,6 @@ fun Modifier.bringIntoViewOnFocus(extraBottomClearance: Dp = 28.dp): Modifier = 
             }
             runCatching { requester.bringIntoView(targetRect) }
             delay(140L)
-            runCatching { requester.bringIntoView(targetRect) }
-            delay(160L)
             runCatching { requester.bringIntoView(targetRect) }
         }
     }

@@ -331,7 +331,7 @@ class OwnerReportedDefectsRemediationTest {
             findNodeByTagOrNull(activity, "habit_reminder_quiet_hours_warning")
         )
 
-        controller.pause().stop().destroy()
+        controller.pause().stop()
         repo.dbHelper.close()
     }
 
@@ -522,7 +522,7 @@ class OwnerReportedDefectsRemediationTest {
             repo.getSettingString("onboarding_completed", "false")
         )
 
-        controller.pause().stop().destroy()
+        controller.pause().stop()
         repo.dbHelper.close()
     }
 
@@ -580,7 +580,7 @@ class OwnerReportedDefectsRemediationTest {
         assertEquals(3, entries.first().valueUnits)
         assertEquals("Felt refreshed after afternoon walk", entries.first().entryNote)
 
-        controller.pause().stop().destroy()
+        controller.pause().stop()
         repo.dbHelper.close()
     }
 }

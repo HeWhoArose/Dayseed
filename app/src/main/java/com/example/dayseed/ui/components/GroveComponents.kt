@@ -4,12 +4,16 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,7 +22,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -28,7 +31,6 @@ import androidx.compose.material.icons.filled.Forest
 import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -44,16 +46,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Fill
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.dayseed.DayseedViewModel
 import com.example.dayseed.data.GroveTerminalReason
@@ -63,10 +64,6 @@ import com.example.dayseed.data.HabitStreakRun
 import com.example.dayseed.data.HabitSummary
 import com.example.dayseed.data.LongestActiveStreakSelection
 import com.example.dayseed.data.StreakUnit
-import com.example.dayseed.ui.theme.ExtraBranchColor
-import com.example.dayseed.ui.theme.RestColor
-import com.example.dayseed.ui.theme.TinySproutColor
-import com.example.dayseed.ui.theme.UsualLeafColor
 
 @Composable
 fun TodayLongestStreakIndicator(
@@ -167,6 +164,7 @@ fun TodayLongestStreakIndicator(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HabitBranchCanvas(
     habitName: String,
@@ -175,6 +173,7 @@ fun HabitBranchCanvas(
     reducedMotion: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val activeState = activeRun?.treeState
     val stateLabel = when (activeState) {
         GroveTreeState.GROWING_TREE -> "Growing Tree (7+ active span days)"
@@ -186,10 +185,6 @@ fun HabitBranchCanvas(
         }
     }
 
-    val branchColor = MaterialTheme.colorScheme.primary
-    val leafColor = UsualLeafColor
-    val dormantColor = RestColor
-
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -198,7 +193,7 @@ fun HabitBranchCanvas(
             .padding(12.dp)
             .testTag("habit_branch_visual")
             .semantics {
-                contentDescription = "$habitName botanical branch: $stateLabel, ${groveRuns.size} permanent Grove trees"
+                contentDescription = "$habitName botanical glade: $stateLabel, ${groveRuns.size} permanent Grove trees"
             }
     ) {
         Row(
@@ -210,9 +205,11 @@ fun HabitBranchCanvas(
                 text = stateLabel,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
             )
             if (reducedMotion) {
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Static view",
                     style = MaterialTheme.typography.labelSmall,
@@ -221,112 +218,42 @@ fun HabitBranchCanvas(
             }
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(74.dp)
+                .height(104.dp)
+                .clip(RoundedCornerShape(10.dp))
         ) {
-            val w = size.width
-            val h = size.height
-
-            // Main horizontal botanical branch
-            val branchPath = Path().apply {
-                moveTo(w * 0.06f, h * 0.72f)
-                cubicTo(
-                    w * 0.35f, h * 0.64f,
-                    w * 0.65f, h * 0.68f,
-                    w * 0.94f, h * 0.56f
-                )
-            }
-            drawPath(
-                path = branchPath,
-                color = branchColor,
-                style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round)
+            drawHabitGladeVignette(
+                habitName = habitName,
+                activeRun = activeRun,
+                groveRuns = groveRuns,
+                isDark = isDark
             )
-
-            // Draw up to 6 preserved Grove trees along the left/middle of the branch
-            val displayedGrove = groveRuns.takeLast(6)
-            displayedGrove.forEachIndexed { idx, run ->
-                val x = w * (0.16f + idx * 0.11f)
-                val y = h * 0.66f
-                val isDormant = !run.isActive
-                val nodeColor = if (isDormant) dormantColor else ExtraBranchColor
-
-                // Trunk
-                drawLine(
-                    color = branchColor,
-                    start = Offset(x, y),
-                    end = Offset(x, y - 22.dp.toPx()),
-                    strokeWidth = 2.5.dp.toPx(),
-                    cap = StrokeCap.Round
-                )
-                // Canopy: full circle for Growing Tree, double ring for Dormant Tree (non-colour distinction)
-                drawCircle(
-                    color = nodeColor.copy(alpha = if (isDormant) 0.55f else 0.85f),
-                    radius = 9.dp.toPx(),
-                    center = Offset(x, y - 26.dp.toPx()),
-                    style = Fill
-                )
-                if (isDormant) {
-                    drawCircle(
-                        color = branchColor,
-                        radius = 11.dp.toPx(),
-                        center = Offset(x, y - 26.dp.toPx()),
-                        style = Stroke(width = 1.5.dp.toPx())
-                    )
-                }
-            }
-
-            // Draw active sapling or active growing shoot at the tip of the branch
-            if (activeRun != null && activeRun.isActive) {
-                val tipX = w * 0.86f
-                val tipY = h * 0.58f
-                drawLine(
-                    color = leafColor,
-                    start = Offset(tipX, tipY),
-                    end = Offset(tipX, tipY - 18.dp.toPx()),
-                    strokeWidth = 2.5.dp.toPx(),
-                    cap = StrokeCap.Round
-                )
-                // Two sprout leaves
-                val leftLeaf = Path().apply {
-                    moveTo(tipX, tipY - 12.dp.toPx())
-                    quadraticTo(tipX - 10.dp.toPx(), tipY - 20.dp.toPx(), tipX - 4.dp.toPx(), tipY - 24.dp.toPx())
-                    quadraticTo(tipX, tipY - 18.dp.toPx(), tipX, tipY - 12.dp.toPx())
-                }
-                drawPath(leftLeaf, color = TinySproutColor, style = Fill)
-                if (activeRun.qualifiedForGrove) {
-                    drawCircle(
-                        color = leafColor,
-                        radius = 8.dp.toPx(),
-                        center = Offset(tipX + 4.dp.toPx(), tipY - 22.dp.toPx()),
-                        style = Fill
-                    )
-                }
-            }
         }
 
-        // Legend with non-colour symbols and labels
-        Row(
+        Spacer(modifier = Modifier.height(8.dp))
+
+        FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                text = "🌱 Sapling (1–6d)",
-                style = MaterialTheme.typography.bodySmall,
+                text = "Sapling (1–6d)",
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = "🌳 Growing Tree (7d+)",
-                style = MaterialTheme.typography.bodySmall,
+                text = "Growing Tree (7d+)",
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = "🍂 Dormant Tree (Preserved)",
-                style = MaterialTheme.typography.bodySmall,
+                text = "Dormant Tree (Preserved)",
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -359,7 +286,7 @@ fun DormantTransitionBanner(
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Text(
-                text = "🍂 Tree Preserved in Your Living Grove",
+                text = "Tree Preserved in Your Living Grove",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -421,8 +348,10 @@ fun LivingGroveScreen(
     val allRuns by viewModel.habitStreakRuns.collectAsState()
     val growthMetrics by viewModel.growthMetrics.collectAsState()
     val appSettings by viewModel.appSettings.collectAsState()
+    val touchedPlantId by viewModel.touchedGrovePlantId.collectAsState()
 
     var selectedHabitFilter by remember(initialHabitId) { mutableStateOf(initialHabitId) }
+
     val reducedMotion = remember(appSettings) { viewModel.isReducedMotionEnabled() }
     val unacknowledgedDormant = remember(allRuns, appSettings, selectedHabitFilter) {
         viewModel.unacknowledgedDormantRuns(selectedHabitFilter)
@@ -432,14 +361,22 @@ fun LivingGroveScreen(
         if (selectedHabitFilter == null) habits else habits.filter { it.habitId == selectedHabitFilter }
     }
 
+    val qualifiedGroveRuns = remember(allRuns, selectedHabitFilter) {
+        allRuns.filter { run ->
+            run.qualifiedForGrove &&
+                (selectedHabitFilter == null || run.habitId == selectedHabitFilter)
+        }.reversed()
+    }
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .testTag("living_grove_screen"),
         contentPadding = PaddingValues(18.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Top Header with Back Navigation
+        // 1. Clean Heading: "Your Grove" + Concise Description
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -453,19 +390,20 @@ fun LivingGroveScreen(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back"
+                        contentDescription = "Back",
+                        tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
                 Spacer(modifier = Modifier.width(6.dp))
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Living Grove & Individual Streaks",
-                        style = MaterialTheme.typography.titleLarge,
+                        text = "Your Grove",
+                        style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "Every streak reaching 7 active span days becomes a permanent tree in your Grove.",
+                        text = "Every streak reaching 7 active span days roots a permanent tree in your landscape.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -473,43 +411,65 @@ fun LivingGroveScreen(
             }
         }
 
-        // Grove Summary Metrics Row
+        // 2. Three Balanced, Non-Cramped Summary Statistics Cards
         item {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                GroveStatPill(
-                    icon = "🌱",
+                GroveStatCard(
+                    icon = Icons.Default.Spa,
+                    iconTint = MaterialTheme.colorScheme.primary,
                     title = "Active Saplings",
                     subtitle = "1–6d span",
                     count = growthMetrics.activeSaplingsCount,
                     modifier = Modifier
                         .weight(1f)
+                        .fillMaxHeight()
                         .testTag("grove_stat_saplings")
                 )
-                GroveStatPill(
-                    icon = "🌳",
+                GroveStatCard(
+                    icon = Icons.Default.Forest,
+                    iconTint = MaterialTheme.colorScheme.primary,
                     title = "Growing Trees",
                     subtitle = "7d+ active",
                     count = growthMetrics.growingTreesCount,
                     modifier = Modifier
                         .weight(1f)
+                        .fillMaxHeight()
                         .testTag("grove_stat_growing")
                 )
-                GroveStatPill(
-                    icon = "🍂",
+                GroveStatCard(
+                    icon = Icons.Default.Eco,
+                    iconTint = MaterialTheme.colorScheme.secondary,
                     title = "Dormant Trees",
                     subtitle = "Preserved",
                     count = growthMetrics.dormantTreesCount,
                     modifier = Modifier
                         .weight(1f)
+                        .fillMaxHeight()
                         .testTag("grove_stat_dormant")
                 )
             }
         }
 
-        // One-shot Dormant Transition Notices
+        // 3. Dominant Evolving Botanical Landscape Painting (Controls appear ONLY when a leaf is touched)
+        item {
+            LivingGroveLandscapeSection(
+                habits = habits,
+                summaries = summaries,
+                allRuns = allRuns,
+                selectedHabitFilter = selectedHabitFilter,
+                touchedPlantId = touchedPlantId,
+                onTouchPlant = { viewModel.setTouchedGrovePlantId(it) },
+                onSelectHabitFilter = { selectedHabitFilter = it },
+                onInspectHabit = { habitId -> viewModel.openHabitDetail(habitId) }
+            )
+        }
+
+        // 4. One-shot Dormant Transition Notices
         items(unacknowledgedDormant, key = { "dormant_notice_${it.runId}" }) { run ->
             val hName = habits.find { it.habitId == run.habitId }?.name ?: "Habit"
             DormantTransitionBanner(
@@ -519,36 +479,15 @@ fun LivingGroveScreen(
             )
         }
 
-        // Habit Filter Chips
-        if (habits.isNotEmpty()) {
-            item {
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    item {
-                        FilterChip(
-                            selected = selectedHabitFilter == null,
-                            onClick = { selectedHabitFilter = null },
-                            label = { Text("All Habits") },
-                            modifier = Modifier.testTag("grove_filter_all")
-                        )
-                    }
-                    items(habits, key = { "filter_${it.habitId}" }) { habit ->
-                        FilterChip(
-                            selected = selectedHabitFilter == habit.habitId,
-                            onClick = {
-                                selectedHabitFilter = if (selectedHabitFilter == habit.habitId) null else habit.habitId
-                            },
-                            label = { Text(habit.name) },
-                            modifier = Modifier.testTag("grove_filter_${habit.habitId}")
-                        )
-                    }
-                }
-            }
+        // 5. Compact Unified Permanent Grove Summary Section (below the painting)
+        item {
+            PermanentGroveSummaryCard(
+                qualifiedRuns = qualifiedGroveRuns,
+                habits = habits
+            )
         }
 
-        // Per-Habit Branch & Grove History Cards
+        // 6. Per-Habit Grove Records
         items(filteredHabits, key = { it.habitId }) { habit ->
             val summary = summaries[habit.habitId]
             HabitGroveCard(
@@ -563,8 +502,9 @@ fun LivingGroveScreen(
 }
 
 @Composable
-private fun GroveStatPill(
-    icon: String,
+private fun GroveStatCard(
+    icon: ImageVector,
+    iconTint: Color,
     title: String,
     subtitle: String,
     count: Int,
@@ -574,32 +514,106 @@ private fun GroveStatPill(
         modifier = modifier,
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(20.dp)
+            )
+            Text(
+                text = count.toString(),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PermanentGroveSummaryCard(
+    qualifiedRuns: List<HabitStreakRun>,
+    habits: List<Habit>
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("grove_permanent_section"),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Text(text = icon, style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = count.toString(),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Permanent Grove (${qualifiedRuns.size})",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "7+ active span days",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (qualifiedRuns.isEmpty()) {
+                Text(
+                    text = "When any habit reaches 7 elapsed active span days, its tree takes permanent root in your Grove—even if a streak later rests.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                val growing = qualifiedRuns.count { it.isActive }
+                val dormant = qualifiedRuns.count { !it.isActive }
+                val habitNames = qualifiedRuns
+                    .mapNotNull { r -> habits.find { it.habitId == r.habitId }?.name }
+                    .distinct()
+                    .joinToString(", ")
+                Text(
+                    text = "$growing active growing ${if (growing == 1) "tree" else "trees"} and $dormant preserved autumn ${if (dormant == 1) "tree" else "trees"} across $habitNames.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -694,9 +708,9 @@ private fun HabitGroveCard(
                             if (run.completedStreakCount == 1) "day" else "days"
                         }
                         val stateBadge = when (run.treeState) {
-                            GroveTreeState.GROWING_TREE -> "🌳 Growing Tree"
-                            GroveTreeState.DORMANT_TREE -> "🍂 Dormant Tree"
-                            GroveTreeState.SAPLING_ACTIVE -> "🌱 Sapling"
+                            GroveTreeState.GROWING_TREE -> "Growing Tree"
+                            GroveTreeState.DORMANT_TREE -> "Dormant Tree"
+                            GroveTreeState.SAPLING_ACTIVE -> "Sapling"
                             GroveTreeState.UNQUALIFIED_HISTORY -> "Short run"
                         }
                         Surface(
@@ -719,8 +733,10 @@ private fun HabitGroveCard(
                                         text = "$stateBadge • ${run.startLocalDate} to ${run.endLocalDate}",
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.weight(1f)
                                     )
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = "${run.completedStreakCount} $unitLabel (${run.elapsedActiveSpanCount}d span)",
                                         style = MaterialTheme.typography.bodySmall,
