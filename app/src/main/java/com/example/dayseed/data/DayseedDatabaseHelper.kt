@@ -27,7 +27,7 @@ class DayseedDatabaseHelper(
 
     companion object {
         const val DATABASE_NAME = "dayseed.db"
-        const val DATABASE_VERSION = 3
+        const val DATABASE_VERSION = 4
 
         const val TABLE_HABITS = "habits"
         const val TABLE_HABIT_VERSIONS = "habit_versions"
@@ -92,13 +92,14 @@ class DayseedDatabaseHelper(
         db.execSQL("PRAGMA foreign_keys = ON;")
         if (!db.isReadOnly && db.version == DATABASE_VERSION) {
             reconcileExistingV3SchemaIfNeeded(db)
+            ensureV4LifecycleColumnsIfNeeded(db)
             cleanupLegacyV1DemoDataIfNeeded(db)
         }
     }
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("PRAGMA foreign_keys = ON;")
-        createV3Schema(db)
+        createV4Schema(db)
         seedDefaultSettingsIfEmpty(db, System.currentTimeMillis())
         seedDefaultWeekStartBaselineIfEmpty(db, System.currentTimeMillis())
     }
@@ -113,6 +114,9 @@ class DayseedDatabaseHelper(
         }
         if (oldVersion < 3) {
             migrateV2ToV3FailClosed(db, migrationEvaluationDateProvider())
+        }
+        if (oldVersion < 4) {
+            migrateV3ToV4FailClosed(db)
         }
         cleanupLegacyV1DemoDataIfNeeded(db)
     }
@@ -220,6 +224,11 @@ class DayseedDatabaseHelper(
         createV3Triggers(db)
     }
 
+    fun createV4Schema(db: SQLiteDatabase) {
+        createV3Schema(db)
+        ensureV4LifecycleColumnsIfNeeded(db)
+    }
+
     private fun buildRestoreConflictsTableSql(tableName: String): String =
         """
         CREATE TABLE $tableName (
@@ -274,7 +283,7 @@ class DayseedDatabaseHelper(
             scheduled_weekdays_mask INTEGER,
             preferred_weekdays_mask INTEGER,
             lifecycle_state TEXT NOT NULL CHECK (
-                lifecycle_state IN ('ACTIVE', 'PAUSED', 'COMPLETED', 'ARCHIVED')
+                lifecycle_state IN ('ACTIVE', 'PAUSED', 'COMPLETED', 'ENDED', 'ARCHIVED')
             ),
             reminder_mode TEXT NOT NULL CHECK (reminder_mode IN ('OFF', 'AT_TIME')),
             reminder_time_local TEXT CHECK (
@@ -598,7 +607,7 @@ class DayseedDatabaseHelper(
                               AND effective_from_local_date <= NEW.local_date
                             ORDER BY effective_from_local_date DESC, created_at_utc_ms DESC
                             LIMIT 1
-                        ) IN ('PAUSED', 'ARCHIVED', 'COMPLETED')
+                        ) IN ('PAUSED', 'ARCHIVED', 'COMPLETED', 'ENDED')
                         THEN RAISE(ABORT, 'Cannot record habit_entries on a date where habit lifecycle_state is closed/paused')
                         WHEN NEW.value_units > 0 AND EXISTS (
                             SELECT 1 FROM $TABLE_HABIT_DATE_EXCEPTIONS
@@ -651,7 +660,7 @@ class DayseedDatabaseHelper(
                               AND effective_from_local_date <= NEW.local_date
                             ORDER BY effective_from_local_date DESC, created_at_utc_ms DESC
                             LIMIT 1
-                        ) IN ('PAUSED', 'ARCHIVED', 'COMPLETED')
+                        ) IN ('PAUSED', 'ARCHIVED', 'COMPLETED', 'ENDED')
                         THEN RAISE(ABORT, 'Cannot record habit_day_outcomes on a date where habit lifecycle_state is closed/paused')
                         WHEN EXISTS (
                             SELECT 1 FROM $TABLE_HABIT_DATE_EXCEPTIONS
@@ -696,8 +705,8 @@ class DayseedDatabaseHelper(
                               AND effective_from_local_date <= NEW.local_date
                             ORDER BY effective_from_local_date DESC, created_at_utc_ms DESC
                             LIMIT 1
-                        ) IN ('PAUSED', 'ARCHIVED', 'COMPLETED')
-                        THEN RAISE(ABORT, 'Cannot insert REST_DAY on a paused, archived, or completed habit date')
+                        ) IN ('PAUSED', 'ARCHIVED', 'COMPLETED', 'ENDED')
+                        THEN RAISE(ABORT, 'Cannot insert REST_DAY on a paused, archived, completed, or ended habit date')
                     END;
                 END;
                 """.trimIndent()
@@ -1510,7 +1519,8 @@ class DayseedDatabaseHelper(
         val restoreConflictsSql = getTableCreateSql(db, TABLE_RESTORE_CONFLICTS)
 
         val needsHabitVersionsUpgrade = habitVersionsSql != null &&
-            !habitVersionsSql.contains("target_period = 'WEEK' AND (target_value IS NULL")
+            (!habitVersionsSql.contains("target_period = 'WEEK' AND (target_value IS NULL") ||
+                !habitVersionsSql.contains("'ENDED'"))
         val needsRestoreConflictsUpgrade = restoreConflictsSql != null &&
             !restoreConflictsSql.contains("'habit_streak_run'")
 
@@ -1620,6 +1630,129 @@ class DayseedDatabaseHelper(
             throw DayseedMigrationBlockedException("v3 schema reconciliation failed and rolled back: ${e.message}")
         } finally {
             db.endTransaction()
+        }
+    }
+
+    /**
+     * Migrates a v3 schema to v4 by adding persistent habit lifecycle and end-date columns
+     * to `habits`, backfilling `start_local_date` from the earliest `habit_versions` row
+     * while preserving all existing records and defaulting existing habits without an end
+     * date to ongoing (`duration_kind = 'NONE'`, `scheduled_end_local_date = NULL`).
+     */
+    fun migrateV3ToV4FailClosed(db: SQLiteDatabase) {
+        db.beginTransaction()
+        try {
+            reconcileExistingV3SchemaIfNeeded(db)
+            ensureV4LifecycleColumnsIfNeeded(db)
+            createV3Triggers(db)
+
+            db.rawQuery("PRAGMA foreign_key_check;", null).use { c ->
+                if (c.moveToFirst()) {
+                    val tbl = c.getString(0)
+                    throw DayseedMigrationBlockedException("PRAGMA foreign_key_check failed on table '$tbl' during v3->v4 migration.")
+                }
+            }
+            db.rawQuery("PRAGMA integrity_check;", null).use { c ->
+                if (c.moveToFirst()) {
+                    val res = c.getString(0)
+                    if (!res.equals("ok", ignoreCase = true)) {
+                        throw DayseedMigrationBlockedException("PRAGMA integrity_check failed during v3->v4 migration: $res")
+                    }
+                }
+            }
+
+            db.setTransactionSuccessful()
+        } catch (e: DayseedMigrationBlockedException) {
+            throw e
+        } catch (e: Exception) {
+            throw DayseedMigrationBlockedException("v3->v4 migration failed and rolled back: ${e.message}")
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    fun ensureV4LifecycleColumnsIfNeeded(db: SQLiteDatabase) {
+        if (!tableExists(db, TABLE_HABITS)) return
+        val existingCols = getColumnNames(db, TABLE_HABITS)
+        if ("start_local_date" !in existingCols) {
+            db.execSQL(
+                """
+                ALTER TABLE $TABLE_HABITS
+                ADD COLUMN start_local_date TEXT CHECK (
+                    start_local_date IS NULL
+                    OR (length(start_local_date) = 10 AND start_local_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]')
+                );
+                """.trimIndent()
+            )
+        }
+        if ("scheduled_end_local_date" !in existingCols) {
+            db.execSQL(
+                """
+                ALTER TABLE $TABLE_HABITS
+                ADD COLUMN scheduled_end_local_date TEXT CHECK (
+                    scheduled_end_local_date IS NULL
+                    OR (length(scheduled_end_local_date) = 10 AND scheduled_end_local_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]')
+                );
+                """.trimIndent()
+            )
+        }
+        if ("actual_end_local_date" !in existingCols) {
+            db.execSQL(
+                """
+                ALTER TABLE $TABLE_HABITS
+                ADD COLUMN actual_end_local_date TEXT CHECK (
+                    actual_end_local_date IS NULL
+                    OR (length(actual_end_local_date) = 10 AND actual_end_local_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]')
+                );
+                """.trimIndent()
+            )
+        }
+        if ("end_reason" !in existingCols) {
+            db.execSQL(
+                """
+                ALTER TABLE $TABLE_HABITS
+                ADD COLUMN end_reason TEXT CHECK (
+                    end_reason IS NULL
+                    OR end_reason IN ('SCHEDULED_COMPLETED', 'MANUAL_COMPLETED', 'MANUAL_ENDED')
+                );
+                """.trimIndent()
+            )
+        }
+        if ("duration_kind" !in existingCols) {
+            db.execSQL(
+                """
+                ALTER TABLE $TABLE_HABITS
+                ADD COLUMN duration_kind TEXT NOT NULL DEFAULT 'NONE' CHECK (
+                    duration_kind IN ('NONE', 'DAYS', 'WEEKS', 'MONTHS', 'YEARS', 'SPECIFIC_DATE')
+                );
+                """.trimIndent()
+            )
+        }
+        if ("duration_value" !in existingCols) {
+            db.execSQL(
+                """
+                ALTER TABLE $TABLE_HABITS
+                ADD COLUMN duration_value INTEGER CHECK (
+                    duration_value IS NULL
+                    OR (duration_value >= 1 AND duration_value <= 36500)
+                );
+                """.trimIndent()
+            )
+        }
+
+        // Backfill start_local_date from earliest habit_versions row when missing
+        if (tableExists(db, TABLE_HABIT_VERSIONS)) {
+            db.execSQL(
+                """
+                UPDATE $TABLE_HABITS
+                SET start_local_date = (
+                    SELECT MIN(effective_from_local_date)
+                    FROM $TABLE_HABIT_VERSIONS
+                    WHERE $TABLE_HABIT_VERSIONS.habit_id = $TABLE_HABITS.habit_id
+                )
+                WHERE start_local_date IS NULL;
+                """.trimIndent()
+            )
         }
     }
 

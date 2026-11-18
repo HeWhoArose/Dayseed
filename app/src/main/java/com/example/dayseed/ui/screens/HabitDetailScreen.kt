@@ -27,6 +27,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -38,6 +39,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -47,6 +52,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -61,11 +67,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.dayseed.DayseedViewModel
 import com.example.dayseed.data.DerivedDayStatus
 import com.example.dayseed.data.HabitDateExceptionKind
+import com.example.dayseed.data.HabitDurationKind
 import com.example.dayseed.data.HabitLifecycleState
+import com.example.dayseed.data.HabitLifetimeCalculator
+import com.example.dayseed.data.HabitLifetimeStatus
 import com.example.dayseed.data.ProgressBand
 import com.example.dayseed.data.StreakUnit
 import com.example.dayseed.data.TargetPeriod
@@ -78,9 +88,10 @@ import java.math.BigInteger
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun HabitDetailScreen(
     viewModel: DayseedViewModel,
@@ -170,6 +181,43 @@ fun HabitDetailScreen(
         mutableStateOf(noteOnSelectedDate?.body ?: "")
     }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var showEndHabitConfirmDialog by remember { mutableStateOf(false) }
+
+    val habitStartDate = remember(habit.startLocalDate, activeVersion, today) {
+        val raw = habit.startLocalDate ?: activeVersion?.effectiveFromLocalDate
+        raw?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: today
+    }
+    var showEndDateEditor by remember(habit.habitId) { mutableStateOf(false) }
+    var editDurationKind by remember(habit.durationKind, habit.scheduledEndLocalDate) {
+        val initialKind = when {
+            habit.durationKind != HabitDurationKind.NONE -> habit.durationKind
+            habit.scheduledEndLocalDate != null -> HabitDurationKind.SPECIFIC_DATE
+            else -> HabitDurationKind.DAYS
+        }
+        mutableStateOf(initialKind)
+    }
+    var editDurationValueText by remember(habit.durationValue) {
+        mutableStateOf((habit.durationValue ?: 30).toString())
+    }
+    var editSpecificEndDateText by remember(habit.scheduledEndLocalDate) {
+        mutableStateOf(habit.scheduledEndLocalDate ?: habitStartDate.plusDays(30).toString())
+    }
+    var editEndDateError by remember { mutableStateOf<String?>(null) }
+    var showDetailDatePickerDialog by remember { mutableStateOf(false) }
+
+    val editEndDateCalculation = remember(
+        habitStartDate,
+        editDurationKind,
+        editDurationValueText,
+        editSpecificEndDateText
+    ) {
+        HabitLifetimeCalculator.calculateEndDateResult(
+            startDate = habitStartDate,
+            durationKind = editDurationKind,
+            durationValue = editDurationValueText.trim().toIntOrNull(),
+            specificEndDateIso = editSpecificEndDateText.trim().ifBlank { null }
+        )
+    }
 
     val habitRuns = remember(streakRuns, habitId) {
         streakRuns.filter { it.habitId == habitId }
@@ -331,13 +379,25 @@ fun HabitDetailScreen(
 
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                                color = when (habit.lifetimeStatus) {
+                                    HabitLifetimeStatus.ONGOING,
+                                    HabitLifetimeStatus.SCHEDULED_TO_END ->
+                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
+                                    HabitLifetimeStatus.COMPLETED ->
+                                        MaterialTheme.colorScheme.tertiaryContainer
+                                    HabitLifetimeStatus.ENDED ->
+                                        MaterialTheme.colorScheme.secondaryContainer
+                                    HabitLifetimeStatus.PAUSED ->
+                                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
+                                    HabitLifetimeStatus.ARCHIVED ->
+                                        MaterialTheme.colorScheme.surfaceVariant
+                                }
                             ) {
                                 Text(
-                                    text = habit.lifecycleState.name.lowercase().replaceFirstChar { it.uppercase() },
+                                    text = habit.lifetimeStatusLabel,
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                         .testTag("detail_lifecycle_badge")
@@ -352,6 +412,14 @@ fun HabitDetailScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+
+                        Text(
+                            text = habit.formatLifetimeSummary(),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.testTag("detail_lifetime_summary_text")
+                        )
 
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -372,7 +440,7 @@ fun HabitDetailScreen(
                             MetadataBadge("Schedule: ${summary?.formatScheduleSummary() ?: habit.formatScheduleSummary()}")
                             val activeReminderMode = activeVersion?.reminderMode ?: habit.reminderMode
                             val activeReminderTime = activeVersion?.reminderTimeLocal ?: habit.reminderTimeLocal
-                            if (activeReminderMode == "AT_TIME" && !activeReminderTime.isNullOrBlank()) {
+                            if (!habit.lifecycleState.isTerminal && activeReminderMode == "AT_TIME" && !activeReminderTime.isNullOrBlank()) {
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
                                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
@@ -710,56 +778,65 @@ fun HabitDetailScreen(
                             }
                         }
 
-                        // Primary CTA: Record Session & Rest Day controls
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Button(
-                                onClick = {
-                                    onOpenRecordSession(habitId, selectedLocalDate, null)
-                                },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .heightIn(min = 48.dp)
-                                    .testTag("detail_record_session_btn")
+                        // Primary CTA: Record Session & Rest Day controls (only for non-terminal habits)
+                        if (!habit.lifecycleState.isTerminal) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Record Session")
-                            }
+                                Button(
+                                    onClick = {
+                                        onOpenRecordSession(habitId, selectedLocalDate, null)
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .heightIn(min = 48.dp)
+                                        .testTag("detail_record_session_btn")
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Record Session")
+                                }
 
-                            if (selectedLocalDate == todayStr) {
-                                val hasRestDayToday = exceptionOnSelectedDate?.exceptionKind == HabitDateExceptionKind.REST_DAY ||
-                                    summary?.hasRestDayToday == true
-                                if (hasRestDayToday) {
-                                    OutlinedButton(
-                                        onClick = { viewModel.clearRestDayToday(habit) },
-                                        modifier = Modifier
-                                            .heightIn(min = 48.dp)
-                                            .testTag("detail_clear_rest_day_btn")
-                                    ) {
-                                        Text("Clear Rest Day")
-                                    }
-                                } else if (summary?.canTakeRestDayToday == true) {
-                                    OutlinedButton(
-                                        onClick = { viewModel.takeRestDayToday(habit) },
-                                        modifier = Modifier
-                                            .heightIn(min = 48.dp)
-                                            .testTag("detail_take_rest_day_btn")
-                                    ) {
-                                        Text("Take a rest day")
+                                if (selectedLocalDate == todayStr) {
+                                    val hasRestDayToday = exceptionOnSelectedDate?.exceptionKind == HabitDateExceptionKind.REST_DAY ||
+                                        summary?.hasRestDayToday == true
+                                    if (hasRestDayToday) {
+                                        OutlinedButton(
+                                            onClick = { viewModel.clearRestDayToday(habit) },
+                                            modifier = Modifier
+                                                .heightIn(min = 48.dp)
+                                                .testTag("detail_clear_rest_day_btn")
+                                        ) {
+                                            Text("Clear Rest Day")
+                                        }
+                                    } else if (summary?.canTakeRestDayToday == true) {
+                                        OutlinedButton(
+                                            onClick = { viewModel.takeRestDayToday(habit) },
+                                            modifier = Modifier
+                                                .heightIn(min = 48.dp)
+                                                .testTag("detail_take_rest_day_btn")
+                                        ) {
+                                            Text("Take a rest day")
+                                        }
                                     }
                                 }
                             }
-                        }
 
-                        if (selectedLocalDate != todayStr) {
+                            if (selectedLocalDate != todayStr) {
+                                Text(
+                                    text = "Rest days can only be taken on today's date (D-057).",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.testTag("detail_rest_day_past_info")
+                                )
+                            }
+                        } else {
                             Text(
-                                text = "Rest days can only be taken on today's date (D-057).",
+                                text = "This habit is ${habit.lifetimeStatusLabel.lowercase()}. Historical records are preserved above; active daily completion actions are disabled.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.testTag("detail_rest_day_past_info")
+                                modifier = Modifier.testTag("detail_terminal_logging_disabled_notice")
                             )
                         }
                     }
@@ -1001,7 +1078,7 @@ fun HabitDetailScreen(
                 }
             }
 
-            // SECTION F: Lifecycle Controls
+            // SECTION F: Lifecycle & End-Date Management
             item {
                 Card(
                     shape = RoundedCornerShape(16.dp),
@@ -1016,15 +1093,341 @@ fun HabitDetailScreen(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Text(
-                            text = "Habit Lifecycle Controls",
+                            text = "Habit Lifecycle & End Date",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Pausing, completing, or archiving preserves your past Grove trees without penalty.",
+                            text = "Manage when this habit ends, return it to an ongoing state, or end it immediately while preserving your history and Grove trees.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+
+                        // Lifecycle status & dates summary box
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = "Lifecycle status: ${habit.lifetimeStatusLabel}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.testTag("detail_lifecycle_status_text")
+                                )
+                                Text(
+                                    text = "Start date: $habitStartDate",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.testTag("detail_start_date_text")
+                                )
+                                val scheduledEndDisplay = habit.scheduledEndLocalDate?.let { raw ->
+                                    val parsed = runCatching { LocalDate.parse(raw) }.getOrNull()
+                                    if (parsed != null) {
+                                        "${HabitLifetimeCalculator.formatHumanReadableDate(parsed)} ($raw)"
+                                    } else {
+                                        raw
+                                    }
+                                } ?: "No end date (Ongoing)"
+                                Text(
+                                    text = "Scheduled end date: $scheduledEndDisplay",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.testTag("detail_scheduled_end_date_text")
+                                )
+                                if (habit.actualEndLocalDate != null || habit.endReason != null || habit.lifecycleState.isEndedOrCompleted) {
+                                    val reasonText = habit.endReason?.label ?: habit.lifecycleState.displayLabel
+                                    Text(
+                                        text = "Ended on: ${habit.actualEndLocalDate ?: "—"} ($reasonText)",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.testTag("detail_actual_end_date_text")
+                                    )
+                                }
+                            }
+                        }
+
+                        // End-date editor toggle & remove end date button
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    editEndDateError = null
+                                    showEndDateEditor = !showEndDateEditor
+                                },
+                                modifier = Modifier
+                                    .heightIn(min = 48.dp)
+                                    .testTag("detail_edit_end_date_btn")
+                            ) {
+                                Text(
+                                    when {
+                                        showEndDateEditor -> "Close End Date Editor"
+                                        habit.scheduledEndLocalDate != null -> "Change End Date"
+                                        else -> "Set End Date"
+                                    }
+                                )
+                            }
+
+                            if (habit.scheduledEndLocalDate != null || habit.lifecycleState.isEndedOrCompleted) {
+                                OutlinedButton(
+                                    onClick = {
+                                        viewModel.clearHabitEndDate(habit.habitId) {
+                                            showEndDateEditor = false
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .heightIn(min = 48.dp)
+                                        .testTag("detail_remove_end_date_btn")
+                                ) {
+                                    Text("Return to Ongoing")
+                                }
+                            }
+
+                            if (!habit.lifecycleState.isEndedOrCompleted) {
+                                Button(
+                                    onClick = { showEndHabitConfirmDialog = true },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                    ),
+                                    modifier = Modifier
+                                        .heightIn(min = 48.dp)
+                                        .testTag("detail_end_habit_btn")
+                                ) {
+                                    Text("End this habit")
+                                }
+                            }
+                        }
+
+                        if (showEndDateEditor) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.22f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("detail_end_date_editor")
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Text(
+                                        text = "How long do you want to maintain this habit?",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+
+                                    FlowRow(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        HabitDurationKind.entries.forEach { kind ->
+                                            FilterChip(
+                                                selected = editDurationKind == kind,
+                                                onClick = {
+                                                    editDurationKind = kind
+                                                    editEndDateError = null
+                                                    when (kind) {
+                                                        HabitDurationKind.DAYS -> {
+                                                            if (editDurationValueText.toIntOrNull() == null || editDurationValueText.toInt() <= 0) {
+                                                                editDurationValueText = "30"
+                                                            }
+                                                        }
+                                                        HabitDurationKind.WEEKS -> {
+                                                            if (editDurationValueText.toIntOrNull() == null || editDurationValueText.toInt() <= 0 || editDurationValueText == "30") {
+                                                                editDurationValueText = "2"
+                                                            }
+                                                        }
+                                                        HabitDurationKind.MONTHS -> {
+                                                            if (editDurationValueText.toIntOrNull() == null || editDurationValueText.toInt() <= 0 || editDurationValueText == "30") {
+                                                                editDurationValueText = "3"
+                                                            }
+                                                        }
+                                                        HabitDurationKind.YEARS -> {
+                                                            if (editDurationValueText.toIntOrNull() == null || editDurationValueText.toInt() <= 0 || editDurationValueText == "30") {
+                                                                editDurationValueText = "1"
+                                                            }
+                                                        }
+                                                        HabitDurationKind.SPECIFIC_DATE -> {
+                                                            if (editSpecificEndDateText.isBlank()) {
+                                                                editSpecificEndDateText = today.plusDays(30).toString()
+                                                            }
+                                                        }
+                                                        HabitDurationKind.NONE -> Unit
+                                                    }
+                                                },
+                                                label = { Text(kind.label) },
+                                                modifier = Modifier.testTag("detail_duration_kind_${kind.name}")
+                                            )
+                                        }
+                                    }
+
+                                    when (editDurationKind) {
+                                        HabitDurationKind.NONE -> {
+                                            Text(
+                                                text = "Removes the scheduled end date and returns this habit to Ongoing.",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.testTag("detail_calculated_end_date_text")
+                                            )
+                                        }
+                                        HabitDurationKind.DAYS,
+                                        HabitDurationKind.WEEKS,
+                                        HabitDurationKind.MONTHS,
+                                        HabitDurationKind.YEARS -> {
+                                            val unitLabel = when (editDurationKind) {
+                                                HabitDurationKind.DAYS -> "Number of days"
+                                                HabitDurationKind.WEEKS -> "Number of weeks"
+                                                HabitDurationKind.MONTHS -> "Number of months"
+                                                HabitDurationKind.YEARS -> "Number of years"
+                                                else -> "Duration"
+                                            }
+                                            OutlinedTextField(
+                                                value = editDurationValueText,
+                                                onValueChange = { raw ->
+                                                    editDurationValueText = raw.filter { it.isDigit() || it == '-' }
+                                                    editEndDateError = null
+                                                },
+                                                label = { Text(unitLabel) },
+                                                singleLine = true,
+                                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .bringIntoViewOnFocus()
+                                                    .testTag("detail_duration_value_input")
+                                            )
+                                            val calcDate = editEndDateCalculation.getOrNull()
+                                            val calcErr = editEndDateCalculation.exceptionOrNull()?.message
+                                            if (calcDate != null) {
+                                                Text(
+                                                    text = "Calculated end date: ${HabitLifetimeCalculator.formatHumanReadableDate(calcDate)} ($calcDate)",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.testTag("detail_calculated_end_date_text")
+                                                )
+                                            } else if (calcErr != null) {
+                                                Text(
+                                                    text = calcErr,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.error,
+                                                    modifier = Modifier.testTag("detail_end_date_error_text")
+                                                )
+                                            }
+                                        }
+                                        HabitDurationKind.SPECIFIC_DATE -> {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                OutlinedTextField(
+                                                    value = editSpecificEndDateText,
+                                                    onValueChange = {
+                                                        editSpecificEndDateText = it
+                                                        editEndDateError = null
+                                                    },
+                                                    label = { Text("End date (YYYY-MM-DD)") },
+                                                    singleLine = true,
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .bringIntoViewOnFocus()
+                                                        .testTag("detail_specific_end_date_input")
+                                                )
+                                                OutlinedButton(
+                                                    onClick = { showDetailDatePickerDialog = true },
+                                                    modifier = Modifier
+                                                        .heightIn(min = 48.dp)
+                                                        .testTag("detail_pick_end_date_btn")
+                                                ) {
+                                                    Text("Calendar")
+                                                }
+                                            }
+                                            val calcDate = editEndDateCalculation.getOrNull()
+                                            val calcErr = editEndDateCalculation.exceptionOrNull()?.message
+                                            if (calcDate != null) {
+                                                Text(
+                                                    text = "Selected end date: ${HabitLifetimeCalculator.formatHumanReadableDate(calcDate)} ($calcDate)",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.testTag("detail_calculated_end_date_text")
+                                                )
+                                            } else if (calcErr != null) {
+                                                Text(
+                                                    text = calcErr,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.error,
+                                                    modifier = Modifier.testTag("detail_end_date_error_text")
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    if (editEndDateError != null) {
+                                        Text(
+                                            text = editEndDateError!!,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.testTag("detail_end_date_save_error")
+                                        )
+                                    }
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        OutlinedButton(
+                                            onClick = { showEndDateEditor = false },
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .heightIn(min = 48.dp)
+                                                .testTag("detail_cancel_end_date_btn")
+                                        ) {
+                                            Text("Cancel")
+                                        }
+                                        Button(
+                                            onClick = {
+                                                if (editEndDateCalculation.isFailure) {
+                                                    editEndDateError = editEndDateCalculation.exceptionOrNull()?.message
+                                                        ?: "Please enter a valid end date."
+                                                    return@Button
+                                                }
+                                                if (editDurationKind == HabitDurationKind.NONE) {
+                                                    viewModel.clearHabitEndDate(habit.habitId) {
+                                                        showEndDateEditor = false
+                                                    }
+                                                } else {
+                                                    viewModel.updateHabitEndDate(
+                                                        habitId = habit.habitId,
+                                                        durationKind = editDurationKind,
+                                                        durationValue = editDurationValueText.trim().toIntOrNull(),
+                                                        specificEndDate = editSpecificEndDateText.trim().ifBlank { null }
+                                                    ) {
+                                                        showEndDateEditor = false
+                                                    }
+                                                }
+                                            },
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .heightIn(min = 48.dp)
+                                                .testTag("detail_save_end_date_btn")
+                                        ) {
+                                            Text("Save End Date")
+                                        }
+                                    }
+                                }
+                            }
+                        }
 
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1050,7 +1453,7 @@ fun HabitDetailScreen(
                                 ) {
                                     Text("Resume Habit")
                                 }
-                            } else {
+                            } else if (habit.lifecycleState == HabitLifecycleState.ACTIVE) {
                                 OutlinedButton(
                                     onClick = {
                                         viewModel.updateHabitLifecycle(habit.habitId, HabitLifecycleState.PAUSED)
@@ -1066,7 +1469,7 @@ fun HabitDetailScreen(
                             if (habit.lifecycleState != HabitLifecycleState.COMPLETED) {
                                 OutlinedButton(
                                     onClick = {
-                                        viewModel.updateHabitLifecycle(habit.habitId, HabitLifecycleState.COMPLETED)
+                                        viewModel.endHabitImmediately(habit.habitId, markAsCompleted = true)
                                     },
                                     modifier = Modifier
                                         .heightIn(min = 48.dp)
@@ -1115,6 +1518,107 @@ fun HabitDetailScreen(
                     }
                 }
             }
+        }
+    }
+
+    if (showEndHabitConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showEndHabitConfirmDialog = false },
+            title = { Text("End \"${habit.name}\"?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Ending this habit means:\n" +
+                            "• It will no longer appear as an active habit on Today.\n" +
+                            "• Its scheduled reminders will stop immediately.\n" +
+                            "• All existing progress, streaks, and history will be preserved."
+                    )
+                    Text(
+                        "How would you like to record the ending of this habit?",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            },
+            confirmButton = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            showEndHabitConfirmDialog = false
+                            viewModel.endHabitImmediately(habit.habitId, markAsCompleted = true)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
+                            .testTag("confirm_end_habit_completed_btn")
+                    ) {
+                        Text("Mark as Completed")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            showEndHabitConfirmDialog = false
+                            viewModel.endHabitImmediately(habit.habitId, markAsCompleted = false)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
+                            .testTag("confirm_end_habit_ended_btn")
+                    ) {
+                        Text("End Without Completion")
+                    }
+                    TextButton(
+                        onClick = { showEndHabitConfirmDialog = false },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
+                            .testTag("cancel_end_habit_btn")
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+            },
+            modifier = Modifier.testTag("end_habit_confirm_dialog")
+        )
+    }
+
+    if (showDetailDatePickerDialog) {
+        val initialSelectedDate = runCatching { LocalDate.parse(editSpecificEndDateText.trim()) }.getOrNull()
+            ?: today.plusDays(30)
+        val initialMillis = initialSelectedDate.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialMillis)
+        DatePickerDialog(
+            onDismissRequest = { showDetailDatePickerDialog = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            val pickedDate = Instant.ofEpochMilli(millis)
+                                .atZone(ZoneOffset.UTC)
+                                .toLocalDate()
+                            editSpecificEndDateText = pickedDate.toString()
+                            editEndDateError = null
+                        }
+                        showDetailDatePickerDialog = false
+                    },
+                    modifier = Modifier.testTag("confirm_detail_end_date_picker_btn")
+                ) {
+                    Text("Select")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDetailDatePickerDialog = false },
+                    modifier = Modifier.testTag("cancel_detail_end_date_picker_btn")
+                ) {
+                    Text("Cancel")
+                }
+            },
+            modifier = Modifier.testTag("detail_end_date_picker_dialog")
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 

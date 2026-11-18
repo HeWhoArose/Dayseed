@@ -387,7 +387,7 @@ private fun DayDetailHabitCard(
                     )
                 }
 
-                if (!isFutureDate) {
+                if (!isFutureDate && (!item.effectiveVersion.lifecycleState.isTerminal || item.entries.isNotEmpty() || item.outcomes.isNotEmpty())) {
                     OutlinedButton(
                         onClick = { onRecordOrEditSession(null) },
                         modifier = Modifier.testTag("day_detail_log_session_${item.habit.habitId}")

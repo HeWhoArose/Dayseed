@@ -121,10 +121,22 @@ class DayseedAcceptanceTest {
             assertTrue("Missing table: $table", actualTables.contains(table))
         }
 
-        // Verify canonical v3 columns on habits
+        // Verify canonical v4 columns on habits (including lifecycle & end-date columns)
         val habitCols = getTableColumns(db, "habits")
         assertEquals(
-            setOf("habit_id", "created_at_utc_ms", "updated_at_utc_ms", "category", "lifetime_goal_days"),
+            setOf(
+                "habit_id",
+                "created_at_utc_ms",
+                "updated_at_utc_ms",
+                "category",
+                "lifetime_goal_days",
+                "start_local_date",
+                "scheduled_end_local_date",
+                "actual_end_local_date",
+                "end_reason",
+                "duration_kind",
+                "duration_value"
+            ),
             habitCols
         )
 

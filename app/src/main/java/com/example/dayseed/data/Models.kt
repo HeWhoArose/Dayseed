@@ -111,7 +111,138 @@ enum class HabitLifecycleState(val label: String) {
     ACTIVE("Active"),
     PAUSED("Paused"),
     COMPLETED("Completed"),
-    ARCHIVED("Archived")
+    ENDED("Ended"),
+    ARCHIVED("Archived");
+
+    val displayLabel: String
+        get() = label
+
+    val isTerminal: Boolean
+        get() = this == COMPLETED || this == ENDED || this == ARCHIVED
+
+    val isEndedOrCompleted: Boolean
+        get() = this == COMPLETED || this == ENDED
+}
+
+enum class HabitDurationKind(val label: String) {
+    NONE("No end date"),
+    DAYS("Days"),
+    WEEKS("Weeks"),
+    MONTHS("Months"),
+    YEARS("Years"),
+    SPECIFIC_DATE("Specific date");
+
+    companion object {
+        fun fromDb(raw: String?): HabitDurationKind {
+            if (raw.isNullOrBlank()) return NONE
+            return entries.find { it.name.equals(raw.trim(), ignoreCase = true) } ?: NONE
+        }
+    }
+}
+
+enum class HabitEndReason(val displayLabel: String) {
+    SCHEDULED_COMPLETED("Completed on scheduled end date"),
+    MANUAL_COMPLETED("Marked as completed"),
+    MANUAL_ENDED("Ended without completion");
+
+    val label: String
+        get() = displayLabel
+
+    companion object {
+        fun fromDb(raw: String?): HabitEndReason? {
+            if (raw.isNullOrBlank()) return null
+            return entries.find { it.name.equals(raw.trim(), ignoreCase = true) }
+        }
+    }
+}
+
+enum class HabitLifetimeStatus(val displayLabel: String) {
+    ONGOING("Ongoing"),
+    SCHEDULED_TO_END("Scheduled to end"),
+    COMPLETED("Completed"),
+    ENDED("Ended"),
+    PAUSED("Paused"),
+    ARCHIVED("Archived");
+
+    val label: String
+        get() = displayLabel
+}
+
+object HabitLifetimeCalculator {
+    private val DISPLAY_DATE_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMMM uuuu", Locale.ENGLISH)
+
+    /**
+     * Calculates the calendar-aware scheduled end date using [LocalDate.plusDays],
+     * [LocalDate.plusWeeks], [LocalDate.plusMonths], or [LocalDate.plusYears], or validates
+     * a specific ISO date (`YYYY-MM-DD`).
+     *
+     * Throws [IllegalArgumentException] if the duration value is not positive, if the specific
+     * date is not a valid calendar date, or if the resulting end date is earlier than [startDate].
+     */
+    fun calculateEndDate(
+        startDate: LocalDate,
+        durationKind: HabitDurationKind,
+        durationValue: Int? = null,
+        specificEndDate: String? = null
+    ): LocalDate? {
+        val computed: LocalDate = when (durationKind) {
+            HabitDurationKind.NONE -> return null
+            HabitDurationKind.DAYS -> {
+                val n = durationValue ?: throw IllegalArgumentException("Please enter a positive number of days.")
+                require(n in 1..36500) { "Number of days must be between 1 and 36,500." }
+                startDate.plusDays(n.toLong())
+            }
+            HabitDurationKind.WEEKS -> {
+                val n = durationValue ?: throw IllegalArgumentException("Please enter a positive number of weeks.")
+                require(n in 1..5200) { "Number of weeks must be between 1 and 5,200." }
+                startDate.plusWeeks(n.toLong())
+            }
+            HabitDurationKind.MONTHS -> {
+                val n = durationValue ?: throw IllegalArgumentException("Please enter a positive number of months.")
+                require(n in 1..1200) { "Number of months must be between 1 and 1,200." }
+                startDate.plusMonths(n.toLong())
+            }
+            HabitDurationKind.YEARS -> {
+                val n = durationValue ?: throw IllegalArgumentException("Please enter a positive number of years.")
+                require(n in 1..100) { "Number of years must be between 1 and 100." }
+                startDate.plusYears(n.toLong())
+            }
+            HabitDurationKind.SPECIFIC_DATE -> {
+                val raw = specificEndDate?.trim().orEmpty()
+                require(raw.isNotEmpty()) { "Please select or enter an end date (YYYY-MM-DD)." }
+                LocalDateValidator.parseStrict(raw)
+            }
+        }
+        require(!computed.isBefore(startDate)) {
+            "End date ($computed) cannot be earlier than the habit start date ($startDate)."
+        }
+        return computed
+    }
+
+    fun calculateEndDateResult(
+        startDate: LocalDate,
+        durationKind: HabitDurationKind,
+        durationValue: Int? = null,
+        specificEndDateIso: String? = null
+    ): Result<LocalDate?> = runCatching {
+        calculateEndDate(
+            startDate = startDate,
+            durationKind = durationKind,
+            durationValue = durationValue,
+            specificEndDate = specificEndDateIso
+        )
+    }
+
+    fun formatHumanReadableDate(date: LocalDate): String =
+        date.format(DISPLAY_DATE_FMT)
+
+    fun formatHumanReadableDate(isoDate: String?): String {
+        if (isoDate.isNullOrBlank()) return "Ongoing"
+        return runCatching {
+            val d = LocalDateValidator.parseStrict(isoDate)
+            "${d.format(DISPLAY_DATE_FMT)} ($isoDate)"
+        }.getOrDefault(isoDate)
+    }
 }
 
 enum class EffortLevel(val label: String, val badgeText: String) {
@@ -508,10 +639,53 @@ data class Habit(
     val extraDescription: String = currentVersion?.extraDescription ?: "Optional stretch action",
     val scheduleDays: Set<DayOfWeek> = DayOfWeek.values().toSet(),
     val colorHex: String = currentVersion?.colorHex ?: "#286143",
-    val sortOrder: Int = currentVersion?.sortOrder ?: 0
+    val sortOrder: Int = currentVersion?.sortOrder ?: 0,
+    val startLocalDate: String? = currentVersion?.effectiveFromLocalDate,
+    val scheduledEndLocalDate: String? = null,
+    val actualEndLocalDate: String? = null,
+    val endReason: HabitEndReason? = null,
+    val durationKind: HabitDurationKind = HabitDurationKind.NONE,
+    val durationValue: Int? = null
 ) {
     val id: String get() = habitId
     val isArchived: Boolean get() = lifecycleState == HabitLifecycleState.ARCHIVED
+
+    val lifetimeStatus: HabitLifetimeStatus
+        get() = when (lifecycleState) {
+            HabitLifecycleState.COMPLETED -> HabitLifetimeStatus.COMPLETED
+            HabitLifecycleState.ENDED -> HabitLifetimeStatus.ENDED
+            HabitLifecycleState.ARCHIVED -> HabitLifetimeStatus.ARCHIVED
+            HabitLifecycleState.PAUSED -> if (!scheduledEndLocalDate.isNullOrBlank()) {
+                HabitLifetimeStatus.SCHEDULED_TO_END
+            } else {
+                HabitLifetimeStatus.PAUSED
+            }
+            HabitLifecycleState.ACTIVE -> if (!scheduledEndLocalDate.isNullOrBlank()) {
+                HabitLifetimeStatus.SCHEDULED_TO_END
+            } else {
+                HabitLifetimeStatus.ONGOING
+            }
+        }
+
+    val lifetimeStatusLabel: String
+        get() = lifetimeStatus.displayLabel
+
+    fun formatLifetimeSummary(): String {
+        return when (lifetimeStatus) {
+            HabitLifetimeStatus.ONGOING -> "Ongoing (no end date)"
+            HabitLifetimeStatus.SCHEDULED_TO_END -> "Scheduled to end on $scheduledEndLocalDate"
+            HabitLifetimeStatus.COMPLETED -> {
+                val endStr = actualEndLocalDate ?: scheduledEndLocalDate
+                if (!endStr.isNullOrBlank()) "Completed on $endStr" else "Completed"
+            }
+            HabitLifetimeStatus.ENDED -> {
+                val endStr = actualEndLocalDate
+                if (!endStr.isNullOrBlank()) "Ended early on $endStr" else "Ended"
+            }
+            HabitLifetimeStatus.PAUSED -> "Paused"
+            HabitLifetimeStatus.ARCHIVED -> "Archived"
+        }
+    }
 
     fun isScheduledFor(dayOfWeek: DayOfWeek): Boolean = when (scheduleKind) {
         ScheduleKind.DAILY -> true

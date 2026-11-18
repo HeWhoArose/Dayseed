@@ -1125,7 +1125,7 @@ class Phase1ImplementationTest {
                 migrationEvaluationDateProvider = { LocalDate.of(2026, 3, 12) }
             )
             val db = v3Helper.writableDatabase
-            assertEquals(3, db.version)
+            assertEquals(DayseedDatabaseHelper.DATABASE_VERSION, db.version)
 
             // Verify BINARY + EFFORT_LEVELS records migrated to habit_day_outcomes and QUANTITY + DURATION migrated to habit_entries
             db.rawQuery("SELECT COUNT(*) FROM habit_day_outcomes", null).use { c ->
@@ -1266,7 +1266,7 @@ class Phase1ImplementationTest {
 
             val reconciledHelper = DayseedDatabaseHelper(context, oldV3DbName)
             val db = reconciledHelper.writableDatabase
-            assertEquals(3, db.version)
+            assertEquals(DayseedDatabaseHelper.DATABASE_VERSION, db.version)
 
             // Verify existing rows were preserved and new v3 constraints now permit weekly COMPLETION_ONLY target_value > 1 and 'habit_streak_run' conflicts
             db.rawQuery("SELECT COUNT(*) FROM habit_versions WHERE version_id = 'v_existing_v3'", null).use { c ->

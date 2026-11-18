@@ -143,7 +143,12 @@ object StreakAndGroveEngine {
         if (version == null) {
             return DayRecordState.NO_RECORD to ProgressBand.ZERO
         }
-        if (version.lifecycleState == HabitLifecycleState.PAUSED) {
+        if (version.lifecycleState == HabitLifecycleState.PAUSED ||
+            ((version.lifecycleState == HabitLifecycleState.COMPLETED ||
+                version.lifecycleState == HabitLifecycleState.ENDED ||
+                version.lifecycleState == HabitLifecycleState.ARCHIVED) &&
+                dayEntries.isEmpty() && dayOutcome == null)
+        ) {
             return DayRecordState.PAUSED_LIFECYCLE to ProgressBand.ZERO
         }
 
@@ -406,14 +411,69 @@ object StreakAndGroveEngine {
                 continue
             }
 
-            // Lifecycle closures (PAUSED, ARCHIVED, COMPLETED) close any open run immediately without brokenOnLocalDate (U-5, U-13)
+            // Lifecycle closures (PAUSED, ARCHIVED, COMPLETED, ENDED) close any open run immediately without brokenOnLocalDate (U-5, U-13).
+            // If qualifying activity was already recorded on the exact completion/ending date before closure, credit it first.
             if (eff.lifecycleState != HabitLifecycleState.ACTIVE) {
+                val closureDayEntries = entriesByDate[dateStr].orEmpty()
+                val closureDayOutcome = outcomesByDate[dateStr]
+                val closureDayException = exceptionsByDate[dateStr]
+                if (eff.lifecycleState != HabitLifecycleState.PAUSED &&
+                    (closureDayEntries.isNotEmpty() || closureDayOutcome != null)
+                ) {
+                    val (closureDayState, _) = evaluateDayRecordState(
+                        eff.copy(lifecycleState = HabitLifecycleState.ACTIVE),
+                        cursor,
+                        closureDayEntries,
+                        closureDayOutcome,
+                        closureDayException
+                    )
+                    when (closureDayState) {
+                        DayRecordState.GOAL_MET_OR_EXCEEDED -> {
+                            val current = openRun
+                            if (current == null) {
+                                val existing = existingByStart[dateStr]
+                                val newRun = MutableRun(
+                                    runId = existing?.runId ?: UUID.randomUUID().toString(),
+                                    habitId = habitId,
+                                    startLocalDate = cursor,
+                                    endLocalDate = cursor,
+                                    completedStreakCount = 1,
+                                    activeDatesCount = 1,
+                                    streakUnit = StreakUnit.DAYS,
+                                    createdAtUtcMs = existing?.createdAtUtcMs ?: nowUtcMs,
+                                    updatedAtUtcMs = maxOf(existing?.createdAtUtcMs ?: nowUtcMs, nowUtcMs),
+                                    priorQualifiedAtUtcMs = existing?.qualifiedAtUtcMs
+                                )
+                                newRun.updateQualification(nowUtcMs)
+                                openRun = newRun
+                            } else {
+                                val gapDays = ChronoUnit.DAYS.between(current.endLocalDate, cursor).toInt()
+                                current.endLocalDate = cursor
+                                current.completedStreakCount += 1
+                                current.activeDatesCount += gapDays.coerceAtLeast(1)
+                                current.updatedAtUtcMs = nowUtcMs
+                                current.updateQualification(nowUtcMs)
+                            }
+                        }
+                        DayRecordState.PARTIAL_PROGRESS -> {
+                            val current = openRun
+                            if (current != null) {
+                                val gapDays = ChronoUnit.DAYS.between(current.endLocalDate, cursor).toInt()
+                                current.endLocalDate = cursor
+                                current.activeDatesCount += gapDays.coerceAtLeast(1)
+                                current.updatedAtUtcMs = nowUtcMs
+                                current.updateQualification(nowUtcMs)
+                            }
+                        }
+                        else -> {}
+                    }
+                }
                 val active = openRun
                 if (active != null) {
                     active.isActive = false
                     active.terminalReason = when (eff.lifecycleState) {
                         HabitLifecycleState.PAUSED -> GroveTerminalReason.PAUSED
-                        HabitLifecycleState.ARCHIVED -> GroveTerminalReason.ARCHIVED
+                        HabitLifecycleState.ARCHIVED, HabitLifecycleState.ENDED -> GroveTerminalReason.ARCHIVED
                         HabitLifecycleState.COMPLETED -> GroveTerminalReason.COMPLETED
                         else -> GroveTerminalReason.PAUSED
                     }
@@ -754,7 +814,7 @@ object StreakAndGroveEngine {
                         current.isActive = false
                         current.terminalReason = when (eff.lifecycleState) {
                             HabitLifecycleState.PAUSED -> GroveTerminalReason.PAUSED
-                            HabitLifecycleState.ARCHIVED -> GroveTerminalReason.ARCHIVED
+                            HabitLifecycleState.ARCHIVED, HabitLifecycleState.ENDED -> GroveTerminalReason.ARCHIVED
                             HabitLifecycleState.COMPLETED -> GroveTerminalReason.COMPLETED
                             else -> GroveTerminalReason.PAUSED
                         }

@@ -244,3 +244,26 @@ CHECK (
 ```
 
 The explicit `effort_level IS NOT NULL` is required because SQLite permits a CHECK expression evaluating to NULL. The write guard must also confirm that the outcome kind matches the effective tracking mode. Mirror these rules in domain validation and migration validation. They remain proposed until schema closure and explicit implementation authorisation.
+
+---
+
+## 8. SQLite v4 Habit Lifecycle & End-Date Schema Addendum (2026-11-18, Stage B Implementation)
+
+To support optional habit lifetime durations, calendar end dates, automatic scheduled completion, and manual completion versus early ending without completion while preserving all historical versions and records:
+
+1. **`DATABASE_VERSION = 4` (`DayseedDatabaseHelper.kt`):**
+   - Extends `habits` with six nullable/defaulted lifecycle metadata columns:
+     - `start_local_date TEXT` (`YYYY-MM-DD`, backfilled on `v3 -> v4` upgrade from `MIN(effective_from_local_date)` in `habit_versions` or `created_at_utc_ms` in UTC date format)
+     - `scheduled_end_local_date TEXT` (`YYYY-MM-DD` or `NULL` for ongoing habits)
+     - `actual_end_local_date TEXT` (`YYYY-MM-DD` or `NULL` while active/paused)
+     - `end_reason TEXT` (`'SCHEDULED_COMPLETED'`, `'MANUAL_COMPLETED'`, `'MANUAL_ENDED'`, or `NULL`)
+     - `duration_kind TEXT NOT NULL DEFAULT 'NONE'` (`'NONE'`, `'DAYS'`, `'WEEKS'`, `'MONTHS'`, `'YEARS'`, `'SPECIFIC_DATE'`)
+     - `duration_value INTEGER` (positive integer for `'DAYS'`, `'WEEKS'`, `'MONTHS'`, `'YEARS'`; `NULL` for `'NONE'` and `'SPECIFIC_DATE'`)
+   - Extends `habit_versions.lifecycle_state` CHECK constraint and immutability triggers (`trg_habit_versions_validate_insert`, `trg_habit_versions_immutable_past_update`) to allow `'ENDED'` alongside `'ACTIVE'`, `'PAUSED'`, `'COMPLETED'`, and `'ARCHIVED'`.
+   - Extends `habit_streak_runs.close_reason` to record `'ENDED'` when a streak run is closed by manual early ending without completion.
+2. **Fail-Closed `v3 -> v4` Migration (`migrateV3ToV4FailClosed` & `ensureV4LifecycleColumnsIfNeeded`):**
+   - Executed inside a single SQLite transaction when upgrading from v3 (or chained from `v1 -> v2 -> v3 -> v4`), adding the v4 columns to `habits`, backfilling `start_local_date` and `duration_kind = 'NONE'`, rebuilding `habit_versions` and its triggers so `'ENDED'` is permitted by table CHECK constraints, and verifying `PRAGMA foreign_key_check` and `PRAGMA integrity_check` before commit.
+3. **Portable Backup & Restore Compatibility (`DayseedRepository.kt`):**
+   - `exportPortableBackupSync` exports `source_schema_version = 4` and includes `start_local_date`, `scheduled_end_local_date`, `actual_end_local_date`, `end_reason`, `duration_kind`, and `duration_value` on each habit object.
+   - `normalizePortableBackupToV3`, `validateBackupJsonPayload`, `importBackupArraysDirect` (`REPLACE`), `mergeBackupWithConflictDetection` (`MERGE`), and `resolveRestoreConflictSync` accept `source_schema_version` in `2..4`, default missing v2/v3 lifecycle fields to ongoing (`duration_kind = 'NONE'`, `scheduled_end_local_date = NULL`), validate ISO `YYYY-MM-DD` dates and `scheduled_end_local_date >= start_local_date`, and preserve all lifecycle states (`ACTIVE`, `PAUSED`, `COMPLETED`, `ENDED`, `ARCHIVED`).
+

@@ -1014,3 +1014,26 @@ Regression coverage: `p4_32`–`p4_34` (committed `b0fc29d`), plus `p4_35` (an e
 ### 18.4 Obligations carried into Stage C
 
 All 70 human/device cases in `docs/38` remain `NOT RUN`; the Phase 4 ones (`P4-H01`–`P4-H12`) cover permission allow/deny, weekly copy, quiet hours/cap, dedupe after restart, delete-all, restore safety of `reminders_enabled`, SAF save/open, airplane mode, accessibility and large-history performance. Release signing still uses the debug identity, and the PowerShell bootstrap script remains unverified on Windows. Stage C independent validation and Stage D owner acceptance are unaffected by this addendum and remain closed.
+
+---
+
+## 19. Habit Lifecycle & End-Date Implementation Addendum (2026-11-18, Stage B Implementation)
+
+To distinguish daily/weekly goal completion from the overall lifetime of a habit, Dayseed implements a persistent habit lifecycle and end-date management system across domain models, SQLite v4 schema migration, repository evaluation, reminder scheduling, portable backup/restore, and Jetpack Compose screens:
+
+1. **Domain Model & Calendar-Aware Date Arithmetic (`Models.kt`):**
+   - Added `HabitLifecycleState.ENDED` (with `isTerminal` and `isEndedOrCompleted` helpers), `HabitDurationKind` (`NONE`, `DAYS`, `WEEKS`, `MONTHS`, `YEARS`, `SPECIFIC_DATE`), `HabitEndReason` (`SCHEDULED_COMPLETED`, `MANUAL_COMPLETED`, `MANUAL_ENDED`), and `HabitLifetimeStatus` (`ONGOING`, `SCHEDULED_TO_END`, `COMPLETED`, `ENDED`, `PAUSED`, `ARCHIVED`).
+   - Added `HabitLifetimeCalculator` (`calculateEndDate`, `calculateEndDateResult`, `formatHumanReadableDate`) using calendar-aware `java.time.LocalDate` arithmetic (`plusDays`, `plusWeeks`, `plusMonths`, `plusYears`) and rejecting non-positive durations, malformed dates, or end dates earlier than the habit's start date.
+2. **SQLite v4 Schema & Fail-Closed Migration (`DayseedDatabaseHelper.kt`):**
+   - Bumped `DATABASE_VERSION = 4` and added `start_local_date`, `scheduled_end_local_date`, `actual_end_local_date`, `end_reason`, `duration_kind`, and `duration_value` to `habits`, plus `'ENDED'` to `habit_versions` CHECK constraints and immutability triggers (`migrateV3ToV4FailClosed`, `ensureV4LifecycleColumnsIfNeeded`).
+3. **Automatic & Manual Habit Ending, Streak Closure & Reminder Cancellation (`DayseedRepository.kt`, `StreakAndGroveEngine.kt`, `ReminderScheduler.kt`, `MainActivity.kt`, `DayseedViewModel.kt`):**
+   - `evaluateScheduledHabitEndingsSync` / `evaluateScheduledHabitEndingsInDb` runs on repository initialization, `MainActivity.onResume` (`viewModel.onAppResumed()`), date selection (`selectHistoryDate`), and `ReminderScheduler.scheduleAll`. When `currentLocalDate >= scheduledEndLocalDate`, active habits transition to `COMPLETED` (`SCHEDULED_COMPLETED`, `actual_end_local_date = scheduled_end_local_date`), turn off reminders, cancel scheduled alarms, enqueue notification cancellation outbox entries, and recalculate streak runs while preserving all historical records.
+   - `endHabitImmediatelySync(habitId, markAsCompleted)` records `COMPLETED` (`MANUAL_COMPLETED`) or `ENDED` (`MANUAL_ENDED`) on `todayLocal()`, stops reminders, and preserves same-day and historical entries, outcomes, streak runs, notes, and linked journal entries.
+   - `updateHabitEndDateSync` and `clearHabitEndDateSync` allow setting, changing, or removing a scheduled end date on existing habits.
+4. **UI Integration (`CreateEditHabitScreen.kt`, `HabitDetailScreen.kt`, `HabitsScreen.kt`, `DayDetailScreen.kt`):**
+   - `CreateEditHabitScreen` adds the **"How long do you want to maintain this habit?"** section (`habit_duration_section`) with `No end date`, `Days`, `Weeks`, `Months`, `Years`, and `Specific date` (calendar `DatePickerDialog` `habit_end_date_picker_dialog` + `YYYY-MM-DD` input) and live calculated end-date preview (`habit_calculated_end_date_text`).
+   - `HabitDetailScreen` displays distinct lifecycle status (`Ongoing`, `Scheduled to end`, `Completed`, `Ended`), hides active daily logging CTAs on terminal habits, provides inline end-date editing/removal (`detail_edit_end_date_btn`, `detail_end_date_editor`, `detail_remove_end_date_btn`), and provides **"End this habit"** (`detail_end_habit_btn`) with a confirmation dialog (`end_habit_confirm_dialog`) offering **Mark as Completed**, **End Without Completion**, and **Cancel**.
+   - `HabitsScreen` adds the `Ended` filter chip and distinct `Scheduled to end` / `Completed` / `Ended` badges.
+5. **Portable Backup & Restore (`DayseedRepository.kt`):**
+   - `exportPortableBackupSync`, `normalizePortableBackupToV3`, `validateBackupJsonPayload`, `importBackupArraysDirect` (`REPLACE`), `mergeBackupWithConflictDetection` (`MERGE`), and `resolveRestoreConflictSync` preserve all v4 habit lifecycle fields and compatibility with v2/v3 backups.
+

@@ -386,13 +386,16 @@ private fun HabitDirectoryCard(
                                     HabitLifecycleState.ACTIVE -> MaterialTheme.colorScheme.primaryContainer
                                     HabitLifecycleState.PAUSED -> MaterialTheme.colorScheme.secondaryContainer
                                     HabitLifecycleState.COMPLETED -> MaterialTheme.colorScheme.tertiaryContainer
+                                    HabitLifecycleState.ENDED -> MaterialTheme.colorScheme.secondaryContainer
                                     HabitLifecycleState.ARCHIVED -> MaterialTheme.colorScheme.surfaceVariant
                                 }
                             ) {
                                 Text(
-                                    text = habit.lifecycleState.name.lowercase().replaceFirstChar { it.uppercase() },
+                                    text = habit.lifetimeStatusLabel,
                                     style = MaterialTheme.typography.labelSmall,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    modifier = Modifier
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        .testTag("habits_status_badge_${habit.habitId}")
                                 )
                             }
                             if (!habit.category.isNullOrBlank()) {
@@ -502,6 +505,17 @@ private fun HabitDirectoryCard(
                                     modifier = Modifier.testTag("habits_menu_complete_${habit.habitId}")
                                 )
                             }
+                            if (habit.lifecycleState.isEndedOrCompleted) {
+                                DropdownMenuItem(
+                                    text = { Text("Return to Ongoing") },
+                                    leadingIcon = { Icon(Icons.Default.PlayArrow, contentDescription = null) },
+                                    onClick = {
+                                        showMenu = false
+                                        onUpdateLifecycle(HabitLifecycleState.ACTIVE)
+                                    },
+                                    modifier = Modifier.testTag("habits_menu_return_ongoing_${habit.habitId}")
+                                )
+                            }
                             if (habit.lifecycleState != HabitLifecycleState.ARCHIVED) {
                                 DropdownMenuItem(
                                     text = { Text("Archive Habit") },
@@ -534,6 +548,14 @@ private fun HabitDirectoryCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.testTag("habits_meta_${habit.habitId}")
+            )
+
+            // Habit Lifetime Summary Row
+            Text(
+                text = habit.formatLifetimeSummary(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag("habits_lifetime_dates_${habit.habitId}")
             )
 
             // Streak, Grove & Lifetime Active Days Row

@@ -36,6 +36,9 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -48,6 +51,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -68,7 +72,9 @@ import androidx.compose.ui.unit.dp
 import com.example.dayseed.DayseedViewModel
 import com.example.dayseed.data.Habit
 import com.example.dayseed.data.HabitConfigEffectivePolicy
+import com.example.dayseed.data.HabitDurationKind
 import com.example.dayseed.data.HabitLifecycleState
+import com.example.dayseed.data.HabitLifetimeCalculator
 import com.example.dayseed.data.HabitMeasurementKind
 import com.example.dayseed.data.HabitNaturalLanguageParser
 import com.example.dayseed.data.ScheduleKind
@@ -77,6 +83,9 @@ import com.example.dayseed.data.TrackingMode
 import com.example.dayseed.data.UnitFormatter
 import com.example.dayseed.data.WeekdayMask
 import java.time.DayOfWeek
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 import java.util.UUID
 
 private val HABIT_COLOR_PALETTE = listOf(
@@ -133,7 +142,7 @@ internal fun weeklyTargetSemanticsExplanation(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun CreateEditHabitScreen(
     viewModel: DayseedViewModel,
@@ -302,6 +311,38 @@ fun CreateEditHabitScreen(
         )
     }
 
+    // Optional habit duration / end-date configuration
+    val habitStartDate = remember(initialHabit, activeVersion, today) {
+        val rawStart = initialHabit?.startLocalDate ?: activeVersion?.effectiveFromLocalDate
+        rawStart?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: today
+    }
+    var durationKind by remember(initialHabit) {
+        mutableStateOf(initialHabit?.durationKind ?: HabitDurationKind.NONE)
+    }
+    var durationValueText by remember(initialHabit) {
+        val defaultVal = initialHabit?.durationValue ?: 30
+        mutableStateOf(defaultVal.toString())
+    }
+    var specificEndDateText by remember(initialHabit) {
+        mutableStateOf(initialHabit?.scheduledEndLocalDate ?: "")
+    }
+    var showEndDatePickerDialog by remember { mutableStateOf(false) }
+
+    val durationCalculationResult = remember(
+        habitStartDate,
+        durationKind,
+        durationValueText,
+        specificEndDateText
+    ) {
+        val parsedVal = durationValueText.trim().toIntOrNull()
+        HabitLifetimeCalculator.calculateEndDateResult(
+            startDate = habitStartDate,
+            durationKind = durationKind,
+            durationValue = parsedVal,
+            specificEndDateIso = specificEndDateText.trim().ifBlank { null }
+        )
+    }
+
     var validationError by remember { mutableStateOf<String?>(null) }
 
     // Live deterministic natural-language interpretation
@@ -429,8 +470,8 @@ fun CreateEditHabitScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .imePadding(),
-            contentPadding = PaddingValues(18.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Top Bar
             item {
@@ -474,7 +515,7 @@ fun CreateEditHabitScreen(
                             text = validationError!!,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.padding(12.dp)
+                            modifier = Modifier.padding(10.dp)
                         )
                     }
                 }
@@ -489,8 +530,8 @@ fun CreateEditHabitScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
                             text = "What would you like to do?",
@@ -523,7 +564,7 @@ fun CreateEditHabitScreen(
                             )
                             FlowRow(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 NATURAL_LANGUAGE_EXAMPLES.forEachIndexed { idx, example ->
                                     FilterChip(
@@ -552,7 +593,7 @@ fun CreateEditHabitScreen(
                             .testTag("legacy_effort_conversion_banner")
                     ) {
                         Column(
-                            modifier = Modifier.padding(14.dp),
+                            modifier = Modifier.padding(12.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text(
@@ -584,8 +625,8 @@ fun CreateEditHabitScreen(
                         .testTag("smart_habit_interpretation_card")
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -632,8 +673,8 @@ fun CreateEditHabitScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(
-                                modifier = Modifier.padding(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                                modifier = Modifier.padding(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 InterpretationSummaryRow(
                                     label = "Activity",
@@ -650,6 +691,15 @@ fun CreateEditHabitScreen(
                                     value = effectiveScheduleSummary,
                                     testTag = "smart_interpreted_schedule_value"
                                 )
+                                if (durationKind != HabitDurationKind.NONE) {
+                                    InterpretationSummaryRow(
+                                        label = "Duration",
+                                        value = durationCalculationResult.getOrNull()?.let { endDate ->
+                                            "Until ${HabitLifetimeCalculator.formatHumanReadableDate(endDate)} ($endDate)"
+                                        } ?: "Select valid end date",
+                                        testTag = "smart_interpreted_end_date_value"
+                                    )
+                                }
                             }
                         }
 
@@ -665,8 +715,9 @@ fun CreateEditHabitScreen(
                         // Compact "Adjust interpretation" toggle
                         TextButton(
                             onClick = { showAdjustInterpretation = !showAdjustInterpretation },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                             modifier = Modifier
-                                .heightIn(min = 48.dp)
+                                .heightIn(min = 36.dp)
                                 .testTag("smart_adjust_interpretation_toggle")
                         ) {
                             Icon(
@@ -770,7 +821,7 @@ fun CreateEditHabitScreen(
                                                 customUnitText = "items"
                                             }
                                         }
-                                        .padding(vertical = 4.dp)
+                                        .padding(vertical = 2.dp)
                                         .testTag(tag),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -804,7 +855,7 @@ fun CreateEditHabitScreen(
                                             userOverrodeMeasurement = true
                                             selectedMode = TrackingMode.EFFORT_AWARE
                                         }
-                                        .padding(vertical = 4.dp)
+                                        .padding(vertical = 2.dp)
                                         .testTag("mode_option_effort_aware"),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -852,8 +903,8 @@ fun CreateEditHabitScreen(
                                 )
 
                                 FlowRow(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     COMMON_UNIT_SUGGESTIONS.forEach { preset ->
                                         FilterChip(
@@ -915,8 +966,8 @@ fun CreateEditHabitScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
                             text = "Schedule",
@@ -926,7 +977,7 @@ fun CreateEditHabitScreen(
 
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             FilterChip(
                                 selected = scheduleKind == ScheduleKind.DAILY && targetPeriod == TargetPeriod.DAY,
@@ -1073,15 +1124,15 @@ fun CreateEditHabitScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(10.dp))
                                 .clickable { showAdvancedOptions = !showAdvancedOptions }
-                                .padding(vertical = 4.dp)
+                                .padding(vertical = 2.dp)
                                 .testTag("habit_advanced_options_toggle"),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
@@ -1389,6 +1440,238 @@ fun CreateEditHabitScreen(
                 }
             }
 
+            // STEP 4B: Optional Duration & End Date ("How long do you want to maintain this habit?")
+            item {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("habit_duration_section")
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "How long do you want to maintain this habit?",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            HabitDurationKind.entries.forEach { kind ->
+                                val isSelected = durationKind == kind
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) {
+                                        MaterialTheme.colorScheme.primaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                                    },
+                                    border = BorderStroke(
+                                        1.dp,
+                                        if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+                                    ),
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable {
+                                            durationKind = kind
+                                            validationError = null
+                                            when (kind) {
+                                                HabitDurationKind.DAYS -> {
+                                                    if (durationValueText.toIntOrNull() == null || durationValueText.toInt() <= 0) {
+                                                        durationValueText = "30"
+                                                    }
+                                                }
+                                                HabitDurationKind.WEEKS -> {
+                                                    if (durationValueText.toIntOrNull() == null || durationValueText.toInt() <= 0 || durationValueText == "30") {
+                                                        durationValueText = "2"
+                                                    }
+                                                }
+                                                HabitDurationKind.MONTHS -> {
+                                                    if (durationValueText.toIntOrNull() == null || durationValueText.toInt() <= 0 || durationValueText == "30") {
+                                                        durationValueText = "3"
+                                                    }
+                                                }
+                                                HabitDurationKind.YEARS -> {
+                                                    if (durationValueText.toIntOrNull() == null || durationValueText.toInt() <= 0 || durationValueText == "30") {
+                                                        durationValueText = "1"
+                                                    }
+                                                }
+                                                HabitDurationKind.SPECIFIC_DATE -> {
+                                                    if (specificEndDateText.isBlank()) {
+                                                        specificEndDateText = habitStartDate.plusDays(30).toString()
+                                                    }
+                                                }
+                                                HabitDurationKind.NONE -> Unit
+                                            }
+                                        }
+                                        .testTag("habit_duration_kind_${kind.name}")
+                                ) {
+                                    Text(
+                                        text = kind.label,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        when (durationKind) {
+                            HabitDurationKind.NONE -> Unit
+                            HabitDurationKind.DAYS,
+                            HabitDurationKind.WEEKS,
+                            HabitDurationKind.MONTHS,
+                            HabitDurationKind.YEARS -> {
+                                val unitLabel = when (durationKind) {
+                                    HabitDurationKind.DAYS -> "Number of days (e.g. 30)"
+                                    HabitDurationKind.WEEKS -> "Number of weeks (e.g. 2)"
+                                    HabitDurationKind.MONTHS -> "Number of months (e.g. 3)"
+                                    HabitDurationKind.YEARS -> "Number of years (e.g. 1)"
+                                    else -> "Duration"
+                                }
+                                val presets = when (durationKind) {
+                                    HabitDurationKind.DAYS -> listOf(7, 14, 30, 60, 90)
+                                    HabitDurationKind.WEEKS -> listOf(2, 4, 6, 8, 12)
+                                    HabitDurationKind.MONTHS -> listOf(1, 3, 6, 9, 12)
+                                    HabitDurationKind.YEARS -> listOf(1, 2, 3, 5)
+                                    else -> emptyList()
+                                }
+                                FlowRow(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    presets.forEach { preset ->
+                                        val suffix = when (durationKind) {
+                                            HabitDurationKind.DAYS -> if (preset == 1) "day" else "days"
+                                            HabitDurationKind.WEEKS -> if (preset == 1) "week" else "weeks"
+                                            HabitDurationKind.MONTHS -> if (preset == 1) "month" else "months"
+                                            HabitDurationKind.YEARS -> if (preset == 1) "year" else "years"
+                                            else -> ""
+                                        }
+                                        FilterChip(
+                                            selected = durationValueText.trim() == preset.toString(),
+                                            onClick = {
+                                                durationValueText = preset.toString()
+                                                validationError = null
+                                            },
+                                            label = { Text("$preset $suffix") },
+                                            modifier = Modifier.testTag("habit_duration_preset_${durationKind.name}_$preset")
+                                        )
+                                    }
+                                }
+                                OutlinedTextField(
+                                    value = durationValueText,
+                                    onValueChange = { raw ->
+                                        durationValueText = raw.filter { it.isDigit() || it == '-' }
+                                        validationError = null
+                                    },
+                                    label = { Text(unitLabel) },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .bringIntoViewOnFocus()
+                                        .testTag("habit_duration_value_input")
+                                )
+
+                                val calcDate = durationCalculationResult.getOrNull()
+                                val calcErr = durationCalculationResult.exceptionOrNull()?.message
+                                if (calcDate != null) {
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = "Scheduled end date: ${HabitLifetimeCalculator.formatHumanReadableDate(calcDate)} ($calcDate)",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier
+                                                .padding(10.dp)
+                                                .testTag("habit_calculated_end_date_text")
+                                        )
+                                    }
+                                } else if (calcErr != null) {
+                                    Text(
+                                        text = calcErr,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.testTag("habit_duration_validation_text")
+                                    )
+                                }
+                            }
+                            HabitDurationKind.SPECIFIC_DATE -> {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    OutlinedTextField(
+                                        value = specificEndDateText,
+                                        onValueChange = {
+                                            specificEndDateText = it
+                                            validationError = null
+                                        },
+                                        label = { Text("End date (YYYY-MM-DD)") },
+                                        placeholder = { Text("e.g. 2026-12-25") },
+                                        singleLine = true,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .bringIntoViewOnFocus()
+                                            .testTag("habit_specific_end_date_input")
+                                    )
+                                    OutlinedButton(
+                                        onClick = { showEndDatePickerDialog = true },
+                                        modifier = Modifier
+                                            .heightIn(min = 48.dp)
+                                            .testTag("habit_pick_end_date_btn")
+                                    ) {
+                                        Text("Calendar")
+                                    }
+                                }
+
+                                val calcDate = durationCalculationResult.getOrNull()
+                                val calcErr = durationCalculationResult.exceptionOrNull()?.message
+                                if (calcDate != null) {
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = "Selected end date: ${HabitLifetimeCalculator.formatHumanReadableDate(calcDate)} ($calcDate)",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier
+                                                .padding(10.dp)
+                                                .testTag("habit_calculated_end_date_text")
+                                        )
+                                    }
+                                } else if (calcErr != null) {
+                                    Text(
+                                        text = calcErr,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.testTag("habit_duration_validation_text")
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // STEP 6: Save & Cancel Actions
             item {
                 Row(
@@ -1480,6 +1763,26 @@ fun CreateEditHabitScreen(
                                 null
                             }
 
+                            val resolvedEndDateResult = HabitLifetimeCalculator.calculateEndDateResult(
+                                startDate = habitStartDate,
+                                durationKind = durationKind,
+                                durationValue = durationValueText.trim().toIntOrNull(),
+                                specificEndDateIso = specificEndDateText.trim().ifBlank { null }
+                            )
+                            if (resolvedEndDateResult.isFailure) {
+                                validationError = resolvedEndDateResult.exceptionOrNull()?.message
+                                    ?: "Please enter a valid duration or end date."
+                                return@Button
+                            }
+                            val resolvedEndDate = resolvedEndDateResult.getOrNull()
+                            val resolvedDurationValue = when (durationKind) {
+                                HabitDurationKind.DAYS,
+                                HabitDurationKind.WEEKS,
+                                HabitDurationKind.MONTHS,
+                                HabitDurationKind.YEARS -> durationValueText.trim().toIntOrNull()
+                                else -> null
+                            }
+
                             val newHabit = Habit(
                                 habitId = initialHabit?.habitId ?: "habit_${UUID.randomUUID()}",
                                 name = cleanName,
@@ -1495,6 +1798,16 @@ fun CreateEditHabitScreen(
                                 reminderMode = if (reminderEnabled) "AT_TIME" else "OFF",
                                 reminderTimeLocal = resolvedReminderTime,
                                 lifetimeGoalDays = parsedLifetime,
+                                startLocalDate = habitStartDate.toString(),
+                                scheduledEndLocalDate = resolvedEndDate?.toString(),
+                                actualEndLocalDate = if (resolvedEndDate != null && !today.isBefore(resolvedEndDate)) {
+                                    resolvedEndDate.toString()
+                                } else {
+                                    initialHabit?.actualEndLocalDate
+                                },
+                                endReason = initialHabit?.endReason,
+                                durationKind = durationKind,
+                                durationValue = resolvedDurationValue,
                                 lifecycleState = initialHabit?.lifecycleState ?: HabitLifecycleState.ACTIVE,
                                 sortOrder = initialHabit?.sortOrder ?: habits.size,
                                 colorHex = selectedColorHex,
@@ -1517,6 +1830,44 @@ fun CreateEditHabitScreen(
                     }
                 }
             }
+        }
+    }
+
+    if (showEndDatePickerDialog) {
+        val initialSelectedDate = runCatching { LocalDate.parse(specificEndDateText.trim()) }.getOrNull()
+            ?: habitStartDate.plusDays(30)
+        val initialMillis = initialSelectedDate.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialMillis)
+        DatePickerDialog(
+            onDismissRequest = { showEndDatePickerDialog = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            val pickedDate = Instant.ofEpochMilli(millis)
+                                .atZone(ZoneOffset.UTC)
+                                .toLocalDate()
+                            specificEndDateText = pickedDate.toString()
+                            validationError = null
+                        }
+                        showEndDatePickerDialog = false
+                    },
+                    modifier = Modifier.testTag("confirm_end_date_picker_btn")
+                ) {
+                    Text("Select")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showEndDatePickerDialog = false },
+                    modifier = Modifier.testTag("cancel_end_date_picker_btn")
+                ) {
+                    Text("Cancel")
+                }
+            },
+            modifier = Modifier.testTag("habit_end_date_picker_dialog")
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }

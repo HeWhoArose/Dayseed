@@ -96,6 +96,7 @@ object ReminderScheduler {
         val appContext = context.applicationContext
 
         ensurePeriodicReconcile(appContext)
+        repository.evaluateScheduledHabitEndingsSync()
 
         val zone = repository.clock.zoneId()
         val today = repository.clock.todayLocal()
@@ -106,9 +107,15 @@ object ReminderScheduler {
         val eligibleIds = LinkedHashSet<String>()
         if (isGlobalRemindersEnabled(repository) && alarmManager != null) {
             for (habit in repository.habits.value) {
+                if (habit.lifecycleState != HabitLifecycleState.ACTIVE) continue
                 val effective = repository.getEffectiveHabitVersion(habit.habitId, today) ?: continue
                 if (effective.lifecycleState != HabitLifecycleState.ACTIVE) continue
                 if (effective.reminderMode == "OFF") continue
+
+                val scheduledEnd = habit.scheduledEndLocalDate?.let {
+                    runCatching { LocalDate.parse(it) }.getOrNull()
+                }
+                if (scheduledEnd != null && !today.isBefore(scheduledEnd)) continue
 
                 // D-229 R-WR-01/03: alarms are registered for the next *scheduled* day of the
                 // habit (today only when today is a scheduled opportunity and the time is
@@ -126,6 +133,7 @@ object ReminderScheduler {
                     }
                 }
                 val trigger = nextScheduledTriggerFor(effective, timeLocal, zone, now, notBefore) ?: continue
+                if (scheduledEnd != null && !trigger.toLocalDate().isBefore(scheduledEnd)) continue
                 val pendingIntent = buildAlarmPendingIntent(
                     appContext,
                     habitId = habit.habitId,

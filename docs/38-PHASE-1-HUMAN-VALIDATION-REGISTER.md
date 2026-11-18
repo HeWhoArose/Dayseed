@@ -790,3 +790,47 @@ All `P5-H*` cases below are **`NOT RUN`**. They require installing the upgraded 
   2. Observe the `dayseed_cold_launch_scene` card on `Today`, then switch tabs or dismiss it and return to `Today`.
 - **Expected:** The adaptive Dayseed seed-and-sprout launcher icon appears cleanly on the Android home screen; the opening brand lockup (`Dayseed` + `"Your progress is more than your streak."`) appears calmly once per cold launch without blocking interaction and does not reappear on subsequent tab switches within the same session.
 
+---
+
+## Habit Lifecycle & End-Date Management — Human/Device Validation Cases (added 2026-11-18)
+
+All `P6-H*` cases below are **`NOT RUN`**. Automated unit, repository, migration, reminder, backup/restore, and Robolectric Compose UI tests are executed in `HabitLifecycleAndEndDateTest`; physical-device verification remains deferred to the consolidated human validation session.
+
+### P6-H01 — Create habits with optional duration (`Days`, `Weeks`, `Months`, `Years`) and calendar end date (`Specific date`)
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Open `Create Habit` and inspect the **"How long do you want to maintain this habit?"** section (`No end date` selected by default).
+  2. Test selecting `Days` (`30`), `Weeks` (`2`), `Months` (`3`), `Years` (`1`), and `Specific date` (via the calendar date picker dialog).
+  3. Verify the live calculated end date preview updates immediately and rejects dates earlier than the start date.
+  4. Save the habit, force-stop and relaunch Dayseed, and inspect `Habit Detail`.
+- **Expected:** Duration remains optional; calendar-aware `LocalDate` arithmetic calculates and displays the exact end date; saved scheduled end dates persist across restarts and display as `Scheduled to end` in `Habit Detail` and `Habits`.
+
+### P6-H02 — Edit, remove, or set an end date on an existing habit in `Habit Detail`
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Open `Habit Detail` for an `Ongoing` habit and tap `Set end date` (`detail_edit_end_date_btn`).
+  2. Choose a duration or calendar date and save; confirm status changes to `Scheduled to end`.
+  3. Tap `Change end date`, pick a new date, and save; confirm the updated end date is shown.
+  4. Tap `Remove end date (Ongoing)` (`detail_remove_end_date_btn`); confirm status returns to `Ongoing` with no scheduled end date.
+- **Expected:** Setting, changing, and removing an end date updates the habit's lifecycle metadata immediately and persists across app restarts without altering historical entries or streaks.
+
+### P6-H03 — Manual completion vs. early ending without completion (`End this habit` confirmation dialog)
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. On an active habit with logged history and an enabled reminder, open `Habit Detail` and tap `End this habit` (`detail_end_habit_btn`).
+  2. Verify the confirmation dialog explains that the habit will no longer appear as an active habit, its reminders will stop, and existing progress/history will be preserved, and offers `Mark as Completed`, `End Without Completion`, and `Cancel`.
+  3. Tap `Cancel` first and confirm the habit remains active; then tap `End this habit` again and select `Mark as Completed` on one habit and `End Without Completion` on a second habit.
+- **Expected:** Both habits are removed from the active `Today` list and active daily completion actions, their reminders stop, and they remain inspectable in `Habits` (`Completed` vs `Ended` filters) with all prior entries, notes, streak runs, and linked journal entries intact.
+
+### P6-H04 — Automatic completion on reaching the scheduled end date across app startup/resume and reminder boundary
+
+- **Status:** `NOT RUN`
+- **Procedure:**
+  1. Create a habit scheduled to end tomorrow with an active reminder.
+  2. When the device local date reaches the scheduled end date, open/resume Dayseed (or allow the reminder scheduler/reconcile pass to run).
+- **Expected:** The habit automatically transitions to `Completed` (`SCHEDULED_COMPLETED` with `actual_end_local_date = scheduled_end_local_date`), disappears from active `Today` habits, cancels its reminders without affecting other active habits' reminders, and preserves all historical records.
+
+

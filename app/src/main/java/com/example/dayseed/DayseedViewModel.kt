@@ -12,6 +12,7 @@ import com.example.dayseed.data.GroveTreeState
 import com.example.dayseed.data.Habit
 import com.example.dayseed.data.HabitConfigEffectivePolicy
 import com.example.dayseed.data.HabitConfigurationLockedTodayException
+import com.example.dayseed.data.HabitDurationKind
 import com.example.dayseed.data.HabitLifecycleState
 import com.example.dayseed.data.HabitStreakRun
 import com.example.dayseed.data.HabitVersion
@@ -45,6 +46,7 @@ enum class HabitsFilterState(val label: String, val lifecycleState: HabitLifecyc
     ACTIVE("Active", HabitLifecycleState.ACTIVE),
     PAUSED("Paused", HabitLifecycleState.PAUSED),
     COMPLETED("Completed", HabitLifecycleState.COMPLETED),
+    ENDED("Ended", HabitLifecycleState.ENDED),
     ARCHIVED("Archived", HabitLifecycleState.ARCHIVED)
 }
 
@@ -495,6 +497,11 @@ class DayseedViewModel @JvmOverloads constructor(
     }
 
     fun selectHistoryDate(date: LocalDate) {
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                repository.evaluateScheduledHabitEndingsSync()
+            }
+        }
         _selectedHistoryDate.value = date
         val top = _currentSecondaryRoute.value
         if (top is SecondaryRoute.HabitDetail) {
@@ -509,6 +516,14 @@ class DayseedViewModel @JvmOverloads constructor(
     }
 
     fun selectDate(date: LocalDate) = selectHistoryDate(date)
+
+    fun onAppResumed() {
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                repository.evaluateScheduledHabitEndingsSync()
+            }
+        }
+    }
 
     fun setHabitsFilter(filter: HabitsFilterState) {
         _habitsFilterState.value = filter
@@ -868,10 +883,94 @@ class DayseedViewModel @JvmOverloads constructor(
                     HabitLifecycleState.ACTIVE -> "active"
                     HabitLifecycleState.PAUSED -> "paused"
                     HabitLifecycleState.COMPLETED -> "completed"
+                    HabitLifecycleState.ENDED -> "ended"
                     HabitLifecycleState.ARCHIVED -> "archived"
                 }
                 _userMessage.value = "Habit marked as $stateWord"
             }
+        }
+    }
+
+    fun updateHabitEndDate(
+        habitId: String,
+        durationKind: HabitDurationKind,
+        durationValue: Int? = null,
+        specificEndDate: String? = null,
+        onSuccess: () -> Unit = {}
+    ) {
+        _lastSaveError.value = null
+        viewModelScope.launch {
+            val ok = withContext(ioDispatcher) {
+                try {
+                    val updated = repository.updateHabitEndDate(
+                        habitId = habitId,
+                        durationKind = durationKind,
+                        durationValue = durationValue,
+                        specificEndDate = specificEndDate
+                    )
+                    _userMessage.value = when {
+                        updated.lifecycleState == HabitLifecycleState.COMPLETED ->
+                            "Habit completed on ${updated.actualEndLocalDate ?: updated.scheduledEndLocalDate}"
+                        updated.scheduledEndLocalDate != null ->
+                            "Scheduled end date set to ${updated.scheduledEndLocalDate}"
+                        else ->
+                            "End date removed — habit is now ongoing"
+                    }
+                    true
+                } catch (e: Exception) {
+                    val msg = e.message ?: "Unable to update habit end date"
+                    _lastSaveError.value = msg
+                    _userMessage.value = msg
+                    false
+                }
+            }
+            if (ok) onSuccess()
+        }
+    }
+
+    fun clearHabitEndDate(habitId: String, onSuccess: () -> Unit = {}) {
+        _lastSaveError.value = null
+        viewModelScope.launch {
+            val ok = withContext(ioDispatcher) {
+                try {
+                    repository.clearHabitEndDate(habitId)
+                    _userMessage.value = "End date removed — habit is now ongoing"
+                    true
+                } catch (e: Exception) {
+                    val msg = e.message ?: "Unable to remove end date"
+                    _lastSaveError.value = msg
+                    _userMessage.value = msg
+                    false
+                }
+            }
+            if (ok) onSuccess()
+        }
+    }
+
+    fun endHabitImmediately(
+        habitId: String,
+        markAsCompleted: Boolean,
+        onSuccess: () -> Unit = {}
+    ) {
+        _lastSaveError.value = null
+        viewModelScope.launch {
+            val ok = withContext(ioDispatcher) {
+                try {
+                    repository.endHabitImmediately(habitId, markAsCompleted)
+                    _userMessage.value = if (markAsCompleted) {
+                        "Habit marked as completed"
+                    } else {
+                        "Habit ended"
+                    }
+                    true
+                } catch (e: Exception) {
+                    val msg = e.message ?: "Unable to end habit"
+                    _lastSaveError.value = msg
+                    _userMessage.value = msg
+                    false
+                }
+            }
+            if (ok) onSuccess()
         }
     }
 
