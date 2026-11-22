@@ -119,7 +119,10 @@ class DayseedAsyncMutationThreadingTest {
 
     @Test
     fun logHabitReturnsImmediatelyAndRunsLater() {
-        val viewModel = newViewModel()
+        // The IO work is held on a gate so "the write has not finished yet" is guaranteed by construction.
+        // (With the real IO pool this assertion raced the write and failed whenever the write won.)
+        val gate = GateDispatcher()
+        val viewModel = newViewModel(ioDispatcher = gate)
         viewModel.repository.saveHabitSync(
             completionHabit("h_async_log"),
             effectiveDateOverride = LocalDate.of(2026, 3, 15)
@@ -130,9 +133,15 @@ class DayseedAsyncMutationThreadingTest {
             habit = viewModel.repository.loadHabitsSync().single { it.habitId == "h_async_log" },
             date = LocalDate.of(2026, 3, 15)
         )
+        mainDispatcherRule.dispatcher.scheduler.runCurrent()   // let the launch body reach withContext(gate)
         assertNull("mutation must return without waiting for the DB write (no completion message yet)",
             viewModel.userMessage.value)
+        assertTrue("the database work must still be queued, held by the gate", gate.pendingCount >= 1)
 
+        // Drive the held work to completion step by step (event-driven, no sleeps).
+        gate.releaseAll()
+        gate.awaitPending(timeoutMs = 2_000)   // an IO hop inside the repository re-dispatches on the gate
+        gate.releaseAll()
         mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
 
         // Event-driven completion wait (repository hops to the real IO pool).

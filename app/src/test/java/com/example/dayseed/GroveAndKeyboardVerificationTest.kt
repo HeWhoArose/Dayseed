@@ -520,6 +520,17 @@ class GroveAndKeyboardVerificationTest {
             "h_new_sapling" in vm.newlyCreatedSaplingHabitIds.value
         )
 
+        // The save completes on a real IO thread, so the new habit reaches the UI after an
+        // unpredictable amount of real time. Wait (bounded) for it to appear instead of assuming a fixed
+        // number of pumps is enough; the assertions below are unchanged and just as strict.
+        val appearDeadline = System.currentTimeMillis() + 5_000L
+        while (findNodeByTagOrNull(activity, "grove_leaf_target_h_new_sapling") == null &&
+            System.currentTimeMillis() < appearDeadline
+        ) {
+            pumpActivity(activity, widthDp = 360, heightDp = 860, recompose = false)
+            Thread.sleep(10)
+        }
+
         // Advance frame clock enough to complete the spring Animatable and verify it settles to Sprouted
         for (step in 1..25) {
             pumpActivity(activity, widthDp = 360, heightDp = 860, recompose = false)
