@@ -11,6 +11,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.node.RootForTest
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.test.core.app.ApplicationProvider
 import com.example.dayseed.data.DayseedRepository
 import com.example.dayseed.data.Habit
@@ -156,6 +161,45 @@ class UiScreenshotCaptureTest {
         Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(80))
     }
 
+    private fun findRootForTest(view: View): RootForTest? {
+        if (view is RootForTest) return view
+        if (view is android.view.ViewGroup) {
+            for (i in 0 until view.childCount) findRootForTest(view.getChildAt(i))?.let { return it }
+        }
+        return null
+    }
+
+    /**
+     * Records every tappable element whose real touch area (touchBoundsInRoot, which includes Compose's
+     * minimum-interactive-size expansion) is smaller than 48dp in either direction.
+     */
+    private fun auditTouchTargets(activity: ComponentActivity, scene: String) {
+        val root = findRootForTest(activity.window.decorView) ?: return
+        val density = activity.resources.displayMetrics.density
+        val lines = StringBuilder()
+        var tappable = 0
+        fun walk(n: SemanticsNode) {
+            if (n.config.contains(SemanticsActions.OnClick)) {
+                val b = n.touchBoundsInRoot
+                val w = b.width / density
+                val h = b.height / density
+                if (w > 0f && h > 0f) {
+                    tappable++
+                    if (w < 47.5f || h < 47.5f) {
+                        val tag = n.config.getOrNull(SemanticsProperties.TestTag)
+                        val text = n.config.getOrNull(SemanticsProperties.Text)?.joinToString(" ") { it.text }
+                        val desc = n.config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString("|")
+                        lines.append("$scene\t${w.toInt()}x${h.toInt()}\ttag=${tag ?: "-"}\ttext=${text ?: "-"}\tdesc=${desc ?: "-"}\n")
+                    }
+                }
+            }
+            n.children.forEach { walk(it) }
+        }
+        walk(root.semanticsOwner.unmergedRootSemanticsNode)
+        File(outDir, "touch_targets.tsv").appendText(lines.toString())
+        File(outDir, "touch_target_counts.tsv").appendText("$scene\ttappable=$tappable\n")
+    }
+
     private fun shot(activity: ComponentActivity, name: String, wDp: Int, hDp: Int) {
         // Robolectric has no frame clock, so navigation state changes are not redrawn unless the
         // composition is recreated (same technique the existing UI tests use: recompose = true).
@@ -166,6 +210,7 @@ class UiScreenshotCaptureTest {
         val bmp = Bitmap.createBitmap(decor.width.coerceAtLeast(1), decor.height.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
         decor.draw(Canvas(bmp))
         FileOutputStream(File(outDir, "$name.png")).use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        auditTouchTargets(activity, name)
     }
 
     /** Runs one rendering condition across the requested scenes. */
