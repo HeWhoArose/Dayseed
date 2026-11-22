@@ -113,11 +113,11 @@ private val COMMON_UNIT_SUGGESTIONS = listOf(
 )
 
 private val NATURAL_LANGUAGE_EXAMPLES = listOf(
-    "Read 10 pages of a book",
-    "Plant 10 seeds",
+    "10 push-ups daily",
+    "Read 20 pages every evening",
     "Drink 1.5 litres",
-    "Save ₦5,000",
     "Walk for 30 minutes",
+    "Save ₦5,000",
     "Meditate daily"
 )
 
@@ -356,7 +356,7 @@ fun CreateEditHabitScreen(
         validationError = null
         val parsed = HabitNaturalLanguageParser.parse(newInput)
         if (!userEditedActivityName) {
-            interpretedActivityName = parsed.activityName
+            interpretedActivityName = parsed.displayName
         }
         if (!userOverrodeMeasurement) {
             selectedMeasurementKind = parsed.measurementKind
@@ -381,7 +381,9 @@ fun CreateEditHabitScreen(
     }
 
     val effectiveActivityTitle = interpretedActivityName.trim().ifBlank {
-        parsedInterpretation.activityName.ifBlank { rawHabitText.trim() }
+        parsedInterpretation.displayName.ifBlank {
+            parsedInterpretation.activityName.ifBlank { rawHabitText.trim() }
+        }
     }
 
     val parsedTargetTriple = remember(targetValueText, customUnitText, selectedMeasurementKind) {
@@ -677,7 +679,7 @@ fun CreateEditHabitScreen(
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 InterpretationSummaryRow(
-                                    label = "Activity",
+                                    label = "Habit name",
                                     value = effectiveActivityTitle.ifBlank { "—" },
                                     testTag = "smart_interpreted_activity_value"
                                 )
@@ -691,6 +693,13 @@ fun CreateEditHabitScreen(
                                     value = effectiveScheduleSummary,
                                     testTag = "smart_interpreted_schedule_value"
                                 )
+                                if (!parsedInterpretation.preferredTimeHint.isNullOrBlank()) {
+                                    InterpretationSummaryRow(
+                                        label = "Preferred time",
+                                        value = parsedInterpretation.preferredTimeHint,
+                                        testTag = "smart_interpreted_time_hint_value"
+                                    )
+                                }
                                 if (durationKind != HabitDurationKind.NONE) {
                                     InterpretationSummaryRow(
                                         label = "Duration",
@@ -750,8 +759,9 @@ fun CreateEditHabitScreen(
                                     interpretedActivityName = it
                                     userEditedActivityName = true
                                 },
-                                label = { Text("Activity display name") },
-                                placeholder = { Text("e.g. Read a book, Drink water, Save") },
+                                label = { Text("Habit display name") },
+                                placeholder = { Text("e.g. 10 Push-ups, Read 20 Pages, Drink Water") },
+                                supportingText = { Text("Displayed on Today, Habits, and History. Editing this won't change your target or schedule.") },
                                 singleLine = true,
                                 modifier = Modifier
                                     .fillMaxWidth()

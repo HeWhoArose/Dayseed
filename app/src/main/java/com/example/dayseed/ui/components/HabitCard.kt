@@ -108,7 +108,7 @@ fun HabitCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Header Row: Habit Name (tappable to open HabitDetail), Target/Schedule summary, Rest day action
+            // Header Row: Habit Name (tappable to open HabitDetail), concise schedule + streak meta, optional Rest day action
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -126,7 +126,7 @@ fun HabitCard(
                                 Modifier
                             }
                         )
-                        .padding(vertical = 4.dp)
+                        .padding(vertical = 2.dp)
                         .testTag("open_habit_detail_${habit.id}"),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -143,7 +143,7 @@ fun HabitCard(
                             )
                     )
                     Spacer(modifier = Modifier.width(10.dp))
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -151,35 +151,54 @@ fun HabitCard(
                             Text(
                                 text = habit.name,
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             if (!habit.category.isNullOrBlank()) {
                                 Surface(
-                                    shape = RoundedCornerShape(6.dp),
+                                    shape = RoundedCornerShape(999.dp),
                                     color = MaterialTheme.colorScheme.surfaceVariant
                                 ) {
                                     Text(
                                         text = habit.category,
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
                                     )
                                 }
                             }
                         }
-                        val metaLine = if (summary != null) {
-                            "${summary.formatTargetAndPeriodSummary()} • ${summary.formatScheduleSummary()}"
-                        } else if (habit.description.isNotBlank()) {
-                            habit.description
+
+                        val streakSummary = if (summary != null && (summary.currentCompletedStreak > 0 || summary.currentElapsedActiveSpan > 0)) {
+                            val unitWord = if (summary.streakUnit == StreakUnit.WEEKS) {
+                                if (summary.currentCompletedStreak == 1) "week" else "weeks"
+                            } else {
+                                if (summary.currentCompletedStreak == 1) "day" else "days"
+                            }
+                            "${summary.currentCompletedStreak}-$unitWord streak"
                         } else {
-                            ""
+                            null
                         }
-                        if (metaLine.isNotBlank()) {
+
+                        val metaParts = buildList {
+                            if (summary != null) {
+                                add(summary.formatScheduleSummary())
+                            } else if (habit.description.isNotBlank()) {
+                                add(habit.description)
+                            }
+                            if (streakSummary != null) {
+                                add(streakSummary)
+                            }
+                            if (summary?.lifetimeGoalDays != null) {
+                                add("${summary.lifetimeActiveDays}/${summary.lifetimeGoalDays}d goal")
+                            }
+                        }
+                        if (metaParts.isNotEmpty()) {
                             Text(
-                                text = metaLine,
+                                text = metaParts.joinToString(" · "),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (streakSummary != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.testTag("habit_streak_badge_${habit.id}")
                             )
                         }
                     }
@@ -188,6 +207,7 @@ fun HabitCard(
                 if (summary?.canTakeRestDayToday == true && onTakeRestDayToday != null && restDayException == null) {
                     TextButton(
                         onClick = onTakeRestDayToday,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                         modifier = Modifier
                             .heightIn(min = 48.dp)
                             .testTag("take_rest_day_btn_${habit.id}")
@@ -196,48 +216,6 @@ fun HabitCard(
                             text = "Rest day",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            // Optional Streak & Grove / Lifetime Goal Row (D-217, U-6)
-            if (summary != null && (summary.currentCompletedStreak > 0 || summary.currentElapsedActiveSpan > 0 || summary.lifetimeGoalDays != null)) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (summary.currentCompletedStreak > 0 || summary.currentElapsedActiveSpan > 0) {
-                        val unitWord = if (summary.streakUnit == StreakUnit.WEEKS) {
-                            if (summary.currentCompletedStreak == 1) "week" else "weeks"
-                        } else {
-                            if (summary.currentCompletedStreak == 1) "day" else "days"
-                        }
-                        val treeIcon = when (summary.activeRun?.treeState) {
-                            GroveTreeState.GROWING_TREE -> "🌳"
-                            GroveTreeState.SAPLING_ACTIVE -> "🌱"
-                            else -> "🌿"
-                        }
-                        val streakText = if (summary.currentElapsedActiveSpan > summary.currentCompletedStreak) {
-                            "$treeIcon ${summary.currentCompletedStreak} $unitWord (${summary.currentElapsedActiveSpan}d span)"
-                        } else {
-                            "$treeIcon ${summary.currentCompletedStreak} $unitWord streak"
-                        }
-                        Text(
-                            text = streakText,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.testTag("habit_streak_badge_${habit.id}")
-                        )
-                    }
-                    if (summary.lifetimeGoalDays != null) {
-                        Text(
-                            text = "• ${summary.lifetimeActiveDays} / ${summary.lifetimeGoalDays} active days",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.testTag("habit_lifetime_goal_${habit.id}")
                         )
                     }
                 }
@@ -291,7 +269,8 @@ fun HabitCard(
                             onAddEntry = { units, note ->
                                 onLogQuantityOrDuration?.invoke(units, note)
                             },
-                            onOpenRecordSession = onOpenRecordSession
+                            onOpenRecordSession = onOpenRecordSession,
+                            onOpenHabitDetail = onOpenHabitDetail
                         )
                     }
 
@@ -305,6 +284,7 @@ fun HabitCard(
                             RecordedOutcomeRow(
                                 outcome = outcome,
                                 onReset = onResetRecord,
+                                onOpenHabitDetail = onOpenHabitDetail,
                                 onOpenRecordSession = onOpenRecordSession
                             )
                         } else {
@@ -312,6 +292,7 @@ fun HabitCard(
                                 habit = habit,
                                 summary = summary,
                                 onLog = onLogOutcome,
+                                onOpenHabitDetail = onOpenHabitDetail,
                                 onOpenRecordSession = onOpenRecordSession
                             )
                         }
@@ -427,7 +408,8 @@ private fun QuantityOrDurationSection(
     summary: HabitSummary?,
     entries: List<HabitEntry>,
     onAddEntry: (Int, String?) -> Unit,
-    onOpenRecordSession: ((String?) -> Unit)? = null
+    onOpenRecordSession: ((String?) -> Unit)? = null,
+    onOpenHabitDetail: (() -> Unit)? = null
 ) {
     val isWeekly = (summary?.effectiveVersion?.targetPeriod ?: habit.targetPeriod) == TargetPeriod.WEEK
     val target = if (isWeekly && summary != null) {
@@ -449,9 +431,9 @@ private fun QuantityOrDurationSection(
         ProgressBandClassifier.sumUnitsExact(entries.map { it.valueUnits })
     }
     val activeUnitsBig = if (isWeekly && summary != null) summary.weekTotalUnits else todayUnitsBig
-    val activeUnitsInt = activeUnitsBig.min(BigInteger.valueOf(Int.MAX_VALUE.toLong())).toInt()
     val band = ProgressBandClassifier.classify(activeUnitsBig, targetBig)
     val pct = ProgressBandClassifier.displayPercentage(activeUnitsBig, targetBig)
+    val isGoalReached = activeUnitsBig >= targetBig
 
     val formattedRatio = if (UnitFormatter.isCurrencyUnit(unitLabel) || UnitFormatter.extractScale(unitLabel) > 0) {
         UnitFormatter.formatProgressRatioBig(activeUnitsBig, targetBig, unitLabel)
@@ -461,7 +443,7 @@ private fun QuantityOrDurationSection(
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // Progress bar + Band badge
+        // Concise progress ratio + status pill
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -469,38 +451,27 @@ private fun QuantityOrDurationSection(
         ) {
             val progressPrefix = if (isWeekly) "This week: " else ""
             Text(
-                text = "$progressPrefix$formattedRatio ($pct%)",
+                text = "$progressPrefix$formattedRatio",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.testTag("habit_progress_text_${habit.id}")
             )
             Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
+                shape = RoundedCornerShape(999.dp),
+                color = if (isGoalReached) MaterialTheme.colorScheme.primaryContainer
+                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
                 modifier = Modifier.testTag("habit_band_badge_${habit.id}")
             ) {
                 Text(
-                    text = band.label,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    text = if (isGoalReached) "✓ Goal reached" else band.label,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isGoalReached) MaterialTheme.colorScheme.onPrimaryContainer
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
                 )
             }
-        }
-
-        if (isWeekly && todayUnitsBig > BigInteger.ZERO) {
-            val todayFormatted = if (UnitFormatter.extractScale(unitLabel) > 0) {
-                UnitFormatter.formatValueWithUnitBig(todayUnitsBig, unitLabel)
-            } else {
-                "$todayUnitsBig ${UnitFormatter.cleanUnitCode(unitLabel)}"
-            }
-            Text(
-                text = "Today: +$todayFormatted",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary
-            )
         }
 
         LinearProgressIndicator(
@@ -508,176 +479,149 @@ private fun QuantityOrDurationSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(8.dp)
-                .clip(RoundedCornerShape(4.dp)),
+                .clip(RoundedCornerShape(999.dp)),
             color = MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
         )
 
+        // Single calm encouragement/session context line when progress exists
         if (entries.isNotEmpty() || activeUnitsBig > BigInteger.ZERO) {
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    text = band.encouragementQuote,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = band.motivationQuote,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            val sessionLabel = if (entries.size == 1) "1 session today" else "${entries.size} sessions today"
+            Text(
+                text = if (entries.isNotEmpty()) "$sessionLabel · ${band.encouragementQuote}" else band.encouragementQuote,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag("habit_today_sessions_summary_${habit.id}")
+            )
         }
 
-        // Separate Quick Complete / Quick Add actions and detailed Add Progress action
-        // Quick increments must be natural values at the stored precision. Dividing the stored
-        // integer straight into quarters produced artefacts such as +0.37 litres for a 1.5 litre
-        // target; the helper returns friendly steps (+0.25 / +0.5) or null when the target is too
-        // small to support a meaningful increment.
-        val quickIncrements = if (isSessionCountHabit) {
-            1 to 1
-        } else {
-            UnitFormatter.quickIncrementStoredUnits(target, unitLabel)
-        }
-        val stepSmall = quickIncrements?.first
-        val stepHalf = quickIncrements?.second
-        val stepSmallLabel = stepSmall?.let { step ->
-            if (UnitFormatter.extractScale(unitLabel) > 0) {
-                "+${UnitFormatter.formatValueWithUnit(step, unitLabel)}"
-            } else {
-                "+$step ${UnitFormatter.formatUnitForCount(step, unitLabel)}"
-            }
-        }
-        val stepHalfLabel = stepHalf?.let { step ->
-            if (UnitFormatter.extractScale(unitLabel) > 0) {
-                "+${UnitFormatter.formatValueWithUnit(step, unitLabel)}"
-            } else {
-                "+$step ${UnitFormatter.formatUnitForCount(step, unitLabel)}"
-            }
-        }
-
-        Column(
+        // Clear Action Hierarchy: Primary = Add Progress, Secondary = View Details
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            val smallStep = stepSmall
-            val halfStep = stepHalf
-            val smallStepLabel = stepSmallLabel
-            val halfStepLabel = stepHalfLabel
-            if (!isSessionCountHabit && smallStep != null && halfStep != null &&
-                smallStepLabel != null && halfStepLabel != null
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = { onAddEntry(smallStep, null) },
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 48.dp)
-                            .testTag("quick_add_small_${habit.id}"),
-                        shape = RoundedCornerShape(10.dp),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = smallStepLabel,
-                            fontSize = 12.sp,
-                            maxLines = 1
-                        )
-                    }
-                    if (halfStep != smallStep) {
-                        OutlinedButton(
-                            onClick = { onAddEntry(halfStep, null) },
-                            modifier = Modifier
-                                .weight(1f)
-                                .heightIn(min = 48.dp)
-                                .testTag("quick_add_half_${habit.id}"),
-                            shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
-                        ) {
-                            Text(
-                                text = halfStepLabel,
-                                fontSize = 12.sp,
-                                maxLines = 1
-                            )
-                        }
-                    }
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            if (onOpenRecordSession != null) {
                 Button(
-                    onClick = {
-                        if (isSessionCountHabit) {
-                            onAddEntry(1, null)
-                        } else {
-                            val remainingBig = targetBig.subtract(activeUnitsBig)
-                            val remaining = if (remainingBig <= BigInteger.ONE) 1 else remainingBig.min(BigInteger.valueOf(Int.MAX_VALUE.toLong())).toInt()
-                            onAddEntry(remaining, null)
-                        }
-                    },
+                    onClick = { onOpenRecordSession(null) },
                     modifier = Modifier
                         .weight(1f)
                         .heightIn(min = 48.dp)
-                        .testTag("quick_add_goal_${habit.id}"),
-                    shape = RoundedCornerShape(10.dp),
+                        .testTag("open_record_session_${habit.id}"),
+                    shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Add progress for ${habit.name}",
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = if (isSessionCountHabit) "+1 Session" else "Complete Goal",
-                        fontSize = 12.sp,
+                        text = if (isGoalReached) "Add More" else "Add Progress",
+                        style = MaterialTheme.typography.labelLarge,
                         maxLines = 1
                     )
                 }
-                if (onOpenRecordSession != null) {
-                    OutlinedButton(
-                        onClick = { onOpenRecordSession(null) },
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 48.dp)
-                            .testTag("open_record_session_${habit.id}"),
-                        shape = RoundedCornerShape(10.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Add,
-                            contentDescription = "Add progress for ${habit.name}",
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Add Progress",
-                            fontSize = 12.sp,
-                            maxLines = 1
-                        )
-                    }
+            }
+            if (onOpenHabitDetail != null) {
+                OutlinedButton(
+                    onClick = onOpenHabitDetail,
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 48.dp)
+                        .testTag("habit_view_details_${habit.id}"),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = "View Details",
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1
+                    )
                 }
             }
         }
 
-        // Compact, read-only session count summary (editing/deletion lives in HabitDetailScreen & RecordSessionSheet)
-        if (entries.isNotEmpty()) {
-            val sessionCountText = if (entries.size == 1) "1 session logged today" else "${entries.size} sessions logged today"
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("habit_today_sessions_summary_${habit.id}")
+        // Subtle Quick-Add row (only when daily/weekly target is not yet reached, never competing with Add Progress)
+        if (!isGoalReached) {
+            val quickIncrements = if (isSessionCountHabit) {
+                1 to 1
+            } else {
+                UnitFormatter.quickIncrementStoredUnits(target, unitLabel)
+            }
+            val smallStep = quickIncrements?.first
+            val halfStep = quickIncrements?.second
+            val smallStepLabel = smallStep?.let { step ->
+                if (UnitFormatter.extractScale(unitLabel) > 0) {
+                    "+${UnitFormatter.formatValueWithUnit(step, unitLabel)}"
+                } else {
+                    "+$step"
+                }
+            }
+            val halfStepLabel = halfStep?.let { step ->
+                if (UnitFormatter.extractScale(unitLabel) > 0) {
+                    "+${UnitFormatter.formatValueWithUnit(step, unitLabel)}"
+                } else {
+                    "+$step"
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = sessionCountText,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                )
+                if (!isSessionCountHabit && smallStep != null && smallStepLabel != null) {
+                    TextButton(
+                        onClick = { onAddEntry(smallStep, null) },
+                        modifier = Modifier
+                            .heightIn(min = 40.dp)
+                            .testTag("quick_add_small_${habit.id}"),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(text = smallStepLabel, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                    }
+                }
+                if (!isSessionCountHabit && halfStep != null && halfStep != smallStep && halfStepLabel != null) {
+                    TextButton(
+                        onClick = { onAddEntry(halfStep, null) },
+                        modifier = Modifier
+                            .heightIn(min = 40.dp)
+                            .testTag("quick_add_half_${habit.id}"),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(text = halfStepLabel, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                    }
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                TextButton(
+                    onClick = {
+                        if (isSessionCountHabit) {
+                            onAddEntry(1, null)
+                        } else {
+                            val remainingBig = targetBig.subtract(activeUnitsBig)
+                            val remaining = if (remainingBig <= BigInteger.ONE) 1
+                            else remainingBig.min(BigInteger.valueOf(Int.MAX_VALUE.toLong())).toInt()
+                            onAddEntry(remaining, null)
+                        }
+                    },
+                    modifier = Modifier
+                        .heightIn(min = 40.dp)
+                        .testTag("quick_add_goal_${habit.id}"),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = if (isSessionCountHabit) "+1 session" else "Finish goal",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1
+                    )
+                }
             }
         }
     }
@@ -687,6 +631,7 @@ private fun QuantityOrDurationSection(
 private fun RecordedOutcomeRow(
     outcome: HabitDayOutcome,
     onReset: () -> Unit,
+    onOpenHabitDetail: (() -> Unit)? = null,
     onOpenRecordSession: ((String?) -> Unit)? = null
 ) {
     val effort = when (outcome.effortLevel) {
@@ -707,51 +652,66 @@ private fun RecordedOutcomeRow(
     }
     val symbol = if (outcome.outcomeKind == "COMPLETED") "✓" else effort.symbol()
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(effColor.copy(alpha = 0.12f))
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(effColor.copy(alpha = 0.12f))
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = symbol, fontSize = 16.sp)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                color = effColor
-            )
-        }
-
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            if (onOpenRecordSession != null) {
-                OutlinedButton(
-                    onClick = { onOpenRecordSession(null) },
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier
-                        .heightIn(min = 48.dp)
-                        .testTag("open_record_session_${outcome.habitId}")
-                ) {
-                    Text(text = "Record", style = MaterialTheme.typography.labelMedium)
-                }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(text = symbol, fontSize = 16.sp, color = effColor, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = effColor
+                )
             }
-            OutlinedButton(
+            TextButton(
                 onClick = onReset,
-                shape = RoundedCornerShape(8.dp),
-                border = BorderStroke(1.dp, effColor.copy(alpha = 0.5f)),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = effColor),
                 modifier = Modifier
                     .heightIn(min = 48.dp)
                     .testTag("reset_outcome_btn_${outcome.habitId}")
             ) {
-                Text(text = "Change", style = MaterialTheme.typography.labelMedium)
+                Text(text = "Undo", style = MaterialTheme.typography.labelMedium, color = effColor)
+            }
+        }
+
+        if (onOpenHabitDetail != null || onOpenRecordSession != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (onOpenHabitDetail != null) {
+                    OutlinedButton(
+                        onClick = onOpenHabitDetail,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 48.dp)
+                            .testTag("habit_view_details_${outcome.habitId}")
+                    ) {
+                        Text(text = "View Details", style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+                if (onOpenRecordSession != null) {
+                    TextButton(
+                        onClick = { onOpenRecordSession(null) },
+                        modifier = Modifier
+                            .heightIn(min = 48.dp)
+                            .testTag("open_record_session_${outcome.habitId}")
+                    ) {
+                        Text(text = "Add Note", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
             }
         }
     }
@@ -762,6 +722,7 @@ private fun UnrecordedOutcomeActionRow(
     habit: Habit,
     summary: HabitSummary? = null,
     onLog: (outcome: DailyOutcome, effort: EffortLevel) -> Unit,
+    onOpenHabitDetail: (() -> Unit)? = null,
     onOpenRecordSession: ((String?) -> Unit)? = null
 ) {
     val effVersion = summary?.effectiveVersion
@@ -792,10 +753,21 @@ private fun UnrecordedOutcomeActionRow(
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 Text("Complete", style = MaterialTheme.typography.labelLarge)
             }
-            if (onOpenRecordSession != null) {
+            if (onOpenHabitDetail != null) {
+                OutlinedButton(
+                    onClick = onOpenHabitDetail,
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 48.dp)
+                        .testTag("habit_view_details_${habit.id}"),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("View Details", style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                }
+            } else if (onOpenRecordSession != null) {
                 OutlinedButton(
                     onClick = { onOpenRecordSession(null) },
                     modifier = Modifier
@@ -805,7 +777,7 @@ private fun UnrecordedOutcomeActionRow(
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Record", style = MaterialTheme.typography.labelLarge)
+                    Text("Add Progress", style = MaterialTheme.typography.labelLarge)
                 }
             }
         }

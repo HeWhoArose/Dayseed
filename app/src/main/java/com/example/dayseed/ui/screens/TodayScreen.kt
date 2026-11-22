@@ -46,6 +46,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -63,10 +64,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.example.dayseed.DayseedViewModel
@@ -82,8 +85,12 @@ import com.example.dayseed.data.ScheduleKind
 import com.example.dayseed.data.TargetPeriod
 import com.example.dayseed.ui.components.CollectedMomentsSummaryCard
 import com.example.dayseed.ui.components.ComebackCard
+import com.example.dayseed.ui.components.CompactWeeklyCalendarStrip
 import com.example.dayseed.ui.components.DaypartArtwork
+import com.example.dayseed.ui.components.DayseedCard
 import com.example.dayseed.ui.components.DayseedLogoSymbol
+import com.example.dayseed.ui.components.DayseedShapes
+import com.example.dayseed.ui.components.DayseedSpacing
 import com.example.dayseed.ui.components.HabitCard
 import com.example.dayseed.ui.components.ReflectionCard
 import com.example.dayseed.ui.components.TodayLongestStreakIndicator
@@ -346,8 +353,13 @@ fun TodayScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .testTag("today_screen_list"),
-                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                contentPadding = PaddingValues(
+                    start = DayseedSpacing.ScreenHorizontal,
+                    end = DayseedSpacing.ScreenHorizontal,
+                    top = 6.dp,
+                    bottom = DayseedSpacing.FabBottomClearance
+                ),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Element 1 & Element 2: Date, time-aware greeting, single canonical motto, and Daypart Artwork (§5.1)
                 item {
@@ -372,17 +384,19 @@ fun TodayScreen(
                                 style = DayseedDateStyle,
                                 color = MaterialTheme.colorScheme.primary
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
+                            Spacer(modifier = Modifier.height(1.dp))
                             Text(
                                 text = greetingFor(daypart),
                                 style = DayseedGreetingStyle,
                                 color = MaterialTheme.colorScheme.onBackground
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
+                            Spacer(modifier = Modifier.height(1.dp))
                             Text(
                                 text = "Your progress is more than your streak.",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                         Spacer(modifier = Modifier.width(8.dp))
@@ -391,7 +405,7 @@ fun TodayScreen(
                             secondaryArtwork = artworkBlend.secondaryArtwork,
                             blendFraction = artworkBlend.blendFraction,
                             reducedMotion = reducedMotion,
-                            modifier = Modifier.size(width = 104.dp, height = 84.dp)
+                            modifier = Modifier.size(width = 84.dp, height = 66.dp)
                         )
                     }
                 }
@@ -437,18 +451,82 @@ fun TodayScreen(
                     }
                 }
 
-                    // Habits exist: reveal Longest Active Rhythm only when a meaningful active streak exists
-                    if (longestActiveStreak != null) {
+                    // Section 2: Compact Daily Progress Summary Card (when scheduled habits exist today)
+                    if (scheduledTodayHabits.isNotEmpty()) {
                         item {
-                            TodayLongestStreakIndicator(
-                                longestSelection = longestActiveStreak,
-                                onOpenHabitDetail = { habitId ->
-                                    viewModel.openHabitDetail(habitId, today)
-                                },
-                                onOpenLivingGrove = { habitId ->
-                                    viewModel.openLivingGrove(selectedHabitId = habitId)
-                                }
+                            val tendedToday = computeTendedTodayCount(
+                                scheduledTodayHabits = scheduledTodayHabits,
+                                habitSummaries = habitSummaries,
+                                todayOutcomes = todayOutcomes,
+                                todayEntries = todayEntries,
+                                todayExceptions = todayExceptions
                             )
+                            val totalScheduled = scheduledTodayHabits.size
+                            val progressFraction = if (totalScheduled > 0) {
+                                (tendedToday.toFloat() / totalScheduled.toFloat()).coerceIn(0f, 1f)
+                            } else {
+                                0f
+                            }
+                            val encouragingLine = when {
+                                tendedToday >= totalScheduled -> "All scheduled habits tended today."
+                                tendedToday > 0 -> "Steady momentum — one step at a time."
+                                else -> "Ready when you are — start small."
+                            }
+
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("today_progress_summary_card"),
+                                shape = DayseedShapes.Card,
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f)
+                                ),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.30f)),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Today's progress",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "$tendedToday of $totalScheduled completed",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.testTag("today_progress_ratio_text")
+                                        )
+                                    }
+                                    LinearProgressIndicator(
+                                        progress = { progressFraction },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(6.dp)
+                                            .clip(DayseedShapes.ProgressTrack),
+                                        color = MaterialTheme.colorScheme.primary,
+                                        trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                                    )
+                                    Text(
+                                        text = encouragingLine,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -481,7 +559,7 @@ fun TodayScreen(
                     }
 
                     if (scheduledTodayHabits.isNotEmpty()) {
-                        // Today's Scheduled Habits Header & List (§5.1)
+                        // Section 4: Today's Habits Header & List (§5.1)
                         item {
                             val tendedToday = computeTendedTodayCount(
                                 scheduledTodayHabits = scheduledTodayHabits,
@@ -493,28 +571,27 @@ fun TodayScreen(
                             FlowRow(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(end = 84.dp)
                                     .testTag("today_seeds_section_header"),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                                 verticalArrangement = Arrangement.Center
                             ) {
                                 Text(
-                                    text = "Today's Seeds",
-                                    style = MaterialTheme.typography.titleLarge,
+                                    text = "Today's Habits",
+                                    style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onBackground,
                                     modifier = Modifier.testTag("today_seeds_heading_text")
                                 )
                                 Surface(
-                                    shape = RoundedCornerShape(10.dp),
+                                    shape = RoundedCornerShape(999.dp),
                                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
                                 ) {
                                     Text(
                                         text = "$tendedToday of ${scheduledTodayHabits.size} tended",
-                                        style = MaterialTheme.typography.labelLarge,
+                                        style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier
-                                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                                            .padding(horizontal = 10.dp, vertical = 3.dp)
                                             .testTag("today_tended_count_text")
                                     )
                                 }
@@ -674,6 +751,27 @@ fun TodayScreen(
                         }
                     }
 
+                    // Compact 7-day Weekly Calendar Strip (direct continuity view right below today's habits)
+                    item {
+                        CompactWeeklyCalendarStrip(
+                            referenceToday = today,
+                            selectedDate = today,
+                            weekStartDay = currentWeekStartDay,
+                            habits = activeHabits,
+                            evaluateDateStateForHabit = { habitId, date ->
+                                viewModel.repository.evaluateHonestCalendarDateState(habitId, date, today)
+                            },
+                            onSelectDate = { tappedDate ->
+                                viewModel.openDayDetail(tappedDate)
+                            },
+                            onOpenFullCalendar = {
+                                viewModel.markColdLaunchSceneShown()
+                                viewModel.selectTab(NavTab.INSIGHTS)
+                            },
+                            modifier = Modifier.testTag("today_weekly_calendar_strip")
+                        )
+                    }
+
                     // Compact Daily Reflection Action / Card (revealed once at least one habit exists)
                     item {
                         Spacer(modifier = Modifier.height(4.dp))
@@ -684,6 +782,17 @@ fun TodayScreen(
                             onOpenEditor = { viewModel.openJournalEditor(todayJournal, today) },
                             onWriteAnother = { viewModel.openJournalEditor(null, today) }
                         )
+                    }
+
+                    // Active Streak Indicator (revealed calmly below Reflection only once an active streak exists)
+                    if (longestActiveStreak != null) {
+                        item {
+                            TodayLongestStreakIndicator(
+                                longestSelection = longestActiveStreak,
+                                onOpenHabitDetail = { habitId -> viewModel.openHabitDetail(habitId, today) },
+                                onOpenLivingGrove = { habitId -> viewModel.openLivingGrove(habitId) }
+                            )
+                        }
                     }
 
                     // Collected Moments Summary Card (revealed only when meaningful recorded data exists)

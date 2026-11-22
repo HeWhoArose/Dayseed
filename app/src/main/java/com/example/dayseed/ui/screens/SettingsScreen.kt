@@ -165,11 +165,11 @@ fun SettingsScreen(
                 }
             }
 
-            // SECTION 1: Appearance & rhythm (Inline theme cards + inline week toggle)
+            // SECTION 1: Appearance & personalisation
             item {
                 SettingsSectionLabel(
-                    text = "Appearance & rhythm",
-                    supporting = "Botanical theme atmosphere and weekly Insights calendar start."
+                    text = "Appearance & personalisation",
+                    supporting = "Theme atmosphere, weekly calendar start, and motion comfort."
                 )
             }
             item {
@@ -265,11 +265,11 @@ fun SettingsScreen(
                 }
             }
 
-            // SECTION 2: Habits & gentle prompts (Quiet hours + Removed habits)
+            // SECTION 2: Habits & reminders
             item {
                 SettingsSectionLabel(
-                    text = "Habits & gentle prompts",
-                    supporting = "Notification quiet hours and paused or archived habits."
+                    text = "Habits & reminders",
+                    supporting = "Quiet hours, gentle reminders, and paused or archived habits."
                 )
             }
             item {
@@ -309,10 +309,10 @@ fun SettingsScreen(
                 }
             }
 
-            // SECTION 3: Data, backup & journal copy (Unified Data sub-screen)
+            // SECTION 3: Data, backup & journal
             item {
                 SettingsSectionLabel(
-                    text = "Data, backup & journal copy",
+                    text = "Data, backup & journal",
                     supporting = dataOverviewText
                 )
             }
@@ -336,11 +336,11 @@ fun SettingsScreen(
                 }
             }
 
-            // SECTION 4: Trust & about
+            // SECTION 4: Privacy & about
             item {
                 SettingsSectionLabel(
-                    text = "Trust & about",
-                    supporting = "How Dayseed keeps your records private and offline."
+                    text = "Privacy & about",
+                    supporting = "How Dayseed keeps your records private and offline on this device."
                 )
             }
             item {

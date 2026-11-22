@@ -45,7 +45,9 @@ data class SmartHabitInterpretation(
     val valueScale: Int = 0,
     val targetAmountText: String? = targetValue?.toString(),
     val storageUnitCode: String? = UnitFormatter.encodeUnitWithScale(unitCode, valueScale),
-    val isDefaultSchedule: Boolean = true
+    val isDefaultSchedule: Boolean = true,
+    val displayName: String = activityName,
+    val preferredTimeHint: String? = null
 ) {
     fun formattedTargetSummary(): String {
         return when (measurementKind) {
@@ -154,6 +156,14 @@ object HabitNaturalLanguageParser {
         "of", "a", "an", "the", "for", "to", "in", "on", "at", "my", "our", "some", "every", "each", "per"
     )
 
+    private val TITLE_MINOR_WORDS = setOf(
+        "of", "a", "an", "the", "for", "to", "in", "on", "at", "with", "and", "or", "by", "per"
+    )
+
+    private val GENERIC_EMPTY_VERBS = setOf(
+        "do", "perform"
+    )
+
     private val CURRENCY_SYMBOL_LEADING_REGEX =
         Regex("""^(.*?)\s*([₦$€£¥₹₵])\s*(\d[\d,]*(?:\.\d+)?)\b(.*)$""")
     private val CURRENCY_SYMBOL_TRAILING_REGEX =
@@ -175,13 +185,16 @@ object HabitNaturalLanguageParser {
                 valueScale = 0,
                 targetAmountText = null,
                 storageUnitCode = null,
-                isDefaultSchedule = true
+                isDefaultSchedule = true,
+                displayName = "",
+                preferredTimeHint = null
             )
         }
 
-        // 1. Extract schedule phrases from the input while keeping a clean working string
+        // 1. Extract schedule and time-of-day phrases from the input while keeping a clean working string
         val scheduleExtraction = extractSchedule(trimmed)
         val working = scheduleExtraction.cleanedText.trim()
+        val computedDisplayName = buildDisplayName(working, trimmed)
 
         // 2. Check for explicit currency symbols first (e.g., "Save ₦5,000", "Save ₦1,250.50", "Save $50")
         val leadingCurrencyMatch = CURRENCY_SYMBOL_LEADING_REGEX.find(working)
@@ -192,7 +205,8 @@ object HabitNaturalLanguageParser {
                 symbol = leadingCurrencyMatch.groupValues[2],
                 numberPart = leadingCurrencyMatch.groupValues[3],
                 afterPart = leadingCurrencyMatch.groupValues[4],
-                schedule = scheduleExtraction
+                schedule = scheduleExtraction,
+                displayName = computedDisplayName
             )
         }
 
@@ -204,7 +218,8 @@ object HabitNaturalLanguageParser {
                 symbol = trailingCurrencyMatch.groupValues[3],
                 numberPart = trailingCurrencyMatch.groupValues[2],
                 afterPart = trailingCurrencyMatch.groupValues[4],
-                schedule = scheduleExtraction
+                schedule = scheduleExtraction,
+                displayName = computedDisplayName
             )
         }
 
@@ -226,7 +241,9 @@ object HabitNaturalLanguageParser {
                 valueScale = 0,
                 targetAmountText = null,
                 storageUnitCode = null,
-                isDefaultSchedule = !scheduleExtraction.foundInText
+                isDefaultSchedule = !scheduleExtraction.foundInText,
+                displayName = computedDisplayName.ifBlank { cleanActivity },
+                preferredTimeHint = scheduleExtraction.preferredTimeHint
             )
         }
 
@@ -254,7 +271,9 @@ object HabitNaturalLanguageParser {
                 valueScale = 0,
                 targetAmountText = null,
                 storageUnitCode = null,
-                isDefaultSchedule = !scheduleExtraction.foundInText
+                isDefaultSchedule = !scheduleExtraction.foundInText,
+                displayName = computedDisplayName.ifBlank { cleanActivity },
+                preferredTimeHint = scheduleExtraction.preferredTimeHint
             )
         }
 
@@ -316,7 +335,9 @@ object HabitNaturalLanguageParser {
                 valueScale = 0,
                 targetAmountText = targetMinutes.toString(),
                 storageUnitCode = "min",
-                isDefaultSchedule = !scheduleExtraction.foundInText
+                isDefaultSchedule = !scheduleExtraction.foundInText,
+                displayName = computedDisplayName.ifBlank { finalActivity },
+                preferredTimeHint = scheduleExtraction.preferredTimeHint
             )
         }
 
@@ -333,6 +354,7 @@ object HabitNaturalLanguageParser {
                 hasDecimalPoint = hasDecimalPoint,
                 hasMultipleNumbers = hasMultipleNumbers,
                 schedule = scheduleExtraction,
+                displayName = computedDisplayName.ifBlank { finalActivity },
                 extraAmbiguity = if (matchedCurrency.canonicalUnitCode == "shillings") {
                     "'shillings' is used by several currencies (KES, UGX, TZS) — tap Adjust interpretation to choose one."
                 } else {
@@ -385,7 +407,9 @@ object HabitNaturalLanguageParser {
                 valueScale = effectiveScale,
                 targetAmountText = cleanAmountText,
                 storageUnitCode = encodedStorageUnit,
-                isDefaultSchedule = !scheduleExtraction.foundInText
+                isDefaultSchedule = !scheduleExtraction.foundInText,
+                displayName = computedDisplayName.ifBlank { finalActivity },
+                preferredTimeHint = scheduleExtraction.preferredTimeHint
             )
         }
 
@@ -418,7 +442,9 @@ object HabitNaturalLanguageParser {
             valueScale = 0,
             targetAmountText = targetInt.toString(),
             storageUnitCode = resolvedUnit,
-            isDefaultSchedule = !scheduleExtraction.foundInText
+            isDefaultSchedule = !scheduleExtraction.foundInText,
+            displayName = computedDisplayName.ifBlank { finalActivity },
+            preferredTimeHint = scheduleExtraction.preferredTimeHint
         )
     }
 
@@ -428,7 +454,8 @@ object HabitNaturalLanguageParser {
         symbol: String,
         numberPart: String,
         afterPart: String,
-        schedule: ScheduleExtraction
+        schedule: ScheduleExtraction,
+        displayName: String
     ): SmartHabitInterpretation {
         val spec = CURRENCY_SPECS.firstOrNull { it.symbol == symbol }
             ?: CurrencySpec("currency", symbol, setOf(symbol))
@@ -452,7 +479,8 @@ object HabitNaturalLanguageParser {
             parsedDecimal = parsedDecimal,
             hasDecimalPoint = hasDecimalPoint,
             hasMultipleNumbers = false,
-            schedule = schedule
+            schedule = schedule,
+            displayName = displayName.ifBlank { activity }
         )
     }
 
@@ -464,6 +492,7 @@ object HabitNaturalLanguageParser {
         hasDecimalPoint: Boolean,
         hasMultipleNumbers: Boolean,
         schedule: ScheduleExtraction,
+        displayName: String,
         extraAmbiguity: String? = null
     ): SmartHabitInterpretation {
         if (hasDecimalPoint) {
@@ -498,7 +527,9 @@ object HabitNaturalLanguageParser {
                 valueScale = effectiveScale,
                 targetAmountText = formattedDecimalPlain,
                 storageUnitCode = encodedUnit,
-                isDefaultSchedule = !schedule.foundInText
+                isDefaultSchedule = !schedule.foundInText,
+                displayName = displayName.ifBlank { finalActivity },
+                preferredTimeHint = schedule.preferredTimeHint
             )
         }
 
@@ -531,7 +562,9 @@ object HabitNaturalLanguageParser {
             valueScale = 0,
             targetAmountText = targetInt.toString(),
             storageUnitCode = spec.canonicalUnitCode,
-            isDefaultSchedule = !schedule.foundInText
+            isDefaultSchedule = !schedule.foundInText,
+            displayName = displayName.ifBlank { finalActivity },
+            preferredTimeHint = schedule.preferredTimeHint
         )
     }
 
@@ -564,21 +597,66 @@ object HabitNaturalLanguageParser {
         val cleanedRemainder = remainderAfterUnit
             .replace(Regex("""(?i)^(of|for|in|on|to)\s+"""), "")
             .trim()
+        val beforeIsEmptyVerb = cleanedBefore.lowercase(Locale.getDefault()) in GENERIC_EMPTY_VERBS
 
         val rawCombined = when {
-            cleanedBefore.isNotBlank() && cleanedRemainder.isNotBlank() -> {
+            cleanedBefore.isNotBlank() && !beforeIsEmptyVerb && cleanedRemainder.isNotBlank() -> {
                 if (remainderAfterUnit.lowercase(Locale.getDefault()).startsWith("of ")) {
                     "$cleanedBefore ${remainderAfterUnit.trim()}"
                 } else {
                     "$cleanedBefore $cleanedRemainder"
                 }
             }
-            cleanedBefore.isNotBlank() -> cleanedBefore
+            cleanedBefore.isNotBlank() && !beforeIsEmptyVerb -> cleanedBefore
             cleanedRemainder.isNotBlank() -> cleanedRemainder
             unitPhrase.isNotBlank() -> unitPhrase
+            cleanedBefore.isNotBlank() -> cleanedBefore
             else -> ""
         }
         return cleanActivityTitle(rawCombined)
+    }
+
+    /**
+     * Produces a clear, human-friendly display title from the user's habit sentence
+     * after removing schedule/frequency phrases, avoiding bare generic verbs like "Do".
+     *
+     * Examples:
+     * - "10 push-ups daily" -> "10 Push-ups"
+     * - "Do 10 push-ups daily" -> "10 Push-ups"
+     * - "Read 20 pages every evening" -> "Read 20 Pages"
+     * - "Walk for 30 minutes" -> "Walk 30 Minutes"
+     * - "Meditate daily" -> "Meditate"
+     */
+    private fun buildDisplayName(working: String, fallbackRaw: String): String {
+        val base = working
+            // Strip vacuous helper verbs when directly preceding a number (e.g. "Do 10 push-ups" -> "10 push-ups")
+            .replace(Regex("""(?i)^(do|perform)\s+(?=\d)"""), "")
+            // Tighten "Walk for 30 minutes" -> "Walk 30 minutes"
+            .replace(Regex("""(?i)\s+for\s+(?=\d)"""), " ")
+            .replace(Regex("""\s+"""), " ")
+            .trim(' ', ',', '.', '-', ';', ':')
+            .ifBlank { fallbackRaw.trim() }
+
+        if (base.isEmpty()) return ""
+
+        val words = base.split(" ").filter { it.isNotBlank() }
+        return words.mapIndexed { idx, token ->
+            val lower = token.lowercase(Locale.getDefault())
+            when {
+                // Keep numeric / currency tokens intact (e.g. "10", "1.5", "₦5,000")
+                token.firstOrNull()?.isDigit() == true -> token
+                token.firstOrNull() in setOf('₦', '$', '€', '£', '¥', '₹', '₵') -> token
+                // Keep minor connectors lowercase in the middle of a title
+                idx > 0 && lower in TITLE_MINOR_WORDS -> lower
+                // Preserve natural casing for hyphenated words like "Push-ups"
+                token.contains('-') -> token.replaceFirstChar {
+                    if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
+                }
+                else -> token.replaceFirstChar {
+                    if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
+                }
+            }
+        }.joinToString(" ")
     }
 
     private fun cleanActivityTitle(raw: String): String {
@@ -597,7 +675,8 @@ object HabitNaturalLanguageParser {
         val scheduleKind: ScheduleKind,
         val targetPeriod: TargetPeriod,
         val weekdaysMask: Int,
-        val foundInText: Boolean
+        val foundInText: Boolean,
+        val preferredTimeHint: String? = null
     )
 
     private fun extractSchedule(input: String): ScheduleExtraction {
@@ -606,6 +685,58 @@ object HabitNaturalLanguageParser {
         var targetPeriod = TargetPeriod.DAY
         var mask = WeekdayMask.ALL_DAYS_MASK
         var foundInText = false
+        var preferredTimeHint: String? = null
+
+        val everyMorningRegex = Regex("""(?i)\b(every|each)\s+morning\b""")
+        val everyAfternoonRegex = Regex("""(?i)\b(every|each)\s+afternoon\b""")
+        val everyEveningRegex = Regex("""(?i)\b(every|each)\s+evening\b""")
+        val everyNightRegex = Regex("""(?i)\b(every|each)\s+night\b""")
+        val inMorningRegex = Regex("""(?i)\b(in\s+the\s+morning|mornings)\b""")
+        val inAfternoonRegex = Regex("""(?i)\b(in\s+the\s+afternoon|afternoons)\b""")
+        val inEveningRegex = Regex("""(?i)\b(in\s+the\s+evening|evenings)\b""")
+        val atNightRegex = Regex("""(?i)\b(at\s+night|before\s+bed|before\s+sleep|nightly)\b""")
+
+        when {
+            everyMorningRegex.containsMatchIn(text) -> {
+                text = text.replace(everyMorningRegex, " ")
+                preferredTimeHint = "Morning"
+                foundInText = true
+            }
+            everyAfternoonRegex.containsMatchIn(text) -> {
+                text = text.replace(everyAfternoonRegex, " ")
+                preferredTimeHint = "Afternoon"
+                foundInText = true
+            }
+            everyEveningRegex.containsMatchIn(text) -> {
+                text = text.replace(everyEveningRegex, " ")
+                preferredTimeHint = "Evening"
+                foundInText = true
+            }
+            everyNightRegex.containsMatchIn(text) -> {
+                text = text.replace(everyNightRegex, " ")
+                preferredTimeHint = "Night"
+                foundInText = true
+            }
+            inMorningRegex.containsMatchIn(text) -> {
+                text = text.replace(inMorningRegex, " ")
+                preferredTimeHint = "Morning"
+            }
+            inAfternoonRegex.containsMatchIn(text) -> {
+                text = text.replace(inAfternoonRegex, " ")
+                preferredTimeHint = "Afternoon"
+            }
+            inEveningRegex.containsMatchIn(text) -> {
+                text = text.replace(inEveningRegex, " ")
+                preferredTimeHint = "Evening"
+            }
+            atNightRegex.containsMatchIn(text) -> {
+                text = text.replace(atNightRegex, " ")
+                preferredTimeHint = "Night"
+                if (Regex("""(?i)\bnightly\b""").containsMatchIn(input)) {
+                    foundInText = true
+                }
+            }
+        }
 
         val weekdaysRegex = Regex("""(?i)\b(on\s+weekdays|every\s+weekday|weekdays)\b""")
         val weekendsRegex = Regex("""(?i)\b(on\s+weekends|every\s+weekend|weekends)\b""")
@@ -656,7 +787,8 @@ object HabitNaturalLanguageParser {
             scheduleKind = scheduleKind,
             targetPeriod = targetPeriod,
             weekdaysMask = mask,
-            foundInText = foundInText
+            foundInText = foundInText,
+            preferredTimeHint = preferredTimeHint
         )
     }
 }
@@ -742,7 +874,8 @@ object UnitFormatter {
         "rep", "reps", "set", "sets", "step", "steps", "session", "sessions",
         "application", "applications", "email", "emails", "call", "calls", "message", "messages",
         "task", "tasks", "item", "items", "time", "times", "glass", "glasses", "bottle", "bottles",
-        "pushup", "pushups", "squat", "squats", "situp", "situps", "pullup", "pullups",
+        "pushup", "pushups", "push-up", "push-ups", "squat", "squats", "situp", "situps", "sit-up", "sit-ups",
+        "pullup", "pullups", "pull-up", "pull-ups",
         "lap", "laps", "card", "cards", "flashcard", "flashcards", "problem", "problems",
         "lesson", "lessons", "article", "articles", "post", "posts", "sketch", "sketches",
         "drawing", "drawings", "photo", "photos", "plant", "plants", "tree", "trees",

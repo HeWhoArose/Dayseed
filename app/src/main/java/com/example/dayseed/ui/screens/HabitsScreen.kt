@@ -45,9 +45,11 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -146,28 +148,37 @@ fun HabitsScreen(
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(end = 10.dp)
+                            .padding(end = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         Text(
-                            text = "Habits Directory",
-                            style = MaterialTheme.typography.titleLarge,
+                            text = "Your Habits",
+                            style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.testTag("habits_header_title")
                         )
                         Text(
-                            text = "Manage schedules, targets, order, and lifecycle states.",
+                            text = "Build routines that grow with you.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Button(
+                    OutlinedButton(
                         onClick = { viewModel.openLivingGrove(null) },
                         modifier = Modifier
                             .heightIn(min = 48.dp)
                             .testTag("habits_open_grove_btn"),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.45f))
                     ) {
-                        Text("Living Grove")
+                        Icon(
+                            imageVector = Icons.Default.Spa,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Living Grove", fontWeight = FontWeight.Medium)
                     }
                 }
             }
@@ -421,142 +432,139 @@ private fun HabitDirectoryCard(
                     }
                 }
 
-                // Reorder & Lifecycle Actions
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // Single Overflow Menu for Edit, Reorder & Lifecycle Actions
+                Box {
                     IconButton(
-                        onClick = onMoveUp,
-                        enabled = canMoveUp,
+                        onClick = { showMenu = true },
                         modifier = Modifier
                             .size(48.dp)
-                            .testTag("reorder_up_${habit.habitId}")
+                            .testTag("habits_card_menu_${habit.habitId}")
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ArrowUpward,
-                            contentDescription = "Move ${habit.name} up"
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "Options for ${habit.name}"
                         )
                     }
-                    IconButton(
-                        onClick = onMoveDown,
-                        enabled = canMoveDown,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .testTag("reorder_down_${habit.habitId}")
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowDownward,
-                            contentDescription = "Move ${habit.name} down"
+                        DropdownMenuItem(
+                            text = { Text("Edit Habit") },
+                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                            onClick = {
+                                showMenu = false
+                                onEditHabit()
+                            },
+                            modifier = Modifier.testTag("habits_menu_edit_${habit.habitId}")
                         )
-                    }
-
-                    Box {
-                        IconButton(
-                            onClick = { showMenu = true },
-                            modifier = Modifier
-                                .size(48.dp)
-                                .testTag("habits_card_menu_${habit.habitId}")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.MoreVert,
-                                contentDescription = "Lifecycle options for ${habit.name}"
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
-                        ) {
+                        DropdownMenuItem(
+                            text = { Text("Move up") },
+                            leadingIcon = { Icon(Icons.Default.ArrowUpward, contentDescription = null) },
+                            enabled = canMoveUp,
+                            onClick = {
+                                showMenu = false
+                                onMoveUp()
+                            },
+                            modifier = Modifier.testTag("reorder_up_${habit.habitId}")
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Move down") },
+                            leadingIcon = { Icon(Icons.Default.ArrowDownward, contentDescription = null) },
+                            enabled = canMoveDown,
+                            onClick = {
+                                showMenu = false
+                                onMoveDown()
+                            },
+                            modifier = Modifier.testTag("reorder_down_${habit.habitId}")
+                        )
+                        HorizontalDivider()
+                        if (habit.lifecycleState != HabitLifecycleState.PAUSED) {
                             DropdownMenuItem(
-                                text = { Text("Edit Habit") },
-                                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                                text = { Text("Pause Habit") },
+                                leadingIcon = { Icon(Icons.Default.Pause, contentDescription = null) },
                                 onClick = {
                                     showMenu = false
-                                    onEditHabit()
+                                    onUpdateLifecycle(HabitLifecycleState.PAUSED)
                                 },
-                                modifier = Modifier.testTag("habits_menu_edit_${habit.habitId}")
+                                modifier = Modifier.testTag("habits_menu_pause_${habit.habitId}")
                             )
-                            if (habit.lifecycleState != HabitLifecycleState.PAUSED) {
-                                DropdownMenuItem(
-                                    text = { Text("Pause Habit") },
-                                    leadingIcon = { Icon(Icons.Default.Pause, contentDescription = null) },
-                                    onClick = {
-                                        showMenu = false
-                                        onUpdateLifecycle(HabitLifecycleState.PAUSED)
-                                    },
-                                    modifier = Modifier.testTag("habits_menu_pause_${habit.habitId}")
-                                )
-                            } else {
-                                DropdownMenuItem(
-                                    text = { Text("Resume Habit") },
-                                    leadingIcon = { Icon(Icons.Default.PlayArrow, contentDescription = null) },
-                                    onClick = {
-                                        showMenu = false
-                                        onUpdateLifecycle(HabitLifecycleState.ACTIVE)
-                                    },
-                                    modifier = Modifier.testTag("habits_menu_resume_${habit.habitId}")
-                                )
-                            }
-                            if (habit.lifecycleState != HabitLifecycleState.COMPLETED) {
-                                DropdownMenuItem(
-                                    text = { Text("Mark Completed") },
-                                    leadingIcon = { Icon(Icons.Default.CheckCircle, contentDescription = null) },
-                                    onClick = {
-                                        showMenu = false
-                                        onUpdateLifecycle(HabitLifecycleState.COMPLETED)
-                                    },
-                                    modifier = Modifier.testTag("habits_menu_complete_${habit.habitId}")
-                                )
-                            }
-                            if (habit.lifecycleState.isEndedOrCompleted) {
-                                DropdownMenuItem(
-                                    text = { Text("Return to Ongoing") },
-                                    leadingIcon = { Icon(Icons.Default.PlayArrow, contentDescription = null) },
-                                    onClick = {
-                                        showMenu = false
-                                        onUpdateLifecycle(HabitLifecycleState.ACTIVE)
-                                    },
-                                    modifier = Modifier.testTag("habits_menu_return_ongoing_${habit.habitId}")
-                                )
-                            }
-                            if (habit.lifecycleState != HabitLifecycleState.ARCHIVED) {
-                                DropdownMenuItem(
-                                    text = { Text("Archive Habit") },
-                                    leadingIcon = { Icon(Icons.Default.Archive, contentDescription = null) },
-                                    onClick = {
-                                        showMenu = false
-                                        onUpdateLifecycle(HabitLifecycleState.ARCHIVED)
-                                    },
-                                    modifier = Modifier.testTag("habits_menu_archive_${habit.habitId}")
-                                )
-                            } else {
-                                DropdownMenuItem(
-                                    text = { Text("Unarchive Habit") },
-                                    leadingIcon = { Icon(Icons.Default.PlayArrow, contentDescription = null) },
-                                    onClick = {
-                                        showMenu = false
-                                        onUpdateLifecycle(HabitLifecycleState.ACTIVE)
-                                    },
-                                    modifier = Modifier.testTag("habits_menu_unarchive_${habit.habitId}")
-                                )
-                            }
+                        } else {
+                            DropdownMenuItem(
+                                text = { Text("Resume Habit") },
+                                leadingIcon = { Icon(Icons.Default.PlayArrow, contentDescription = null) },
+                                onClick = {
+                                    showMenu = false
+                                    onUpdateLifecycle(HabitLifecycleState.ACTIVE)
+                                },
+                                modifier = Modifier.testTag("habits_menu_resume_${habit.habitId}")
+                            )
+                        }
+                        if (habit.lifecycleState != HabitLifecycleState.COMPLETED) {
+                            DropdownMenuItem(
+                                text = { Text("Mark Completed") },
+                                leadingIcon = { Icon(Icons.Default.CheckCircle, contentDescription = null) },
+                                onClick = {
+                                    showMenu = false
+                                    onUpdateLifecycle(HabitLifecycleState.COMPLETED)
+                                },
+                                modifier = Modifier.testTag("habits_menu_complete_${habit.habitId}")
+                            )
+                        }
+                        if (habit.lifecycleState.isEndedOrCompleted) {
+                            DropdownMenuItem(
+                                text = { Text("Return to Ongoing") },
+                                leadingIcon = { Icon(Icons.Default.PlayArrow, contentDescription = null) },
+                                onClick = {
+                                    showMenu = false
+                                    onUpdateLifecycle(HabitLifecycleState.ACTIVE)
+                                },
+                                modifier = Modifier.testTag("habits_menu_return_ongoing_${habit.habitId}")
+                            )
+                        }
+                        if (habit.lifecycleState != HabitLifecycleState.ARCHIVED) {
+                            DropdownMenuItem(
+                                text = { Text("Archive Habit") },
+                                leadingIcon = { Icon(Icons.Default.Archive, contentDescription = null) },
+                                onClick = {
+                                    showMenu = false
+                                    onUpdateLifecycle(HabitLifecycleState.ARCHIVED)
+                                },
+                                modifier = Modifier.testTag("habits_menu_archive_${habit.habitId}")
+                            )
+                        } else {
+                            DropdownMenuItem(
+                                text = { Text("Unarchive Habit") },
+                                leadingIcon = { Icon(Icons.Default.PlayArrow, contentDescription = null) },
+                                onClick = {
+                                    showMenu = false
+                                    onUpdateLifecycle(HabitLifecycleState.ACTIVE)
+                                },
+                                modifier = Modifier.testTag("habits_menu_unarchive_${habit.habitId}")
+                            )
                         }
                     }
                 }
             }
 
-            // Metadata Summary Row
+            // Concise Target & Schedule Summary Row
             Text(
-                text = "$modeLabel • $targetSummary • $scheduleSummary$reminderSummarySuffix",
+                text = "$targetSummary • $scheduleSummary$reminderSummarySuffix",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.testTag("habits_meta_${habit.habitId}")
             )
 
-            // Habit Lifetime Summary Row
-            Text(
-                text = habit.formatLifetimeSummary(),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.testTag("habits_lifetime_dates_${habit.habitId}")
-            )
+            // Habit Lifetime Summary Row (only highlighted when scheduled/finite or non-ongoing)
+            val lifetimeSummary = habit.formatLifetimeSummary()
+            if (habit.scheduledEndLocalDate != null || habit.lifecycleState != HabitLifecycleState.ACTIVE) {
+                Text(
+                    text = lifetimeSummary,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag("habits_lifetime_dates_${habit.habitId}")
+                )
+            }
 
             // Streak, Grove & Lifetime Active Days Row
             Row(
@@ -564,8 +572,13 @@ private fun HabitDirectoryCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val streakSummary = if ((summary?.currentCompletedStreak ?: 0) > 0) {
+                    "${summary?.currentCompletedStreak} $streakUnitWord streak • $groveBadge"
+                } else {
+                    groveBadge
+                }
                 Text(
-                    text = "${summary?.currentCompletedStreak ?: 0} $streakUnitWord streak • $groveBadge",
+                    text = streakSummary,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.testTag("habits_streak_${habit.habitId}")
