@@ -1,5 +1,6 @@
 package com.example.dayseed.ui.screens
 
+import androidx.compose.ui.semantics.Role
 import androidx.core.graphics.toColorInt
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -528,7 +529,7 @@ fun CreateEditHabitScreen(
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
@@ -671,7 +672,7 @@ fun CreateEditHabitScreen(
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = MaterialTheme.colorScheme.surface,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(
@@ -750,7 +751,7 @@ fun CreateEditHabitScreen(
                         // Detailed editing controls revealed ONLY when user taps "Adjust interpretation"
                         if (showAdjustInterpretation) {
                             HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
                             )
 
                             OutlinedTextField(
@@ -810,7 +811,7 @@ fun CreateEditHabitScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(10.dp))
-                                        .clickable {
+                                        .clickable(role = Role.Button) {
                                             userOverrodeMeasurement = true
                                             selectedMeasurementKind = kind
                                             selectedMode = when (kind) {
@@ -861,7 +862,7 @@ fun CreateEditHabitScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(10.dp))
-                                        .clickable {
+                                        .clickable(role = Role.Button) {
                                             userOverrodeMeasurement = true
                                             selectedMode = TrackingMode.EFFORT_AWARE
                                         }
@@ -972,7 +973,7 @@ fun CreateEditHabitScreen(
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
@@ -1130,7 +1131,7 @@ fun CreateEditHabitScreen(
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
@@ -1141,7 +1142,7 @@ fun CreateEditHabitScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(10.dp))
-                                .clickable { showAdvancedOptions = !showAdvancedOptions }
+                                .clickable(role = Role.Button) { showAdvancedOptions = !showAdvancedOptions }
                                 .padding(vertical = 2.dp)
                                 .testTag("habit_advanced_options_toggle"),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -1167,7 +1168,7 @@ fun CreateEditHabitScreen(
 
                         if (showAdvancedOptions) {
                             HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
                             )
 
                             // Gentle Reminder inside More Options
@@ -1346,7 +1347,7 @@ fun CreateEditHabitScreen(
                                                 else Color.Transparent,
                                                 shape = CircleShape
                                             )
-                                            .clickable { selectedColorHex = hex }
+                                            .clickable(role = Role.Button) { selectedColorHex = hex }
                                             .semantics { contentDescription = "Select colour $label" }
                                             .testTag("color_swatch_${hex.removePrefix("#")}"),
                                         contentAlignment = Alignment.Center
@@ -1455,7 +1456,7 @@ fun CreateEditHabitScreen(
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("habit_duration_section")
@@ -1486,11 +1487,11 @@ fun CreateEditHabitScreen(
                                     },
                                     border = BorderStroke(
                                         1.dp,
-                                        if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+                                        if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
                                     ),
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(8.dp))
-                                        .clickable {
+                                        .clickable(role = Role.Button) {
                                             durationKind = kind
                                             validationError = null
                                             when (kind) {

@@ -1,5 +1,7 @@
 package com.example.dayseed.ui.screens
 
+import com.example.dayseed.ui.components.dayseedHeading
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -170,7 +172,8 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
                 text = "Insights",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.dayseedHeading()
             )
             Text(
                 text = "Honest progress across habits, mood, and collected moments",
@@ -230,7 +233,7 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
             Card(
                 shape = DayseedShapes.CardLarge,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -637,7 +640,7 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable {
+                                    .clickable(role = Role.Button) {
                                         selectedMoodFilter = if (selectedMoodFilter.equals(item.moodCode, ignoreCase = true)) {
                                             null
                                         } else {
@@ -725,7 +728,7 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
                                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable {
+                                    .clickable(role = Role.Button) {
                                         viewModel.openJournalEditor(entry = entry, forDate = entry.date)
                                     }
                                     .testTag("mood_matching_entry_${entry.journalEntryId}")
@@ -776,7 +779,7 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable {
+                        .clickable(role = Role.Button) {
                             viewModel.openCollectedMomentsDetail(
                                 yearMonth = YearMonth.from(referenceToday)
                             )
@@ -824,7 +827,7 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { viewModel.openLivingGrove() }
+                        .clickable(role = Role.Button) { viewModel.openLivingGrove() }
                         .testTag("insights_open_grove_card")
                 ) {
                     Row(
@@ -1071,7 +1074,7 @@ private fun SelectedDayHabitRow(
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
             .testTag("insights_day_summary_habit_${item.habit.habitId}")
     ) {
         Row(

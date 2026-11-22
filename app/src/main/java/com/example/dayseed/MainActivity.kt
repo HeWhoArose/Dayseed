@@ -42,6 +42,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.sp
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.ui.platform.testTag
 import com.example.dayseed.ui.components.CollectedMomentsDetailSheet
 import com.example.dayseed.ui.components.DaypartBackgroundLayer
@@ -429,6 +431,13 @@ private fun NavLabel(text: String) {
     CompositionLocalProvider(
         LocalDensity provides Density(density.density, fontScale = minOf(density.fontScale, 1.15f))
     ) {
-        Text(text = text, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
+        // Nav labels stay at 12sp (the Material default for this slot) regardless of the label type roles.
+        Text(
+            text = text,
+            style = LocalTextStyle.current.copy(fontSize = 12.sp, lineHeight = 16.sp),
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }

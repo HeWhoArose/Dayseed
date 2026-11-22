@@ -520,7 +520,7 @@ fun LivingGroveLandscapeSection(
                 }
 
                 // Subtle storybook plate caption bar at the bottom of the frame
-                Row(
+                FlowRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(
@@ -528,7 +528,7 @@ fun LivingGroveLandscapeSection(
                         )
                         .padding(horizontal = 14.dp, vertical = 9.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
                         text = stageSummaryLabel,
@@ -536,11 +536,10 @@ fun LivingGroveLandscapeSection(
                         fontStyle = FontStyle.Italic,
                         color = if (isDark) Color(0xFFD5E0D4) else Color(0xFF3E4D3B),
                         modifier = Modifier
-                            .weight(1f)
+                            .padding(end = 8.dp)
                             .testTag("grove_painting_stage_caption")
                     )
                     if (plants.isNotEmpty()) {
-                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = if (touchedPlant == null) "Touch a leaf to inspect" else "Leaf selected",
                             style = MaterialTheme.typography.labelSmall,

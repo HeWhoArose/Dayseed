@@ -1,5 +1,6 @@
 package com.example.dayseed.ui.components
 
+import androidx.compose.ui.semantics.Role
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -87,7 +88,7 @@ fun TodayLongestStreakIndicator(
             .fillMaxWidth()
             .testTag("today_main_streak_indicator")
             .semantics { contentDescription = desc }
-            .clickable {
+            .clickable(role = Role.Button) {
                 onOpenLivingGrove(null)
             },
         shape = RoundedCornerShape(14.dp),
@@ -433,7 +434,8 @@ fun LivingGroveScreen(
                         text = "Your Grove",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.dayseedHeading()
                     )
                     Text(
                         text = "Every streak reaching 7 active span days roots a permanent tree in your landscape.",
@@ -552,7 +554,7 @@ private fun GroveStatCard(
         modifier = modifier,
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
         Column(
             modifier = Modifier
@@ -608,7 +610,7 @@ private fun PermanentGroveSummaryCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
     ) {
         Column(
             modifier = Modifier
@@ -677,7 +679,7 @@ private fun HabitGroveCard(
             .testTag("grove_habit_card_${habit.habitId}"),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Column(
             modifier = Modifier

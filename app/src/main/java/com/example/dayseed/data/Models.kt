@@ -672,7 +672,7 @@ data class Habit(
 
     fun formatLifetimeSummary(): String {
         return when (lifetimeStatus) {
-            HabitLifetimeStatus.ONGOING -> "Ongoing (no end date)"
+            HabitLifetimeStatus.ONGOING -> "No end date"
             HabitLifetimeStatus.SCHEDULED_TO_END -> "Scheduled to end on $scheduledEndLocalDate"
             HabitLifetimeStatus.COMPLETED -> {
                 val endStr = actualEndLocalDate ?: scheduledEndLocalDate

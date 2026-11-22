@@ -1,5 +1,10 @@
 package com.example.dayseed.ui.screens
 
+import com.example.dayseed.ui.components.friendlyDate
+import com.example.dayseed.ui.components.DayseedStatusPill
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.example.dayseed.ui.components.spokenDescription
 import android.text.format.DateFormat
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
@@ -442,7 +447,7 @@ fun RecordSessionSheet(
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
@@ -461,7 +466,7 @@ fun RecordSessionSheet(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "Selected: $selectedDateStr" + if (selectedDate == today) " (Today)" else "",
+                                    text = "Selected: ${friendlyDate(selectedDate, today)}" + if (selectedDate == today) " (Today)" else "",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.testTag("record_session_selected_date")
@@ -528,7 +533,7 @@ fun RecordSessionSheet(
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
@@ -728,24 +733,16 @@ fun RecordSessionSheet(
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold
                             )
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.primaryContainer
-                            ) {
-                                Text(
-                                    text = "${projectedBand.label} (${projectedBand.shortBadge})",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier
-                                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                                        .testTag("record_session_preview_band")
-                                )
-                            }
+                            DayseedStatusPill(
+                                text = projectedBand.label,
+                                modifier = Modifier
+                                    .semantics { contentDescription = projectedBand.spokenDescription() }
+                                    .testTag("record_session_preview_band")
+                            )
                         }
 
                         Text(
-                            text = "Existing progress on $selectedDateStr: $formattedExistingRatio ($existingPct%)",
+                            text = "Existing progress on ${friendlyDate(selectedDate, today)}: $formattedExistingRatio ($existingPct%)",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.testTag("record_session_preview_existing")
@@ -764,7 +761,7 @@ fun RecordSessionSheet(
                         )
 
                         Text(
-                            text = "Resulting daily total on $selectedDateStr: $formattedProjectedDailyRatio ($projectedPct%)",
+                            text = "Resulting daily total on ${friendlyDate(selectedDate, today)}: $formattedProjectedDailyRatio ($projectedPct%)",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.primary,
@@ -824,7 +821,7 @@ fun RecordSessionSheet(
                     Card(
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("record_session_existing_entries_card")
@@ -834,7 +831,7 @@ fun RecordSessionSheet(
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Text(
-                                text = "Recorded on $selectedDateStr (${entriesOnSelectedDate.size})",
+                                text = "Recorded on ${friendlyDate(selectedDate, today)} (${entriesOnSelectedDate.size})",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold
                             )

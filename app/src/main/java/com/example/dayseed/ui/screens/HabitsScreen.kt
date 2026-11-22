@@ -1,5 +1,7 @@
 package com.example.dayseed.ui.screens
 
+import com.example.dayseed.ui.components.dayseedHeading
+import androidx.compose.ui.semantics.Role
 import androidx.core.graphics.toColorInt
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -157,7 +159,7 @@ fun HabitsScreen(
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.testTag("habits_header_title")
+                            modifier = Modifier.testTag("habits_header_title").dayseedHeading()
                         )
                         Text(
                             text = "Build routines that grow with you.",
@@ -341,14 +343,14 @@ private fun HabitDirectoryCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onOpenDetail() }
+            .clickable(role = Role.Button) { onOpenDetail() }
             .testTag("habits_directory_card_${habit.habitId}")
             .semantics {
                 contentDescription = "${habit.name}, ${habit.lifecycleState.name}, $modeLabel, $targetSummary, $scheduleSummary"
             },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.55f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
     ) {
         Column(
             modifier = Modifier

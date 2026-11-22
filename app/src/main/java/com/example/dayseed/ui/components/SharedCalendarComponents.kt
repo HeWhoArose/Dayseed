@@ -1,5 +1,6 @@
 package com.example.dayseed.ui.components
 
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -109,7 +110,7 @@ fun CompactWeeklyCalendarStrip(
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .clickable { onOpenFullCalendar() }
+                        .clickable(role = Role.Button) { onOpenFullCalendar() }
                         .padding(horizontal = 6.dp, vertical = 4.dp)
                         .testTag("${testTagPrefix}_full_calendar_btn"),
                     verticalAlignment = Alignment.CenterVertically
@@ -170,7 +171,7 @@ fun CompactWeeklyCalendarStrip(
                                 color = borderColor,
                                 shape = RoundedCornerShape(10.dp)
                             )
-                            .clickable { onSelectDate(date) }
+                            .clickable(role = Role.Button) { onSelectDate(date) }
                             .semantics {
                                 contentDescription = "${date.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault())}, $date, ${state.displayLabel}"
                             }
@@ -193,7 +194,7 @@ fun CompactWeeklyCalendarStrip(
                         )
                         Text(
                             text = indicator.ifEmpty { " " },
-                            fontSize = 9.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = fgColor
                         )
@@ -422,7 +423,7 @@ fun SharedMonthCalendar(
                                     scheme.surface
                                 }
                                 val neutralFg = if (date.isAfter(referenceToday)) {
-                                    scheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                    scheme.onSurfaceVariant.copy(alpha = 0.8f)
                                 } else {
                                     scheme.onSurface
                                 }
@@ -455,7 +456,7 @@ fun SharedMonthCalendar(
                                         color = borderColor,
                                         shape = RoundedCornerShape(10.dp)
                                     )
-                                    .clickable { onSelectDate(date) }
+                                    .clickable(role = Role.Button) { onSelectDate(date) }
                                     .semantics { contentDescription = a11yDescription }
                                     .testTag("${testTagPrefix}_date_${date}"),
                                 contentAlignment = Alignment.Center
@@ -628,7 +629,7 @@ private fun calendarColorsForState(
         HonestCalendarDateState.COMPLETED_TARGET_MET -> scheme.onPrimaryContainer
         HonestCalendarDateState.PARTIAL_OR_TINY_PROGRESS -> scheme.onSecondaryContainer
         HonestCalendarDateState.MISSED_SCHEDULED_DATE -> scheme.onErrorContainer
-        HonestCalendarDateState.FUTURE_DATE -> scheme.onSurfaceVariant.copy(alpha = 0.6f)
+        HonestCalendarDateState.FUTURE_DATE -> scheme.onSurfaceVariant.copy(alpha = 0.8f)
         else -> scheme.onSurface
     }
     val border = when {
@@ -733,7 +734,7 @@ fun WeeklyHabitBoard(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(8.dp))
-                            .clickable { onSelectDate(day) }
+                            .clickable(role = Role.Button) { onSelectDate(day) }
                             .padding(vertical = 4.dp)
                             .testTag("weekly_board_day_header_$day"),
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -756,12 +757,12 @@ fun WeeklyHabitBoard(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 if (mood != null) {
-                                    Text(text = mood.symbol, fontSize = 9.sp)
+                                    Text(text = mood.symbol, fontSize = 11.sp)
                                 }
                                 if (jCount > 0) {
                                     Text(
                                         text = if (jCount > 1) "✍️$jCount" else "✍️",
-                                        fontSize = 8.sp
+                                        fontSize = 10.sp
                                     )
                                 }
                             }
@@ -807,7 +808,7 @@ fun WeeklyHabitBoard(
                                     overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier
                                         .weight(1f)
-                                        .clickable { onOpenHabitDetail(row.habit.habitId, boardModel.weekEndDate.coerceAtMost(referenceToday)) }
+                                        .clickable(role = Role.Button) { onOpenHabitDetail(row.habit.habitId, boardModel.weekEndDate.coerceAtMost(referenceToday)) }
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 val badgeColor = when (row.periodStatus) {
@@ -857,7 +858,7 @@ fun WeeklyHabitBoard(
                                             .clip(RoundedCornerShape(8.dp))
                                             .background(cellBg)
                                             .border(1.dp, cellBorder, RoundedCornerShape(8.dp))
-                                            .clickable { onSelectDate(cell.date) }
+                                            .clickable(role = Role.Button) { onSelectDate(cell.date) }
                                             .semantics { contentDescription = cellDesc }
                                             .testTag("weekly_board_cell_${row.habit.habitId}_${cell.date}"),
                                         contentAlignment = Alignment.Center

@@ -1,5 +1,6 @@
 package com.example.dayseed.ui.components
 
+import androidx.compose.ui.semantics.Role
 import androidx.core.graphics.toColorInt
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -100,7 +101,7 @@ fun HabitCard(
         border = BorderStroke(
             width = 1.dp,
             color = if (isRecorded) MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
-            else MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
+            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
@@ -140,7 +141,7 @@ fun HabitCard(
                         .clip(RoundedCornerShape(10.dp))
                         .then(
                             if (onOpenHabitDetail != null) {
-                                Modifier.clickable { onOpenHabitDetail() }
+                                Modifier.clickable(role = Role.Button, onClickLabel = "Open details for ${habit.name}") { onOpenHabitDetail() }
                             } else {
                                 Modifier
                             }
@@ -507,48 +508,24 @@ private fun QuantityOrDurationSection(
         // AdaptiveActionRow stacks the two buttons when text is large or the card is narrow.
         AdaptiveActionRow(
             primary = if (onOpenRecordSession != null) { m ->
-                Button(
+                DayseedPrimaryButton(
+                    text = if (isGoalReached) "Add More" else "Add Progress",
                     onClick = { onOpenRecordSession(null) },
+                    icon = Icons.Default.Add,
                     modifier = m
-                        .heightIn(min = 48.dp)
-                        .testTag("open_record_session_${habit.id}"),
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                ) {
-                    Icon(
-                        Icons.Default.Add,
-                        contentDescription = "Add progress for ${habit.name}",
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = if (isGoalReached) "Add More" else "Add Progress",
-                        style = MaterialTheme.typography.labelLarge,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                        // The visible label is the same on every card, so name the habit for screen readers.
+                        .semantics { contentDescription = "Add progress for ${habit.name}" }
+                        .testTag("open_record_session_${habit.id}")
+                )
             } else null,
             secondary = if (onOpenHabitDetail != null) { m ->
-                OutlinedButton(
+                DayseedSecondaryButton(
+                    text = "View Details",
                     onClick = onOpenHabitDetail,
                     modifier = m
-                        .heightIn(min = 48.dp)
-                        .testTag("habit_view_details_${habit.id}"),
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        text = "View Details",
-                        style = MaterialTheme.typography.labelLarge,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                        .semantics { contentDescription = "View details for ${habit.name}" }
+                        .testTag("habit_view_details_${habit.id}")
+                )
             } else null
         )
 
@@ -744,62 +721,32 @@ private fun UnrecordedOutcomeActionRow(
         }
         AdaptiveActionRow(
             primary = { m ->
-                Button(
+                DayseedPrimaryButton(
+                    text = "Complete",
                     onClick = { onLog(DailyOutcome.COMPLETED, EffortLevel.STANDARD) },
+                    icon = Icons.Default.Check,
                     modifier = m
-                        .heightIn(min = 48.dp)
-                        .testTag("habit_done_btn_${habit.id}"),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        "Complete",
-                        style = MaterialTheme.typography.labelLarge,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                        .semantics { contentDescription = "Mark ${habit.name} complete" }
+                        .testTag("habit_done_btn_${habit.id}")
+                )
             },
             secondary = if (onOpenHabitDetail != null) { m ->
-                OutlinedButton(
+                DayseedSecondaryButton(
+                    text = "View Details",
                     onClick = onOpenHabitDetail,
                     modifier = m
-                        .heightIn(min = 48.dp)
-                        .testTag("habit_view_details_${habit.id}"),
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        "View Details",
-                        style = MaterialTheme.typography.labelLarge,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                        .semantics { contentDescription = "View details for ${habit.name}" }
+                        .testTag("habit_view_details_${habit.id}")
+                )
             } else if (onOpenRecordSession != null) { m ->
-                OutlinedButton(
+                DayseedSecondaryButton(
+                    text = "Add Progress",
                     onClick = { onOpenRecordSession(null) },
+                    icon = Icons.Default.Add,
                     modifier = m
-                        .heightIn(min = 48.dp)
-                        .testTag("open_record_session_${habit.id}"),
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        "Add Progress",
-                        style = MaterialTheme.typography.labelLarge,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                        .semantics { contentDescription = "Add progress for ${habit.name}" }
+                        .testTag("open_record_session_${habit.id}")
+                )
             } else null
         )
     }

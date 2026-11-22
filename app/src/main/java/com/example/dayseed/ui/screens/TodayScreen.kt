@@ -1,5 +1,10 @@
 package com.example.dayseed.ui.screens
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
+import com.example.dayseed.ui.components.dayseedHeading
+import androidx.compose.ui.semantics.Role
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -529,7 +534,7 @@ fun TodayScreen(
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onBackground,
-                                    modifier = Modifier.testTag("today_seeds_heading_text")
+                                    modifier = Modifier.testTag("today_seeds_heading_text").dayseedHeading()
                                 )
                             }
                         }
@@ -618,7 +623,7 @@ fun TodayScreen(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .heightIn(min = 48.dp)
-                                            .clickable {
+                                            .clickable(role = Role.Button) {
                                                 viewModel.setTodayNotScheduledExpanded(!notScheduledExpanded)
                                             }
                                             .padding(horizontal = 14.dp, vertical = 10.dp)
@@ -807,7 +812,8 @@ private fun TodayHeaderText(
         Text(
             text = greeting,
             style = DayseedGreetingStyle,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.dayseedHeading()
         )
         Text(
             text = "Your progress is more than your streak.",
@@ -832,6 +838,7 @@ private fun UndoBanner(
         ),
         modifier = modifier
             .fillMaxWidth()
+            .semantics { liveRegion = LiveRegionMode.Polite } // announce "Change recorded" without moving focus
             .testTag("undo_action_banner")
     ) {
         Row(
@@ -1087,13 +1094,13 @@ private fun FirstUseWelcomeCard(
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier
-                                    .clickable(onClick = onToggleWeekStart)
+                                    .clickable(role = Role.Button, onClick = onToggleWeekStart)
                                     .padding(vertical = 4.dp)
                                     .testTag("onboarding_week_start_toggle_btn")
                             )
                         }
 
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -1122,7 +1129,7 @@ private fun FirstUseWelcomeCard(
                             }
                         }
 
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -1165,7 +1172,7 @@ private fun EmptyHabitsCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
     ) {
         Column(
             modifier = Modifier

@@ -78,5 +78,29 @@ val DayseedTypography = Typography(
         fontSize = 13.sp,
         lineHeight = 18.sp,
         letterSpacing = 0.4.sp
+    ),
+    // DESIGN.md type scale: body 16 / label 14 / caption 12-13. Material's defaults for these three
+    // roles (titleSmall 14, labelMedium 12, labelSmall 11) were left implicit, so 64 chips, tags and
+    // captions rendered at 11sp, below the caption minimum. Defined explicitly here, no new tokens.
+    titleSmall = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 15.sp,
+        lineHeight = 20.sp,
+        letterSpacing = 0.1.sp
+    ),
+    labelMedium = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Medium,
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
+        letterSpacing = 0.3.sp
+    ),
+    labelSmall = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Medium,
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        letterSpacing = 0.3.sp
     )
 )

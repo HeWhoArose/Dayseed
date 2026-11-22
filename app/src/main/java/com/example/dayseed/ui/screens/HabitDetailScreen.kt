@@ -1,5 +1,19 @@
 package com.example.dayseed.ui.screens
 
+import androidx.compose.ui.text.style.TextOverflow
+import com.example.dayseed.ui.components.DayseedSecondaryButton
+import com.example.dayseed.ui.components.DayseedPrimaryButton
+import com.example.dayseed.ui.components.AdaptiveActionRow
+import com.example.dayseed.ui.components.friendlyDateRange
+import com.example.dayseed.ui.components.friendlyDate
+import com.example.dayseed.ui.components.DayseedStatusPill
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
+import com.example.dayseed.ui.components.dayseedHeading
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.example.dayseed.ui.components.spokenDescription
 import android.text.format.DateFormat
 import androidx.core.graphics.toColorInt
 import androidx.compose.foundation.BorderStroke
@@ -269,7 +283,10 @@ fun HabitDetailScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         IconButton(
                             onClick = onNavigateBack,
                             modifier = Modifier
@@ -284,6 +301,9 @@ fun HabitDetailScreen(
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "Habit Detail",
+                            modifier = Modifier.weight(1f, fill = false).dayseedHeading(),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground
@@ -302,7 +322,7 @@ fun HabitDetailScreen(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Edit")
+                        Text("Edit", maxLines = 1, softWrap = false)
                     }
                 }
             }
@@ -317,6 +337,7 @@ fun HabitDetailScreen(
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
+                            .semantics { liveRegion = LiveRegionMode.Polite }
                             .testTag("undo_banner")
                     ) {
                         Row(
@@ -359,7 +380,7 @@ fun HabitDetailScreen(
                 Card(
                     shape = DayseedShapes.Card,
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("habit_detail_section_a")
@@ -392,9 +413,9 @@ fun HabitDetailScreen(
                                 )
                             }
 
-                            Surface(
-                                shape = DayseedShapes.Pill,
-                                color = when (habit.lifetimeStatus) {
+                            DayseedStatusPill(
+                                text = habit.lifetimeStatusLabel,
+                                containerColor = when (habit.lifetimeStatus) {
                                     HabitLifetimeStatus.ONGOING,
                                     HabitLifetimeStatus.SCHEDULED_TO_END ->
                                         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f)
@@ -406,18 +427,10 @@ fun HabitDetailScreen(
                                         MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
                                     HabitLifetimeStatus.ARCHIVED ->
                                         MaterialTheme.colorScheme.surfaceVariant
-                                }
-                            ) {
-                                Text(
-                                    text = habit.lifetimeStatusLabel,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier
-                                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                                        .testTag("detail_lifecycle_badge")
-                                )
-                            }
+                                },
+                                contentColor = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.testTag("detail_lifecycle_badge")
+                            )
                         }
 
                         Text(
@@ -489,34 +502,27 @@ fun HabitDetailScreen(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Row(
+                        FlowRow(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
                                 text = if (isWeekly) "Weekly Progress" else "Today's Progress",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
-                            Surface(
-                                shape = DayseedShapes.Pill,
-                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f)
-                            ) {
-                                Text(
-                                    text = "${activeBand.label} (${activeBand.shortBadge})",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier
-                                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                                        .testTag("detail_progress_band_badge")
-                                )
-                            }
+                            DayseedStatusPill(
+                                text = activeBand.label,
+                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f),
+                                modifier = Modifier
+                                    .semantics { contentDescription = activeBand.spokenDescription() }
+                                    .testTag("detail_progress_band_badge")
+                            )
                         }
 
                         val progressLabel = if (isWeekly && !summary?.weekStartLocalDate.isNullOrBlank()) {
-                            "This week (${summary?.weekStartLocalDate}..${summary?.weekEndLocalDate}): $ratioDisplay ($pct%)"
+                            "This week (${friendlyDateRange(summary?.weekStartLocalDate.orEmpty(), summary?.weekEndLocalDate.orEmpty())}): $ratioDisplay ($pct%)"
                         } else {
                             "Today: $ratioDisplay ($pct%)"
                         }
@@ -554,38 +560,23 @@ fun HabitDetailScreen(
 
                         // Immediately discoverable Primary Actions
                         if (!habit.lifecycleState.isTerminal) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Button(
-                                    onClick = {
-                                        onOpenRecordSession(habitId, selectedLocalDate, null)
-                                    },
-                                    shape = DayseedShapes.Button,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .heightIn(min = 48.dp)
-                                        .testTag("detail_record_session_btn")
-                                ) {
-                                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        if (selectedLocalDate == todayStr) "Add Progress" else "Add ($selectedLocalDate)",
-                                        fontWeight = FontWeight.SemiBold
+                            AdaptiveActionRow(
+                                primary = { m ->
+                                    DayseedPrimaryButton(
+                                        text = if (selectedLocalDate == todayStr) "Add Progress" else "Add (${friendlyDate(selectedLocalDate, today)})",
+                                        onClick = { onOpenRecordSession(habitId, selectedLocalDate, null) },
+                                        icon = Icons.Default.Add,
+                                        modifier = m.testTag("detail_record_session_btn")
+                                    )
+                                },
+                                secondary = { m ->
+                                    DayseedSecondaryButton(
+                                        text = "Edit Habit",
+                                        onClick = { onOpenEditHabit(habit.habitId) },
+                                        modifier = m.testTag("detail_primary_edit_btn")
                                     )
                                 }
-
-                                OutlinedButton(
-                                    onClick = { onOpenEditHabit(habit.habitId) },
-                                    shape = DayseedShapes.Button,
-                                    modifier = Modifier
-                                        .heightIn(min = 48.dp)
-                                        .testTag("detail_primary_edit_btn")
-                                ) {
-                                    Text("Edit Habit")
-                                }
-                            }
+                            )
 
                             if (selectedLocalDate == todayStr) {
                                 val hasRestDayToday = exceptionOnSelectedDate?.exceptionKind == HabitDateExceptionKind.REST_DAY ||
@@ -629,7 +620,7 @@ fun HabitDetailScreen(
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("habit_detail_section_c")
@@ -660,7 +651,7 @@ fun HabitDetailScreen(
                                     color = if (isSelected) MaterialTheme.colorScheme.primary
                                     else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
                                     modifier = Modifier
-                                        .clickable { onSelectDate(dStr) }
+                                        .clickable(role = Role.Button) { onSelectDate(dStr) }
                                         .testTag("detail_date_pill_$dStr")
                                 ) {
                                     Column(
@@ -705,7 +696,7 @@ fun HabitDetailScreen(
                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                         ) {
                             Text(
-                                text = "$selectedLocalDate — $statusLabel",
+                                text = "${friendlyDate(selectedLocalDate, today)} — $statusLabel",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier
@@ -850,7 +841,7 @@ fun HabitDetailScreen(
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("habit_detail_section_d")
@@ -1134,7 +1125,7 @@ fun HabitDetailScreen(
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("habit_detail_section_f")

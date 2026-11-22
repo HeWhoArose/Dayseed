@@ -1,5 +1,10 @@
 package com.example.dayseed.ui.screens
 
+import com.example.dayseed.ui.components.DayseedStatusPill
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import com.example.dayseed.ui.components.friendlyDate
+import androidx.compose.ui.semantics.Role
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -55,6 +60,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DayDetailScreen(
     date: LocalDate,
@@ -182,10 +188,10 @@ fun DayDetailScreen(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Row(
+                    FlowRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Column {
                             Text(
@@ -207,19 +213,10 @@ fun DayDetailScreen(
                             )
                         }
                         if (summary.collectedMomentsSummary != null) {
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.primaryContainer
-                            ) {
-                                Text(
-                                    text = "⏳ ${summary.collectedMomentsSummary.formattedTotalDuration}",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier
-                                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                                        .testTag("day_detail_duration_badge")
-                                )
-                            }
+                            DayseedStatusPill(
+                                text = "⏳ ${summary.collectedMomentsSummary.formattedTotalDuration}",
+                                modifier = Modifier.testTag("day_detail_duration_badge")
+                            )
                         }
                     }
                 }
@@ -229,7 +226,7 @@ fun DayDetailScreen(
         // Habits Section
         item {
             Text(
-                text = "Habits on ${summary.date}",
+                text = "Habits on ${friendlyDate(summary.date, referenceToday)}",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -368,7 +365,7 @@ private fun DayDetailHabitCard(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .clickable { onOpenHabitDetail() }
+                        .clickable(role = Role.Button) { onOpenHabitDetail() }
                 ) {
                     Text(
                         text = item.effectiveVersion.name,
@@ -475,7 +472,7 @@ private fun DayDetailHabitCard(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onRecordOrEditSession(entry.entryId) }
+                        .clickable(role = Role.Button) { onRecordOrEditSession(entry.entryId) }
                         .testTag("day_detail_entry_${entry.entryId}"),
                     shape = RoundedCornerShape(10.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
@@ -525,7 +522,7 @@ private fun DayDetailHabitCard(
                         text = if (outcome.outcomeKind == "EFFORT_LOGGED") {
                             "Effort recorded: ${outcome.effortLevel ?: "USUAL"}"
                         } else {
-                            "✓ Completed on $date"
+                            "✓ Completed on ${friendlyDate(date)}"
                         },
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
@@ -555,7 +552,7 @@ private fun DayDetailDraftCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onResumeDraft() }
+            .clickable(role = Role.Button) { onResumeDraft() }
             .testTag("day_detail_draft_${draft.draftId}"),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
@@ -600,7 +597,7 @@ private fun DayDetailJournalEntryCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onEdit() }
+            .clickable(role = Role.Button) { onEdit() }
             .testTag("day_detail_journal_${entry.journalEntryId}"),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),

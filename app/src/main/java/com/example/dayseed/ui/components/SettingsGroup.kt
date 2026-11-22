@@ -1,5 +1,6 @@
 package com.example.dayseed.ui.components
 
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -41,7 +42,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun SettingsGroupCard(
     modifier: Modifier = Modifier,
-    borderColor: Color = MaterialTheme.colorScheme.outline.copy(alpha = 0.55f),
+    borderColor: Color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
     containerColor: Color = MaterialTheme.colorScheme.surface,
     content: @Composable () -> Unit
 ) {
@@ -101,7 +102,7 @@ fun SettingsRow(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 60.dp)
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp)
             .testTag(testTag),
         verticalAlignment = Alignment.CenterVertically
@@ -170,7 +171,7 @@ fun SettingsRow(
 @Composable
 fun SettingsRowDivider() {
     HorizontalDivider(
-        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
         modifier = Modifier.padding(horizontal = 16.dp)
     )
 }

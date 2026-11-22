@@ -1,5 +1,6 @@
 package com.example.dayseed.ui.screens
 
+import com.example.dayseed.ui.components.dayseedHeading
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -154,7 +155,8 @@ fun SettingsScreen(
                         text = "Settings",
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.dayseedHeading()
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(

@@ -1,5 +1,7 @@
 package com.example.dayseed.ui.screens
 
+import com.example.dayseed.ui.components.dayseedHeading
+import androidx.compose.ui.semantics.Role
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -143,7 +145,7 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 softWrap = false,
-                                modifier = Modifier.testTag("journal_header_title")
+                                modifier = Modifier.testTag("journal_header_title").dayseedHeading()
                             )
                             Text(
                                 text = reflectionCountText,
@@ -213,7 +215,7 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 softWrap = false,
-                                modifier = Modifier.testTag("journal_header_title")
+                                modifier = Modifier.testTag("journal_header_title").dayseedHeading()
                             )
                             Text(
                                 text = reflectionCountText,
@@ -342,7 +344,7 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable {
+                                .clickable(role = Role.Button) {
                                     viewModel.openJournalEditor(
                                         entry = null,
                                         forDate = draftDate,
@@ -644,11 +646,11 @@ private fun JournalArchiveCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .clickable(role = Role.Button) { onClick() }
             .testTag("journal_card_${entry.journalEntryId}"),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.38f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.38f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
@@ -671,7 +673,7 @@ private fun JournalArchiveCard(
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clickable { onOpenDayDetail() }
+                        modifier = Modifier.clickable(role = Role.Button) { onOpenDayDetail() }
                     )
                     if (sameDateTotalCount > 1) {
                         Surface(

@@ -1,5 +1,9 @@
 package com.example.dayseed.ui.components
 
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.Role
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -74,7 +78,7 @@ object DayseedShapes {
 fun DayseedCard(
     modifier: Modifier = Modifier,
     containerColor: Color = MaterialTheme.colorScheme.surface,
-    borderColor: Color = MaterialTheme.colorScheme.outline.copy(alpha = 0.42f),
+    borderColor: Color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.42f),
     shape: RoundedCornerShape = DayseedShapes.Card,
     contentPadding: PaddingValues = PaddingValues(DayseedSpacing.CardPadding),
     content: @Composable ColumnScope.() -> Unit
@@ -193,7 +197,7 @@ fun DayseedExpandableCard(
     modifier: Modifier = Modifier,
     toggleTestTag: String? = null,
     leadingIcon: ImageVector? = null,
-    borderColor: Color = MaterialTheme.colorScheme.outline.copy(alpha = 0.42f),
+    borderColor: Color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.42f),
     containerColor: Color = MaterialTheme.colorScheme.surface,
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -208,7 +212,8 @@ fun DayseedExpandableCard(
             val headerModifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 56.dp)
-                .clickable(onClick = onToggle)
+                .clickable(role = Role.Button, onClick = onToggle)
+                .semantics { stateDescription = if (expanded) "Expanded" else "Collapsed" }
                 .padding(horizontal = 16.dp, vertical = 12.dp)
                 .let { base -> if (toggleTestTag != null) base.testTag(toggleTestTag) else base }
 
@@ -235,7 +240,8 @@ fun DayseedExpandableCard(
                             text = title,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.dayseedHeading()
                         )
                         if (summary.isNotBlank()) {
                             Text(
@@ -316,7 +322,7 @@ fun DayseedSecondaryButton(
         onClick = onClick,
         enabled = enabled,
         shape = DayseedShapes.Button,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
         modifier = modifier.heightIn(min = DayseedSpacing.MinTouchTarget)
     ) {
@@ -391,7 +397,7 @@ fun AdaptiveActionRow(
 ) {
     val largeText = rememberIsLargeText()
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
-        if (largeText || maxWidth < 250.dp) {
+        if (largeText || maxWidth < 270.dp) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -410,3 +416,6 @@ fun AdaptiveActionRow(
         }
     }
 }
+
+/** Marks a title as a heading so screen readers can jump between sections (WCAG 1.3.1 / 2.4.6). */
+fun Modifier.dayseedHeading(): Modifier = this.semantics { heading() }

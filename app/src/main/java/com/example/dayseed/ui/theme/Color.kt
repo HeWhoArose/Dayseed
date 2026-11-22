@@ -11,6 +11,9 @@ val DayJournalSurface = Color(0xFFF3F4EC) // Warm cream-sage card tint from Fiel
 val LightTextPrimary = Color(0xFF24352B)
 val LightTextSecondary = Color(0xFF59655C)
 val LightBorder = Color(0xFFD8DED5)
+// Control boundaries (text fields, outlined buttons, chips) need 3:1 non-text contrast (WCAG 1.4.11).
+// Derived from LightBorder toward LightTextSecondary; 3.4:1 on the card surface. Decorative borders keep LightBorder.
+val LightControlBorder = Color(0xFF7F8980)
 val LightBrand = Color(0xFF286143)
 val LightOnBrand = Color(0xFFFFFFFF)
 val LightGrowthSubtle = Color(0xFFE4EBDD)
@@ -22,6 +25,8 @@ val DarkSurface = Color(0xFF1A251E)
 val DarkTextPrimary = Color(0xFFF3F2E8)
 val DarkTextSecondary = Color(0xFFC1CBC1)
 val DarkBorder = Color(0xFF334437)
+// Control boundary on dark surfaces: 3.9:1 on DarkSurface, 3.2:1 on DarkGrowthSubtle.
+val DarkControlBorder = Color(0xFF738175)
 val DarkBrand = Color(0xFF88B38C)
 val DarkOnBrand = Color(0xFF132017)
 val DarkGrowthSubtle = Color(0xFF253529)
@@ -97,7 +102,9 @@ object SoftBotanicalThemeConfig {
     val EveningSurface = Color(0xFFF9F1E4)
     val EveningGrowthSubtle = Color(0xFFEFE2D0)
     val EveningBrand = Color(0xFFAC5530)
-    val EveningSecondary = Color(0xFF6B7B5C)
+    // Darkened 10% from 0xFF6B7B5C (4.06:1 on the evening card) to reach WCAG AA for text:
+    // 4.8:1 on EveningSurface, 4.6:1 on EveningCanvas. Same sage hue; the colour is used for text and icons.
+    val EveningSecondary = Color(0xFF606F53)
     val EveningBorder = Color(0xFFDECDB4)
 
     fun resolveDaypart(localTime: LocalTime): BotanicalDaypart {

@@ -1,5 +1,6 @@
 package com.example.dayseed
 
+import com.example.dayseed.ui.components.friendlyDate
 import android.app.Application
 import android.content.Context
 import android.graphics.Bitmap
@@ -775,11 +776,11 @@ class ProgressiveDisclosureAndSmartHabitTest {
         val initialTexts = collectAllRenderedTexts(activity)
         assertTrue(
             "Existing progress must display '6 / 10 pages (60%)'",
-            initialTexts.any { it.contains("Existing progress on $today: 6 / 10 pages (60%)") }
+            initialTexts.any { it.contains("Existing progress on ${friendlyDate(today, today)}: 6 / 10 pages (60%)") }
         )
         assertTrue(
             "Resulting daily total must remain '6 / 10 pages (60%)' before user enters a value",
-            initialTexts.any { it.contains("Resulting daily total on $today: 6 / 10 pages (60%)") }
+            initialTexts.any { it.contains("Resulting daily total on ${friendlyDate(today, today)}: 6 / 10 pages (60%)") }
         )
         assertFalse(
             "Preview must NEVER show '16 / 10 pages (160%)' on open",
@@ -802,9 +803,9 @@ class ProgressiveDisclosureAndSmartHabitTest {
         setTextTag(activity, "record_session_value_input", "2", widthDp = 360, heightDp = 1500)
         assertTrue("Save Progress must be enabled when valid positive amount '2' is entered", isNodeEnabled(activity, "record_session_save_btn"))
         val textsAfterTwo = collectAllRenderedTexts(activity)
-        assertTrue(textsAfterTwo.any { it.contains("Existing progress on $today: 6 / 10 pages (60%)") })
+        assertTrue(textsAfterTwo.any { it.contains("Existing progress on ${friendlyDate(today, today)}: 6 / 10 pages (60%)") })
         assertTrue(textsAfterTwo.any { it.contains("New entry: +2 pages") })
-        assertTrue(textsAfterTwo.any { it.contains("Resulting daily total on $today: 8 / 10 pages (80%)") })
+        assertTrue(textsAfterTwo.any { it.contains("Resulting daily total on ${friendlyDate(today, today)}: 8 / 10 pages (80%)") })
 
         // Verify across 320dp, 360dp, and 411dp widths
         for (widthDp in listOf(320, 360, 411)) {
@@ -824,7 +825,7 @@ class ProgressiveDisclosureAndSmartHabitTest {
         val textsWhileEditingOriginal = collectAllRenderedTexts(activity)
         assertTrue(textsWhileEditingOriginal.any { it.contains("Edit Progress Entry") })
         assertTrue(textsWhileEditingOriginal.any { it.contains("Updating entry to: 3 pages") })
-        assertTrue(textsWhileEditingOriginal.any { it.contains("Resulting daily total on $today: 6 / 10 pages (60%)") })
+        assertTrue(textsWhileEditingOriginal.any { it.contains("Resulting daily total on ${friendlyDate(today, today)}: 6 / 10 pages (60%)") })
 
         // Screenshot 6: Existing-entry editing with original value populated
         saveScreenshotPng(activity, "07_record_session_edit_existing_entry.png", widthDp = 360, heightDp = 1080)
@@ -948,14 +949,14 @@ class ProgressiveDisclosureAndSmartHabitTest {
         )
         assertTrue(
             "Existing progress must show '0.75 / 1.5 litres (50%)'",
-            sheetTextsInitial.any { it.contains("Existing progress on $today: 0.75 / 1.5 litres (50%)") }
+            sheetTextsInitial.any { it.contains("Existing progress on ${friendlyDate(today, today)}: 0.75 / 1.5 litres (50%)") }
         )
 
         // Enter "0.75" in the input -> preview shows New entry: +0.75 litres, Resulting daily total: 1.5 / 1.5 litres (100%)
         setTextTag(activity, "record_session_value_input", "0.75", widthDp = 360, heightDp = 1100)
         val sheetTextsWithEntry = collectAllRenderedTexts(activity)
         assertTrue(sheetTextsWithEntry.any { it.contains("New entry: +0.75 litres") })
-        assertTrue(sheetTextsWithEntry.any { it.contains("Resulting daily total on $today: 1.5 / 1.5 litres (100%)") })
+        assertTrue(sheetTextsWithEntry.any { it.contains("Resulting daily total on ${friendlyDate(today, today)}: 1.5 / 1.5 litres (100%)") })
 
         // Screenshot 7: Fractional measurement habit (1.5 litres with 0.75 existing + 0.75 new entry)
         saveScreenshotPng(activity, "08_fractional_measurement_habit_progress.png", widthDp = 360, heightDp = 980)

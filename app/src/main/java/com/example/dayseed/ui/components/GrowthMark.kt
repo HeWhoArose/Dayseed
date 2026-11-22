@@ -112,7 +112,7 @@ fun GrowthMarkSummaryCard(
             .fillMaxWidth()
             .defaultMinSize(minHeight = 88.dp)
             .clip(RoundedCornerShape(24.dp))
-            .clickable {
+            .clickable(role = Role.Button) {
                 if (!metrics.loadError.isNullOrBlank()) {
                     onRetryLoad()
                 } else {
@@ -534,7 +534,7 @@ fun CollectedMomentsDetailSheet(
                                 Column(
                                     modifier = Modifier
                                         .weight(1f)
-                                        .clickable { onInspectDayDetail(dateSummary.date) }
+                                        .clickable(role = Role.Button) { onInspectDayDetail(dateSummary.date) }
                                 ) {
                                     Text(
                                         text = dateSummary.date.format(dateFormatter),
@@ -572,7 +572,7 @@ fun CollectedMomentsDetailSheet(
                                 Surface(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable {
+                                        .clickable(role = Role.Button) {
                                             onEditSession(session.habitId, session.localDate, session.entryId)
                                         }
                                         .testTag("collected_moments_session_${session.entryId}"),

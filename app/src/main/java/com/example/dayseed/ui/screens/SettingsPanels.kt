@@ -1,5 +1,6 @@
 package com.example.dayseed.ui.screens
 
+import androidx.compose.ui.semantics.Role
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -195,12 +196,12 @@ fun InlineAppearanceSelector(
                         color = if (selected) {
                             MaterialTheme.colorScheme.primary
                         } else {
-                            MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
                         }
                     ),
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .clickable { viewModel.setThemeMode(mode) }
+                        .clickable(role = Role.Button) { viewModel.setThemeMode(mode) }
                         .testTag("theme_chip_${mode.settingValue.lowercase()}")
                 ) {
                     Row(
@@ -1417,7 +1418,7 @@ fun BackupRestorePanel(
         Surface(
             shape = RoundedCornerShape(14.dp),
             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)),
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag("data_summary_card")

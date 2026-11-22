@@ -39,7 +39,8 @@ private val DarkColorScheme = darkColorScheme(
     onSurface = DarkTextPrimary,
     surfaceVariant = DarkGrowthSubtle,
     onSurfaceVariant = DarkTextSecondary,
-    outline = DarkBorder,
+    outline = DarkControlBorder,
+    outlineVariant = DarkBorder,
     error = DarkAccentWarm,
     onError = DarkOnBrand
 )
@@ -61,7 +62,8 @@ private val LightColorScheme = lightColorScheme(
     onSurface = LightTextPrimary,
     surfaceVariant = LightGrowthSubtle,
     onSurfaceVariant = LightTextSecondary,
-    outline = LightBorder,
+    outline = LightControlBorder,
+    outlineVariant = LightBorder,
     error = LightAccentWarm,
     onError = LightOnBrand
 )
@@ -79,7 +81,8 @@ private val MorningColorScheme = LightColorScheme.copy(
     background = SoftBotanicalThemeConfig.MorningCanvas,
     surface = SoftBotanicalThemeConfig.MorningSurface,
     surfaceVariant = SoftBotanicalThemeConfig.MorningGrowthSubtle,
-    outline = SoftBotanicalThemeConfig.MorningBorder
+    outline = LightControlBorder,
+    outlineVariant = SoftBotanicalThemeConfig.MorningBorder
 )
 
 // Evening ("Earth & Clay"): terracotta action on warm stone canvas with sand-tinted cards and olive-sage accents.
@@ -95,7 +98,8 @@ private val EveningColorScheme = LightColorScheme.copy(
     background = SoftBotanicalThemeConfig.EveningCanvas,
     surface = SoftBotanicalThemeConfig.EveningSurface,
     surfaceVariant = SoftBotanicalThemeConfig.EveningGrowthSubtle,
-    outline = SoftBotanicalThemeConfig.EveningBorder
+    outline = LightControlBorder,
+    outlineVariant = SoftBotanicalThemeConfig.EveningBorder
 )
 
 private fun schemeForDaypart(daypart: BotanicalDaypart): ColorScheme = when (daypart) {
@@ -209,6 +213,7 @@ fun DayseedTheme(
         surfaceVariant = animateThemeColor(targetScheme.surfaceVariant, reducedMotion),
         onSurfaceVariant = animateThemeColor(targetScheme.onSurfaceVariant, reducedMotion),
         outline = animateThemeColor(targetScheme.outline, reducedMotion),
+        outlineVariant = animateThemeColor(targetScheme.outlineVariant, reducedMotion),
         error = animateThemeColor(targetScheme.error, reducedMotion),
         onError = animateThemeColor(targetScheme.onError, reducedMotion)
     )
