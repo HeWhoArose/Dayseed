@@ -215,6 +215,7 @@ class UiScreenshotCaptureTest {
                 "grove" -> { vm.selectTab(NavTab.INSIGHTS); vm.openLivingGrove() }
                 "journal_editor" -> { vm.selectTab(NavTab.JOURNAL); vm.openJournalEditor(forDate = today) }
             }
+            vm.clearUserMessage() // drop the theme-change toast raised by test setup
             shot(activity, "${prefix}_$scene", wDp, hDp)
             if (scene in setOf("journal_editor")) vm.closeJournalEditor()
         }

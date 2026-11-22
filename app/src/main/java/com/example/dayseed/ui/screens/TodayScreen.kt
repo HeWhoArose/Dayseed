@@ -66,6 +66,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -91,6 +92,7 @@ import com.example.dayseed.ui.components.DayseedCard
 import com.example.dayseed.ui.components.DayseedLogoSymbol
 import com.example.dayseed.ui.components.DayseedShapes
 import com.example.dayseed.ui.components.DayseedSpacing
+import com.example.dayseed.ui.components.rememberIsLargeText
 import com.example.dayseed.ui.components.HabitCard
 import com.example.dayseed.ui.components.ReflectionCard
 import com.example.dayseed.ui.components.TodayLongestStreakIndicator
@@ -363,6 +365,10 @@ fun TodayScreen(
             ) {
                 // Element 1 & Element 2: Date, time-aware greeting, single canonical motto, and Daypart Artwork (§5.1)
                 item {
+                    val largeText = rememberIsLargeText()
+                    // Narrow phones (<340dp) also drop the small corner artwork so the greeting stays on one line.
+                    val narrowScreen = LocalConfiguration.current.screenWidthDp < 340
+                    val showCornerArtwork = !largeText && !narrowScreen
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -376,78 +382,28 @@ fun TodayScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(
+                        TodayHeaderText(
+                            dateLabel = today.format(DateTimeFormatter.ofPattern("EEEE, MMMM d")),
+                            greeting = greetingFor(daypart),
                             modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                text = today.format(DateTimeFormatter.ofPattern("EEEE, MMMM d")),
-                                style = DayseedDateStyle,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.height(1.dp))
-                            Text(
-                                text = greetingFor(daypart),
-                                style = DayseedGreetingStyle,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                            Spacer(modifier = Modifier.height(1.dp))
-                            Text(
-                                text = "Your progress is more than your streak.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                        )
+                        if (showCornerArtwork) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            DaypartArtwork(
+                                artwork = artworkBlend.primaryArtwork,
+                                secondaryArtwork = artworkBlend.secondaryArtwork,
+                                blendFraction = artworkBlend.blendFraction,
+                                reducedMotion = reducedMotion,
+                                modifier = Modifier.size(width = 84.dp, height = 66.dp)
                             )
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        DaypartArtwork(
-                            artwork = artworkBlend.primaryArtwork,
-                            secondaryArtwork = artworkBlend.secondaryArtwork,
-                            blendFraction = artworkBlend.blendFraction,
-                            reducedMotion = reducedMotion,
-                            modifier = Modifier.size(width = 84.dp, height = 66.dp)
-                        )
                     }
                 }
 
-                // 8-Second Guarded Undo Bar (D-209)
+                // 8-Second Guarded Undo Bar (D-209) - shared with the first-run scene
                 if (activeUndoToken != null) {
                     item {
-                        Card(
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("undo_action_banner")
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Recent change recorded (8s undo window)",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                TextButton(
-                                    onClick = { viewModel.triggerUndo() },
-                                    modifier = Modifier
-                                        .heightIn(min = 48.dp)
-                                        .testTag("undo_action_btn")
-                                ) {
-                                    Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Undo", fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
-                                }
-                            }
-                        }
+                        UndoBanner(onUndo = { viewModel.triggerUndo() })
                     }
                 }
 
@@ -490,10 +446,10 @@ fun TodayScreen(
                                         .padding(horizontal = 14.dp, vertical = 8.dp),
                                     verticalArrangement = Arrangement.spacedBy(5.dp)
                                 ) {
-                                    Row(
+                                    FlowRow(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
                                     ) {
                                         Text(
                                             text = "Today's progress",
@@ -522,7 +478,7 @@ fun TodayScreen(
                                         text = encouragingLine,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
+                                        maxLines = 2,
                                         overflow = TextOverflow.Ellipsis
                                     )
                                 }
@@ -853,6 +809,84 @@ fun TodayScreen(
 }
 
 /**
+ * Date, greeting and tagline shared by BOTH Today states (normal list and first-run scene) so the
+ * header cannot drift between them. The tagline may wrap to two lines instead of truncating.
+ */
+@Composable
+private fun TodayHeaderText(
+    dateLabel: String,
+    greeting: String,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(1.dp)) {
+        Text(
+            text = dateLabel,
+            style = DayseedDateStyle,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = greeting,
+            style = DayseedGreetingStyle,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Text(
+            text = "Your progress is more than your streak.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+/** 8-second undo banner (D-209) shared by both Today states. */
+@Composable
+private fun UndoBanner(
+    onUndo: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("undo_action_banner")
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Recent change recorded (8s undo window)",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            TextButton(
+                onClick = onUndo,
+                modifier = Modifier
+                    .heightIn(min = 48.dp)
+                    .testTag("undo_action_btn")
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Undo,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Undo", fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+            }
+        }
+    }
+}
+
+/**
  * Intentional first-use scene shown only while the user has no active habits.
  *
  * The composition is deliberately not a single card floating at the top of an empty screen: the
@@ -898,72 +932,18 @@ private fun FirstUseScene(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = viewportHeight)
-                    .padding(horizontal = 20.dp, vertical = 14.dp),
+                    .padding(horizontal = DayseedSpacing.ScreenHorizontal, vertical = 14.dp),
                 verticalArrangement = Arrangement.SpaceBetween,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    Text(
-                        text = dateLabel,
-                        style = DayseedDateStyle,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = greeting,
-                        style = DayseedGreetingStyle,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Text(
-                        text = "Your progress is more than your streak.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                TodayHeaderText(
+                    dateLabel = dateLabel,
+                    greeting = greeting,
+                    modifier = Modifier.fillMaxWidth()
+                )
 
                 if (onUndo != null) {
-                    Card(
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 2.dp)
-                            .testTag("undo_action_banner")
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Recent change recorded (8s undo window)",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            TextButton(
-                                onClick = onUndo,
-                                modifier = Modifier
-                                    .heightIn(min = 48.dp)
-                                    .testTag("undo_action_btn")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.Undo,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Undo", fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
-                            }
-                        }
-                    }
+                    UndoBanner(onUndo = onUndo, modifier = Modifier.padding(top = 2.dp))
                 }
 
                 Box(

@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -32,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -365,5 +367,46 @@ fun DayseedDestructiveButton(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
+    }
+}
+
+
+/**
+ * True when the user's font scale is large enough that side-by-side compact controls no longer fit
+ * (labels would break mid-word or truncate). Layouts use this to stack controls vertically instead.
+ */
+@Composable
+fun rememberIsLargeText(): Boolean = LocalDensity.current.fontScale > 1.15f
+
+/**
+ * Lays out up to two actions side by side (equal widths) when there is room, and stacks them full-width
+ * when text is large or the container is very narrow. Each slot receives the Modifier to apply
+ * (weight(1f) in a row, fillMaxWidth() in a column) so the caller keeps its own tags and styling.
+ */
+@Composable
+fun AdaptiveActionRow(
+    modifier: Modifier = Modifier,
+    primary: (@Composable (Modifier) -> Unit)? = null,
+    secondary: (@Composable (Modifier) -> Unit)? = null
+) {
+    val largeText = rememberIsLargeText()
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        if (largeText || maxWidth < 250.dp) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                primary?.invoke(Modifier.fillMaxWidth())
+                secondary?.invoke(Modifier.fillMaxWidth())
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                primary?.invoke(Modifier.weight(1f))
+                secondary?.invoke(Modifier.weight(1f))
+            }
+        }
     }
 }

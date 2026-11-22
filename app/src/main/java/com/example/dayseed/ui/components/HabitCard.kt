@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -108,6 +109,24 @@ fun HabitCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
+            val largeText = rememberIsLargeText()
+            val showRestDayButton = summary?.canTakeRestDayToday == true &&
+                onTakeRestDayToday != null && restDayException == null
+            val restDayButton: @Composable () -> Unit = {
+                TextButton(
+                    onClick = { onTakeRestDayToday?.invoke() },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .testTag("take_rest_day_btn_${habit.id}")
+                ) {
+                    Text(
+                        text = "Rest day",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
             // Header Row: Habit Name (tappable to open HabitDetail), concise schedule + streak meta, optional Rest day action
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -170,11 +189,8 @@ fun HabitCard(
                         }
 
                         val streakSummary = if (summary != null && (summary.currentCompletedStreak > 0 || summary.currentElapsedActiveSpan > 0)) {
-                            val unitWord = if (summary.streakUnit == StreakUnit.WEEKS) {
-                                if (summary.currentCompletedStreak == 1) "week" else "weeks"
-                            } else {
-                                if (summary.currentCompletedStreak == 1) "day" else "days"
-                            }
+                            // Compound adjective: always singular ("12-day streak", "2-week streak").
+                            val unitWord = if (summary.streakUnit == StreakUnit.WEEKS) "week" else "day"
                             "${summary.currentCompletedStreak}-$unitWord streak"
                         } else {
                             null
@@ -204,21 +220,13 @@ fun HabitCard(
                     }
                 }
 
-                if (summary?.canTakeRestDayToday == true && onTakeRestDayToday != null && restDayException == null) {
-                    TextButton(
-                        onClick = onTakeRestDayToday,
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                        modifier = Modifier
-                            .heightIn(min = 48.dp)
-                            .testTag("take_rest_day_btn_${habit.id}")
-                    ) {
-                        Text(
-                            text = "Rest day",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                if (showRestDayButton && !largeText) {
+                    restDayButton()
                 }
+            }
+            if (showRestDayButton && largeText) {
+                // Large text: give the action its own row so the title and meta line keep their width.
+                restDayButton()
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -495,16 +503,13 @@ private fun QuantityOrDurationSection(
             )
         }
 
-        // Clear Action Hierarchy: Primary = Add Progress, Secondary = View Details
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            if (onOpenRecordSession != null) {
+        // Clear Action Hierarchy: Primary = Add Progress, Secondary = View Details.
+        // AdaptiveActionRow stacks the two buttons when text is large or the card is narrow.
+        AdaptiveActionRow(
+            primary = if (onOpenRecordSession != null) { m ->
                 Button(
                     onClick = { onOpenRecordSession(null) },
-                    modifier = Modifier
-                        .weight(1f)
+                    modifier = m
                         .heightIn(min = 48.dp)
                         .testTag("open_record_session_${habit.id}"),
                     shape = RoundedCornerShape(12.dp),
@@ -523,15 +528,15 @@ private fun QuantityOrDurationSection(
                     Text(
                         text = if (isGoalReached) "Add More" else "Add Progress",
                         style = MaterialTheme.typography.labelLarge,
-                        maxLines = 1
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
-            }
-            if (onOpenHabitDetail != null) {
+            } else null,
+            secondary = if (onOpenHabitDetail != null) { m ->
                 OutlinedButton(
                     onClick = onOpenHabitDetail,
-                    modifier = Modifier
-                        .weight(1f)
+                    modifier = m
                         .heightIn(min = 48.dp)
                         .testTag("habit_view_details_${habit.id}"),
                     shape = RoundedCornerShape(12.dp),
@@ -540,11 +545,12 @@ private fun QuantityOrDurationSection(
                     Text(
                         text = "View Details",
                         style = MaterialTheme.typography.labelLarge,
-                        maxLines = 1
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
-            }
-        }
+            } else null
+        )
 
         // Subtle Quick-Add row (only when daily/weekly target is not yet reached, never competing with Add Progress)
         if (!isGoalReached) {
@@ -736,50 +742,65 @@ private fun UnrecordedOutcomeActionRow(
                 modifier = Modifier.testTag("legacy_effort_mode_notice_${habit.id}")
             )
         }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(
-                onClick = { onLog(DailyOutcome.COMPLETED, EffortLevel.STANDARD) },
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 48.dp)
-                    .testTag("habit_done_btn_${habit.id}"),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Complete", style = MaterialTheme.typography.labelLarge)
-            }
-            if (onOpenHabitDetail != null) {
-                OutlinedButton(
-                    onClick = onOpenHabitDetail,
-                    modifier = Modifier
-                        .weight(1f)
+        AdaptiveActionRow(
+            primary = { m ->
+                Button(
+                    onClick = { onLog(DailyOutcome.COMPLETED, EffortLevel.STANDARD) },
+                    modifier = m
                         .heightIn(min = 48.dp)
-                        .testTag("habit_view_details_${habit.id}"),
+                        .testTag("habit_done_btn_${habit.id}"),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("View Details", style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        "Complete",
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
-            } else if (onOpenRecordSession != null) {
+            },
+            secondary = if (onOpenHabitDetail != null) { m ->
+                OutlinedButton(
+                    onClick = onOpenHabitDetail,
+                    modifier = m
+                        .heightIn(min = 48.dp)
+                        .testTag("habit_view_details_${habit.id}"),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        "View Details",
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            } else if (onOpenRecordSession != null) { m ->
                 OutlinedButton(
                     onClick = { onOpenRecordSession(null) },
-                    modifier = Modifier
+                    modifier = m
                         .heightIn(min = 48.dp)
                         .testTag("open_record_session_${habit.id}"),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Add Progress", style = MaterialTheme.typography.labelLarge)
+                    Text(
+                        "Add Progress",
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
-            }
-        }
+            } else null
+        )
     }
 }

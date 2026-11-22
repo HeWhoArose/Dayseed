@@ -80,6 +80,7 @@ import com.example.dayseed.data.HabitSummary
 import com.example.dayseed.data.StreakUnit
 import com.example.dayseed.data.TrackingMode
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HabitsScreen(
     viewModel: DayseedViewModel,
@@ -140,15 +141,15 @@ fun HabitsScreen(
         ) {
             // Header
             item {
-                Row(
+                // FlowRow: at large text the Living Grove button wraps below the title instead of
+                // squeezing the title/subtitle into a narrow column.
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(end = 10.dp),
+                        modifier = Modifier.padding(end = 10.dp),
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         Text(
@@ -320,11 +321,8 @@ private fun HabitDirectoryCard(
         ""
     }
 
-    val streakUnitWord = if (summary?.streakUnit == StreakUnit.WEEKS) {
-        if (summary.currentCompletedStreak == 1) "week" else "weeks"
-    } else {
-        if (summary?.currentCompletedStreak == 1) "day" else "days"
-    }
+    // Compound adjective, always singular ("12-day streak", "2-week streak"); matches the Today card.
+    val streakUnitWord = if (summary?.streakUnit == StreakUnit.WEEKS) "week" else "day"
     val groveBadge = when (summary?.activeRun?.treeState) {
         GroveTreeState.GROWING_TREE -> "🌳 Growing Tree"
         GroveTreeState.SAPLING_ACTIVE -> "🌱 Active Sapling"
@@ -566,14 +564,14 @@ private fun HabitDirectoryCard(
                 )
             }
 
-            // Streak, Grove & Lifetime Active Days Row
-            Row(
+            // Streak, Grove & Lifetime Active Days Row (wraps instead of squeezing at large text)
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 val streakSummary = if ((summary?.currentCompletedStreak ?: 0) > 0) {
-                    "${summary?.currentCompletedStreak} $streakUnitWord streak • $groveBadge"
+                    "${summary?.currentCompletedStreak}-$streakUnitWord streak • $groveBadge"
                 } else {
                     groveBadge
                 }

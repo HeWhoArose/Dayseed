@@ -40,6 +40,8 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.platform.testTag
 import com.example.dayseed.ui.components.CollectedMomentsDetailSheet
 import com.example.dayseed.ui.components.DaypartBackgroundLayer
@@ -177,7 +179,7 @@ fun DayseedApp(
                                 viewModel.selectTab(NavTab.TODAY)
                             },
                             icon = { Icon(Icons.Default.Spa, contentDescription = "Today") },
-                            label = { Text("Today") },
+                            label = { NavLabel("Today") },
                             modifier = Modifier.testTag("nav_today"),
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = MaterialTheme.colorScheme.primary,
@@ -193,7 +195,7 @@ fun DayseedApp(
                                 viewModel.selectTab(NavTab.HABITS)
                             },
                             icon = { Icon(Icons.Default.Checklist, contentDescription = "Habits") },
-                            label = { Text("Habits") },
+                            label = { NavLabel("Habits") },
                             modifier = Modifier.testTag("nav_habits"),
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = MaterialTheme.colorScheme.primary,
@@ -209,7 +211,7 @@ fun DayseedApp(
                                 viewModel.selectTab(NavTab.JOURNAL)
                             },
                             icon = { Icon(Icons.Default.Book, contentDescription = "Journal") },
-                            label = { Text("Journal") },
+                            label = { NavLabel("Journal") },
                             modifier = Modifier.testTag("nav_journal"),
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = MaterialTheme.colorScheme.primary,
@@ -225,7 +227,7 @@ fun DayseedApp(
                                 viewModel.selectTab(NavTab.INSIGHTS)
                             },
                             icon = { Icon(Icons.Default.Eco, contentDescription = "Insights") },
-                            label = { Text("Insights") },
+                            label = { NavLabel("Insights") },
                             modifier = Modifier.testTag("nav_insights"),
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = MaterialTheme.colorScheme.primary,
@@ -241,7 +243,7 @@ fun DayseedApp(
                                 viewModel.selectTab(NavTab.SETTINGS)
                             },
                             icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-                            label = { Text("Settings") },
+                            label = { NavLabel("Settings") },
                             modifier = Modifier.testTag("nav_settings"),
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = MaterialTheme.colorScheme.primary,
@@ -412,5 +414,21 @@ fun DayseedApp(
                 onDelete = { id -> viewModel.deleteJournalEntry(id) }
             )
         }
+    }
+}
+
+
+/**
+ * Bottom-navigation label. Material navigation labels must stay on one line, so the label's font scale
+ * is capped (at 1.15x) and never wraps mid-word; the icon, active indicator and content description
+ * still carry the destination at larger system font sizes.
+ */
+@Composable
+private fun NavLabel(text: String) {
+    val density = LocalDensity.current
+    CompositionLocalProvider(
+        LocalDensity provides Density(density.density, fontScale = minOf(density.fontScale, 1.15f))
+    ) {
+        Text(text = text, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
     }
 }
