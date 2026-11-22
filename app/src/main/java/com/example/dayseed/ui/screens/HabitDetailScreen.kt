@@ -327,7 +327,7 @@ fun HabitDetailScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Action recorded (Undo available for 8s)",
+                                text = "Change recorded",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 modifier = Modifier.weight(1f)

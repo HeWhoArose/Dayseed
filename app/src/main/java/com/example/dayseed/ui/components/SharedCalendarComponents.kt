@@ -475,7 +475,7 @@ fun SharedMonthCalendar(
                                     if (isSingleHabitMode) {
                                         Text(
                                             text = singleHabitState.nonColorIndicator,
-                                            fontSize = 10.sp,
+                                            fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = textColor
                                         )
@@ -490,7 +490,7 @@ fun SharedMonthCalendar(
                                             .ifEmpty { "·" }
                                         Text(
                                             text = compactMarks,
-                                            fontSize = 9.sp,
+                                            fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = textColor,
                                             maxLines = 1
@@ -505,14 +505,14 @@ fun SharedMonthCalendar(
                                             if (latestMood != null) {
                                                 Text(
                                                     text = latestMood.symbol,
-                                                    fontSize = 8.sp
+                                                    fontSize = 10.sp
                                                 )
                                             }
                                             if (dayJournals.isNotEmpty()) {
                                                 val jBadgeText = if (dayJournals.size > 1) "✍️${dayJournals.size}" else "✍️"
                                                 Text(
                                                     text = jBadgeText,
-                                                    fontSize = 8.sp,
+                                                    fontSize = 10.sp,
                                                     modifier = Modifier.testTag("${testTagPrefix}_journal_badge_$date")
                                                 )
                                             }

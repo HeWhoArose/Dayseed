@@ -1417,15 +1417,15 @@ class CanonicalUiAndBehaviourReconciliationTest {
 
         val fabWithOneHabit = findNodeByTag("add_habit_fab").boundsInRoot
         val seedsHeaderWithOneHabit = findNodeByTag("today_seeds_section_header").boundsInRoot
-        val tendedCountWithOneHabit = findNodeByTag("today_tended_count_text").boundsInRoot
+        val progressRatioWithOneHabit = findNodeByTag("today_progress_ratio_text").boundsInRoot
         val habitCardWithOneHabit = findNodeByTag("habit_card_h_resp_1").boundsInRoot
         assertFalse(
             "With 1 habit on TodayScreen, add_habit_fab must not overlap Today's Seeds header",
             fabWithOneHabit.overlaps(seedsHeaderWithOneHabit)
         )
         assertFalse(
-            "With 1 habit on TodayScreen, add_habit_fab must not overlap tended count badge",
-            fabWithOneHabit.overlaps(tendedCountWithOneHabit)
+            "With 1 habit on TodayScreen, add_habit_fab must not overlap the progress ratio text",
+            fabWithOneHabit.overlaps(progressRatioWithOneHabit)
         )
         assertFalse(
             "With 1 habit on TodayScreen, add_habit_fab ($fabWithOneHabit) must not overlap first HabitCard ($habitCardWithOneHabit)",

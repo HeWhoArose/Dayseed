@@ -517,13 +517,6 @@ fun TodayScreen(
                     if (scheduledTodayHabits.isNotEmpty()) {
                         // Section 4: Today's Habits Header & List (§5.1)
                         item {
-                            val tendedToday = computeTendedTodayCount(
-                                scheduledTodayHabits = scheduledTodayHabits,
-                                habitSummaries = habitSummaries,
-                                todayOutcomes = todayOutcomes,
-                                todayEntries = todayEntries,
-                                todayExceptions = todayExceptions
-                            )
                             FlowRow(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -538,19 +531,6 @@ fun TodayScreen(
                                     color = MaterialTheme.colorScheme.onBackground,
                                     modifier = Modifier.testTag("today_seeds_heading_text")
                                 )
-                                Surface(
-                                    shape = RoundedCornerShape(999.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
-                                ) {
-                                    Text(
-                                        text = "$tendedToday of ${scheduledTodayHabits.size} tended",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier
-                                            .padding(horizontal = 10.dp, vertical = 3.dp)
-                                            .testTag("today_tended_count_text")
-                                    )
-                                }
                             }
                         }
 
@@ -862,7 +842,7 @@ private fun UndoBanner(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Recent change recorded (8s undo window)",
+                text = "Change recorded",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f)

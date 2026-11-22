@@ -524,7 +524,7 @@ class ProgressiveDisclosureAndSmartHabitTest {
 
         assertNull("TodayLongestStreakIndicator must be hidden when 0 habits exist", findNodeByTagOrNull(activity, "today_main_streak_indicator"))
         assertNull("Today's Seeds header must be hidden when 0 habits exist", findNodeByTagOrNull(activity, "today_seeds_section_header"))
-        assertNull("0 of 0 tended text must be hidden when 0 habits exist", findNodeByTagOrNull(activity, "today_tended_count_text"))
+        assertNull("0 of 0 progress ratio text must be hidden when 0 habits exist", findNodeByTagOrNull(activity, "today_progress_ratio_text"))
         assertNull("ReflectionCard must be hidden when 0 habits exist", findNodeByTagOrNull(activity, "reflection_card"))
         assertNull("CollectedMomentsSummaryCard must be hidden when 0 habits exist", findNodeByTagOrNull(activity, "growth_mark_summary_card"))
         assertNull("Floating action button must be hidden when 0 habits exist", findNodeByTagOrNull(activity, "add_habit_fab"))
