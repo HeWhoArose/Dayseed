@@ -45,6 +45,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import com.example.dayseed.ui.components.ProgressBarWithOverflow
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -782,14 +783,9 @@ fun RecordSessionSheet(
                             )
                         }
 
-                        LinearProgressIndicator(
-                            progress = { (projectedPct / 100f).coerceIn(0f, 1f) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(8.dp)
-                                .clip(RoundedCornerShape(4.dp)),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        ProgressBarWithOverflow(
+                            fraction = projectedPct / 100f,
+                            modifier = Modifier.fillMaxWidth()
                         )
 
                         if (projectedActiveTotal > BigInteger.ZERO) {

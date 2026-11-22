@@ -1117,8 +1117,8 @@ class CanonicalUiAndBehaviourReconciliationTest {
         assertTrue("Cold-launch brand lockup must display official motto", initialTexts.contains("Your progress is more than your streak."))
 
         // Verify habit cards on Today expose unified Complete/Record without manual Tiny/Usual/Extra buttons
-        assertTrue("Quantity habit Complete Goal button must be present", "quick_add_goal_h_runtime_qty" in initialTags)
-        assertTrue("Quantity habit Record button must be present", "open_record_session_h_runtime_qty" in initialTags)
+        assertTrue("Quantity habit round + (quick log) button must be present", "quick_log_btn_h_runtime_qty" in initialTags)
+        assertTrue("Quantity habit progress bar must be present", "habit_progress_bar_h_runtime_qty" in initialTags)
         assertTrue("Legacy habit Complete button must be present", "habit_done_btn_h_runtime_legacy" in initialTags)
         assertTrue("Legacy habit conversion notice must be present", "legacy_effort_mode_notice_h_runtime_legacy" in initialTags)
         assertFalse("Manual Tiny effort button must NOT be rendered", initialTexts.any { it.contains("🌱 Tiny") })

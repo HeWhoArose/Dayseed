@@ -60,6 +60,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import com.example.dayseed.ui.components.ProgressBarWithOverflow
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -534,14 +535,9 @@ fun HabitDetailScreen(
                             modifier = Modifier.testTag("detail_progress_summary_text")
                         )
 
-                        LinearProgressIndicator(
-                            progress = { (pct / 100f).coerceIn(0f, 1f) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(8.dp)
-                                .clip(RoundedCornerShape(999.dp)),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                        ProgressBarWithOverflow(
+                            fraction = pct / 100f,
+                            modifier = Modifier.fillMaxWidth()
                         )
 
                         Text(

@@ -14,6 +14,10 @@ val LightBorder = Color(0xFFD8DED5)
 // Control boundaries (text fields, outlined buttons, chips) need 3:1 non-text contrast (WCAG 1.4.11).
 // Derived from LightBorder toward LightTextSecondary; 3.4:1 on the card surface. Decorative borders keep LightBorder.
 val LightControlBorder = Color(0xFF7F8980)
+// Progress beyond the target (D-040 Extra/Huge): drawn as a second lap over the filled bar. A warm gold, distinct
+// from the green fill and from the rust accent (which stays reserved for rare emphasis, never a failure signal).
+// The lap is also separated by a gap and described in text, so colour is never the only cue.
+val LightProgressExtra = Color(0xFFE0A72E)
 val LightBrand = Color(0xFF286143)
 val LightOnBrand = Color(0xFFFFFFFF)
 val LightGrowthSubtle = Color(0xFFE4EBDD)
@@ -27,6 +31,7 @@ val DarkTextSecondary = Color(0xFFC1CBC1)
 val DarkBorder = Color(0xFF334437)
 // Control boundary on dark surfaces: 3.9:1 on DarkSurface, 3.2:1 on DarkGrowthSubtle.
 val DarkControlBorder = Color(0xFF738175)
+val DarkProgressExtra = Color(0xFFEBBE55)
 val DarkBrand = Color(0xFF88B38C)
 val DarkOnBrand = Color(0xFF132017)
 val DarkGrowthSubtle = Color(0xFF253529)

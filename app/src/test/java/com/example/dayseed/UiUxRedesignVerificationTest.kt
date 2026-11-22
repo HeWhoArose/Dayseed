@@ -271,8 +271,8 @@ class UiUxRedesignVerificationTest {
 
             assertNotNull("Daily progress summary card must render ($theme)", findNodeByTagOrNull(activity, "today_progress_summary_card"))
             assertNotNull("Compact 7-day weekly calendar strip must render ($theme)", findNodeByTagOrNull(activity, "today_weekly_calendar_strip"))
-            assertNotNull("Primary Add Progress button must render ($theme)", findNodeByTagOrNull(activity, "open_record_session_h_pushups"))
-            assertNotNull("Secondary View Details button must render ($theme)", findNodeByTagOrNull(activity, "habit_view_details_h_pushups"))
+            assertNotNull("Compact row round action must render ($theme)", findNodeByTagOrNull(activity, "quick_log_btn_h_pushups") ?: findNodeByTagOrNull(activity, "habit_done_btn_h_pushups"))
+            assertNotNull("Compact row detail opener must render ($theme)", findNodeByTagOrNull(activity, "open_habit_detail_h_pushups"))
 
             // Bottom navigation must be visible on primary Today tab
             assertNotNull("Bottom nav must be visible on Today tab ($theme)", findNodeByTagOrNull(activity, "nav_today"))

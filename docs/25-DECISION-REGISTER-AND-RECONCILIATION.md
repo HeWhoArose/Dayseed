@@ -591,6 +591,12 @@ The decision log and register contain 224 unique decision IDs through D-230 (gap
 
 The decision log and register now contain 228 unique decision IDs through D-234 (gaps preserved).
 
+## D-235 — Compact Today rows, quick-log sheet, over-target bar (2026-11-22)
+
+| D-235 | Owner accepted compact one-tap Today rows (round action; **+** opens a Complete-or-log-amount sheet) and the `EveningSecondary` contrast adjustment; progress bars continue past 100 % as a second gold lap. Resolves the "awaiting owner" items in D-234. Full record in `docs/09-DECISION-LOG.md` (D-235). Stage C/D NOT OPEN; device cases NOT RUN. |
+
+The decision log and register now contain 229 unique decision IDs through D-235 (gaps preserved).
+
 
 
 

@@ -1,5 +1,11 @@
 package com.example.dayseed.ui.screens
 
+import com.example.dayseed.ui.components.computeHabitProgress
+import com.example.dayseed.ui.components.QuickLogSheetContent
+import com.example.dayseed.ui.components.CompactHabitRow
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -98,7 +104,6 @@ import com.example.dayseed.ui.components.DayseedLogoSymbol
 import com.example.dayseed.ui.components.DayseedShapes
 import com.example.dayseed.ui.components.DayseedSpacing
 import com.example.dayseed.ui.components.rememberIsLargeText
-import com.example.dayseed.ui.components.HabitCard
 import com.example.dayseed.ui.components.ReflectionCard
 import com.example.dayseed.ui.components.TodayLongestStreakIndicator
 import com.example.dayseed.ui.theme.DayseedDateStyle
@@ -153,7 +158,7 @@ fun computeTendedTodayCount(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun TodayScreen(
     viewModel: DayseedViewModel,
@@ -254,6 +259,8 @@ fun TodayScreen(
     }
 
     var showMetricInfoDialog by remember { mutableStateOf(false) }
+    // Which amount habit the quick-log bottom sheet is open for (null = closed).
+    var quickLogHabitId by remember { mutableStateOf<String?>(null) }
 
     val hasShownColdLaunchScene by viewModel.hasShownColdLaunchScene.collectAsState()
     val themeMode = remember(appSettings) {
@@ -551,7 +558,7 @@ fun TodayScreen(
                                 viewModel.repository.isHabitEligibleForRetrospectivePrompt(habit.habitId, today)
                             }
 
-                            HabitCard(
+                            CompactHabitRow(
                                 habit = habit,
                                 outcome = outcome,
                                 entries = habitEntriesForToday,
@@ -562,14 +569,9 @@ fun TodayScreen(
                                 onOpenHabitDetail = {
                                     viewModel.openHabitDetail(habit.habitId, today)
                                 },
-                                onOpenRecordSession = { entryId ->
-                                    viewModel.openRecordSession(habit.habitId, today, entryId)
-                                },
+                                onOpenQuickLog = { quickLogHabitId = habit.habitId },
                                 onLogOutcome = { outKind, effort ->
                                     viewModel.logHabit(habit, today, outKind, effort)
-                                },
-                                onLogQuantityOrDuration = { units, note ->
-                                    viewModel.logHabitQuantityOrDuration(habit, units, today, note)
                                 },
                                 onTakeRestDayToday = {
                                     viewModel.takeRestDayToday(habit)
@@ -664,7 +666,7 @@ fun TodayScreen(
                                 }
                                 val summary = habitSummaries[habit.habitId]
 
-                                HabitCard(
+                                CompactHabitRow(
                                     habit = habit,
                                     outcome = outcome,
                                     entries = habitEntriesForToday,
@@ -675,14 +677,9 @@ fun TodayScreen(
                                     onOpenHabitDetail = {
                                         viewModel.openHabitDetail(habit.habitId, today)
                                     },
-                                    onOpenRecordSession = { entryId ->
-                                        viewModel.openRecordSession(habit.habitId, today, entryId)
-                                    },
+                                    onOpenQuickLog = { quickLogHabitId = habit.habitId },
                                     onLogOutcome = { outKind, effort ->
                                         viewModel.logHabit(habit, today, outKind, effort)
-                                    },
-                                    onLogQuantityOrDuration = { units, note ->
-                                        viewModel.logHabitQuantityOrDuration(habit, units, today, note)
                                     },
                                     onResetRecord = {
                                         viewModel.removeRecord(habit.habitId, today)
@@ -758,6 +755,49 @@ fun TodayScreen(
                         Spacer(modifier = Modifier.height(96.dp))
                     }
             }
+            }
+        }
+    }
+
+    quickLogHabitId?.let { id ->
+        val habit = habits.find { it.habitId == id }
+        val progress = habit?.let { h ->
+            computeHabitProgress(h, habitSummaries[id], todayEntries.filter { it.habitId == id })
+        }
+        if (habit == null || progress == null) {
+            // The habit disappeared or is not an amount habit any more: close quietly.
+            androidx.compose.runtime.LaunchedEffect(id) { quickLogHabitId = null }
+        } else {
+            val summary = habitSummaries[id]
+            val hasRestDay = todayExceptions.any {
+                it.habitId == id && it.exceptionKind == HabitDateExceptionKind.REST_DAY
+            }
+            ModalBottomSheet(
+                onDismissRequest = { quickLogHabitId = null },
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            ) {
+                QuickLogSheetContent(
+                    habitName = habit.name,
+                    progress = progress,
+                    onComplete = { units ->
+                        viewModel.logHabitQuantityOrDuration(habit, units, today, null)
+                        quickLogHabitId = null
+                    },
+                    onLogAmount = { units ->
+                        viewModel.logHabitQuantityOrDuration(habit, units, today, null)
+                        quickLogHabitId = null
+                    },
+                    onTakeRestDay = if (summary?.canTakeRestDayToday == true && !hasRestDay) {
+                        {
+                            viewModel.takeRestDayToday(habit)
+                            quickLogHabitId = null
+                        }
+                    } else null,
+                    onOpenRecord = {
+                        viewModel.openRecordSession(habit.habitId, today, null)
+                        quickLogHabitId = null
+                    }
+                )
             }
         }
     }
