@@ -26,12 +26,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,6 +45,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -72,6 +78,7 @@ import java.math.BigInteger
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 /**
@@ -180,7 +187,7 @@ internal fun validateRecordSessionDate(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun RecordSessionSheet(
     viewModel: DayseedViewModel,
@@ -306,6 +313,7 @@ fun RecordSessionSheet(
     }
     var valueError by remember { mutableStateOf<String?>(null) }
     var hasSubmitted by remember { mutableStateOf(false) }
+    var showDatePickerDialog by remember { mutableStateOf(false) }
 
     val recentDates = remember(today, habitCreatedDate) {
         (0..13).map { today.minusDays(it.toLong()) }
@@ -441,17 +449,40 @@ fun RecordSessionSheet(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Text(
-                            text = "Session Date",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Selected: $selectedDateStr" + if (selectedDate == today) " (Today)" else "",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.testTag("record_session_selected_date")
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Session Date",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Selected: $selectedDateStr" + if (selectedDate == today) " (Today)" else "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.testTag("record_session_selected_date")
+                                )
+                            }
+                            OutlinedButton(
+                                onClick = { showDatePickerDialog = true },
+                                modifier = Modifier
+                                    .heightIn(min = 48.dp)
+                                    .testTag("record_session_pick_date_btn"),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarMonth,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Choose date")
+                            }
+                        }
 
                         LazyRow(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -643,7 +674,7 @@ fun RecordSessionSheet(
                             value = entryNote,
                             onValueChange = { entryNote = it },
                             label = { Text("Session note (optional)") },
-                            placeholder = { Text("What did you focus on in this session?") },
+                            placeholder = { Text("Saved with this session only — e.g. what went well") },
                             maxLines = 3,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -973,6 +1004,41 @@ fun RecordSessionSheet(
                     }
                 }
             }
+        }
+    }
+
+    if (showDatePickerDialog) {
+        val initialMillis = remember(selectedDate) {
+            selectedDate.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+        }
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialMillis)
+        DatePickerDialog(
+            onDismissRequest = { showDatePickerDialog = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            val picked = Instant.ofEpochMilli(millis)
+                                .atZone(ZoneOffset.UTC)
+                                .toLocalDate()
+                            selectedDateStr = picked.toString()
+                            activeEditingEntryId = null
+                            valueError = null
+                        }
+                        showDatePickerDialog = false
+                    },
+                    modifier = Modifier.testTag("record_session_datepicker_confirm")
+                ) {
+                    Text("Select")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePickerDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }

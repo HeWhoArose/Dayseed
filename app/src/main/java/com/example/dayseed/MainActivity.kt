@@ -165,7 +165,7 @@ fun DayseedApp(
             contentWindowInsets = WindowInsets.safeDrawing.exclude(WindowInsets.ime),
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
-                if (!isImeVisible) {
+                if (!isImeVisible && currentSecondaryRoute == null) {
                     NavigationBar(
                         containerColor = MaterialTheme.colorScheme.surface,
                         contentColor = MaterialTheme.colorScheme.onSurface

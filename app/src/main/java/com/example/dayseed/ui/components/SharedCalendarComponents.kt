@@ -1,5 +1,6 @@
 package com.example.dayseed.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -57,6 +58,151 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+
+/**
+ * Compact 7-day weekly calendar strip for the Today screen.
+ * Uses real [HonestCalendarDateState] evaluations so Completed, Partial, Missed,
+ * Rest/Unscheduled, and Future dates are honestly distinguished with both color and symbols.
+ */
+@Composable
+fun CompactWeeklyCalendarStrip(
+    referenceToday: LocalDate,
+    selectedDate: LocalDate,
+    weekStartDay: DayOfWeek,
+    habits: List<Habit>,
+    evaluateDateStateForHabit: (habitId: String, date: LocalDate) -> HonestCalendarDateState,
+    onSelectDate: (LocalDate) -> Unit,
+    onOpenFullCalendar: () -> Unit,
+    modifier: Modifier = Modifier,
+    testTagPrefix: String = "today_weekly_strip"
+) {
+    val daysSinceWeekStart = Math.floorMod(referenceToday.dayOfWeek.value - weekStartDay.value, 7)
+    val weekStart = referenceToday.minusDays(daysSinceWeekStart.toLong())
+    val weekDates = (0..6).map { weekStart.plusDays(it.toLong()) }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("${testTagPrefix}_card"),
+        shape = DayseedShapes.Card,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.75f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "This week",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onOpenFullCalendar() }
+                        .padding(horizontal = 6.dp, vertical = 4.dp)
+                        .testTag("${testTagPrefix}_full_calendar_btn"),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Full calendar",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = "Open full monthly calendar",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                weekDates.forEach { date ->
+                    val state = resolveCalendarCellHonestState(
+                        date = date,
+                        referenceToday = referenceToday,
+                        habitsForMonth = habits,
+                        selectedHabitFilterId = null,
+                        evaluateDateStateForHabit = evaluateDateStateForHabit
+                    )
+                    val isToday = date == referenceToday
+                    val isSelected = date == selectedDate
+                    val (bgColor, fgColor, borderColor) = calendarColorsForState(
+                        state = state,
+                        isSelected = isSelected,
+                        isToday = isToday
+                    )
+                    val dayLabel = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()).take(1)
+                    val indicator = when (state) {
+                        HonestCalendarDateState.COMPLETED_TARGET_MET -> "✓"
+                        HonestCalendarDateState.PARTIAL_OR_TINY_PROGRESS -> "◐"
+                        HonestCalendarDateState.MISSED_SCHEDULED_DATE -> "○"
+                        HonestCalendarDateState.REST_DAY_PLANNED_PAUSE,
+                        HonestCalendarDateState.PAUSED_DATE_RANGE -> "⏸"
+                        HonestCalendarDateState.FUTURE_DATE -> ""
+                        else -> "·"
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .defaultMinSize(minHeight = 48.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(bgColor)
+                            .border(
+                                width = if (isToday) 1.5.dp else if (isSelected) 1.5.dp else 0.75.dp,
+                                color = borderColor,
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .clickable { onSelectDate(date) }
+                            .semantics {
+                                contentDescription = "${date.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault())}, $date, ${state.displayLabel}"
+                            }
+                            .padding(vertical = 3.dp)
+                            .testTag("${testTagPrefix}_date_$date"),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = dayLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Medium
+                        )
+                        Text(
+                            text = date.dayOfMonth.toString(),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                            color = fgColor
+                        )
+                        Text(
+                            text = indicator.ifEmpty { " " },
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = fgColor
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable

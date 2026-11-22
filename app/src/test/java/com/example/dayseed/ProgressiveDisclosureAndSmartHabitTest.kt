@@ -699,8 +699,8 @@ class ProgressiveDisclosureAndSmartHabitTest {
 
         // 6. Save the habit and verify persisted Habit model
         clickTag(activity, "save_habit_btn", widthDp = 360, heightDp = 1600)
-        repo.habits.awaitMatch { list -> list.any { it.name == "Sell" } }
-        val savedHabit = repo.habits.value.first { it.name == "Sell" }
+        repo.habits.awaitMatch { list -> list.any { it.name == "Sell 5 Handmade Bags" } }
+        val savedHabit = repo.habits.value.first { it.name == "Sell 5 Handmade Bags" }
         assertEquals(TrackingMode.QUANTITY, savedHabit.trackingMode)
         assertEquals(8, savedHabit.targetValue)
         assertEquals("handmade bags", savedHabit.unitCode)

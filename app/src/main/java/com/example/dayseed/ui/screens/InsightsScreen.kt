@@ -55,15 +55,26 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.ChevronRight
 import com.example.dayseed.DayseedViewModel
+import com.example.dayseed.data.CompactHistoryBucket
+import com.example.dayseed.data.DayDetailHabitItem
+import com.example.dayseed.data.DayDetailSummary
 import com.example.dayseed.data.DurationNormalizer
 import com.example.dayseed.data.MoodCatalog
 import com.example.dayseed.data.ProgressBand
+import com.example.dayseed.data.TrackingMode
+import com.example.dayseed.data.UnitFormatter
 import com.example.dayseed.ui.components.BotanicalGrowthCanvas
+import com.example.dayseed.ui.components.DayseedExpandableCard
+import com.example.dayseed.ui.components.DayseedShapes
 import com.example.dayseed.ui.components.SharedMonthCalendar
 import com.example.dayseed.ui.components.WeeklyHabitBoard
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -132,15 +143,29 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
         )
     }
 
+    val selectedDaySummary = remember(
+        selectedDate,
+        referenceToday,
+        habits,
+        habitVersions,
+        habitEntries,
+        habitDayOutcomes,
+        habitDateExceptions,
+        journalEntries
+    ) {
+        viewModel.repository.computeDayDetailSummary(selectedDate, referenceToday)
+    }
+    var progressBandsExpanded by rememberSaveable { mutableStateOf(false) }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp)
             .testTag("insights_screen"),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "Insights",
                 style = MaterialTheme.typography.headlineMedium,
@@ -149,19 +174,64 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
             )
             Text(
                 text = "Honest progress across habits, mood, and collected moments",
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
         // =====================================================================
-        // 1. OVERVIEW SECTION (Separated Habit vs. Journal & Opportunity Metrics)
+        // 1. MONTHLY CALENDAR & INLINE SELECTED-DAY ACTIVITY SUMMARY
+        // =====================================================================
+        item {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("insights_section_calendar"),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                SharedMonthCalendar(
+                    displayedMonth = displayedMonth,
+                    selectedDate = selectedDate,
+                    referenceToday = referenceToday,
+                    weekStartDay = viewModel.repository.getWeekStartDay(monthStart),
+                    habitsForMonth = habitsForMonth,
+                    selectedHabitFilterId = selectedCalendarHabitId,
+                    onSelectHabitFilter = { selectedCalendarHabitId = it },
+                    evaluateDateStateForHabit = { hId, d ->
+                        viewModel.repository.evaluateHonestCalendarDateState(hId, d, referenceToday)
+                    },
+                    journalEntries = journalEntries,
+                    onPreviousMonth = { displayedMonthStr = displayedMonth.minusMonths(1).toString() },
+                    onNextMonth = { displayedMonthStr = displayedMonth.plusMonths(1).toString() },
+                    onJumpToToday = {
+                        displayedMonthStr = YearMonth.from(referenceToday).toString()
+                        weeklyBoardDateStr = referenceToday.toString()
+                        viewModel.selectHistoryDate(referenceToday)
+                    },
+                    onSelectDate = { date ->
+                        weeklyBoardDateStr = date.toString()
+                        viewModel.selectHistoryDate(date)
+                    },
+                    testTagPrefix = "insights_calendar"
+                )
+
+                SelectedDayActivitySummaryCard(
+                    summary = selectedDaySummary,
+                    onOpenDayDetail = { viewModel.openDayDetail(selectedDate) },
+                    onOpenHabitDetail = { habitId -> viewModel.openHabitDetail(habitId, selectedDate) }
+                )
+            }
+        }
+
+        // =====================================================================
+        // 2. OVERVIEW METRICS (Equal-height paired stat cards)
         // =====================================================================
         item {
             Card(
-                shape = RoundedCornerShape(22.dp),
+                shape = DayseedShapes.CardLarge,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("insights_section_overview")
@@ -169,11 +239,11 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = "1. Overview",
+                        text = "Overview",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -195,7 +265,7 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
                     }
 
                     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                        val useSingleColumn = maxWidth < 260.dp
+                        val useSingleColumn = maxWidth < 220.dp
                         if (useSingleColumn) {
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
@@ -355,70 +425,19 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
         }
 
         // =====================================================================
-        // 2. HABITS SECTION (Shared Month Calendar + 7-Column Weekly Board + D-040 Bands)
+        // 3. WEEKLY HABIT CONSISTENCY BOARD & EXPANDABLE PROGRESS BANDS
         // =====================================================================
         item {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("insights_section_habits"),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(end = 8.dp)
-                    ) {
-                        Text(
-                            text = "2. Habits",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Tap any date in the calendar or weekly board to open Day Detail",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    TextButton(
-                        onClick = { viewModel.openDayDetail(selectedDate) },
-                        modifier = Modifier
-                            .defaultMinSize(minHeight = 48.dp)
-                            .testTag("insights_open_selected_day_detail")
-                    ) {
-                        Text("Day Detail ($selectedDate)")
-                    }
-                }
-
-                SharedMonthCalendar(
-                    displayedMonth = displayedMonth,
-                    selectedDate = selectedDate,
-                    referenceToday = referenceToday,
-                    weekStartDay = viewModel.repository.getWeekStartDay(monthStart),
-                    habitsForMonth = habitsForMonth,
-                    selectedHabitFilterId = selectedCalendarHabitId,
-                    onSelectHabitFilter = { selectedCalendarHabitId = it },
-                    evaluateDateStateForHabit = { hId, d ->
-                        viewModel.repository.evaluateHonestCalendarDateState(hId, d, referenceToday)
-                    },
-                    journalEntries = journalEntries,
-                    onPreviousMonth = { displayedMonthStr = displayedMonth.minusMonths(1).toString() },
-                    onNextMonth = { displayedMonthStr = displayedMonth.plusMonths(1).toString() },
-                    onJumpToToday = {
-                        displayedMonthStr = YearMonth.from(referenceToday).toString()
-                        weeklyBoardDateStr = referenceToday.toString()
-                        viewModel.selectHistoryDate(referenceToday)
-                    },
-                    onSelectDate = { date ->
-                        weeklyBoardDateStr = date.toString()
-                        viewModel.openDayDetail(date)
-                    },
-                    testTagPrefix = "insights_calendar"
+                Text(
+                    text = "Weekly Consistency",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
                 )
 
                 WeeklyHabitBoard(
@@ -431,79 +450,74 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
                     onOpenHabitDetail = { habitId, date -> viewModel.openHabitDetail(habitId, date) }
                 )
 
-                // Aggregated D-040 Progress Bands Card
-                Card(
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("insights_progress_bands_card")
+                // Expandable Detailed Progress Bands (D-040 — preserved in full without crowding Insights)
+                val detailedBands = listOf(
+                    ProgressBand.ZERO,
+                    ProgressBand.TINY_STEP,
+                    ProgressBand.GETTING_STARTED,
+                    ProgressBand.HALFWAY,
+                    ProgressBand.ALMOST_THERE,
+                    ProgressBand.GOAL_MET,
+                    ProgressBand.EXTRA,
+                    ProgressBand.HUGE
+                )
+                val goalMetOrAbove = (growthMetrics.dailyProgressBandCounts[ProgressBand.GOAL_MET] ?: 0) +
+                    (growthMetrics.dailyProgressBandCounts[ProgressBand.EXTRA] ?: 0) +
+                    (growthMetrics.dailyProgressBandCounts[ProgressBand.HUGE] ?: 0) +
+                    (growthMetrics.weeklyProgressBandCounts[ProgressBand.GOAL_MET] ?: 0) +
+                    (growthMetrics.weeklyProgressBandCounts[ProgressBand.EXTRA] ?: 0) +
+                    (growthMetrics.weeklyProgressBandCounts[ProgressBand.HUGE] ?: 0)
+
+                DayseedExpandableCard(
+                    title = "Detailed Progress Bands",
+                    summary = "$goalMetOrAbove goal-met periods across all 7 bands",
+                    expanded = progressBandsExpanded,
+                    onToggle = { progressBandsExpanded = !progressBandsExpanded },
+                    toggleTestTag = "insights_toggle_progress_bands",
+                    modifier = Modifier.testTag("insights_progress_bands_card")
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text(
-                            text = "Aggregated Progress Bands (D-040)",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Aggregated per habit-date (daily targets) and per habit-week (weekly targets)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    Text(
+                        text = "Aggregated per habit-date (daily targets) and per habit-week (weekly targets)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
 
-                        val detailedBands = listOf(
-                            ProgressBand.ZERO,
-                            ProgressBand.TINY_STEP,
-                            ProgressBand.GETTING_STARTED,
-                            ProgressBand.HALFWAY,
-                            ProgressBand.ALMOST_THERE,
-                            ProgressBand.GOAL_MET,
-                            ProgressBand.EXTRA,
-                            ProgressBand.HUGE
-                        )
-                        detailedBands.forEach { band ->
-                            val dailyCount = growthMetrics.dailyProgressBandCounts[band] ?: 0
-                            val weeklyCount = growthMetrics.weeklyProgressBandCounts[band] ?: 0
-                            val combined = dailyCount + weeklyCount
-                            Row(
+                    detailedBands.forEach { band ->
+                        val dailyCount = growthMetrics.dailyProgressBandCounts[band] ?: 0
+                        val weeklyCount = growthMetrics.weeklyProgressBandCounts[band] ?: 0
+                        val combined = dailyCount + weeklyCount
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("insights_band_row_${band.name}"),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "${band.displayName} (${band.rangeLabel})",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("insights_band_row_${band.name}"),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "${band.displayName} (${band.rangeLabel})",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .padding(end = 8.dp)
-                                )
-                                Text(
-                                    text = "$combined ($dailyCount daily • $weeklyCount weekly)",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
+                                    .weight(1f)
+                                    .padding(end = 8.dp)
+                            )
+                            Text(
+                                text = "$combined ($dailyCount daily • $weeklyCount weekly)",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                         }
-
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                        Text(
-                            text = "Legacy Effort Outcomes: Tiny ${growthMetrics.tinyCount} • Usual ${growthMetrics.usualCount} • Extra ${growthMetrics.extraCount}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.testTag("insights_effort_summary_text")
-                        )
                     }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    Text(
+                        text = "Legacy Effort Outcomes: Tiny ${growthMetrics.tinyCount} • Usual ${growthMetrics.usualCount} • Extra ${growthMetrics.extraCount}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag("insights_effort_summary_text")
+                    )
                 }
             }
         }
@@ -533,7 +547,7 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "3. Mood",
+                                text = "Mood & Reflections",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
@@ -747,7 +761,7 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Text(
-                    text = "4. Growth",
+                    text = "Growth & Living Grove",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -885,7 +899,7 @@ private fun OverviewStatBox(
 ) {
     Surface(
         modifier = modifier
-            .defaultMinSize(minHeight = 92.dp)
+            .defaultMinSize(minHeight = 82.dp)
             .testTag(testTag),
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
@@ -915,6 +929,182 @@ private fun OverviewStatBox(
                 style = MaterialTheme.typography.labelSmall,
                 lineHeight = 15.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun SelectedDayActivitySummaryCard(
+    summary: DayDetailSummary,
+    onOpenDayDetail: () -> Unit,
+    onOpenHabitDetail: (String) -> Unit
+) {
+    val dateLabel = remember(summary.date, summary.isToday) {
+        val formatted = summary.date.format(DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault()))
+        if (summary.isToday) "Today · $formatted" else formatted
+    }
+    val completedCount = summary.habitItems.count {
+        it.compactBucket == CompactHistoryBucket.COMPLETED || it.compactBucket == CompactHistoryBucket.EXCEEDED
+    }
+    val partialCount = summary.habitItems.count { it.compactBucket == CompactHistoryBucket.PARTIAL }
+
+    Card(
+        shape = DayseedShapes.Card,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("insights_selected_day_summary")
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CalendarMonth,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Column {
+                        Text(
+                            text = dateLabel,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        val countSub = when {
+                            summary.isFutureDate -> "Upcoming date"
+                            summary.habitItems.isEmpty() -> "No scheduled habits on this day"
+                            partialCount > 0 -> "$completedCount of ${summary.habitItems.size} met · $partialCount in progress"
+                            else -> "$completedCount of ${summary.habitItems.size} habits completed"
+                        }
+                        Text(
+                            text = countSub,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                TextButton(
+                    onClick = onOpenDayDetail,
+                    modifier = Modifier
+                        .defaultMinSize(minHeight = 48.dp)
+                        .testTag("insights_open_selected_day_detail")
+                ) {
+                    Text("Full Day")
+                }
+            }
+
+            if (summary.habitItems.isNotEmpty()) {
+                summary.habitItems.take(4).forEach { item ->
+                    SelectedDayHabitRow(
+                        item = item,
+                        onClick = { onOpenHabitDetail(item.habit.habitId) }
+                    )
+                }
+                if (summary.habitItems.size > 4) {
+                    Text(
+                        text = "+${summary.habitItems.size - 4} more in Full Day Detail",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            if (summary.journalEntries.isNotEmpty()) {
+                val firstEntry = summary.journalEntries.first()
+                Text(
+                    text = "Reflection: ${firstEntry.title?.takeIf { it.isNotBlank() } ?: firstEntry.body}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SelectedDayHabitRow(
+    item: DayDetailHabitItem,
+    onClick: () -> Unit
+) {
+    val mode = item.effectiveVersion.trackingMode.canonical()
+    val rawUnit = item.effectiveVersion.unitCode ?: item.habit.unitCode
+    val statusText = when {
+        item.compactBucket == CompactHistoryBucket.COMPLETED || item.compactBucket == CompactHistoryBucket.EXCEEDED -> {
+            if (mode == TrackingMode.QUANTITY || mode == TrackingMode.DURATION) {
+                "✓ ${UnitFormatter.formatProgressRatioBig(item.totalUnits, item.targetUnits, rawUnit)}"
+            } else {
+                "✓ Completed"
+            }
+        }
+        item.compactBucket == CompactHistoryBucket.PARTIAL -> {
+            if (mode == TrackingMode.QUANTITY || mode == TrackingMode.DURATION) {
+                "◐ ${UnitFormatter.formatProgressRatioBig(item.totalUnits, item.targetUnits, rawUnit)}"
+            } else {
+                "◐ Partial"
+            }
+        }
+        item.restDayException != null -> "◇ Rest day"
+        else -> "○ Not yet logged"
+    }
+
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .testTag("insights_day_summary_habit_${item.habit.habitId}")
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = item.habit.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = statusText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (item.compactBucket == CompactHistoryBucket.COMPLETED || item.compactBucket == CompactHistoryBucket.EXCEEDED) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = "Open ${item.habit.name}",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp)
             )
         }
     }
