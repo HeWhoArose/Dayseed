@@ -1,0 +1,56 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(git branch --show-current)",
+      "Bash(git rev-parse*)",
+      "Bash(git ls-remote*)",
+      "Bash(git fetch*)",
+      "Bash(./gradlew test*)",
+      "Bash(./gradlew :app:test*)",
+      "Bash(./gradlew lint*)",
+      "Bash(./gradlew :app:lint*)",
+      "Bash(bash scripts/check-doc-links.sh*)",
+      "Bash(./scripts/check-doc-links.sh*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Edit(./.env)",
+      "Read(**/*.keystore)",
+      "Read(**/*.jks)",
+      "Edit(**/*.keystore)",
+      "Edit(**/*.jks)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read|Edit|Write|NotebookEdit|Grep|Glob|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard-secrets.sh",
+            "timeout": 10,
+            "statusMessage": "Checking for secret access..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check-doc-links.sh",
+            "timeout": 60,
+            "statusMessage": "Checking Markdown links..."
+          }
+        ]
+      }
+    ]
+  }
+}
