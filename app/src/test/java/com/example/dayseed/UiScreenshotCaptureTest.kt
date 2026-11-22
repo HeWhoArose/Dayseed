@@ -157,6 +157,9 @@ class UiScreenshotCaptureTest {
     }
 
     private fun shot(activity: ComponentActivity, name: String, wDp: Int, hDp: Int) {
+        // Robolectric has no frame clock, so navigation state changes are not redrawn unless the
+        // composition is recreated (same technique the existing UI tests use: recompose = true).
+        findComposeView(activity.window.decorView)?.disposeComposition()
         pump(activity, wDp, hDp)
         pump(activity, wDp, hDp)
         val decor = activity.window.decorView
