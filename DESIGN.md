@@ -42,6 +42,7 @@ These are candidate values for prototype comparisons, not final approvals. UI co
 | `color.text.primary` | `#24352B` | Main text |
 | `color.text.secondary` | `#59655C` | Secondary text; verify exact contrast |
 | `color.border` | `#D8DED5` | Dividers and boundaries |
+| `color.border.control` | `#7F8980` | Boundaries of controls (text fields, outlined buttons, chips). Derived from `color.border` toward `color.text.secondary`; 3.4:1 on the card surface (WCAG 1.4.11). Implemented 2026-11-22 as the Material `outline` role; `color.border` is the `outlineVariant` role and stays for decorative card borders and dividers. |
 | `color.brand` | `#286143` | Primary accent / action background |
 | `color.onBrand` | `#FFFFFF` | Content on brand background |
 | `color.growth.subtle` | `#E4EBDD` | Quiet supporting surface |
@@ -57,6 +58,7 @@ These are candidate values for prototype comparisons, not final approvals. UI co
 | `color.text.primary` | `#F3F2E8` | Main text |
 | `color.text.secondary` | `#C1CBC1` | Secondary text candidate |
 | `color.border` | `#3C4A3E` | Separators and boundaries |
+| `color.border.control` | `#738175` | Same role on dark surfaces; 3.9:1 on the dark card surface. Code values; the dark `color.border` implemented in code is `#334437`, which differs from the candidate above (both remain candidates). |
 | `color.brand` | `#9CCB9C` | Accent candidate on dark surfaces |
 | `color.onBrand` | `#17251C` | Content on light brand accent |
 | `color.growth.subtle` | `#293A2D` | Supporting surface |
@@ -83,6 +85,8 @@ Candidate scalable sizes (platform units are not interchangeable; validate actua
 
 Never put essential instructions, consent, errors, or primary status only in caption-sized text. Text must wrap and scale; do not force fixed-height containers.
 
+**Implemented type roles (2026-11-22):** `DayseedTypography` now defines every role the UI uses rather than inheriting Material defaults: `titleSmall` 15, `labelMedium` 13 and `labelSmall` 12 (previously implicit 14 / 12 / 11, which put 64 chips and captions below the caption minimum). Bottom-navigation labels are pinned at 12 and their font scale is capped at 1.15 so they stay on one line. These sizes are candidates under the same not-yet-approved status as the table above.
+
 ## 5. Spacing, shape, and layout candidates
 
 These values are starting points to test, not locked implementation constants:
@@ -108,6 +112,10 @@ Components should express product semantics and use the tokens above.
 - **Empty state:** explain what is absent and offer a gentle next step; never imply failure.
 - **Destructive action:** explain consequences and provide a clear cancel path; deletion must follow approved data policy.
 - **Status indicator:** use text/shape/icon as well as colour.
+- **Progress band chip (owner decision 2026-11-22, D-234):** show the band label only (for example `Halfway`); the exact percentage is always shown beside it. The strict D-040 range (`50–<75%`, kept unchanged in `ProgressBand.shortBadge`) is spoken in plain words in the accessibility description (`ProgressBand.spokenDescription()`), never as symbols.
+- **Headings and roles:** screen titles and card titles are marked as headings; clickable rows expose a button role; expandable cards announce `Expanded`/`Collapsed`; the undo banner is a polite live region. Shared building blocks (`DayseedPrimaryButton`, `DayseedSecondaryButton`, `DayseedStatusPill`, `DayseedExpandableCard`, `AdaptiveActionRow`) should be preferred over hand-built equivalents.
+- **Large text and narrow screens:** action pairs stack vertically at font scale above 1.15 or container width under 270 dp (`AdaptiveActionRow`); header rows that hold a title plus a chip or button wrap (`FlowRow`) instead of squeezing the title.
+- **Dates in copy:** never show ISO `YYYY-MM-DD` to people; use `friendlyDate` (`Sat, Nov 14`).
 - **Charts:** label metric, time range, and meaning; expose equivalent information to screen readers.
 
 Do not build a component library for its own sake. Add components only when repeated use and consistent behaviour justify them.

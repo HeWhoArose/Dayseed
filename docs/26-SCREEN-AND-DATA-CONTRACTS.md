@@ -273,7 +273,7 @@ All affected screens must implement the following state distinctions:
 2. **`Today` Screen & `HabitCard` (`W1`, `D-040`, `D-210`, `D-211`, `D-216` Option A, `D-217`):**
    - Preserves `DaypartHeaderBanner` artwork and greeting; displays a single longest active streak indicator pill (`selectLongestActiveRun`) with explicit `"days"` or `"weeks"` unit labels, opening `LivingGrove` on tap.
    - Separates scheduled habits from a collapsible `"Not scheduled today"` section supporting extra/unscheduled logging (`U-2`, `U-7`).
-   - Displays derived `D-040` progress band labels (`Zero logged`, `Tiny`, `Small`, `Halfway`, `Nearly there`, `Goal met`, `Extra`, `Huge`), fractional-safe badges, and both `encouragementQuote` and `motivationQuote` (`D-216` Option A).
+   - Displays derived `D-040` progress band labels (`Zero logged`, `Tiny`, `Small`, `Halfway`, `Nearly there`, `Goal met`, `Extra`, `Huge`), the band label chip (owner decision `D-234`: label only; the strict fractional-safe range remains in `ProgressBand.shortBadge` and is spoken in plain words for assistive technology), and both `encouragementQuote` and `motivationQuote` (`D-216` Option A).
    - Guards rapid duplicate quick-action taps within `350 ms` by reusing the first tap's `idempotencyKey`.
    - Tapping the `Collected moments` (`G2`) card opens `CollectedMomentsDetailSheet` (`G3` month selector, recorded duration total, active days, session count, and per-session drill-down).
 3. **`Habits` Directory & Full-Screen `CreateEditHabitScreen` (`D-194`, `D-195`, `D-216`, `U-12`):**
