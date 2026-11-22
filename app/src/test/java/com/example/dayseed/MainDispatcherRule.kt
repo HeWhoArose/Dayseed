@@ -44,6 +44,25 @@ class MainDispatcherRule(
 
     override fun finished(description: Description) {
         Dispatchers.resetMain()
+        drainComposeDispatcher()
+    }
+
+    /**
+     * Test-isolation hygiene for Compose hosted in Robolectric.
+     *
+     * Compose keeps ONE process-wide AndroidUiDispatcher whose "a dispatch is already scheduled" flags
+     * (scheduledFrameDispatch / scheduledTrampolineDispatch) are only cleared when its posted looper
+     * message actually runs. A test that ends with such a message still queued (for example right after
+     * Activity.destroy()) has that message dropped when Robolectric resets the main looper, so the flags
+     * stay true for the rest of the JVM: every later recomposition request is queued but never run.
+     * Symptom: a click changes state yet the UI never redraws, but only in tests that run after the
+     * leaking one. Running the pending looper work here lets the dispatcher clear its flags normally.
+     */
+    private fun drainComposeDispatcher() {
+        runCatching {
+            val looper = android.os.Looper.getMainLooper() ?: return
+            org.robolectric.Shadows.shadowOf(looper).idle()
+        }
     }
 }
 
