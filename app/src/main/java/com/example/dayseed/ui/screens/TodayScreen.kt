@@ -46,6 +46,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Settings
@@ -57,6 +58,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -200,9 +202,6 @@ fun TodayScreen(
     val todayJournal = remember(todayJournals) {
         todayJournals.firstOrNull()
     }
-    val todayDraft = remember(drafts, todayStr) {
-        drafts.find { it.localDate == todayStr && it.sourceContext == "JOURNAL_COMPOSER" }
-    }
 
     val activeHabits = remember(habits) {
         habits.filter { it.lifecycleState == HabitLifecycleState.ACTIVE }
@@ -215,21 +214,6 @@ fun TodayScreen(
     val notScheduledTodayHabits = remember(activeHabits, scheduledTodayHabits) {
         val scheduledIds = scheduledTodayHabits.map { it.habitId }.toSet()
         activeHabits.filter { it.habitId !in scheduledIds }
-    }
-    val longestActiveStreak = remember(habitSummaries, habits) {
-        viewModel.selectLongestActiveRun()
-    }
-
-    val hasMeaningfulCollectedMoments = remember(growthMetrics) {
-        growthMetrics.isLoading ||
-            !growthMetrics.loadError.isNullOrBlank() ||
-            growthMetrics.currentMonthDurationMinutes > 0L ||
-            growthMetrics.currentMonthDurationPositiveSessionsCount > 0 ||
-            growthMetrics.currentMonthDurationZeroSessionsCount > 0 ||
-            growthMetrics.habitActiveDatesCount > 0 ||
-            growthMetrics.tinyCount > 0 ||
-            growthMetrics.usualCount > 0 ||
-            growthMetrics.extraCount > 0
     }
 
     val context = LocalContext.current
@@ -258,7 +242,6 @@ fun TodayScreen(
         v.equals("true", ignoreCase = true) || v == "1" || habits.isNotEmpty()
     }
 
-    var showMetricInfoDialog by remember { mutableStateOf(false) }
     // Which amount habit the quick-log bottom sheet is open for (null = closed).
     var quickLogHabitId by remember { mutableStateOf<String?>(null) }
 
@@ -399,6 +382,16 @@ fun TodayScreen(
                             greeting = greetingFor(daypart),
                             modifier = Modifier.weight(1f)
                         )
+                        IconButton(
+                            onClick = { viewModel.openJournalEditor(todayJournal, today) },
+                            modifier = Modifier.size(48.dp).testTag("today_write_reflection_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Write a reflection for today",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                         if (showCornerArtwork) {
                             Spacer(modifier = Modifier.width(8.dp))
                             DaypartArtwork(
@@ -492,6 +485,23 @@ fun TodayScreen(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 2,
                                         overflow = TextOverflow.Ellipsis
+                                    )
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+                                    CompactWeeklyCalendarStrip(
+                                        referenceToday = today,
+                                        selectedDate = today,
+                                        weekStartDay = currentWeekStartDay,
+                                        habits = activeHabits,
+                                        evaluateDateStateForHabit = { habitId, date ->
+                                            viewModel.repository.evaluateHonestCalendarDateState(habitId, date, today)
+                                        },
+                                        onSelectDate = { tappedDate -> viewModel.openDayDetail(tappedDate) },
+                                        onOpenFullCalendar = {
+                                            viewModel.markColdLaunchSceneShown()
+                                            viewModel.selectTab(NavTab.INSIGHTS)
+                                        },
+                                        embedded = true,
+                                        modifier = Modifier.testTag("today_weekly_calendar_strip")
                                     )
                                 }
                             }
@@ -689,67 +699,6 @@ fun TodayScreen(
                         }
                     }
 
-                    // Compact 7-day Weekly Calendar Strip (direct continuity view right below today's habits)
-                    item {
-                        CompactWeeklyCalendarStrip(
-                            referenceToday = today,
-                            selectedDate = today,
-                            weekStartDay = currentWeekStartDay,
-                            habits = activeHabits,
-                            evaluateDateStateForHabit = { habitId, date ->
-                                viewModel.repository.evaluateHonestCalendarDateState(habitId, date, today)
-                            },
-                            onSelectDate = { tappedDate ->
-                                viewModel.openDayDetail(tappedDate)
-                            },
-                            onOpenFullCalendar = {
-                                viewModel.markColdLaunchSceneShown()
-                                viewModel.selectTab(NavTab.INSIGHTS)
-                            },
-                            modifier = Modifier.testTag("today_weekly_calendar_strip")
-                        )
-                    }
-
-                    // Compact Daily Reflection Action / Card (revealed once at least one habit exists)
-                    item {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        ReflectionCard(
-                            entry = todayJournal,
-                            draft = todayDraft,
-                            entriesCountForDate = todayJournals.size,
-                            onOpenEditor = { viewModel.openJournalEditor(todayJournal, today) },
-                            onWriteAnother = { viewModel.openJournalEditor(null, today) }
-                        )
-                    }
-
-                    // Active Streak Indicator (revealed calmly below Reflection only once an active streak exists)
-                    if (longestActiveStreak != null) {
-                        item {
-                            TodayLongestStreakIndicator(
-                                longestSelection = longestActiveStreak,
-                                onOpenHabitDetail = { habitId -> viewModel.openHabitDetail(habitId, today) },
-                                onOpenLivingGrove = { habitId -> viewModel.openLivingGrove(habitId) }
-                            )
-                        }
-                    }
-
-                    // Collected Moments Summary Card (revealed only when meaningful recorded data exists)
-                    if (hasMeaningfulCollectedMoments) {
-                        item {
-                            CollectedMomentsSummaryCard(
-                                metrics = growthMetrics,
-                                referenceDate = today,
-                                onOpenDetail = {
-                                    viewModel.openCollectedMomentsDetail(
-                                        yearMonth = YearMonth.from(today),
-                                        selectedDate = today
-                                    )
-                                },
-                                onInfoClick = { showMetricInfoDialog = true }
-                            )
-                        }
-                    }
-
                     // Bottom breathing room so final items scroll completely clear of the FAB
                     item {
                         Spacer(modifier = Modifier.height(96.dp))
@@ -800,36 +749,6 @@ fun TodayScreen(
                 )
             }
         }
-    }
-
-    if (showMetricInfoDialog) {
-        AlertDialog(
-            onDismissRequest = { showMetricInfoDialog = false },
-            title = {
-                Text("How Dayseed Measures Progress", fontWeight = FontWeight.Bold)
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        "• Collected moments: Shows your monthly duration total across compatible time-tracked habits alongside your daily session rhythm.",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        "• Tiny & Partial Actions Count: Logging 1 unit or a tiny step is 100% valid effort.",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        "• No Streak Resets: Missed days never erase past progress or reset any counter to zero.",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showMetricInfoDialog = false }) {
-                    Text("Understood")
-                }
-            }
-        )
     }
 }
 

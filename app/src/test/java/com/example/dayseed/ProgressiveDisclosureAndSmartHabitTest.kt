@@ -526,7 +526,7 @@ class ProgressiveDisclosureAndSmartHabitTest {
         assertNull("TodayLongestStreakIndicator must be hidden when 0 habits exist", findNodeByTagOrNull(activity, "today_main_streak_indicator"))
         assertNull("Today's Seeds header must be hidden when 0 habits exist", findNodeByTagOrNull(activity, "today_seeds_section_header"))
         assertNull("0 of 0 progress ratio text must be hidden when 0 habits exist", findNodeByTagOrNull(activity, "today_progress_ratio_text"))
-        assertNull("ReflectionCard must be hidden when 0 habits exist", findNodeByTagOrNull(activity, "reflection_card"))
+        assertNull("Reflection pen must be hidden when 0 habits exist", findNodeByTagOrNull(activity, "today_write_reflection_btn"))
         assertNull("CollectedMomentsSummaryCard must be hidden when 0 habits exist", findNodeByTagOrNull(activity, "growth_mark_summary_card"))
         assertNull("Floating action button must be hidden when 0 habits exist", findNodeByTagOrNull(activity, "add_habit_fab"))
 
@@ -541,7 +541,7 @@ class ProgressiveDisclosureAndSmartHabitTest {
         pumpActivity(activity, widthDp = 360, heightDp = 840, recompose = true)
         assertEquals("true", repo.getSettingString("onboarding_completed", "false"))
         assertNotNull(findNodeByTagOrNull(activity, "today_empty_habits_card"))
-        assertNull(findNodeByTagOrNull(activity, "reflection_card"))
+        assertNull(findNodeByTagOrNull(activity, "today_write_reflection_btn"))
         assertNull(findNodeByTagOrNull(activity, "growth_mark_summary_card"))
 
         // C. When user has 1 habit that is NOT scheduled for today (Saturday 2026-11-14, habit scheduled Monday only):
@@ -567,8 +567,8 @@ class ProgressiveDisclosureAndSmartHabitTest {
         assertNotNull(findNodeByTagOrNull(activity, "today_rest_day_view_habits_btn"))
         assertNotNull(findNodeByTagOrNull(activity, "today_rest_day_create_habit_btn"))
         assertTrue(collectAllRenderedTexts(activity).any { it.contains("No habits scheduled for today.") })
-        assertNotNull("Compact ReflectionCard should appear once user has at least 1 active habit", findNodeByTagOrNull(activity, "reflection_card"))
-        assertTrue(collectAllRenderedTexts(activity).any { it.contains("Write Today's Reflection") })
+        assertNotNull("Header reflection pen should appear once user has at least 1 active habit", findNodeByTagOrNull(activity, "today_write_reflection_btn"))
+        assertNull("The old Daily Reflection card is gone (D-236)", findNodeByTagOrNull(activity, "reflection_card"))
         assertNull("CollectedMomentsSummaryCard must stay hidden when 0 activity recorded", findNodeByTagOrNull(activity, "growth_mark_summary_card"))
         assertNull("TodayLongestStreakIndicator must stay hidden when no active streak exists", findNodeByTagOrNull(activity, "today_main_streak_indicator"))
 
@@ -593,12 +593,12 @@ class ProgressiveDisclosureAndSmartHabitTest {
         assertNotNull(findNodeByTagOrNull(activity, "habit_card_h_read_pages"))
         assertNull("CollectedMomentsSummaryCard still hidden before first progress entry", findNodeByTagOrNull(activity, "growth_mark_summary_card"))
 
-        // E. Record progress -> CollectedMomentsSummaryCard and TodayLongestStreakIndicator appear
+        // E. Record progress -> streak and collected-moments cards no longer appear on Today (moved to Insights, D-236)
         repo.logHabitEntrySync("h_read_pages", today, 10, "Chapter 1")
         pumpActivity(activity, widthDp = 360, heightDp = 2400, recompose = true)
 
-        assertNotNull("TodayLongestStreakIndicator appears after habit is tended", findNodeByTagOrNull(activity, "today_main_streak_indicator"))
-        assertNotNull("CollectedMomentsSummaryCard appears after meaningful progress is recorded", findNodeByTagOrNull(activity, "growth_mark_summary_card"))
+        assertNull("Longest-rhythm indicator lives on Insights, not Today (D-236)", findNodeByTagOrNull(activity, "today_main_streak_indicator"))
+        assertNull("Collected-moments card no longer on Today (D-236)", findNodeByTagOrNull(activity, "growth_mark_summary_card"))
 
         saveScreenshotPng(activity, "04_today_active_habits_and_progress.png", widthDp = 360, heightDp = 900)
 

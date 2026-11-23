@@ -75,25 +75,19 @@ fun CompactWeeklyCalendarStrip(
     onSelectDate: (LocalDate) -> Unit,
     onOpenFullCalendar: () -> Unit,
     modifier: Modifier = Modifier,
-    testTagPrefix: String = "today_weekly_strip"
+    testTagPrefix: String = "today_weekly_strip",
+    /** When true the strip draws without its own card, to sit inside another card. */
+    embedded: Boolean = false
 ) {
     val daysSinceWeekStart = Math.floorMod(referenceToday.dayOfWeek.value - weekStartDay.value, 7)
     val weekStart = referenceToday.minusDays(daysSinceWeekStart.toLong())
     val weekDates = (0..6).map { weekStart.plusDays(it.toLong()) }
 
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .testTag("${testTagPrefix}_card"),
-        shape = DayseedShapes.Card,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.75f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
+    val body: @Composable () -> Unit = {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = if (embedded) 0.dp else 12.dp, vertical = if (embedded) 0.dp else 8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Row(
@@ -202,6 +196,19 @@ fun CompactWeeklyCalendarStrip(
                 }
             }
         }
+    }
+    if (embedded) {
+        androidx.compose.foundation.layout.Box(modifier.fillMaxWidth().testTag("${testTagPrefix}_card")) { body() }
+    } else {
+        Card(
+            modifier = modifier
+                .fillMaxWidth()
+                .testTag("${testTagPrefix}_card"),
+            shape = DayseedShapes.Card,
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.75f)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) { body() }
     }
 }
 

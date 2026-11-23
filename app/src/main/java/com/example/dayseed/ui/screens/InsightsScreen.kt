@@ -90,6 +90,8 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
     val journalEntries by viewModel.journalEntries.collectAsState()
     val growthMetrics by viewModel.growthMetrics.collectAsState()
     val selectedDate by viewModel.selectedHistoryDate.collectAsState()
+    val habitSummaries by viewModel.habitSummaries.collectAsState()
+    val longestActiveStreak = remember(habitSummaries, habits) { viewModel.selectLongestActiveRun() }
 
     val referenceToday = viewModel.repository.clock.todayLocal()
     val reducedMotion = viewModel.isReducedMotionEnabled()
@@ -180,6 +182,16 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+
+        if (longestActiveStreak != null) {
+            item {
+                com.example.dayseed.ui.components.TodayLongestStreakIndicator(
+                    longestSelection = longestActiveStreak,
+                    onOpenHabitDetail = { habitId -> viewModel.openHabitDetail(habitId, referenceToday) },
+                    onOpenLivingGrove = { habitId -> viewModel.openLivingGrove(habitId) }
+                )
+            }
         }
 
         // =====================================================================

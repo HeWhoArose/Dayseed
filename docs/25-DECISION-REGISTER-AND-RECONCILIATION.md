@@ -597,6 +597,12 @@ The decision log and register now contain 228 unique decision IDs through D-234 
 
 The decision log and register now contain 229 unique decision IDs through D-235 (gaps preserved).
 
+## D-236 — Today screen rearranged (2026-11-23)
+
+| D-236 | Calendar moves into the progress card; Daily Reflection card replaced by a header pen icon; longest-rhythm indicator moves to Insights and the collected-moments card is removed from Today. Full record in `docs/09-DECISION-LOG.md` (D-236). Stage C/D NOT OPEN; device cases NOT RUN. |
+
+The decision log and register now contain 230 unique decision IDs through D-236 (gaps preserved).
+
 
 
 
