@@ -796,6 +796,7 @@ class HabitLifecycleAndEndDateTest {
 
             // 1. Create a habit with a 30-day duration via CreateEditHabitScreen
             setTextTag(activity, "habit_name_input", "Drink 4 cups of water")
+            clickTag(activity, "habit_duration_header")
             clickTag(activity, "habit_duration_mode_SET")
             setTextTag(activity, "habit_duration_value_input", "30")
 

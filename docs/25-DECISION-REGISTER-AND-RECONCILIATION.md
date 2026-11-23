@@ -615,6 +615,12 @@ The decision log and register now contain 231 unique decision IDs through D-237 
 
 The decision log and register now contain 232 unique decision IDs through D-238 (gaps preserved).
 
+## D-239 — New Habit screen second pass (2026-11-23)
+
+| D-239 | Live understanding note, summary only after typing, pinned Create bar, uniform collapsible Schedule and How long, reminder state shown in More options; example hints replaced by a placeholder. Full record in `docs/09-DECISION-LOG.md` (D-239). Stage C/D NOT OPEN. |
+
+The decision log and register now contain 233 unique decision IDs through D-239 (gaps preserved).
+
 
 
 

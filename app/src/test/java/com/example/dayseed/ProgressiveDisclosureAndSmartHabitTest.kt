@@ -634,9 +634,9 @@ class ProgressiveDisclosureAndSmartHabitTest {
 
         // 1. Both "Adjust interpretation" and "More Options" are collapsed by default on new habit creation
         assertNotNull(findNodeByTagOrNull(activity, "habit_name_input"))
-        assertNotNull(findNodeByTagOrNull(activity, "smart_habit_interpretation_card"))
-        assertNotNull(findNodeByTagOrNull(activity, "smart_adjust_interpretation_toggle"))
+        assertNull("Summary card stays hidden until the person types something (D-239)", findNodeByTagOrNull(activity, "smart_habit_interpretation_card"))
         assertNotNull(findNodeByTagOrNull(activity, "habit_advanced_options_toggle"))
+        assertNotNull("Pinned Create button is always visible", findNodeByTagOrNull(activity, "save_habit_btn"))
 
         assertNull("Activity display name input must be collapsed until Adjust interpretation is tapped", findNodeByTagOrNull(activity, "smart_interpreted_activity_input"))
         assertNull("Measurement radio options must be collapsed until Adjust interpretation is tapped", findNodeByTagOrNull(activity, "mode_option_quantity"))
@@ -649,6 +649,10 @@ class ProgressiveDisclosureAndSmartHabitTest {
         // 2. Type natural-language habit: "Read 10 pages of a book"
         setTextTag(activity, "habit_name_input", "Read 10 pages of a book", widthDp = 360, heightDp = 1100)
 
+        assertNotNull(findNodeByTagOrNull(activity, "smart_habit_interpretation_card"))
+        assertNotNull(findNodeByTagOrNull(activity, "smart_adjust_interpretation_toggle"))
+        assertTrue("Live note under the field confirms what was understood",
+            collectAllRenderedTexts(activity).any { it.startsWith("Understood:") && it.contains("Read") })
         val textsAfterRead = collectAllRenderedTexts(activity)
         assertTrue("Summary card must show 'Here's what we understood:'", textsAfterRead.any { it.contains("Here's what we understood:") })
         assertTrue("Summary must show interpreted activity 'Read'", textsAfterRead.any { it.startsWith("Read") })

@@ -66,13 +66,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -352,6 +355,8 @@ fun CreateEditHabitScreen(
     }
 
     var validationError by remember { mutableStateOf<String?>(null) }
+    var scheduleExpanded by rememberSaveable { mutableStateOf(false) }
+    var durationExpanded by rememberSaveable { mutableStateOf(false) }
 
     // Live deterministic natural-language interpretation
     val parsedInterpretation = remember(rawHabitText) {
@@ -476,10 +481,11 @@ fun CreateEditHabitScreen(
             .testTag("create_edit_habit_screen"),
         color = Color.Transparent
     ) {
+        Column(modifier = Modifier.fillMaxSize().imePadding()) {
         LazyColumn(
             modifier = Modifier
-                .fillMaxSize()
-                .imePadding(),
+                .weight(1f)
+                .fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -557,45 +563,29 @@ fun CreateEditHabitScreen(
                         OutlinedTextField(
                             value = rawHabitText,
                             onValueChange = { applySmartInterpretationFromInput(it) },
-                            label = { Text("Your habit") },
-                            placeholder = { Text("e.g. Read 10 pages, Drink 1.5 litres, Save ₦5,000") },
+                            placeholder = { Text("e.g. Read 20 pages daily", maxLines = 1) },
                             singleLine = true,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .bringIntoViewOnFocus()
+                                .semantics { contentDescription = "Your habit" }
                                 .testTag("habit_name_input")
                         )
 
-                        if (!isEditing && rawHabitText.isBlank()) {
-                            Text(
-                                text = "Need an idea? Tap one to start from:",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            // Plain, quiet suggestions (no borders or fills) so they read as hints, not as choices.
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                NATURAL_LANGUAGE_EXAMPLES.forEachIndexed { idx, example ->
-                                    Text(
-                                        text = example,
-                                        style = MaterialTheme.typography.bodyMedium.copy(
-                                            textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
-                                        ),
-                                        color = MaterialTheme.colorScheme.primary,
-                                        maxLines = 1,
-                                        modifier = Modifier
-                                            .heightIn(min = 48.dp)
-                                            .clickable(role = Role.Button) { applySmartInterpretationFromInput(example) }
-                                            .wrapContentHeight(Alignment.CenterVertically)
-                                            .testTag("habit_example_chip_$idx")
-                                    )
-                                }
+                        if (rawHabitText.isNotBlank()) {
+                            val liveParts = buildList {
+                                if (effectiveActivityTitle.isNotBlank()) add(effectiveActivityTitle)
+                                if (selectedMode.canonical() == TrackingMode.COMPLETION_ONLY) add("check off")
+                                add(effectiveScheduleSummary.replace(" (default)", "").let { if (it == "Daily") "every day" else it.lowercase() })
                             }
+                            Text(
+                                text = "Understood: " + liveParts.joinToString(" · "),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .semantics { liveRegion = LiveRegionMode.Polite }
+                                    .testTag("habit_live_understanding")
+                            )
                         }
                     }
                 }
@@ -645,57 +635,47 @@ fun CreateEditHabitScreen(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Text(
-                            text = "Schedule",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                        FormSectionHeader(
+                            title = "Schedule",
+                            summary = effectiveScheduleSummary.replace(" (default)", "").let { if (it == "Daily") "Every day" else it },
+                            expanded = scheduleExpanded,
+                            onToggle = { scheduleExpanded = !scheduleExpanded },
+                            tag = "habit_schedule_header"
                         )
+                        if (scheduleExpanded) {
 
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            FilterChip(
-                                selected = scheduleKind == ScheduleKind.DAILY && targetPeriod == TargetPeriod.DAY,
-                                onClick = {
-                                    userOverrodeSchedule = true
-                                    scheduleKind = ScheduleKind.DAILY
-                                    targetPeriod = TargetPeriod.DAY
-                                    weekdaysMask = WeekdayMask.ALL_DAYS_MASK
-                                },
-                                label = { Text("Every day") },
-                                modifier = Modifier.testTag("schedule_kind_daily")
-                            )
-                            FilterChip(
-                                selected = scheduleKind == ScheduleKind.SELECTED_WEEKDAYS && targetPeriod == TargetPeriod.DAY,
-                                onClick = {
-                                    userOverrodeSchedule = true
-                                    scheduleKind = ScheduleKind.SELECTED_WEEKDAYS
-                                    targetPeriod = TargetPeriod.DAY
-                                    if (weekdaysMask <= 0) {
+                        SegmentedChoice(
+                            labels = listOf("Every day", "Selected days", "Weekly target"),
+                            tags = listOf("schedule_kind_daily", "schedule_kind_selected_weekdays", "target_period_week"),
+                            selected = when {
+                                targetPeriod == TargetPeriod.WEEK -> 2
+                                scheduleKind == ScheduleKind.SELECTED_WEEKDAYS -> 1
+                                else -> 0
+                            },
+                            onSelect = { index ->
+                                userOverrodeSchedule = true
+                                when (index) {
+                                    0 -> {
+                                        scheduleKind = ScheduleKind.DAILY
+                                        targetPeriod = TargetPeriod.DAY
                                         weekdaysMask = WeekdayMask.ALL_DAYS_MASK
                                     }
-                                },
-                                label = { Text("Selected days") },
-                                modifier = Modifier.testTag("schedule_kind_selected_weekdays")
-                            )
-                            FilterChip(
-                                selected = targetPeriod == TargetPeriod.WEEK,
-                                onClick = {
-                                    userOverrodeSchedule = true
-                                    targetPeriod = TargetPeriod.WEEK
-                                    if (scheduleKind == ScheduleKind.DAILY) {
-                                        scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET
+                                    1 -> {
+                                        scheduleKind = ScheduleKind.SELECTED_WEEKDAYS
+                                        targetPeriod = TargetPeriod.DAY
+                                        if (weekdaysMask <= 0) weekdaysMask = WeekdayMask.ALL_DAYS_MASK
                                     }
-                                    if (selectedMode.canonical() == TrackingMode.COMPLETION_ONLY) {
-                                        val cur = targetValueText.toIntOrNull() ?: 3
-                                        if (cur !in 1..7) targetValueText = "3"
+                                    else -> {
+                                        targetPeriod = TargetPeriod.WEEK
+                                        if (scheduleKind == ScheduleKind.DAILY) scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET
+                                        if (selectedMode.canonical() == TrackingMode.COMPLETION_ONLY) {
+                                            val cur = targetValueText.toIntOrNull() ?: 3
+                                            if (cur !in 1..7) targetValueText = "3"
+                                        }
                                     }
-                                },
-                                label = { Text("Weekly target") },
-                                modifier = Modifier.testTag("target_period_week")
-                            )
-                        }
+                                }
+                            }
+                        )
 
                         // Hidden compatibility chip tag for tests targeting target_period_day directly
                         if (targetPeriod == TargetPeriod.WEEK) {
@@ -787,6 +767,215 @@ fun CreateEditHabitScreen(
                                 }
                             }
                         }
+                        }
+                    }
+                }
+            }
+
+            // STEP 4B: Optional Duration & End Date ("How long do you want to maintain this habit?")
+            item {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("habit_duration_section")
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        FormSectionHeader(
+                            title = "How long?",
+                            summary = when (durationKind) {
+                                HabitDurationKind.NONE -> "No end date"
+                                HabitDurationKind.SPECIFIC_DATE -> if (specificEndDateText.isBlank()) "Until a date" else "Until ${specificEndDateText.trim()}"
+                                else -> "For ${durationValueText.ifBlank { "…" }} ${durationKind.name.lowercase()}"
+                            },
+                            expanded = durationExpanded,
+                            onToggle = { durationExpanded = !durationExpanded },
+                            tag = "habit_duration_header"
+                        )
+                        if (durationExpanded) {
+
+                        val timeUnits = listOf(HabitDurationKind.DAYS, HabitDurationKind.WEEKS, HabitDurationKind.MONTHS, HabitDurationKind.YEARS)
+                        fun chooseTimeUnit(kind: HabitDurationKind) {
+                            durationKind = kind
+                            validationError = null
+                            if (durationValueText.toIntOrNull() == null || durationValueText.toInt() <= 0) {
+                                durationValueText = when (kind) {
+                                    HabitDurationKind.DAYS -> "30"
+                                    HabitDurationKind.WEEKS -> "4"
+                                    HabitDurationKind.MONTHS -> "3"
+                                    else -> "1"
+                                }
+                            }
+                        }
+                        SegmentedChoice(
+                            labels = listOf("No end date", "A set time", "Until a date"),
+                            tags = listOf("habit_duration_mode_NONE", "habit_duration_mode_SET", "habit_duration_mode_DATE"),
+                            selected = when (durationKind) {
+                                HabitDurationKind.NONE -> 0
+                                HabitDurationKind.SPECIFIC_DATE -> 2
+                                else -> 1
+                            },
+                            onSelect = { index ->
+                                validationError = null
+                                when (index) {
+                                    0 -> durationKind = HabitDurationKind.NONE
+                                    1 -> if (durationKind !in timeUnits) chooseTimeUnit(HabitDurationKind.DAYS)
+                                    else -> {
+                                        durationKind = HabitDurationKind.SPECIFIC_DATE
+                                        if (specificEndDateText.isBlank()) {
+                                            specificEndDateText = habitStartDate.plusDays(30).toString()
+                                        }
+                                    }
+                                }
+                            }
+                        )
+
+                        when (durationKind) {
+                            HabitDurationKind.NONE -> Unit
+                            HabitDurationKind.DAYS,
+                            HabitDurationKind.WEEKS,
+                            HabitDurationKind.MONTHS,
+                            HabitDurationKind.YEARS -> {
+                                SegmentedChoice(
+                                    labels = listOf("Days", "Weeks", "Months", "Years"),
+                                    tags = timeUnits.map { "habit_duration_kind_${it.name}" },
+                                    selected = timeUnits.indexOf(durationKind),
+                                    onSelect = { chooseTimeUnit(timeUnits[it]) }
+                                )
+                                val unitWord = when (durationKind) {
+                                    HabitDurationKind.DAYS -> "days"
+                                    HabitDurationKind.WEEKS -> "weeks"
+                                    HabitDurationKind.MONTHS -> "months"
+                                    else -> "years"
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    val current = durationValueText.toIntOrNull() ?: 0
+                                    IconButton(
+                                        onClick = { durationValueText = (current - 1).coerceAtLeast(1).toString(); validationError = null },
+                                        modifier = Modifier.size(48.dp).testTag("habit_duration_minus_btn")
+                                    ) { Icon(Icons.Default.Remove, contentDescription = "One $unitWord less") }
+                                    OutlinedTextField(
+                                        value = durationValueText,
+                                        onValueChange = { raw ->
+                                            durationValueText = raw.filter { it.isDigit() }.take(4)
+                                            validationError = null
+                                        },
+                                        singleLine = true,
+                                        textStyle = MaterialTheme.typography.titleLarge.copy(textAlign = androidx.compose.ui.text.style.TextAlign.Center),
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        modifier = Modifier
+                                            .width(96.dp)
+                                            .bringIntoViewOnFocus()
+                                            .semantics { contentDescription = "Number of $unitWord" }
+                                            .testTag("habit_duration_value_input")
+                                    )
+                                    IconButton(
+                                        onClick = { durationValueText = (current + 1).coerceAtMost(9999).toString(); validationError = null },
+                                        modifier = Modifier.size(48.dp).testTag("habit_duration_plus_btn")
+                                    ) { Icon(Icons.Default.Add, contentDescription = "One $unitWord more") }
+                                    Text(
+                                        text = unitWord,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(start = 8.dp)
+                                    )
+                                }
+
+                                val calcDate = durationCalculationResult.getOrNull()
+                                val calcErr = durationCalculationResult.exceptionOrNull()?.message
+                                if (calcDate != null) {
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = "Scheduled end date: ${HabitLifetimeCalculator.formatHumanReadableDate(calcDate)} ($calcDate)",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier
+                                                .padding(10.dp)
+                                                .testTag("habit_calculated_end_date_text")
+                                        )
+                                    }
+                                } else if (calcErr != null) {
+                                    Text(
+                                        text = calcErr,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.testTag("habit_duration_validation_text")
+                                    )
+                                }
+                            }
+                            HabitDurationKind.SPECIFIC_DATE -> {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    OutlinedTextField(
+                                        value = specificEndDateText,
+                                        onValueChange = {
+                                            specificEndDateText = it
+                                            validationError = null
+                                        },
+                                        label = { Text("End date (YYYY-MM-DD)") },
+                                        placeholder = { Text("e.g. 2026-12-25") },
+                                        singleLine = true,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .bringIntoViewOnFocus()
+                                            .testTag("habit_specific_end_date_input")
+                                    )
+                                    OutlinedButton(
+                                        onClick = { showEndDatePickerDialog = true },
+                                        modifier = Modifier
+                                            .heightIn(min = 48.dp)
+                                            .testTag("habit_pick_end_date_btn")
+                                    ) {
+                                        Text("Calendar")
+                                    }
+                                }
+
+                                val calcDate = durationCalculationResult.getOrNull()
+                                val calcErr = durationCalculationResult.exceptionOrNull()?.message
+                                if (calcDate != null) {
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = "Selected end date: ${HabitLifetimeCalculator.formatHumanReadableDate(calcDate)} ($calcDate)",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier
+                                                .padding(10.dp)
+                                                .testTag("habit_calculated_end_date_text")
+                                        )
+                                    }
+                                } else if (calcErr != null) {
+                                    Text(
+                                        text = calcErr,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.testTag("habit_duration_validation_text")
+                                    )
+                                }
+                            }
+                        }
+                        }
                     }
                 }
             }
@@ -820,7 +1009,11 @@ fun CreateEditHabitScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "Gentle reminder, note, category, colour, and optional lifetime goal",
+                                    text = if (reminderEnabled) {
+                                        "Reminder at ${reminderHour12Text.ifBlank { "--" }}:${reminderMinuteText.padStart(2, '0')} ${if (reminderIsPm) "PM" else "AM"} · note, category, colour, goal"
+                                    } else {
+                                        "Reminder off · note, category, colour, lifetime goal"
+                                    },
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -1116,210 +1309,9 @@ fun CreateEditHabitScreen(
                 }
             }
 
-            // STEP 4B: Optional Duration & End Date ("How long do you want to maintain this habit?")
-            item {
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("habit_duration_section")
-                ) {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = "How long do you want to maintain this habit?",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-
-                        val timeUnits = listOf(HabitDurationKind.DAYS, HabitDurationKind.WEEKS, HabitDurationKind.MONTHS, HabitDurationKind.YEARS)
-                        fun chooseTimeUnit(kind: HabitDurationKind) {
-                            durationKind = kind
-                            validationError = null
-                            if (durationValueText.toIntOrNull() == null || durationValueText.toInt() <= 0) {
-                                durationValueText = when (kind) {
-                                    HabitDurationKind.DAYS -> "30"
-                                    HabitDurationKind.WEEKS -> "4"
-                                    HabitDurationKind.MONTHS -> "3"
-                                    else -> "1"
-                                }
-                            }
-                        }
-                        DurationSegments(
-                            labels = listOf("No end date", "A set time", "Until a date"),
-                            tags = listOf("habit_duration_mode_NONE", "habit_duration_mode_SET", "habit_duration_mode_DATE"),
-                            selected = when (durationKind) {
-                                HabitDurationKind.NONE -> 0
-                                HabitDurationKind.SPECIFIC_DATE -> 2
-                                else -> 1
-                            },
-                            onSelect = { index ->
-                                validationError = null
-                                when (index) {
-                                    0 -> durationKind = HabitDurationKind.NONE
-                                    1 -> if (durationKind !in timeUnits) chooseTimeUnit(HabitDurationKind.DAYS)
-                                    else -> {
-                                        durationKind = HabitDurationKind.SPECIFIC_DATE
-                                        if (specificEndDateText.isBlank()) {
-                                            specificEndDateText = habitStartDate.plusDays(30).toString()
-                                        }
-                                    }
-                                }
-                            }
-                        )
-
-                        when (durationKind) {
-                            HabitDurationKind.NONE -> Unit
-                            HabitDurationKind.DAYS,
-                            HabitDurationKind.WEEKS,
-                            HabitDurationKind.MONTHS,
-                            HabitDurationKind.YEARS -> {
-                                DurationSegments(
-                                    labels = listOf("Days", "Weeks", "Months", "Years"),
-                                    tags = timeUnits.map { "habit_duration_kind_${it.name}" },
-                                    selected = timeUnits.indexOf(durationKind),
-                                    onSelect = { chooseTimeUnit(timeUnits[it]) }
-                                )
-                                val unitWord = when (durationKind) {
-                                    HabitDurationKind.DAYS -> "days"
-                                    HabitDurationKind.WEEKS -> "weeks"
-                                    HabitDurationKind.MONTHS -> "months"
-                                    else -> "years"
-                                }
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    val current = durationValueText.toIntOrNull() ?: 0
-                                    IconButton(
-                                        onClick = { durationValueText = (current - 1).coerceAtLeast(1).toString(); validationError = null },
-                                        modifier = Modifier.size(48.dp).testTag("habit_duration_minus_btn")
-                                    ) { Icon(Icons.Default.Remove, contentDescription = "One $unitWord less") }
-                                    OutlinedTextField(
-                                        value = durationValueText,
-                                        onValueChange = { raw ->
-                                            durationValueText = raw.filter { it.isDigit() }.take(4)
-                                            validationError = null
-                                        },
-                                        singleLine = true,
-                                        textStyle = MaterialTheme.typography.titleLarge.copy(textAlign = androidx.compose.ui.text.style.TextAlign.Center),
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                        modifier = Modifier
-                                            .width(96.dp)
-                                            .bringIntoViewOnFocus()
-                                            .semantics { contentDescription = "Number of $unitWord" }
-                                            .testTag("habit_duration_value_input")
-                                    )
-                                    IconButton(
-                                        onClick = { durationValueText = (current + 1).coerceAtMost(9999).toString(); validationError = null },
-                                        modifier = Modifier.size(48.dp).testTag("habit_duration_plus_btn")
-                                    ) { Icon(Icons.Default.Add, contentDescription = "One $unitWord more") }
-                                    Text(
-                                        text = unitWord,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(start = 8.dp)
-                                    )
-                                }
-
-                                val calcDate = durationCalculationResult.getOrNull()
-                                val calcErr = durationCalculationResult.exceptionOrNull()?.message
-                                if (calcDate != null) {
-                                    Surface(
-                                        shape = RoundedCornerShape(10.dp),
-                                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Text(
-                                            text = "Scheduled end date: ${HabitLifetimeCalculator.formatHumanReadableDate(calcDate)} ($calcDate)",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier
-                                                .padding(10.dp)
-                                                .testTag("habit_calculated_end_date_text")
-                                        )
-                                    }
-                                } else if (calcErr != null) {
-                                    Text(
-                                        text = calcErr,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.error,
-                                        modifier = Modifier.testTag("habit_duration_validation_text")
-                                    )
-                                }
-                            }
-                            HabitDurationKind.SPECIFIC_DATE -> {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    OutlinedTextField(
-                                        value = specificEndDateText,
-                                        onValueChange = {
-                                            specificEndDateText = it
-                                            validationError = null
-                                        },
-                                        label = { Text("End date (YYYY-MM-DD)") },
-                                        placeholder = { Text("e.g. 2026-12-25") },
-                                        singleLine = true,
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .bringIntoViewOnFocus()
-                                            .testTag("habit_specific_end_date_input")
-                                    )
-                                    OutlinedButton(
-                                        onClick = { showEndDatePickerDialog = true },
-                                        modifier = Modifier
-                                            .heightIn(min = 48.dp)
-                                            .testTag("habit_pick_end_date_btn")
-                                    ) {
-                                        Text("Calendar")
-                                    }
-                                }
-
-                                val calcDate = durationCalculationResult.getOrNull()
-                                val calcErr = durationCalculationResult.exceptionOrNull()?.message
-                                if (calcDate != null) {
-                                    Surface(
-                                        shape = RoundedCornerShape(10.dp),
-                                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Text(
-                                            text = "Selected end date: ${HabitLifetimeCalculator.formatHumanReadableDate(calcDate)} ($calcDate)",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier
-                                                .padding(10.dp)
-                                                .testTag("habit_calculated_end_date_text")
-                                        )
-                                    }
-                                } else if (calcErr != null) {
-                                    Text(
-                                        text = calcErr,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.error,
-                                        modifier = Modifier.testTag("habit_duration_validation_text")
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
             // STEP 5B (shown last, after schedule and duration): Concise Interpretation Summary Card & "Adjust interpretation" Progressive Disclosure
             item {
-                Card(
+                if (isEditing || rawHabitText.isNotBlank()) Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f)
@@ -1670,8 +1662,9 @@ fun CreateEditHabitScreen(
                 }
             }
 
-            // STEP 6: Save & Cancel Actions
-            item {
+        }
+        Surface(color = MaterialTheme.colorScheme.background.copy(alpha = 0.96f), tonalElevation = 2.dp) {
+            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -1834,6 +1827,7 @@ fun CreateEditHabitScreen(
                 }
             }
         }
+        }
     }
 
     if (showEndDatePickerDialog) {
@@ -1903,7 +1897,7 @@ private fun InterpretationSummaryRow(
 
 /** A single-row segmented control: one rounded container, the selected segment filled. */
 @Composable
-private fun DurationSegments(
+private fun SegmentedChoice(
     labels: List<String>,
     tags: List<String>,
     selected: Int,
@@ -1943,3 +1937,38 @@ private fun DurationSegments(
 
 /** Action words that are meaningless as a whole habit name. */
 private val BARE_ACTION_WORDS = setOf("do", "doing", "make", "go", "try", "have", "perform", "get", "take")
+
+/** Section title with the current choice summarised on one line; tap to expand or collapse. */
+@Composable
+private fun FormSectionHeader(
+    title: String,
+    summary: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    tag: String
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(role = Role.Button, onClickLabel = if (expanded) "Collapse $title" else "Change $title") { onToggle() }
+            .heightIn(min = 48.dp)
+            .padding(vertical = 2.dp)
+            .testTag(tag),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                text = summary,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Icon(
+            imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+            contentDescription = null
+        )
+    }
+}
