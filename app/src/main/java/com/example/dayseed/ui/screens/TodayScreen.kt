@@ -94,6 +94,7 @@ import com.example.dayseed.data.HabitDateExceptionKind
 import com.example.dayseed.data.HabitDayOutcome
 import com.example.dayseed.data.HabitEntry
 import com.example.dayseed.data.HabitLifecycleState
+import com.example.dayseed.data.UndoEntityType
 import com.example.dayseed.data.HabitSummary
 import com.example.dayseed.data.ScheduleKind
 import com.example.dayseed.data.TargetPeriod
@@ -177,7 +178,19 @@ fun TodayScreen(
     val appSettings by viewModel.appSettings.collectAsState()
     val comebackInfo by viewModel.comebackInfo.collectAsState()
     val growthMetrics by viewModel.growthMetrics.collectAsState()
-    val activeUndoToken by viewModel.activeUndoToken.collectAsState()
+    val repositoryUndoToken by viewModel.activeUndoToken.collectAsState()
+    // Today only offers Undo for a just-registered completion (an amount or a done/not-done check-in).
+    // Editing, creating or deleting habits and notes never raises this banner (D-237).
+    val activeUndoToken = repositoryUndoToken?.takeIf {
+        it.entityType == UndoEntityType.HABIT_ENTRY || it.entityType == UndoEntityType.HABIT_DAY_OUTCOME
+    }
+    androidx.compose.runtime.LaunchedEffect(repositoryUndoToken?.tokenId) {
+        val token = repositoryUndoToken ?: return@LaunchedEffect
+        val remaining = token.expiresAtUtcMs - viewModel.repository.clock.nowUtcMs()
+        if (remaining > 0) delay(remaining)
+        // Hide the banner (and retire the token) once the short window is over.
+        if (viewModel.activeUndoToken.value?.tokenId == token.tokenId) viewModel.repository.clearActiveUndoToken()
+    }
     val notScheduledExpanded by viewModel.todayNotScheduledExpanded.collectAsState()
     val onboardingSetupExpanded by viewModel.onboardingSetupExpanded.collectAsState()
 
@@ -784,7 +797,7 @@ private fun TodayHeaderText(
     }
 }
 
-/** 8-second undo banner (D-209) shared by both Today states. */
+/** Short (5-second) undo banner for a just-registered completion (D-209, D-237), shared by both Today states. */
 @Composable
 private fun UndoBanner(
     onUndo: () -> Unit,

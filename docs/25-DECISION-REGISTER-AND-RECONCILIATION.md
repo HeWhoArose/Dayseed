@@ -603,6 +603,12 @@ The decision log and register now contain 229 unique decision IDs through D-235 
 
 The decision log and register now contain 230 unique decision IDs through D-236 (gaps preserved).
 
+## D-237 — Undo banner only for registered completions, 5 seconds (2026-11-23)
+
+| D-237 | The Today Undo banner appears only after a completion is registered and disappears after 5 seconds; habit create/edit/delete never raise it. Supersedes D-209's 8-second window. Full record in `docs/09-DECISION-LOG.md` (D-237). Stage C/D NOT OPEN. |
+
+The decision log and register now contain 231 unique decision IDs through D-237 (gaps preserved).
+
 
 
 

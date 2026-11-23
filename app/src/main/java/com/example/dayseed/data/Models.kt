@@ -1200,7 +1200,7 @@ data class UndoToken(
     val expectedUpdatedAtUtcMs: Long,
     val previousPayloadJson: String? = null,
     val createdAtUtcMs: Long,
-    val expiresAtUtcMs: Long = createdAtUtcMs + 8_000L // 8-second undo window (D-209)
+    val expiresAtUtcMs: Long = createdAtUtcMs + 5_000L // 5-second undo window (D-209, shortened by D-237)
 )
 
 // =============================================================================

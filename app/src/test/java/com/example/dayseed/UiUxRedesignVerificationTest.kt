@@ -479,4 +479,36 @@ class UiUxRedesignVerificationTest {
 
         repo.dbHelper.close()
     }
+
+    @Test
+    fun todayUndoBanner_appearsOnlyForRegisteredCompletions() {
+        val repo = newRepository("test_undo_banner_${System.nanoTime()}.db")
+        val vm = newViewModel(repo)
+        val today = testClock.todayLocal()
+        fun habit(id: String) = Habit(
+            habitId = id, name = id, trackingMode = TrackingMode.COMPLETION_ONLY,
+            targetPeriod = TargetPeriod.DAY, targetValue = 1, scheduleKind = ScheduleKind.DAILY
+        )
+        runBlocking { repo.saveHabit(habit("h_keep")); repo.saveHabit(habit("h_drop")) }
+        repo.habits.awaitMatch { it.size >= 2 }
+
+        val controller = Robolectric.buildActivity(ComponentActivity::class.java).create().start().resume().visible()
+        val activity = controller.get()
+        activity.setContent { DayseedTheme(themeMode = ThemeModeOption.LIGHT, reducedMotion = true) { DayseedApp(viewModel = vm) } }
+        layoutAndIdle(activity, widthDp = 360, heightDp = 1200)
+        assertNull("No banner before anything is registered", findNodeByTagOrNull(activity, "undo_action_banner"))
+
+        // Deleting a habit raises an undo token in the data layer, but Today must not show a banner for it.
+        repo.deleteHabitWithUndoSync("h_drop")
+        layoutAndIdle(activity, widthDp = 360, heightDp = 1200, recompose = true)
+        assertNull("Habit changes must not raise the Today undo banner", findNodeByTagOrNull(activity, "undo_action_banner"))
+
+        // Registering a completion does.
+        repo.logHabitDayOutcomeSync("h_keep", today, "COMPLETED")
+        layoutAndIdle(activity, widthDp = 360, heightDp = 1200, recompose = true)
+        assertNotNull("A registered completion must offer Undo", findNodeByTagOrNull(activity, "undo_action_btn"))
+
+        controller.pause().stop()
+        repo.dbHelper.close()
+    }
 }
