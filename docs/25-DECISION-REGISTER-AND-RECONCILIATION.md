@@ -609,6 +609,12 @@ The decision log and register now contain 230 unique decision IDs through D-236 
 
 The decision log and register now contain 231 unique decision IDs through D-237 (gaps preserved).
 
+## D-238 — New Habit screen rework (2026-11-23)
+
+| D-238 | Quiet example hints, interpretation summary moved last, "How long" as mode + unit + stepper, bare helper-verb names refused. Full record in `docs/09-DECISION-LOG.md` (D-238). Stage C/D NOT OPEN. |
+
+The decision log and register now contain 232 unique decision IDs through D-238 (gaps preserved).
+
 
 
 

@@ -7,6 +7,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -561,20 +568,31 @@ fun CreateEditHabitScreen(
 
                         if (!isEditing && rawHabitText.isBlank()) {
                             Text(
-                                text = "Try an example:",
+                                text = "Need an idea? Tap one to start from:",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            FlowRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            // Plain, quiet suggestions (no borders or fills) so they read as hints, not as choices.
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 NATURAL_LANGUAGE_EXAMPLES.forEachIndexed { idx, example ->
-                                    FilterChip(
-                                        selected = false,
-                                        onClick = { applySmartInterpretationFromInput(example) },
-                                        label = { Text(example) },
-                                        modifier = Modifier.testTag("habit_example_chip_$idx")
+                                    Text(
+                                        text = example,
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                                        ),
+                                        color = MaterialTheme.colorScheme.primary,
+                                        maxLines = 1,
+                                        modifier = Modifier
+                                            .heightIn(min = 48.dp)
+                                            .clickable(role = Role.Button) { applySmartInterpretationFromInput(example) }
+                                            .wrapContentHeight(Alignment.CenterVertically)
+                                            .testTag("habit_example_chip_$idx")
                                     )
                                 }
                             }
@@ -610,359 +628,6 @@ fun CreateEditHabitScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
-                        }
-                    }
-                }
-            }
-
-            // STEP 2: Concise Interpretation Summary Card & "Adjust interpretation" Progressive Disclosure
-            item {
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f)
-                    ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("smart_habit_interpretation_card")
-                ) {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        FlowRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.AutoAwesome,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Text(
-                                    text = "Here's what we understood:",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.primaryContainer
-                            ) {
-                                Text(
-                                    text = selectedMeasurementKind.displayLabel,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier
-                                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                                        .testTag("smart_interpreted_measurement_badge")
-                                )
-                            }
-                        }
-
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surface,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                InterpretationSummaryRow(
-                                    label = "Habit name",
-                                    value = effectiveActivityTitle.ifBlank { "—" },
-                                    testTag = "smart_interpreted_activity_value"
-                                )
-                                InterpretationSummaryRow(
-                                    label = "Target",
-                                    value = effectiveTargetSummary,
-                                    testTag = "smart_interpreted_target_value"
-                                )
-                                InterpretationSummaryRow(
-                                    label = "Schedule",
-                                    value = effectiveScheduleSummary,
-                                    testTag = "smart_interpreted_schedule_value"
-                                )
-                                if (!parsedInterpretation.preferredTimeHint.isNullOrBlank()) {
-                                    InterpretationSummaryRow(
-                                        label = "Preferred time",
-                                        value = parsedInterpretation.preferredTimeHint,
-                                        testTag = "smart_interpreted_time_hint_value"
-                                    )
-                                }
-                                if (durationKind != HabitDurationKind.NONE) {
-                                    InterpretationSummaryRow(
-                                        label = "Duration",
-                                        value = durationCalculationResult.getOrNull()?.let { endDate ->
-                                            "Until ${HabitLifetimeCalculator.formatHumanReadableDate(endDate)} ($endDate)"
-                                        } ?: "Select valid end date",
-                                        testTag = "smart_interpreted_end_date_value"
-                                    )
-                                }
-                            }
-                        }
-
-                        if (parsedInterpretation.needsUserConfirmation && parsedInterpretation.ambiguityReason != null) {
-                            Text(
-                                text = "Note: ${parsedInterpretation.ambiguityReason}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.testTag("smart_habit_ambiguity_notice")
-                            )
-                        }
-
-                        // Compact "Adjust interpretation" toggle
-                        TextButton(
-                            onClick = { showAdjustInterpretation = !showAdjustInterpretation },
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                            modifier = Modifier
-                                .heightIn(min = 36.dp)
-                                .testTag("smart_adjust_interpretation_toggle")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Tune,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (showAdjustInterpretation) "Hide adjustments" else "Adjust interpretation",
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Icon(
-                                imageVector = if (showAdjustInterpretation) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-
-                        // Detailed editing controls revealed ONLY when user taps "Adjust interpretation"
-                        if (showAdjustInterpretation) {
-                            HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-                            )
-
-                            OutlinedTextField(
-                                value = interpretedActivityName,
-                                onValueChange = {
-                                    interpretedActivityName = it
-                                    userEditedActivityName = true
-                                },
-                                label = { Text("Habit display name") },
-                                placeholder = { Text("e.g. 10 Push-ups, Read 20 Pages, Drink Water") },
-                                supportingText = { Text("Displayed on Today, Habits, and History. Editing this won't change your target or schedule.") },
-                                singleLine = true,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .bringIntoViewOnFocus()
-                                    .testTag("smart_interpreted_activity_input")
-                            )
-
-                            Text(
-                                text = "How would you like to measure it?",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-
-                            val measurementOptions = listOf(
-                                Triple(
-                                    HabitMeasurementKind.SIMPLE_CHECK_OFF,
-                                    "Simple check-off",
-                                    "Mark done once per day (e.g. Meditate)"
-                                ),
-                                Triple(
-                                    HabitMeasurementKind.DURATION,
-                                    "Duration",
-                                    "Minutes spent per day or week (e.g. Walk 30 min)"
-                                ),
-                                Triple(
-                                    HabitMeasurementKind.QUANTITY,
-                                    "Quantity (Custom or Fractional Unit)",
-                                    "Any whole or decimal count: pages, seeds, litres, kg..."
-                                ),
-                                Triple(
-                                    HabitMeasurementKind.AMOUNT_CURRENCY,
-                                    "Amount / Currency",
-                                    "Track savings or amounts (e.g. ₦5,000, ₦1,250.50, $50)"
-                                )
-                            )
-
-                            measurementOptions.forEach { (kind, label, subtitle) ->
-                                val tag = when (kind) {
-                                    HabitMeasurementKind.SIMPLE_CHECK_OFF -> "mode_option_completion_only"
-                                    HabitMeasurementKind.DURATION -> "mode_option_duration"
-                                    HabitMeasurementKind.QUANTITY -> "mode_option_quantity"
-                                    HabitMeasurementKind.AMOUNT_CURRENCY -> "mode_option_amount_currency"
-                                }
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .clickable(role = Role.Button) {
-                                            userOverrodeMeasurement = true
-                                            selectedMeasurementKind = kind
-                                            selectedMode = when (kind) {
-                                                HabitMeasurementKind.SIMPLE_CHECK_OFF -> TrackingMode.COMPLETION_ONLY
-                                                HabitMeasurementKind.DURATION -> TrackingMode.DURATION
-                                                HabitMeasurementKind.QUANTITY,
-                                                HabitMeasurementKind.AMOUNT_CURRENCY -> TrackingMode.QUANTITY
-                                            }
-                                            if (kind == HabitMeasurementKind.DURATION) {
-                                                customUnitText = "min"
-                                            } else if (kind == HabitMeasurementKind.AMOUNT_CURRENCY &&
-                                                !UnitFormatter.isCurrencyUnit(customUnitText)
-                                            ) {
-                                                customUnitText = "naira"
-                                            } else if (kind == HabitMeasurementKind.QUANTITY &&
-                                                (customUnitText.isBlank() || customUnitText == "min")
-                                            ) {
-                                                customUnitText = "items"
-                                            }
-                                        }
-                                        .padding(vertical = 2.dp)
-                                        .testTag(tag),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    RadioButton(
-                                        selected = selectedMeasurementKind == kind &&
-                                            selectedMode.canonical() != TrackingMode.EFFORT_AWARE,
-                                        onClick = null
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Column {
-                                        Text(
-                                            text = label,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                        Text(
-                                            text = subtitle,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                            }
-
-                            if (isEditing && initialMode == TrackingMode.EFFORT_AWARE) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .clickable(role = Role.Button) {
-                                            userOverrodeMeasurement = true
-                                            selectedMode = TrackingMode.EFFORT_AWARE
-                                        }
-                                        .padding(vertical = 2.dp)
-                                        .testTag("mode_option_effort_aware"),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    RadioButton(
-                                        selected = selectedMode.canonical() == TrackingMode.EFFORT_AWARE,
-                                        onClick = null
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Column {
-                                        Text(
-                                            text = "Effort-Aware (Legacy)",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                        Text(
-                                            text = "Tiny Sprout, Usual Leaf, or Extra Branch",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                            }
-
-                            if (selectedMode.canonical() == TrackingMode.QUANTITY) {
-                                OutlinedTextField(
-                                    value = customUnitText,
-                                    onValueChange = {
-                                        customUnitText = it
-                                        userOverrodeUnit = true
-                                    },
-                                    label = {
-                                        Text(
-                                            if (selectedMeasurementKind == HabitMeasurementKind.AMOUNT_CURRENCY) {
-                                                "Currency or unit (e.g. naira, dollars, euros)"
-                                            } else {
-                                                "Unit (type any unit: pages, litres, kg, handmade bags...)"
-                                            }
-                                        )
-                                    },
-                                    singleLine = true,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .bringIntoViewOnFocus()
-                                        .testTag("habit_unit_code_input")
-                                )
-
-                                FlowRow(
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    COMMON_UNIT_SUGGESTIONS.forEach { preset ->
-                                        FilterChip(
-                                            selected = customUnitText.equals(preset, ignoreCase = true),
-                                            onClick = {
-                                                customUnitText = preset
-                                                userOverrodeUnit = true
-                                                if (UnitFormatter.isCurrencyUnit(preset)) {
-                                                    selectedMeasurementKind = HabitMeasurementKind.AMOUNT_CURRENCY
-                                                } else {
-                                                    selectedMeasurementKind = HabitMeasurementKind.QUANTITY
-                                                }
-                                            },
-                                            label = { Text(preset) },
-                                            modifier = Modifier.testTag("unit_preset_$preset")
-                                        )
-                                    }
-                                }
-                            }
-
-                            val needsNumericTarget = selectedMode.canonical() == TrackingMode.QUANTITY ||
-                                selectedMode.canonical() == TrackingMode.DURATION ||
-                                targetPeriod == TargetPeriod.WEEK
-                            if (needsNumericTarget) {
-                                OutlinedTextField(
-                                    value = targetValueText,
-                                    onValueChange = { raw ->
-                                        targetValueText = raw.filter { ch -> ch.isDigit() || ch == '.' }
-                                        userOverrodeTarget = true
-                                    },
-                                    label = {
-                                        val unitDesc = when (selectedMode.canonical()) {
-                                            TrackingMode.DURATION -> "minutes"
-                                            TrackingMode.QUANTITY -> customUnitText.ifBlank { "units" }
-                                            else -> "days per week (1–7)"
-                                        }
-                                        val periodDesc = if (targetPeriod == TargetPeriod.WEEK) "per week" else "per day"
-                                        Text("Target goal ($unitDesc $periodDesc)")
-                                    },
-                                    singleLine = true,
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .bringIntoViewOnFocus()
-                                        .testTag("habit_target_value_input")
-                                )
-                            }
                         }
                     }
                 }
@@ -1472,69 +1137,41 @@ fun CreateEditHabitScreen(
                             color = MaterialTheme.colorScheme.onSurface
                         )
 
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            HabitDurationKind.entries.forEach { kind ->
-                                val isSelected = durationKind == kind
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = if (isSelected) {
-                                        MaterialTheme.colorScheme.primaryContainer
-                                    } else {
-                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-                                    },
-                                    border = BorderStroke(
-                                        1.dp,
-                                        if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-                                    ),
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .clickable(role = Role.Button) {
-                                            durationKind = kind
-                                            validationError = null
-                                            when (kind) {
-                                                HabitDurationKind.DAYS -> {
-                                                    if (durationValueText.toIntOrNull() == null || durationValueText.toInt() <= 0) {
-                                                        durationValueText = "30"
-                                                    }
-                                                }
-                                                HabitDurationKind.WEEKS -> {
-                                                    if (durationValueText.toIntOrNull() == null || durationValueText.toInt() <= 0 || durationValueText == "30") {
-                                                        durationValueText = "2"
-                                                    }
-                                                }
-                                                HabitDurationKind.MONTHS -> {
-                                                    if (durationValueText.toIntOrNull() == null || durationValueText.toInt() <= 0 || durationValueText == "30") {
-                                                        durationValueText = "3"
-                                                    }
-                                                }
-                                                HabitDurationKind.YEARS -> {
-                                                    if (durationValueText.toIntOrNull() == null || durationValueText.toInt() <= 0 || durationValueText == "30") {
-                                                        durationValueText = "1"
-                                                    }
-                                                }
-                                                HabitDurationKind.SPECIFIC_DATE -> {
-                                                    if (specificEndDateText.isBlank()) {
-                                                        specificEndDateText = habitStartDate.plusDays(30).toString()
-                                                    }
-                                                }
-                                                HabitDurationKind.NONE -> Unit
-                                            }
-                                        }
-                                        .testTag("habit_duration_kind_${kind.name}")
-                                ) {
-                                    Text(
-                                        text = kind.label,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
-                                    )
+                        val timeUnits = listOf(HabitDurationKind.DAYS, HabitDurationKind.WEEKS, HabitDurationKind.MONTHS, HabitDurationKind.YEARS)
+                        fun chooseTimeUnit(kind: HabitDurationKind) {
+                            durationKind = kind
+                            validationError = null
+                            if (durationValueText.toIntOrNull() == null || durationValueText.toInt() <= 0) {
+                                durationValueText = when (kind) {
+                                    HabitDurationKind.DAYS -> "30"
+                                    HabitDurationKind.WEEKS -> "4"
+                                    HabitDurationKind.MONTHS -> "3"
+                                    else -> "1"
                                 }
                             }
                         }
+                        DurationSegments(
+                            labels = listOf("No end date", "A set time", "Until a date"),
+                            tags = listOf("habit_duration_mode_NONE", "habit_duration_mode_SET", "habit_duration_mode_DATE"),
+                            selected = when (durationKind) {
+                                HabitDurationKind.NONE -> 0
+                                HabitDurationKind.SPECIFIC_DATE -> 2
+                                else -> 1
+                            },
+                            onSelect = { index ->
+                                validationError = null
+                                when (index) {
+                                    0 -> durationKind = HabitDurationKind.NONE
+                                    1 -> if (durationKind !in timeUnits) chooseTimeUnit(HabitDurationKind.DAYS)
+                                    else -> {
+                                        durationKind = HabitDurationKind.SPECIFIC_DATE
+                                        if (specificEndDateText.isBlank()) {
+                                            specificEndDateText = habitStartDate.plusDays(30).toString()
+                                        }
+                                    }
+                                }
+                            }
+                        )
 
                         when (durationKind) {
                             HabitDurationKind.NONE -> Unit
@@ -1542,57 +1179,54 @@ fun CreateEditHabitScreen(
                             HabitDurationKind.WEEKS,
                             HabitDurationKind.MONTHS,
                             HabitDurationKind.YEARS -> {
-                                val unitLabel = when (durationKind) {
-                                    HabitDurationKind.DAYS -> "Number of days (e.g. 30)"
-                                    HabitDurationKind.WEEKS -> "Number of weeks (e.g. 2)"
-                                    HabitDurationKind.MONTHS -> "Number of months (e.g. 3)"
-                                    HabitDurationKind.YEARS -> "Number of years (e.g. 1)"
-                                    else -> "Duration"
-                                }
-                                val presets = when (durationKind) {
-                                    HabitDurationKind.DAYS -> listOf(7, 14, 30, 60, 90)
-                                    HabitDurationKind.WEEKS -> listOf(2, 4, 6, 8, 12)
-                                    HabitDurationKind.MONTHS -> listOf(1, 3, 6, 9, 12)
-                                    HabitDurationKind.YEARS -> listOf(1, 2, 3, 5)
-                                    else -> emptyList()
-                                }
-                                FlowRow(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    presets.forEach { preset ->
-                                        val suffix = when (durationKind) {
-                                            HabitDurationKind.DAYS -> if (preset == 1) "day" else "days"
-                                            HabitDurationKind.WEEKS -> if (preset == 1) "week" else "weeks"
-                                            HabitDurationKind.MONTHS -> if (preset == 1) "month" else "months"
-                                            HabitDurationKind.YEARS -> if (preset == 1) "year" else "years"
-                                            else -> ""
-                                        }
-                                        FilterChip(
-                                            selected = durationValueText.trim() == preset.toString(),
-                                            onClick = {
-                                                durationValueText = preset.toString()
-                                                validationError = null
-                                            },
-                                            label = { Text("$preset $suffix") },
-                                            modifier = Modifier.testTag("habit_duration_preset_${durationKind.name}_$preset")
-                                        )
-                                    }
-                                }
-                                OutlinedTextField(
-                                    value = durationValueText,
-                                    onValueChange = { raw ->
-                                        durationValueText = raw.filter { it.isDigit() || it == '-' }
-                                        validationError = null
-                                    },
-                                    label = { Text(unitLabel) },
-                                    singleLine = true,
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .bringIntoViewOnFocus()
-                                        .testTag("habit_duration_value_input")
+                                DurationSegments(
+                                    labels = listOf("Days", "Weeks", "Months", "Years"),
+                                    tags = timeUnits.map { "habit_duration_kind_${it.name}" },
+                                    selected = timeUnits.indexOf(durationKind),
+                                    onSelect = { chooseTimeUnit(timeUnits[it]) }
                                 )
+                                val unitWord = when (durationKind) {
+                                    HabitDurationKind.DAYS -> "days"
+                                    HabitDurationKind.WEEKS -> "weeks"
+                                    HabitDurationKind.MONTHS -> "months"
+                                    else -> "years"
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    val current = durationValueText.toIntOrNull() ?: 0
+                                    IconButton(
+                                        onClick = { durationValueText = (current - 1).coerceAtLeast(1).toString(); validationError = null },
+                                        modifier = Modifier.size(48.dp).testTag("habit_duration_minus_btn")
+                                    ) { Icon(Icons.Default.Remove, contentDescription = "One $unitWord less") }
+                                    OutlinedTextField(
+                                        value = durationValueText,
+                                        onValueChange = { raw ->
+                                            durationValueText = raw.filter { it.isDigit() }.take(4)
+                                            validationError = null
+                                        },
+                                        singleLine = true,
+                                        textStyle = MaterialTheme.typography.titleLarge.copy(textAlign = androidx.compose.ui.text.style.TextAlign.Center),
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        modifier = Modifier
+                                            .width(96.dp)
+                                            .bringIntoViewOnFocus()
+                                            .semantics { contentDescription = "Number of $unitWord" }
+                                            .testTag("habit_duration_value_input")
+                                    )
+                                    IconButton(
+                                        onClick = { durationValueText = (current + 1).coerceAtMost(9999).toString(); validationError = null },
+                                        modifier = Modifier.size(48.dp).testTag("habit_duration_plus_btn")
+                                    ) { Icon(Icons.Default.Add, contentDescription = "One $unitWord more") }
+                                    Text(
+                                        text = unitWord,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(start = 8.dp)
+                                    )
+                                }
 
                                 val calcDate = durationCalculationResult.getOrNull()
                                 val calcErr = durationCalculationResult.exceptionOrNull()?.message
@@ -1683,6 +1317,359 @@ fun CreateEditHabitScreen(
                 }
             }
 
+            // STEP 5B (shown last, after schedule and duration): Concise Interpretation Summary Card & "Adjust interpretation" Progressive Disclosure
+            item {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f)
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("smart_habit_interpretation_card")
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Text(
+                                    text = "Here's what we understood:",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer
+                            ) {
+                                Text(
+                                    text = selectedMeasurementKind.displayLabel,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                        .testTag("smart_interpreted_measurement_badge")
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                InterpretationSummaryRow(
+                                    label = "Habit name",
+                                    value = effectiveActivityTitle.ifBlank { "—" },
+                                    testTag = "smart_interpreted_activity_value"
+                                )
+                                InterpretationSummaryRow(
+                                    label = "Target",
+                                    value = effectiveTargetSummary,
+                                    testTag = "smart_interpreted_target_value"
+                                )
+                                InterpretationSummaryRow(
+                                    label = "Schedule",
+                                    value = effectiveScheduleSummary,
+                                    testTag = "smart_interpreted_schedule_value"
+                                )
+                                if (!parsedInterpretation.preferredTimeHint.isNullOrBlank()) {
+                                    InterpretationSummaryRow(
+                                        label = "Preferred time",
+                                        value = parsedInterpretation.preferredTimeHint,
+                                        testTag = "smart_interpreted_time_hint_value"
+                                    )
+                                }
+                                if (durationKind != HabitDurationKind.NONE) {
+                                    InterpretationSummaryRow(
+                                        label = "Duration",
+                                        value = durationCalculationResult.getOrNull()?.let { endDate ->
+                                            "Until ${HabitLifetimeCalculator.formatHumanReadableDate(endDate)} ($endDate)"
+                                        } ?: "Select valid end date",
+                                        testTag = "smart_interpreted_end_date_value"
+                                    )
+                                }
+                            }
+                        }
+
+                        if (parsedInterpretation.needsUserConfirmation && parsedInterpretation.ambiguityReason != null) {
+                            Text(
+                                text = "Note: ${parsedInterpretation.ambiguityReason}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.testTag("smart_habit_ambiguity_notice")
+                            )
+                        }
+
+                        // Compact "Adjust interpretation" toggle
+                        TextButton(
+                            onClick = { showAdjustInterpretation = !showAdjustInterpretation },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            modifier = Modifier
+                                .heightIn(min = 36.dp)
+                                .testTag("smart_adjust_interpretation_toggle")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Tune,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (showAdjustInterpretation) "Hide adjustments" else "Adjust interpretation",
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = if (showAdjustInterpretation) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        // Detailed editing controls revealed ONLY when user taps "Adjust interpretation"
+                        if (showAdjustInterpretation) {
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                            )
+
+                            OutlinedTextField(
+                                value = interpretedActivityName,
+                                onValueChange = {
+                                    interpretedActivityName = it
+                                    userEditedActivityName = true
+                                },
+                                label = { Text("Habit display name") },
+                                placeholder = { Text("e.g. 10 Push-ups, Read 20 Pages, Drink Water") },
+                                supportingText = { Text("Displayed on Today, Habits, and History. Editing this won't change your target or schedule.") },
+                                singleLine = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .bringIntoViewOnFocus()
+                                    .testTag("smart_interpreted_activity_input")
+                            )
+
+                            Text(
+                                text = "How would you like to measure it?",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+
+                            val measurementOptions = listOf(
+                                Triple(
+                                    HabitMeasurementKind.SIMPLE_CHECK_OFF,
+                                    "Simple check-off",
+                                    "Mark done once per day (e.g. Meditate)"
+                                ),
+                                Triple(
+                                    HabitMeasurementKind.DURATION,
+                                    "Duration",
+                                    "Minutes spent per day or week (e.g. Walk 30 min)"
+                                ),
+                                Triple(
+                                    HabitMeasurementKind.QUANTITY,
+                                    "Quantity (Custom or Fractional Unit)",
+                                    "Any whole or decimal count: pages, seeds, litres, kg..."
+                                ),
+                                Triple(
+                                    HabitMeasurementKind.AMOUNT_CURRENCY,
+                                    "Amount / Currency",
+                                    "Track savings or amounts (e.g. ₦5,000, ₦1,250.50, $50)"
+                                )
+                            )
+
+                            measurementOptions.forEach { (kind, label, subtitle) ->
+                                val tag = when (kind) {
+                                    HabitMeasurementKind.SIMPLE_CHECK_OFF -> "mode_option_completion_only"
+                                    HabitMeasurementKind.DURATION -> "mode_option_duration"
+                                    HabitMeasurementKind.QUANTITY -> "mode_option_quantity"
+                                    HabitMeasurementKind.AMOUNT_CURRENCY -> "mode_option_amount_currency"
+                                }
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .clickable(role = Role.Button) {
+                                            userOverrodeMeasurement = true
+                                            selectedMeasurementKind = kind
+                                            selectedMode = when (kind) {
+                                                HabitMeasurementKind.SIMPLE_CHECK_OFF -> TrackingMode.COMPLETION_ONLY
+                                                HabitMeasurementKind.DURATION -> TrackingMode.DURATION
+                                                HabitMeasurementKind.QUANTITY,
+                                                HabitMeasurementKind.AMOUNT_CURRENCY -> TrackingMode.QUANTITY
+                                            }
+                                            if (kind == HabitMeasurementKind.DURATION) {
+                                                customUnitText = "min"
+                                            } else if (kind == HabitMeasurementKind.AMOUNT_CURRENCY &&
+                                                !UnitFormatter.isCurrencyUnit(customUnitText)
+                                            ) {
+                                                customUnitText = "naira"
+                                            } else if (kind == HabitMeasurementKind.QUANTITY &&
+                                                (customUnitText.isBlank() || customUnitText == "min")
+                                            ) {
+                                                customUnitText = "items"
+                                            }
+                                        }
+                                        .padding(vertical = 2.dp)
+                                        .testTag(tag),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = selectedMeasurementKind == kind &&
+                                            selectedMode.canonical() != TrackingMode.EFFORT_AWARE,
+                                        onClick = null
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column {
+                                        Text(
+                                            text = label,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Text(
+                                            text = subtitle,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (isEditing && initialMode == TrackingMode.EFFORT_AWARE) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .clickable(role = Role.Button) {
+                                            userOverrodeMeasurement = true
+                                            selectedMode = TrackingMode.EFFORT_AWARE
+                                        }
+                                        .padding(vertical = 2.dp)
+                                        .testTag("mode_option_effort_aware"),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = selectedMode.canonical() == TrackingMode.EFFORT_AWARE,
+                                        onClick = null
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column {
+                                        Text(
+                                            text = "Effort-Aware (Legacy)",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Text(
+                                            text = "Tiny Sprout, Usual Leaf, or Extra Branch",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (selectedMode.canonical() == TrackingMode.QUANTITY) {
+                                OutlinedTextField(
+                                    value = customUnitText,
+                                    onValueChange = {
+                                        customUnitText = it
+                                        userOverrodeUnit = true
+                                    },
+                                    label = {
+                                        Text(
+                                            if (selectedMeasurementKind == HabitMeasurementKind.AMOUNT_CURRENCY) {
+                                                "Currency or unit (e.g. naira, dollars, euros)"
+                                            } else {
+                                                "Unit (type any unit: pages, litres, kg, handmade bags...)"
+                                            }
+                                        )
+                                    },
+                                    singleLine = true,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .bringIntoViewOnFocus()
+                                        .testTag("habit_unit_code_input")
+                                )
+
+                                FlowRow(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    COMMON_UNIT_SUGGESTIONS.forEach { preset ->
+                                        FilterChip(
+                                            selected = customUnitText.equals(preset, ignoreCase = true),
+                                            onClick = {
+                                                customUnitText = preset
+                                                userOverrodeUnit = true
+                                                if (UnitFormatter.isCurrencyUnit(preset)) {
+                                                    selectedMeasurementKind = HabitMeasurementKind.AMOUNT_CURRENCY
+                                                } else {
+                                                    selectedMeasurementKind = HabitMeasurementKind.QUANTITY
+                                                }
+                                            },
+                                            label = { Text(preset) },
+                                            modifier = Modifier.testTag("unit_preset_$preset")
+                                        )
+                                    }
+                                }
+                            }
+
+                            val needsNumericTarget = selectedMode.canonical() == TrackingMode.QUANTITY ||
+                                selectedMode.canonical() == TrackingMode.DURATION ||
+                                targetPeriod == TargetPeriod.WEEK
+                            if (needsNumericTarget) {
+                                OutlinedTextField(
+                                    value = targetValueText,
+                                    onValueChange = { raw ->
+                                        targetValueText = raw.filter { ch -> ch.isDigit() || ch == '.' }
+                                        userOverrodeTarget = true
+                                    },
+                                    label = {
+                                        val unitDesc = when (selectedMode.canonical()) {
+                                            TrackingMode.DURATION -> "minutes"
+                                            TrackingMode.QUANTITY -> customUnitText.ifBlank { "units" }
+                                            else -> "days per week (1–7)"
+                                        }
+                                        val periodDesc = if (targetPeriod == TargetPeriod.WEEK) "per week" else "per day"
+                                        Text("Target goal ($unitDesc $periodDesc)")
+                                    },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .bringIntoViewOnFocus()
+                                        .testTag("habit_target_value_input")
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             // STEP 6: Save & Cancel Actions
             item {
                 Row(
@@ -1704,6 +1691,11 @@ fun CreateEditHabitScreen(
                             val cleanName = effectiveActivityTitle.trim()
                             if (cleanName.isEmpty()) {
                                 validationError = "Please describe what you would like to do."
+                                return@Button
+                            }
+                            if (cleanName.trimEnd('.', '!', ' ').lowercase() in BARE_ACTION_WORDS) {
+                                // A habit called just "Do" tells the person nothing; ask for the rest.
+                                validationError = "\"$cleanName\" on its own is not a habit name. Add what you will do, for example \"10 push-ups daily\"."
                                 return@Button
                             }
 
@@ -1908,3 +1900,46 @@ private fun InterpretationSummaryRow(
         )
     }
 }
+
+/** A single-row segmented control: one rounded container, the selected segment filled. */
+@Composable
+private fun DurationSegments(
+    labels: List<String>,
+    tags: List<String>,
+    selected: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
+            .selectableGroup()
+    ) {
+        labels.forEachIndexed { index, label ->
+            val isSelected = index == selected
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 48.dp)
+                    .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
+                    .selectable(selected = isSelected, role = Role.RadioButton, onClick = { onSelect(index) })
+                    .testTag(tags[index])
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
+                )
+            }
+        }
+    }
+}
+
+/** Action words that are meaningless as a whole habit name. */
+private val BARE_ACTION_WORDS = setOf("do", "doing", "make", "go", "try", "have", "perform", "get", "take")
