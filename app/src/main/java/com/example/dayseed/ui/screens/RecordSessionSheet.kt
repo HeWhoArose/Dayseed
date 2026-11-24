@@ -993,7 +993,7 @@ fun RecordSessionSheet(
                     ) {
                         Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(if (existingEntry != null) "Update Entry" else "Save Progress")
+                        Text(if (existingEntry != null) "Update" else "Save", maxLines = 1, softWrap = false)
                     }
                 }
             }

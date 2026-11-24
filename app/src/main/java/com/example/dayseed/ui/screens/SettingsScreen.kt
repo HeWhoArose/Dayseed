@@ -406,7 +406,12 @@ fun SettingsScreen(
 
     activeSheet?.let { sheet ->
         ModalBottomSheet(onDismissRequest = { activeSheet = null }) {
-            Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+            // Scrolls: the longer panels (Reminders, Appearance, Backup) are taller than the sheet.
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 20.dp)
+                    .verticalScroll(androidx.compose.foundation.rememberScrollState())
+            ) {
                 when (sheet) {
                     SettingsSheet.APPEARANCE ->
                         AppearancePanel(viewModel, currentThemeMode)

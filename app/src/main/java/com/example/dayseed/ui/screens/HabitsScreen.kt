@@ -191,7 +191,7 @@ fun HabitsScreen(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { viewModel.setHabitsSearchQuery(it) },
-                    placeholder = { Text("Search habits by name, note, or category...") },
+                    placeholder = { Text("Search habits") },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     singleLine = true,
                     modifier = Modifier
@@ -391,6 +391,9 @@ private fun HabitDirectoryCard(
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
+                            // "Ongoing" is the normal state of every active habit, so it is not repeated on each card;
+                            // only a different state (paused, ending, completed, archived) gets a badge.
+                            if (!(habit.lifecycleState == HabitLifecycleState.ACTIVE && habit.lifetimeStatusLabel.equals("Ongoing", ignoreCase = true))) {
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
                                 color = when (habit.lifecycleState) {
@@ -408,6 +411,7 @@ private fun HabitDirectoryCard(
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                         .testTag("habits_status_badge_${habit.habitId}")
                                 )
+                            }
                             }
                             if (!habit.category.isNullOrBlank()) {
                                 Surface(

@@ -4,6 +4,7 @@ import com.example.dayseed.ui.components.DayseedStatusPill
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import com.example.dayseed.ui.components.friendlyDate
+import com.example.dayseed.ui.components.dayseedHeading
 import androidx.compose.ui.semantics.Role
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
@@ -30,6 +31,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -127,17 +129,23 @@ fun DayDetailScreen(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = summary.date.format(fullDateFmt),
+                        text = friendlyDate(summary.date, referenceToday),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.testTag("day_detail_date_title")
                     )
-                    Text(
+                    val dayKind = when {
+                        summary.isToday -> "Today"
+                        summary.isFutureDate -> "Future Date (Scheduled Preview)"
+                        summary.isNeutralTransitionGap -> "Week-Start Transition Day"
+                        else -> ""
+                    }
+                    if (dayKind.isNotEmpty()) Text(
                         text = when {
                             summary.isToday -> "Today"
                             summary.isFutureDate -> "Future Date (Scheduled Preview)"
                             summary.isNeutralTransitionGap -> "Week-Start Transition Day"
-                            else -> "Historical Day Record"
+                            else -> ""
                         },
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -195,7 +203,7 @@ fun DayDetailScreen(
                     ) {
                         Column {
                             Text(
-                                text = "Day Mood & Moments",
+                                text = "Mood",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -203,7 +211,7 @@ fun DayDetailScreen(
                                 val sec = summary.secondaryMood?.let { " + ${it.symbol} ${it.label}" }.orEmpty()
                                 "${summary.primaryMood.symbol} ${summary.primaryMood.label}$sec"
                             } else {
-                                "No mood recorded for this date"
+                                "No mood recorded"
                             }
                             Text(
                                 text = moodText,
@@ -214,7 +222,7 @@ fun DayDetailScreen(
                         }
                         if (summary.collectedMomentsSummary != null) {
                             DayseedStatusPill(
-                                text = "⏳ ${summary.collectedMomentsSummary.formattedTotalDuration}",
+                                text = "⏳ ${summary.collectedMomentsSummary.formattedTotalDuration} timed",
                                 modifier = Modifier.testTag("day_detail_duration_badge")
                             )
                         }
@@ -226,7 +234,7 @@ fun DayDetailScreen(
         // Habits Section
         item {
             Text(
-                text = "Habits on ${friendlyDate(summary.date, referenceToday)}",
+                text = "Habits",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -266,23 +274,24 @@ fun DayDetailScreen(
 
         // Journal Reflections Section
         item {
-            Row(
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
-                    text = "Journal Reflections (${summary.journalEntries.size})",
+                    text = "Journal (${summary.journalEntries.size})",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.align(Alignment.CenterVertically).dayseedHeading()
                 )
-                Button(
+                OutlinedButton(
                     onClick = { viewModel.openJournalEditor(entry = null, forDate = summary.date) },
-                    modifier = Modifier.testTag("day_detail_new_journal_button")
+                    modifier = Modifier.heightIn(min = 48.dp).testTag("day_detail_new_journal_button")
                 ) {
                     Icon(imageVector = Icons.Default.Add, contentDescription = null)
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Write Reflection")
+                    Text("Write", maxLines = 1, softWrap = false)
                 }
             }
         }
@@ -313,7 +322,7 @@ fun DayDetailScreen(
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Text(
-                        text = "No saved journal entries for ${summary.date}.",
+                        text = "No journal entries for ${friendlyDate(summary.date, referenceToday)}.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(16.dp)
@@ -513,7 +522,8 @@ private fun DayDetailHabitCard(
                 }
             }
 
-            item.outcomes.forEach { outcome ->
+            // A plain "Completed" outcome repeats the status line above, so only effort records get their own chip.
+            item.outcomes.filter { it.outcomeKind == "EFFORT_LOGGED" }.forEach { outcome ->
                 Surface(
                     shape = RoundedCornerShape(10.dp),
                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)

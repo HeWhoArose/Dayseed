@@ -1,6 +1,7 @@
 # Progress and Handover
 
 **Last updated:** 2026-11-22 (Stage B UI, accessibility and design-system polish pass; band chip option B; test-isolation fixes)
+- **Day Detail and remaining screens (2026-11-24, `D-247`):** Day Detail decluttered (header, mood, journal button overlap), Habits search and badge, Record button label, Settings sheet now scrolls. Suite clean 3 of 3 (360 tests); not every screen re-rendered at large text/320 dp/dark; device cases NOT RUN.
 - **Reminder delivery activated (2026-11-24, `D-246`):** until now every reminder switch was disabled and no reminder could arrive; the global and weekly switches are now live, setting a habit reminder turns reminders on, restore keeps the preference. Suite clean 4 of 4 (359 tests); a real alarm, notification, chime and permission prompt on a physical device are NOT RUN.
 - **Appearance, hours and notifications (2026-11-24, `D-245`):** evening 16:00-18:59, seven appearances (four botanical, three plain without artwork), reminders with a unique chime, seedling icon and theme-coloured accent, Settings Appearance opens from its row. Suite clean 3 of 3 (357 tests); chime, icon and notification shade not seen or heard on a device; device cases NOT RUN.
 - **Insights audit (2026-11-24, `D-244`):** Calendar/Stats modes, weekly board habit names restored, honest mood period label, duration headline on the collected-moments card. Suite clean 3 of 3; small calendar marks, legend, Overview wording and mixed section titles still open; device cases NOT RUN.

@@ -663,6 +663,12 @@ The decision log and register now contain 239 unique decision IDs through D-245 
 
 The decision log and register now contain 240 unique decision IDs through D-246 (gaps preserved).
 
+## D-247 — Day Detail audit and remaining-screens pass (2026-11-24)
+
+| D-247 | Day Detail header, mood card, habit cards and journal header decluttered; Habits search and badge, Record button label, and Settings panel scrolling fixed. Full record in `docs/09-DECISION-LOG.md` (D-247). Stage C/D NOT OPEN. |
+
+The decision log and register now contain 241 unique decision IDs through D-247 (gaps preserved).
+
 
 
 

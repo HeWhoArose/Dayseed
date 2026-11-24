@@ -480,17 +480,19 @@ fun QuietHoursPanel(
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 OutlinedButton(
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 8.dp),
                     onClick = { startText = SettingsSupport.stepQuietHours(startText, -30) },
                     modifier = Modifier
                         .weight(1f)
                         .testTag("quiet_start_minus_btn")
-                ) { Text("-30m", style = MaterialTheme.typography.labelSmall) }
+                ) { Text("−30m", style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false) }
                 OutlinedButton(
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 8.dp),
                     onClick = { startText = SettingsSupport.stepQuietHours(startText, 30) },
                     modifier = Modifier
                         .weight(1f)
                         .testTag("quiet_start_plus_btn")
-                ) { Text("+30m", style = MaterialTheme.typography.labelSmall) }
+                ) { Text("+30m", style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false) }
             }
         }
         Column(modifier = Modifier.weight(1f)) {
@@ -517,17 +519,19 @@ fun QuietHoursPanel(
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 OutlinedButton(
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 8.dp),
                     onClick = { endText = SettingsSupport.stepQuietHours(endText, -30) },
                     modifier = Modifier
                         .weight(1f)
                         .testTag("quiet_end_minus_btn")
-                ) { Text("-30m", style = MaterialTheme.typography.labelSmall) }
+                ) { Text("−30m", style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false) }
                 OutlinedButton(
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 8.dp),
                     onClick = { endText = SettingsSupport.stepQuietHours(endText, 30) },
                     modifier = Modifier
                         .weight(1f)
                         .testTag("quiet_end_plus_btn")
-                ) { Text("+30m", style = MaterialTheme.typography.labelSmall) }
+                ) { Text("+30m", style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false) }
             }
         }
     }
@@ -864,12 +868,8 @@ fun RemindersPanel(
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "These prompts are built and evaluated at 09:00 device-local time on " +
-                    "your configured week-start day. That is the intended time, not a delivery " +
-                    "guarantee — Android may delay them slightly. Weekly goal congratulations " +
-                    "are evaluated as progress is saved, and an inactivity check-in may follow " +
-                    "two complete days without progress, at most three times a week. All of " +
-                    "them respect quiet hours and the shared daily limit of 3 notifications.",
+                text = "Weekly prompts are planned for 09:00 on your week-start day; Android may delay " +
+                    "them slightly. They follow quiet hours and the shared limit of 3 notifications a day.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
