@@ -627,6 +627,12 @@ The decision log and register now contain 233 unique decision IDs through D-239 
 
 The decision log and register now contain 234 unique decision IDs through D-240 (gaps preserved).
 
+## D-241 — Habit Detail open findings verified (2026-11-24)
+
+| D-241 | Date strip is 30 days (contract says 14); end-date editor now shares New Habit's mode, unit and stepper controls; narrow-screen title truncation fixed; no history list or Insights link yet. Full record in `docs/09-DECISION-LOG.md` (D-241). Stage C/D NOT OPEN. |
+
+The decision log and register now contain 235 unique decision IDs through D-241 (gaps preserved).
+
 
 
 

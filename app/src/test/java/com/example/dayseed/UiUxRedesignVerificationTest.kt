@@ -380,6 +380,14 @@ class UiUxRedesignVerificationTest {
         assertNotNull("End this habit CTA must remain directly accessible", findNodeByTagOrNull(detailActivity, "detail_end_habit_btn"))
         assertNotNull("Danger zone must visually separate permanent deletion", findNodeByTagOrNull(detailActivity, "habit_detail_danger_zone"))
 
+        // The end-date editor uses the same mode + unit + stepper controls as New Habit (D-241).
+        clickTag(detailActivity, "detail_edit_end_date_btn", widthDp = 360, heightDp = 2600)
+        assertNotNull("End-date editor must open", findNodeByTagOrNull(detailActivity, "detail_end_date_editor"))
+        clickTag(detailActivity, "detail_duration_mode_SET", widthDp = 360, heightDp = 2600)
+        assertNotNull("Unit selector must appear for a set time", findNodeByTagOrNull(detailActivity, "detail_duration_kind_WEEKS"))
+        assertNotNull("Stepper must appear for a set time", findNodeByTagOrNull(detailActivity, "detail_duration_plus_btn"))
+        assertNotNull("Typed number field must remain", findNodeByTagOrNull(detailActivity, "detail_duration_value_input"))
+
         // Expand Streak & Living Grove and verify inner content appears
         assertNull("Streak details should be collapsed by default", findNodeByTagOrNull(detailActivity, "detail_open_grove_btn"))
         clickTag(detailActivity, "detail_toggle_streak_grove", widthDp = 360, heightDp = 2000)

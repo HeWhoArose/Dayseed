@@ -60,7 +60,10 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import com.example.dayseed.ui.components.NumberStepper
+import com.example.dayseed.ui.components.rememberIsLargeText
 import com.example.dayseed.ui.components.ProgressBarWithOverflow
+import com.example.dayseed.ui.components.SegmentedChoice
 import com.example.dayseed.ui.components.rememberCompletionUndoToken
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -80,6 +83,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -312,19 +316,29 @@ fun HabitDetailScreen(
                         )
                     }
 
-                    OutlinedButton(
-                        onClick = { onOpenEditHabit(habit.habitId) },
-                        modifier = Modifier
-                            .heightIn(min = 48.dp)
-                            .testTag("detail_edit_habit_btn")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Edit", maxLines = 1, softWrap = false)
+                    if (rememberIsLargeText() || LocalConfiguration.current.screenWidthDp < 340) {
+                        // Icon-only on narrow screens so the title is never truncated.
+                        IconButton(
+                            onClick = { onOpenEditHabit(habit.habitId) },
+                            modifier = Modifier.size(48.dp).testTag("detail_edit_habit_btn")
+                        ) {
+                            Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit habit")
+                        }
+                    } else {
+                        OutlinedButton(
+                            onClick = { onOpenEditHabit(habit.habitId) },
+                            modifier = Modifier
+                                .heightIn(min = 48.dp)
+                                .testTag("detail_edit_habit_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Edit", maxLines = 1, softWrap = false)
+                        }
                     }
                 }
             }
@@ -1224,55 +1238,46 @@ fun HabitDetailScreen(
                                     verticalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
                                     Text(
-                                        text = "How long do you want to maintain this habit?",
+                                        text = "How long should this habit run?",
                                         style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.Bold
                                     )
 
-                                    FlowRow(
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        HabitDurationKind.entries.forEach { kind ->
-                                            FilterChip(
-                                                selected = editDurationKind == kind,
-                                                onClick = {
-                                                    editDurationKind = kind
-                                                    editEndDateError = null
-                                                    when (kind) {
-                                                        HabitDurationKind.DAYS -> {
-                                                            if (editDurationValueText.toIntOrNull() == null || editDurationValueText.toInt() <= 0) {
-                                                                editDurationValueText = "30"
-                                                            }
-                                                        }
-                                                        HabitDurationKind.WEEKS -> {
-                                                            if (editDurationValueText.toIntOrNull() == null || editDurationValueText.toInt() <= 0 || editDurationValueText == "30") {
-                                                                editDurationValueText = "2"
-                                                            }
-                                                        }
-                                                        HabitDurationKind.MONTHS -> {
-                                                            if (editDurationValueText.toIntOrNull() == null || editDurationValueText.toInt() <= 0 || editDurationValueText == "30") {
-                                                                editDurationValueText = "3"
-                                                            }
-                                                        }
-                                                        HabitDurationKind.YEARS -> {
-                                                            if (editDurationValueText.toIntOrNull() == null || editDurationValueText.toInt() <= 0 || editDurationValueText == "30") {
-                                                                editDurationValueText = "1"
-                                                            }
-                                                        }
-                                                        HabitDurationKind.SPECIFIC_DATE -> {
-                                                            if (editSpecificEndDateText.isBlank()) {
-                                                                editSpecificEndDateText = today.plusDays(30).toString()
-                                                            }
-                                                        }
-                                                        HabitDurationKind.NONE -> Unit
-                                                    }
-                                                },
-                                                label = { Text(kind.label) },
-                                                modifier = Modifier.testTag("detail_duration_kind_${kind.name}")
-                                            )
+                                    val editTimeUnits = listOf(HabitDurationKind.DAYS, HabitDurationKind.WEEKS, HabitDurationKind.MONTHS, HabitDurationKind.YEARS)
+                                    fun chooseEditUnit(kind: HabitDurationKind) {
+                                        editDurationKind = kind
+                                        editEndDateError = null
+                                        if (editDurationValueText.toIntOrNull() == null || editDurationValueText.toInt() <= 0) {
+                                            editDurationValueText = when (kind) {
+                                                HabitDurationKind.DAYS -> "30"
+                                                HabitDurationKind.WEEKS -> "4"
+                                                HabitDurationKind.MONTHS -> "3"
+                                                else -> "1"
+                                            }
                                         }
                                     }
+                                    SegmentedChoice(
+                                        labels = listOf("No end date", "A set time", "Until a date"),
+                                        tags = listOf("detail_duration_mode_NONE", "detail_duration_mode_SET", "detail_duration_mode_DATE"),
+                                        selected = when (editDurationKind) {
+                                            HabitDurationKind.NONE -> 0
+                                            HabitDurationKind.SPECIFIC_DATE -> 2
+                                            else -> 1
+                                        },
+                                        onSelect = { index ->
+                                            editEndDateError = null
+                                            when (index) {
+                                                0 -> editDurationKind = HabitDurationKind.NONE
+                                                1 -> if (editDurationKind !in editTimeUnits) chooseEditUnit(HabitDurationKind.DAYS)
+                                                else -> {
+                                                    editDurationKind = HabitDurationKind.SPECIFIC_DATE
+                                                    if (editSpecificEndDateText.isBlank()) {
+                                                        editSpecificEndDateText = today.plusDays(30).toString()
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    )
 
                                     when (editDurationKind) {
                                         HabitDurationKind.NONE -> {
@@ -1287,26 +1292,24 @@ fun HabitDetailScreen(
                                         HabitDurationKind.WEEKS,
                                         HabitDurationKind.MONTHS,
                                         HabitDurationKind.YEARS -> {
-                                            val unitLabel = when (editDurationKind) {
-                                                HabitDurationKind.DAYS -> "Number of days"
-                                                HabitDurationKind.WEEKS -> "Number of weeks"
-                                                HabitDurationKind.MONTHS -> "Number of months"
-                                                HabitDurationKind.YEARS -> "Number of years"
-                                                else -> "Duration"
-                                            }
-                                            OutlinedTextField(
-                                                value = editDurationValueText,
-                                                onValueChange = { raw ->
-                                                    editDurationValueText = raw.filter { it.isDigit() || it == '-' }
-                                                    editEndDateError = null
+                                            SegmentedChoice(
+                                                labels = listOf("Days", "Weeks", "Months", "Years"),
+                                                tags = editTimeUnits.map { "detail_duration_kind_${it.name}" },
+                                                selected = editTimeUnits.indexOf(editDurationKind),
+                                                onSelect = { chooseEditUnit(editTimeUnits[it]) }
+                                            )
+                                            NumberStepper(
+                                                valueText = editDurationValueText,
+                                                unitWord = when (editDurationKind) {
+                                                    HabitDurationKind.DAYS -> "days"
+                                                    HabitDurationKind.WEEKS -> "weeks"
+                                                    HabitDurationKind.MONTHS -> "months"
+                                                    else -> "years"
                                                 },
-                                                label = { Text(unitLabel) },
-                                                singleLine = true,
-                                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .bringIntoViewOnFocus()
-                                                    .testTag("detail_duration_value_input")
+                                                onValueChange = { editDurationValueText = it; editEndDateError = null },
+                                                inputTag = "detail_duration_value_input",
+                                                minusTag = "detail_duration_minus_btn",
+                                                plusTag = "detail_duration_plus_btn"
                                             )
                                             val calcDate = editEndDateCalculation.getOrNull()
                                             val calcErr = editEndDateCalculation.exceptionOrNull()?.message

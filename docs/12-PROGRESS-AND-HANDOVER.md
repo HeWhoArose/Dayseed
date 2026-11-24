@@ -1,6 +1,7 @@
 # Progress and Handover
 
 **Last updated:** 2026-11-22 (Stage B UI, accessibility and design-system polish pass; band chip option B; test-isolation fixes)
+- **Habit Detail findings verified (2026-11-24, `D-241`):** strip is 30 days not 14, editor unified with New Habit controls, 320 dp title fixed; no link to history yet. Suite clean 3 of 3; device cases NOT RUN.
 - **Habit Detail audit (2026-11-24, `D-240`):** removed three duplicated or redundant controls and several redundant rows, friendly dates throughout, shared 5-second undo rule. Suite clean; 14-day strip, shared end-date editor and large-text/dark review still open; device cases NOT RUN.
 - **New Habit second pass (2026-11-23, `D-239`):** live "Understood" note, summary only after typing, pinned Create bar, collapsible Schedule and How long with one-line summaries, reminder state in More options. Full suite clean; expanded states not visually reviewed; device cases NOT RUN.
 - **New Habit screen rework (2026-11-23, `D-238`):** examples are quiet hints, the interpretation summary is last, "How long" uses a mode + unit + stepper, and a habit named only "Do" is refused. Full suite passed once; stepper state not rendered; device cases NOT RUN.

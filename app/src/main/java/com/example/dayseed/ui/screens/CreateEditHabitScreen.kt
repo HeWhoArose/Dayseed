@@ -1,5 +1,7 @@
 package com.example.dayseed.ui.screens
 
+import com.example.dayseed.ui.components.NumberStepper
+import com.example.dayseed.ui.components.SegmentedChoice
 import androidx.compose.ui.semantics.Role
 import androidx.core.graphics.toColorInt
 import androidx.compose.foundation.BorderStroke
@@ -853,42 +855,14 @@ fun CreateEditHabitScreen(
                                     HabitDurationKind.MONTHS -> "months"
                                     else -> "years"
                                 }
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    val current = durationValueText.toIntOrNull() ?: 0
-                                    IconButton(
-                                        onClick = { durationValueText = (current - 1).coerceAtLeast(1).toString(); validationError = null },
-                                        modifier = Modifier.size(48.dp).testTag("habit_duration_minus_btn")
-                                    ) { Icon(Icons.Default.Remove, contentDescription = "One $unitWord less") }
-                                    OutlinedTextField(
-                                        value = durationValueText,
-                                        onValueChange = { raw ->
-                                            durationValueText = raw.filter { it.isDigit() }.take(4)
-                                            validationError = null
-                                        },
-                                        singleLine = true,
-                                        textStyle = MaterialTheme.typography.titleLarge.copy(textAlign = androidx.compose.ui.text.style.TextAlign.Center),
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                        modifier = Modifier
-                                            .width(96.dp)
-                                            .bringIntoViewOnFocus()
-                                            .semantics { contentDescription = "Number of $unitWord" }
-                                            .testTag("habit_duration_value_input")
-                                    )
-                                    IconButton(
-                                        onClick = { durationValueText = (current + 1).coerceAtMost(9999).toString(); validationError = null },
-                                        modifier = Modifier.size(48.dp).testTag("habit_duration_plus_btn")
-                                    ) { Icon(Icons.Default.Add, contentDescription = "One $unitWord more") }
-                                    Text(
-                                        text = unitWord,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(start = 8.dp)
-                                    )
-                                }
+                                NumberStepper(
+                                    valueText = durationValueText,
+                                    unitWord = unitWord,
+                                    onValueChange = { durationValueText = it; validationError = null },
+                                    inputTag = "habit_duration_value_input",
+                                    minusTag = "habit_duration_minus_btn",
+                                    plusTag = "habit_duration_plus_btn"
+                                )
 
                                 val calcDate = durationCalculationResult.getOrNull()
                                 val calcErr = durationCalculationResult.exceptionOrNull()?.message
@@ -1895,49 +1869,6 @@ private fun InterpretationSummaryRow(
     }
 }
 
-/** A single-row segmented control: one rounded container, the selected segment filled. */
-@Composable
-private fun SegmentedChoice(
-    labels: List<String>,
-    tags: List<String>,
-    selected: Int,
-    onSelect: (Int) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
-            .selectableGroup()
-    ) {
-        labels.forEachIndexed { index, label ->
-            val isSelected = index == selected
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 48.dp)
-                    .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                    .selectable(selected = isSelected, role = Role.RadioButton, onClick = { onSelect(index) })
-                    .testTag(tags[index])
-            ) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
-                )
-            }
-        }
-    }
-}
-
-/** Action words that are meaningless as a whole habit name. */
-private val BARE_ACTION_WORDS = setOf("do", "doing", "make", "go", "try", "have", "perform", "get", "take")
-
 /** Section title with the current choice summarised on one line; tap to expand or collapse. */
 @Composable
 private fun FormSectionHeader(
@@ -1972,3 +1903,6 @@ private fun FormSectionHeader(
         )
     }
 }
+
+/** Action words that are meaningless as a whole habit name. */
+private val BARE_ACTION_WORDS = setOf("do", "doing", "make", "go", "try", "have", "perform", "get", "take")
