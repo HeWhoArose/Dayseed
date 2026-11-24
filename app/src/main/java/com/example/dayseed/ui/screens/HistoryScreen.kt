@@ -1,6 +1,9 @@
 package com.example.dayseed.ui.screens
 
 import com.example.dayseed.ui.components.dayseedHeading
+import com.example.dayseed.ui.components.friendlyDate
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
@@ -307,7 +310,7 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
                                 .defaultMinSize(minHeight = 48.dp)
                                 .testTag("journal_open_day_detail_button")
                         ) {
-                            Text("Inspect Full Day Detail ($selectedDate)")
+                            Text("Open ${friendlyDate(selectedDate, referenceToday)}")
                         }
                         if (isDateFilterActive) {
                             TextButton(
@@ -411,7 +414,7 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { viewModel.setJournalSearchQuery(it) },
-                    placeholder = { Text("Search reflections by title or body...") },
+                    placeholder = { Text("Search your journal") },
                     leadingIcon = {
                         Icon(imageVector = Icons.Default.Search, contentDescription = null)
                     },
@@ -444,7 +447,7 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
                         label = { Text("All Moods") },
                         modifier = Modifier.testTag("journal_mood_filter_ALL")
                     )
-                    MoodCatalog.allMoods.forEach { mood ->
+                    MoodCatalog.pickerMoods.forEach { mood ->
                         FilterChip(
                             selected = selectedMoodFilter.equals(mood.code, ignoreCase = true),
                             onClick = {
@@ -452,8 +455,14 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
                                     if (selectedMoodFilter.equals(mood.code, ignoreCase = true)) null else mood.code
                                 )
                             },
-                            label = { Text("${mood.symbol} ${mood.label}") },
-                            modifier = Modifier.testTag("journal_mood_filter_${mood.code}")
+                            label = {
+                                // Emoji only until chosen, so the whole mood range is scannable at a glance.
+                                val chosen = selectedMoodFilter.equals(mood.code, ignoreCase = true)
+                                Text(if (chosen) "${mood.symbol} ${mood.label}" else mood.symbol)
+                            },
+                            modifier = Modifier
+                                .semantics { contentDescription = "Filter by ${mood.label}" }
+                                .testTag("journal_mood_filter_${mood.code}")
                         )
                     }
                 }
@@ -465,7 +474,7 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         val filterSummary = buildList {
-                            if (isDateFilterActive) add("Date: $selectedDate")
+                            if (isDateFilterActive) add("Date: ${friendlyDate(selectedDate, referenceToday)}")
                             if (!selectedMoodFilter.isNullOrBlank()) {
                                 val m = MoodCatalog.findByCode(selectedMoodFilter)
                                 add("Mood: ${m?.label ?: selectedMoodFilter}")

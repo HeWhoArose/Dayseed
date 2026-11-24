@@ -1,5 +1,15 @@
 package com.example.dayseed.ui.screens
 
+import com.example.dayseed.ui.components.MoodPickerDialog
+import com.example.dayseed.ui.components.MoodSelectorRow
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -136,6 +146,7 @@ fun JournalEditorDialog(
         )
     }
 
+    var showMoodPicker by rememberSaveable { mutableStateOf(false) }
     var primaryMoodCode by rememberSaveable(initialEntry?.journalEntryId, initialDraft?.draftId) {
         mutableStateOf(initialPrimaryMood)
     }
@@ -240,7 +251,7 @@ fun JournalEditorDialog(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = if (initialEntry == null) "Daily Reflection" else "Edit Reflection",
+                                text = if (initialEntry == null) "New reflection" else "Edit reflection",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
@@ -344,14 +355,7 @@ fun JournalEditorDialog(
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
                         Text(
-                            text = "GENTLE PROMPT",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = resolvedPromptText,
+                            text = "💭 $resolvedPromptText",
                             style = MaterialTheme.typography.bodyMedium,
                             fontStyle = FontStyle.Italic,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -363,8 +367,8 @@ fun JournalEditorDialog(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Title (Optional)") },
-                    placeholder = { Text("Give this moment a short title...") },
+                    label = { Text("Title") },
+                    placeholder = { Text("Optional") },
                     singleLine = true,
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier
@@ -385,7 +389,7 @@ fun JournalEditorDialog(
                     isError = contentError,
                     label = { Text("Your Reflection") },
                     placeholder = {
-                        Text("Write freely — even a single sentence is worth keeping...")
+                        Text("Write freely — one sentence is enough.")
                     },
                     minLines = 4,
                     maxLines = 8,
@@ -405,100 +409,66 @@ fun JournalEditorDialog(
                     )
                 }
 
-                // Primary Mood Selector (D-096)
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        text = "Primary Mood (Optional)",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                // Mood: one tappable row; the emoji picker pops up (D-096 rules kept: main feeling, optional second)
+                MoodSelectorRow(
+                    primaryMood = primaryMoodCode,
+                    secondaryMood = secondaryMoodCode,
+                    onClick = { showMoodPicker = true },
+                    modifier = Modifier.testTag("journal_mood_row")
+                )
+                if (showMoodPicker) {
+                    MoodPickerDialog(
+                        initialPrimary = primaryMoodCode,
+                        initialSecondary = secondaryMoodCode,
+                        onConfirm = { p, sMood ->
+                            primaryMoodCode = p
+                            secondaryMoodCode = if (p == null) null else sMood
+                            showMoodPicker = false
+                        },
+                        onDismiss = { showMoodPicker = false }
                     )
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        MoodCatalog.allMoods.forEach { mood ->
-                            val isSelected = primaryMoodCode.equals(mood.code, ignoreCase = true)
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = {
-                                    if (isSelected) {
-                                        primaryMoodCode = null
-                                        secondaryMoodCode = null
-                                    } else {
-                                        primaryMoodCode = mood.code
-                                        if (secondaryMoodCode.equals(mood.code, ignoreCase = true)) {
-                                            secondaryMoodCode = null
-                                        }
-                                    }
-                                },
-                                label = { Text("${mood.symbol} ${mood.label}") },
-                                modifier = Modifier.testTag("primary_mood_${mood.code}")
-                            )
-                        }
-                    }
                 }
 
-                // Secondary Mood Selector (Only enabled when Primary Mood is selected)
-                if (primaryMoodCode != null) {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            text = "Secondary Mood (Optional)",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Row(
+                // Linked habit: one compact row with a menu instead of a long chip strip
+                val linkableHabits = habits.filter { !it.isArchived }
+                if (linkableHabits.isNotEmpty()) {
+                    var habitMenuOpen by remember { mutableStateOf(false) }
+                    val linkedName = linkableHabits.firstOrNull { it.habitId == linkedHabitId }?.name
+                    Box {
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .clickable(role = Role.Button) { habitMenuOpen = true }
+                                .semantics { contentDescription = "Linked habit, ${linkedName ?: "none"}. Opens a list." }
+                                .testTag("journal_linked_habit_row")
                         ) {
-                            MoodCatalog.allMoods
-                                .filter { !it.code.equals(primaryMoodCode, ignoreCase = true) }
-                                .forEach { mood ->
-                                    val isSelected = secondaryMoodCode.equals(mood.code, ignoreCase = true)
-                                    FilterChip(
-                                        selected = isSelected,
-                                        onClick = {
-                                            secondaryMoodCode = if (isSelected) null else mood.code
-                                        },
-                                        label = { Text("${mood.symbol} ${mood.label}") },
-                                        modifier = Modifier.testTag("secondary_mood_${mood.code}")
-                                    )
-                                }
+                            Row(
+                                modifier = Modifier.heightIn(min = 52.dp).padding(horizontal = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = linkedName?.let { "Linked to $it" } ?: "Link to a habit (optional)",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = if (linkedName == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Icon(Icons.Default.ExpandMore, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
-                    }
-                }
-
-                // Linked Habit Selector (Optional)
-                if (habits.isNotEmpty()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            text = "Linked Habit (Optional)",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            FilterChip(
-                                selected = linkedHabitId == null,
-                                onClick = { linkedHabitId = null },
-                                label = { Text("None") },
+                        androidx.compose.material3.DropdownMenu(expanded = habitMenuOpen, onDismissRequest = { habitMenuOpen = false }) {
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = { Text("None") },
+                                onClick = { linkedHabitId = null; habitMenuOpen = false },
                                 modifier = Modifier.testTag("journal_linked_habit_NONE")
                             )
-                            habits.filter { !it.isArchived }.forEach { h ->
-                                FilterChip(
-                                    selected = linkedHabitId == h.habitId,
-                                    onClick = {
-                                        linkedHabitId = if (linkedHabitId == h.habitId) null else h.habitId
-                                    },
-                                    label = { Text(h.name) },
+                            linkableHabits.forEach { h ->
+                                androidx.compose.material3.DropdownMenuItem(
+                                    text = { Text(h.name) },
+                                    onClick = { linkedHabitId = h.habitId; habitMenuOpen = false },
                                     modifier = Modifier.testTag("journal_linked_habit_${h.habitId}")
                                 )
                             }
@@ -534,7 +504,7 @@ fun JournalEditorDialog(
                         ) {
                             Icon(imageVector = Icons.Default.Delete, contentDescription = null)
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Discard Draft")
+                            Text("Discard draft")
                         }
                     } else {
                         Spacer(modifier = Modifier.width(8.dp))

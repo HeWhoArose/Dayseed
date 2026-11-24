@@ -1276,11 +1276,11 @@ object MoodCatalog {
         MoodOption("TIRED", "Tired", "🌙"),
         MoodOption("STRESSED", "Stressed", "🌧️"),
         MoodOption("ANXIOUS", "Anxious", "🍃"),
-        MoodOption("LOW", "Low", "🪨")
+        MoodOption("LOW", "Low", "🌫️")
     )
 
     val allMoods: List<MoodOption> = starterMoods + listOf(
-        MoodOption("SAD", "Sad", "🌧️"),
+        MoodOption("SAD", "Sad", "💧"),
         MoodOption("JOYFUL", "Joyful", "🌻"),
         MoodOption("GROUNDED", "Grounded", "🌳"),
         MoodOption("ENERGIZED", "Energized", "☀️"),
@@ -1291,6 +1291,9 @@ object MoodCatalog {
     )
 
     val options: List<MoodOption> = allMoods
+
+    /** The moods offered in pickers: [allMoods] without the legacy "Energized" spelling duplicate. */
+    val pickerMoods: List<MoodOption> = allMoods.filterNot { it.code == "ENERGIZED" }
 
     fun findByCode(code: String?): MoodOption? {
         if (code.isNullOrBlank()) return null

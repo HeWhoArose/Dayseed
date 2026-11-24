@@ -633,6 +633,12 @@ The decision log and register now contain 234 unique decision IDs through D-240 
 
 The decision log and register now contain 235 unique decision IDs through D-241 (gaps preserved).
 
+## D-242 — Journal and reflection editor audit, emoji mood pop-up (2026-11-24)
+
+| D-242 | Editor mood becomes one row opening an emoji pop-up grid (main feeling, optional second); duplicate mood emoji fixed; editor and Journal list decluttered. Full record in `docs/09-DECISION-LOG.md` (D-242). Stage C/D NOT OPEN. |
+
+The decision log and register now contain 236 unique decision IDs through D-242 (gaps preserved).
+
 
 
 
