@@ -1,6 +1,7 @@
 # Progress and Handover
 
 **Last updated:** 2026-11-22 (Stage B UI, accessibility and design-system polish pass; band chip option B; test-isolation fixes)
+- **Habit Detail audit (2026-11-24, `D-240`):** removed three duplicated or redundant controls and several redundant rows, friendly dates throughout, shared 5-second undo rule. Suite clean; 14-day strip, shared end-date editor and large-text/dark review still open; device cases NOT RUN.
 - **New Habit second pass (2026-11-23, `D-239`):** live "Understood" note, summary only after typing, pinned Create bar, collapsible Schedule and How long with one-line summaries, reminder state in More options. Full suite clean; expanded states not visually reviewed; device cases NOT RUN.
 - **New Habit screen rework (2026-11-23, `D-238`):** examples are quiet hints, the interpretation summary is last, "How long" uses a mode + unit + stepper, and a habit named only "Do" is refused. Full suite passed once; stepper state not rendered; device cases NOT RUN.
 - **Undo banner (2026-11-23, `D-237`):** Today now offers Undo only after a registered completion and hides it after 5 seconds (it previously stayed until the next action and also appeared for habit deletions). Auto-hide timing is not covered by an automated test; device cases NOT RUN.

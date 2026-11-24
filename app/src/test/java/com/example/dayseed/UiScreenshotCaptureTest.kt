@@ -276,6 +276,6 @@ class UiScreenshotCaptureTest {
     @Test fun small_320() = suite("small320", 320, 640, scenes = allScenes)
     @Test fun largefont_360() = suite("font150", 360, 800, fontScale = 1.5f, scenes = allScenes)
     @Test fun wide_411() = suite("wide411", 411, 891, scenes = listOf("today", "insights"))
-    @Test fun tall_360() = suite("tall360", 360, 1700, scenes = listOf("today", "insights", "new_habit"))
+    @Test fun tall_360() = suite("tall360", 360, 3200, scenes = listOf("today", "insights", "new_habit", "habit_detail"))
     @Test fun firstrun_360() = suite("firstrun360", 360, 800, withData = false, scenes = listOf("today", "habits", "journal", "insights"))
 }

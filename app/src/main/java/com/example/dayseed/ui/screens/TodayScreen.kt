@@ -2,6 +2,7 @@ package com.example.dayseed.ui.screens
 
 import com.example.dayseed.ui.components.computeHabitProgress
 import com.example.dayseed.ui.components.QuickLogSheetContent
+import com.example.dayseed.ui.components.rememberCompletionUndoToken
 import com.example.dayseed.ui.components.CompactHabitRow
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ModalBottomSheet
@@ -178,19 +179,7 @@ fun TodayScreen(
     val appSettings by viewModel.appSettings.collectAsState()
     val comebackInfo by viewModel.comebackInfo.collectAsState()
     val growthMetrics by viewModel.growthMetrics.collectAsState()
-    val repositoryUndoToken by viewModel.activeUndoToken.collectAsState()
-    // Today only offers Undo for a just-registered completion (an amount or a done/not-done check-in).
-    // Editing, creating or deleting habits and notes never raises this banner (D-237).
-    val activeUndoToken = repositoryUndoToken?.takeIf {
-        it.entityType == UndoEntityType.HABIT_ENTRY || it.entityType == UndoEntityType.HABIT_DAY_OUTCOME
-    }
-    androidx.compose.runtime.LaunchedEffect(repositoryUndoToken?.tokenId) {
-        val token = repositoryUndoToken ?: return@LaunchedEffect
-        val remaining = token.expiresAtUtcMs - viewModel.repository.clock.nowUtcMs()
-        if (remaining > 0) delay(remaining)
-        // Hide the banner (and retire the token) once the short window is over.
-        if (viewModel.activeUndoToken.value?.tokenId == token.tokenId) viewModel.repository.clearActiveUndoToken()
-    }
+    val activeUndoToken = rememberCompletionUndoToken(viewModel)
     val notScheduledExpanded by viewModel.todayNotScheduledExpanded.collectAsState()
     val onboardingSetupExpanded by viewModel.onboardingSetupExpanded.collectAsState()
 

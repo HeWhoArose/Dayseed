@@ -372,7 +372,9 @@ class UiUxRedesignVerificationTest {
         layoutAndIdle(detailActivity, widthDp = 360, heightDp = 1800)
 
         assertNotNull("Add Progress CTA must be immediately visible in Today's Progress card", findNodeByTagOrNull(detailActivity, "detail_record_session_btn"))
-        assertNotNull("Edit Habit secondary CTA must be immediately visible", findNodeByTagOrNull(detailActivity, "detail_primary_edit_btn"))
+        assertNotNull("Edit lives once, in the header", findNodeByTagOrNull(detailActivity, "detail_edit_habit_btn"))
+        assertNull("No second Edit button inside the progress card (D-240)", findNodeByTagOrNull(detailActivity, "detail_primary_edit_btn"))
+        assertNull("No third Edit button inside Lifecycle (D-240)", findNodeByTagOrNull(detailActivity, "detail_lifecycle_edit_btn"))
         assertNotNull("Expandable Streak & Living Grove toggle must exist", findNodeByTagOrNull(detailActivity, "detail_toggle_streak_grove"))
         assertNotNull("Expandable Lifetime Progress toggle must exist", findNodeByTagOrNull(detailActivity, "detail_toggle_lifetime"))
         assertNotNull("End this habit CTA must remain directly accessible", findNodeByTagOrNull(detailActivity, "detail_end_habit_btn"))

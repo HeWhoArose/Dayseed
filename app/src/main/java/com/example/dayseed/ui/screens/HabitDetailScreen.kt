@@ -61,6 +61,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import com.example.dayseed.ui.components.ProgressBarWithOverflow
+import com.example.dayseed.ui.components.rememberCompletionUndoToken
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -129,7 +130,7 @@ fun HabitDetailScreen(
     val outcomes by viewModel.habitDayOutcomes.collectAsState()
     val dateNotes by viewModel.habitDateNotes.collectAsState()
     val dateExceptions by viewModel.habitDateExceptions.collectAsState()
-    val activeUndoToken by viewModel.activeUndoToken.collectAsState()
+    val activeUndoToken = rememberCompletionUndoToken(viewModel)
     val appSettings by viewModel.appSettings.collectAsState()
 
     val habit = habits.find { it.habitId == habitId }
@@ -328,7 +329,7 @@ fun HabitDetailScreen(
                 }
             }
 
-            // Guarded 8-second Undo Banner
+            // Short undo banner, only for a just-registered completion or deleted session (D-237)
             if (activeUndoToken != null) {
                 item {
                     Card(
@@ -449,28 +450,16 @@ fun HabitDetailScreen(
                             )
                         }
 
-                        Text(
-                            text = habit.formatLifetimeSummary(),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.testTag("detail_lifetime_summary_text")
-                        )
-
-                        if (!habit.lifecycleState.isTerminal && activeReminderMode == "AT_TIME" && !activeReminderTime.isNullOrBlank()) {
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-                                modifier = Modifier.testTag("detail_reminder_badge")
-                            ) {
-                                Text(
-                                    text = "Reminder: ${SettingsSupport.formatUnambiguousTimeDisplay(activeReminderTime, is24HourFormat)}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                )
-                            }
+                        if (habit.scheduledEndLocalDate != null || habit.lifecycleState.isEndedOrCompleted) {
+                            Text(
+                                text = habit.formatLifetimeSummary(),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.testTag("detail_lifetime_summary_text")
+                            )
                         }
+
                     }
                 }
             }
@@ -556,22 +545,11 @@ fun HabitDetailScreen(
 
                         // Immediately discoverable Primary Actions
                         if (!habit.lifecycleState.isTerminal) {
-                            AdaptiveActionRow(
-                                primary = { m ->
-                                    DayseedPrimaryButton(
-                                        text = if (selectedLocalDate == todayStr) "Add Progress" else "Add (${friendlyDate(selectedLocalDate, today)})",
-                                        onClick = { onOpenRecordSession(habitId, selectedLocalDate, null) },
-                                        icon = Icons.Default.Add,
-                                        modifier = m.testTag("detail_record_session_btn")
-                                    )
-                                },
-                                secondary = { m ->
-                                    DayseedSecondaryButton(
-                                        text = "Edit Habit",
-                                        onClick = { onOpenEditHabit(habit.habitId) },
-                                        modifier = m.testTag("detail_primary_edit_btn")
-                                    )
-                                }
+                            DayseedPrimaryButton(
+                                text = if (selectedLocalDate == todayStr) "Add progress" else "Add progress for ${friendlyDate(selectedLocalDate, today)}",
+                                onClick = { onOpenRecordSession(habitId, selectedLocalDate, null) },
+                                icon = Icons.Default.Add,
+                                modifier = Modifier.fillMaxWidth().testTag("detail_record_session_btn")
                             )
 
                             if (selectedLocalDate == todayStr) {
@@ -626,7 +604,7 @@ fun HabitDetailScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = "Selected Date & Individual Sessions",
+                            text = "Recent days",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -704,7 +682,7 @@ fun HabitDetailScreen(
                         // Individual Sessions list on selectedDate
                         if (entriesOnSelectedDate.isEmpty() && outcomeOnSelectedDate == null && exceptionOnSelectedDate == null) {
                             Text(
-                                text = "No individual sessions recorded on $selectedLocalDate.",
+                                text = "Nothing recorded on ${friendlyDate(selectedLocalDate, today)}.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -847,14 +825,14 @@ fun HabitDetailScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = "Daily Habit Note ($selectedLocalDate)",
+                            text = "Note · ${friendlyDate(selectedLocalDate, today)}",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         OutlinedTextField(
                             value = noteDraft,
                             onValueChange = { noteDraft = it },
-                            placeholder = { Text("Add a note for ${habit.name} on $selectedLocalDate...") },
+                            placeholder = { Text("Add a note for ${friendlyDate(selectedLocalDate, today)}…") },
                             maxLines = 3,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -961,7 +939,7 @@ fun HabitDetailScreen(
                                 "Active Sapling (${7 - activeRun.elapsedActiveSpanCount.coerceAtMost(7)} more active days to become a permanent Grove tree)"
                             }
                             Text(
-                                text = "Started ${activeRun.startLocalDate} • $stateText",
+                                text = "Started ${friendlyDate(activeRun.startLocalDate, today)} • $stateText",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -1008,7 +986,7 @@ fun HabitDetailScreen(
                                             fontWeight = FontWeight.SemiBold
                                         )
                                         Text(
-                                            text = "${tree.startLocalDate} → ${tree.endLocalDate} • ${formatTerminalReasonLabel(tree.terminalReason)}",
+                                            text = "${friendlyDate(tree.startLocalDate, today)} → ${friendlyDate(tree.endLocalDate, today)} • ${formatTerminalReasonLabel(tree.terminalReason)}",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -1054,7 +1032,7 @@ fun HabitDetailScreen(
                                             fontWeight = FontWeight.Medium
                                         )
                                         Text(
-                                            text = "${shortRun.startLocalDate} → ${shortRun.endLocalDate} • ${formatTerminalReasonLabel(shortRun.terminalReason)}",
+                                            text = "${friendlyDate(shortRun.startLocalDate, today)} → ${friendlyDate(shortRun.endLocalDate, today)} • ${formatTerminalReasonLabel(shortRun.terminalReason)}",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -1110,7 +1088,7 @@ fun HabitDetailScreen(
                         }
                         MetadataBadge("Mode: $modeLabel")
                         if (activeVersion != null) {
-                            MetadataBadge("Rule effective from: ${activeVersion.effectiveFromLocalDate}")
+                            MetadataBadge("Rule effective from: ${friendlyDate(activeVersion.effectiveFromLocalDate, today)}")
                         }
                     }
                 }
@@ -1131,16 +1109,10 @@ fun HabitDetailScreen(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Text(
-                            text = "Habit Lifecycle & End Date",
+                            text = "Lifecycle",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
-                        Text(
-                            text = "Manage when this habit ends, return it to an ongoing state, or end it immediately while preserving your history and Grove trees.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
                         // Lifecycle status & dates summary box
                         Surface(
                             shape = RoundedCornerShape(12.dp),
@@ -1152,14 +1124,7 @@ fun HabitDetailScreen(
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Text(
-                                    text = "Lifecycle status: ${habit.lifetimeStatusLabel}",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.testTag("detail_lifecycle_status_text")
-                                )
-                                Text(
-                                    text = "Start date: $habitStartDate",
+                                    text = "Started ${friendlyDate(habitStartDate, today)}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.testTag("detail_start_date_text")
@@ -1167,13 +1132,13 @@ fun HabitDetailScreen(
                                 val scheduledEndDisplay = habit.scheduledEndLocalDate?.let { raw ->
                                     val parsed = runCatching { LocalDate.parse(raw) }.getOrNull()
                                     if (parsed != null) {
-                                        "${HabitLifetimeCalculator.formatHumanReadableDate(parsed)} ($raw)"
+                                        friendlyDate(parsed, today)
                                     } else {
                                         raw
                                     }
-                                } ?: "No end date (Ongoing)"
+                                } ?: "none (ongoing)"
                                 Text(
-                                    text = "Scheduled end date: $scheduledEndDisplay",
+                                    text = "Ends: $scheduledEndDisplay",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.testTag("detail_scheduled_end_date_text")
@@ -1181,7 +1146,7 @@ fun HabitDetailScreen(
                                 if (habit.actualEndLocalDate != null || habit.endReason != null || habit.lifecycleState.isEndedOrCompleted) {
                                     val reasonText = habit.endReason?.label ?: habit.lifecycleState.displayLabel
                                     Text(
-                                        text = "Ended on: ${habit.actualEndLocalDate ?: "—"} ($reasonText)",
+                                        text = "Ended ${habit.actualEndLocalDate?.let { friendlyDate(it, today) } ?: "—"} ($reasonText)",
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.Medium,
                                         color = MaterialTheme.colorScheme.primary,
@@ -1207,9 +1172,9 @@ fun HabitDetailScreen(
                             ) {
                                 Text(
                                     when {
-                                        showEndDateEditor -> "Close End Date Editor"
-                                        habit.scheduledEndLocalDate != null -> "Change End Date"
-                                        else -> "Set End Date"
+                                        showEndDateEditor -> "Close end-date editor"
+                                        habit.scheduledEndLocalDate != null -> "Change end date"
+                                        else -> "Set end date"
                                     }
                                 )
                             }
@@ -1225,7 +1190,7 @@ fun HabitDetailScreen(
                                         .heightIn(min = 48.dp)
                                         .testTag("detail_remove_end_date_btn")
                                 ) {
-                                    Text("Return to Ongoing")
+                                    Text("Return to ongoing")
                                 }
                             }
 
@@ -1240,7 +1205,7 @@ fun HabitDetailScreen(
                                         .heightIn(min = 48.dp)
                                         .testTag("detail_end_habit_btn")
                                 ) {
-                                    Text("End this habit")
+                                    Text("Finish habit…")
                                 }
                             }
                         }
@@ -1460,7 +1425,7 @@ fun HabitDetailScreen(
                                                 .heightIn(min = 48.dp)
                                                 .testTag("detail_save_end_date_btn")
                                         ) {
-                                            Text("Save End Date")
+                                            Text("Save end date")
                                         }
                                     }
                                 }
@@ -1471,15 +1436,6 @@ fun HabitDetailScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            OutlinedButton(
-                                onClick = { onOpenEditHabit(habit.habitId) },
-                                modifier = Modifier
-                                    .heightIn(min = 48.dp)
-                                    .testTag("detail_lifecycle_edit_btn")
-                            ) {
-                                Text("Edit Habit")
-                            }
-
                             if (habit.lifecycleState == HabitLifecycleState.PAUSED) {
                                 OutlinedButton(
                                     onClick = {
@@ -1489,7 +1445,7 @@ fun HabitDetailScreen(
                                         .heightIn(min = 48.dp)
                                         .testTag("detail_pause_resume_btn")
                                 ) {
-                                    Text("Resume Habit")
+                                    Text("Resume habit")
                                 }
                             } else if (habit.lifecycleState == HabitLifecycleState.ACTIVE) {
                                 OutlinedButton(
@@ -1500,20 +1456,7 @@ fun HabitDetailScreen(
                                         .heightIn(min = 48.dp)
                                         .testTag("detail_pause_resume_btn")
                                 ) {
-                                    Text("Pause Habit")
-                                }
-                            }
-
-                            if (habit.lifecycleState != HabitLifecycleState.COMPLETED) {
-                                OutlinedButton(
-                                    onClick = {
-                                        viewModel.endHabitImmediately(habit.habitId, markAsCompleted = true)
-                                    },
-                                    modifier = Modifier
-                                        .heightIn(min = 48.dp)
-                                        .testTag("detail_complete_habit_btn")
-                                ) {
-                                    Text("Mark Completed")
+                                    Text("Pause habit")
                                 }
                             }
 
@@ -1526,7 +1469,7 @@ fun HabitDetailScreen(
                                         .heightIn(min = 48.dp)
                                         .testTag("detail_archive_habit_btn")
                                 ) {
-                                    Text("Unarchive Habit")
+                                    Text("Unarchive habit")
                                 }
                             } else {
                                 OutlinedButton(
@@ -1537,7 +1480,7 @@ fun HabitDetailScreen(
                                         .heightIn(min = 48.dp)
                                         .testTag("detail_archive_habit_btn")
                                 ) {
-                                    Text("Archive Habit")
+                                    Text("Archive habit")
                                 }
                             }
 
@@ -1584,7 +1527,7 @@ fun HabitDetailScreen(
                                 .heightIn(min = 48.dp)
                                 .testTag("detail_delete_habit_btn")
                         ) {
-                            Text("Delete Permanently", fontWeight = FontWeight.SemiBold)
+                            Text("Delete permanently", fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }

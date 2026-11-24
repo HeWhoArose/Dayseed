@@ -621,6 +621,12 @@ The decision log and register now contain 232 unique decision IDs through D-238 
 
 The decision log and register now contain 233 unique decision IDs through D-239 (gaps preserved).
 
+## D-240 — Habit Detail audit and declutter (2026-11-24)
+
+| D-240 | Duplicate Edit buttons, reminder badge, lifecycle status row and Mark Completed removed; ISO dates made friendly; titles shortened; Habit Detail undo follows D-237. Full record in `docs/09-DECISION-LOG.md` (D-240). Stage C/D NOT OPEN. |
+
+The decision log and register now contain 234 unique decision IDs through D-240 (gaps preserved).
+
 
 
 
