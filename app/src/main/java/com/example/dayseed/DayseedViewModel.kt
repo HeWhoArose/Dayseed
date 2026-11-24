@@ -244,6 +244,19 @@ class DayseedViewModel @JvmOverloads constructor(
     // NAVIGATION & BACK STACK (§4.1–§4.3)
     // =========================================================================
 
+    private val _pendingSettingsFocus = MutableStateFlow<String?>(null)
+    /** One-shot request for Settings to open a section on arrival (for example "JOURNAL_EXPORT"). */
+    val pendingSettingsFocus: StateFlow<String?> = _pendingSettingsFocus.asStateFlow()
+
+    fun openJournalExportInSettings() {
+        _pendingSettingsFocus.value = "JOURNAL_EXPORT"
+        selectTab(NavTab.SETTINGS)
+    }
+
+    fun consumePendingSettingsFocus() {
+        _pendingSettingsFocus.value = null
+    }
+
     fun selectTab(tab: NavTab) {
         val currentTab = _selectedTab.value
         if (_secondaryRouteStack.value.isNotEmpty()) {

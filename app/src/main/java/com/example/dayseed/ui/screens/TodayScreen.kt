@@ -108,7 +108,6 @@ import com.example.dayseed.ui.components.DayseedLogoSymbol
 import com.example.dayseed.ui.components.DayseedShapes
 import com.example.dayseed.ui.components.DayseedSpacing
 import com.example.dayseed.ui.components.rememberIsLargeText
-import com.example.dayseed.ui.components.ReflectionCard
 import com.example.dayseed.ui.components.TodayLongestStreakIndicator
 import com.example.dayseed.ui.theme.DayseedDateStyle
 import com.example.dayseed.ui.theme.DayseedGreetingStyle

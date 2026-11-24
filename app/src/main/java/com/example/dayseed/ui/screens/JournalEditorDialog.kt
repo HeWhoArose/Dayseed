@@ -1,6 +1,7 @@
 package com.example.dayseed.ui.screens
 
 import com.example.dayseed.ui.components.MoodPickerDialog
+import com.example.dayseed.ui.components.dayseedHeading
 import com.example.dayseed.ui.components.MoodSelectorRow
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
@@ -83,6 +84,8 @@ fun JournalEditorDialog(
     initialPromptId: String? = null,
     initialCursorSelection: Pair<Int, Int>? = null,
     saveErrorMessage: String? = null,
+    /** False renders the editor inline (no pop-up window) so it can be screenshot and tested directly. */
+    asWindow: Boolean = true,
     clockNowMs: () -> Long,
     onClearSaveError: () -> Unit = {},
     onAutosaveDraft: (
@@ -215,10 +218,7 @@ fun JournalEditorDialog(
 
     val dateFormatter = DateTimeFormatter.ofPattern("EEE, MMM d, yyyy", Locale.getDefault())
 
-    Dialog(
-        onDismissRequest = handleRequestClose,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
+    val editorBody: @Composable () -> Unit = {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -235,85 +235,74 @@ fun JournalEditorDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Header Row + Status Badge
+                Column(
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                // Header: title and close on one line; date picker and state on the next (wraps at large text)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = if (initialEntry == null) "New reflection" else "Edit reflection",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = if (initialEntry != null) {
-                                    MaterialTheme.colorScheme.primaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.secondaryContainer
-                                }
-                            ) {
-                                Text(
-                                    text = if (initialEntry != null) "Saved Entry" else "Draft",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier
-                                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                                        .testTag("journal_editor_status_badge")
-                                )
-                            }
-                        }
-
-                        // Editable Date Selector (D-191)
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            IconButton(
-                                onClick = { entryDate = entryDate.minusDays(1) },
-                                modifier = Modifier.testTag("journal_date_prev_button")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                                    contentDescription = "Previous date"
-                                )
-                            }
-                            Text(
-                                text = entryDate.format(dateFormatter),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.testTag("journal_date_label")
-                            )
-                            IconButton(
-                                onClick = { entryDate = entryDate.plusDays(1) },
-                                modifier = Modifier.testTag("journal_date_next_button")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                    contentDescription = "Next date"
-                                )
-                            }
-                        }
-                    }
-
+                    Text(
+                        text = if (initialEntry == null) "New reflection" else "Edit reflection",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f).dayseedHeading()
+                    )
                     IconButton(
                         onClick = handleRequestClose,
                         modifier = Modifier.testTag("journal_close_button")
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close"
+                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
+                    }
+                }
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Editable Date Selector (D-191)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = { entryDate = entryDate.minusDays(1) },
+                            modifier = Modifier.testTag("journal_date_prev_button")
+                        ) {
+                            Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Previous date")
+                        }
+                        Text(
+                            text = entryDate.format(dateFormatter),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.testTag("journal_date_label")
+                        )
+                        IconButton(
+                            onClick = { entryDate = entryDate.plusDays(1) },
+                            modifier = Modifier.testTag("journal_date_next_button")
+                        ) {
+                            Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Next date")
+                        }
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (initialEntry != null) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                    ) {
+                        Text(
+                            text = if (initialEntry != null) "Saved Entry" else "Draft",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            softWrap = false,
+                            modifier = Modifier
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                                .testTag("journal_editor_status_badge")
                         )
                     }
                 }
@@ -476,7 +465,9 @@ fun JournalEditorDialog(
                     }
                 }
 
-                // Action Row
+                }
+
+                // Action Row (pinned below the scrolling form so Save is always reachable)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -490,9 +481,7 @@ fun JournalEditorDialog(
                             ),
                             modifier = Modifier.testTag("journal_delete_entry_button")
                         ) {
-                            Icon(imageVector = Icons.Default.Delete, contentDescription = null)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Delete")
+                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete reflection")
                         }
                     } else if (activeDraftId != null && (initialDraft != null || bodyText.isNotBlank() || title.isNotBlank())) {
                         TextButton(
@@ -502,9 +491,7 @@ fun JournalEditorDialog(
                             ),
                             modifier = Modifier.testTag("discard_journal_draft_btn")
                         ) {
-                            Icon(imageVector = Icons.Default.Delete, contentDescription = null)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Discard draft")
+                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Discard draft")
                         }
                     } else {
                         Spacer(modifier = Modifier.width(8.dp))
@@ -557,12 +544,20 @@ fun JournalEditorDialog(
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.testTag("journal_save_button")
                         ) {
-                            Text("Save Reflection")
+                            Text("Save", maxLines = 1, softWrap = false)
                         }
                     }
                 }
             }
         }
+    }
+    if (asWindow) {
+        Dialog(
+            onDismissRequest = handleRequestClose,
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) { editorBody() }
+    } else {
+        editorBody()
     }
 
     if (showDeleteEntryConfirm && initialEntry != null) {

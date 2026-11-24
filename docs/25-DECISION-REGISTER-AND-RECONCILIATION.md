@@ -639,6 +639,12 @@ The decision log and register now contain 235 unique decision IDs through D-241 
 
 The decision log and register now contain 236 unique decision IDs through D-242 (gaps preserved).
 
+## D-243 — Journal open findings fixed (2026-11-24)
+
+| D-243 | Journal header lightened with floating Write and a calendar icon in search; plain entry time; export link to Settings; dead ReflectionCard removed; reflection editor made testable and its large-text defects repaired. Full record in `docs/09-DECISION-LOG.md` (D-243). Stage C/D NOT OPEN. |
+
+The decision log and register now contain 237 unique decision IDs through D-243 (gaps preserved).
+
 
 
 

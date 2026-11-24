@@ -124,6 +124,14 @@ fun SettingsScreen(
     var exportedTextPreview by remember { mutableStateOf<String?>(null) }
     var exportedTitle by remember { mutableStateOf("") }
 
+    val pendingSettingsFocus by viewModel.pendingSettingsFocus.collectAsState()
+    androidx.compose.runtime.LaunchedEffect(pendingSettingsFocus) {
+        if (pendingSettingsFocus == "JOURNAL_EXPORT") {
+            dataSubScreenFocus = DataSubScreenSection.JOURNAL_FOCUS
+            viewModel.consumePendingSettingsFocus()
+        }
+    }
+
     // System back returns from the unified Data & Backup sub-screen to the main Settings hub.
     BackHandler(enabled = dataSubScreenFocus != null) {
         dataSubScreenFocus = null
