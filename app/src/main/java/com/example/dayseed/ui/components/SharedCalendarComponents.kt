@@ -732,7 +732,6 @@ fun WeeklyHabitBoard(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Spacer(modifier = Modifier.width(56.dp))
                 boardModel.days.forEach { day ->
                     val isToday = day == referenceToday
                     val mood = boardModel.primaryMoodByDate[day]
@@ -802,22 +801,21 @@ fun WeeklyHabitBoard(
                                 .padding(10.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Row(
+                            // The habit name gets its own full-width line (it was squeezed to "…" beside the summary badge).
+                            Column(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Text(
                                     text = row.effectiveVersion.name,
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1,
+                                    maxLines = 2,
                                     overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier
-                                        .weight(1f)
+                                        .fillMaxWidth()
                                         .clickable(role = Role.Button) { onOpenHabitDetail(row.habit.habitId, boardModel.weekEndDate.coerceAtMost(referenceToday)) }
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
                                 val badgeColor = when (row.periodStatus) {
                                     WeeklyPeriodStatus.ABOVE_TARGET,
                                     WeeklyPeriodStatus.MET -> MaterialTheme.colorScheme.primaryContainer
@@ -844,12 +842,6 @@ fun WeeklyHabitBoard(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = row.effectiveVersion.targetPeriod.name.lowercase().replaceFirstChar { it.uppercase() },
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.width(56.dp)
-                                )
                                 row.cells.forEach { cell ->
                                     val (cellBg, cellFg, cellBorder) = calendarColorsForState(
                                         state = cell.honestState,

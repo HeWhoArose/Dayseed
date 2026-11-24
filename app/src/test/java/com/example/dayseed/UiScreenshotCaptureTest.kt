@@ -213,6 +213,28 @@ class UiScreenshotCaptureTest {
         auditTouchTargets(activity, name)
     }
 
+    /** Renders a scene, then taps [tag] (no recomposition reset, so screen-local state survives) and renders again. */
+    private fun shotAfterClick(activity: ComponentActivity, name: String, wDp: Int, hDp: Int, tag: String) {
+        findComposeView(activity.window.decorView)?.disposeComposition()
+        pump(activity, wDp, hDp)
+        pump(activity, wDp, hDp)
+        val root = findRootForTest(activity.window.decorView) ?: return
+        fun walk(n: androidx.compose.ui.semantics.SemanticsNode): androidx.compose.ui.semantics.SemanticsNode? {
+            if (n.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.TestTag) == tag) return n
+            for (c in n.children) walk(c)?.let { return it }
+            return null
+        }
+        val node = walk(root.semanticsOwner.unmergedRootSemanticsNode) ?: return
+        node.config.getOrNull(androidx.compose.ui.semantics.SemanticsActions.OnClick)?.action?.invoke()
+        pump(activity, wDp, hDp + 1)
+        pump(activity, wDp, hDp)
+        pump(activity, wDp, hDp + 2)
+        val decor = activity.window.decorView
+        val bmp = Bitmap.createBitmap(decor.width.coerceAtLeast(1), decor.height.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+        decor.draw(Canvas(bmp))
+        FileOutputStream(File(outDir, "$name.png")).use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    }
+
     /** Runs one rendering condition across the requested scenes. */
     private fun suite(
         prefix: String,
@@ -251,7 +273,7 @@ class UiScreenshotCaptureTest {
                 "today" -> vm.selectTab(NavTab.TODAY)
                 "habits" -> vm.selectTab(NavTab.HABITS)
                 "journal" -> vm.selectTab(NavTab.JOURNAL)
-                "insights" -> vm.selectTab(NavTab.INSIGHTS)
+                "insights", "insights_stats" -> vm.selectTab(NavTab.INSIGHTS)
                 "settings" -> vm.selectTab(NavTab.SETTINGS)
                 "new_habit" -> { vm.selectTab(NavTab.TODAY); vm.openAddHabit() }
                 "habit_detail" -> { vm.selectTab(NavTab.HABITS); vm.openHabitDetail("h_read", today) }
@@ -261,14 +283,18 @@ class UiScreenshotCaptureTest {
                 "journal_editor" -> { vm.selectTab(NavTab.JOURNAL); vm.openJournalEditor(forDate = today) }
             }
             vm.clearUserMessage() // drop the theme-change toast raised by test setup
-            shot(activity, "${prefix}_$scene", wDp, hDp)
+            if (scene == "insights_stats") {
+                shotAfterClick(activity, "${prefix}_$scene", wDp, hDp, "insights_mode_stats")
+            } else {
+                shot(activity, "${prefix}_$scene", wDp, hDp)
+            }
             if (scene in setOf("journal_editor")) vm.closeJournalEditor()
         }
     }
 
     private val allScenes = listOf(
         "today", "habits", "habit_detail", "record", "new_habit", "journal", "journal_editor",
-        "insights", "day_detail", "grove", "settings"
+        "insights", "insights_stats", "day_detail", "grove", "settings"
     )
 
     @Test fun light_360() = suite("light360", 360, 800, scenes = allScenes)
@@ -276,6 +302,6 @@ class UiScreenshotCaptureTest {
     @Test fun small_320() = suite("small320", 320, 640, scenes = allScenes)
     @Test fun largefont_360() = suite("font150", 360, 800, fontScale = 1.5f, scenes = allScenes)
     @Test fun wide_411() = suite("wide411", 411, 891, scenes = listOf("today", "insights"))
-    @Test fun tall_360() = suite("tall360", 360, 3200, scenes = listOf("today", "insights", "new_habit", "habit_detail", "journal", "journal_editor"))
+    @Test fun tall_360() = suite("tall360", 360, 3600, scenes = listOf("today", "insights", "insights_stats"))
     @Test fun firstrun_360() = suite("firstrun360", 360, 800, withData = false, scenes = listOf("today", "habits", "journal", "insights"))
 }

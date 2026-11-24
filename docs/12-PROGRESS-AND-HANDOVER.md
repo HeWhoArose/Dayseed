@@ -1,6 +1,7 @@
 # Progress and Handover
 
 **Last updated:** 2026-11-22 (Stage B UI, accessibility and design-system polish pass; band chip option B; test-isolation fixes)
+- **Insights audit (2026-11-24, `D-244`):** Calendar/Stats modes, weekly board habit names restored, honest mood period label, duration headline on the collected-moments card. Suite clean 3 of 3; small calendar marks, legend, Overview wording and mixed section titles still open; device cases NOT RUN.
 - **Journal open findings fixed (2026-11-24, `D-243`):** floating Write, calendar icon in search, plain entry time, export link, dead card removed, editor rendered inline and repaired at large text. Suite clean 3 of 3 (353 tests); device cases NOT RUN.
 - **Journal and reflection editor audit (2026-11-24, `D-242`):** mood is now one row that opens an emoji pop-up grid; duplicate emoji fixed; editor and list decluttered. Suite clean 3 of 3; the editor window itself not rendered; device cases NOT RUN.
 - **Habit Detail findings verified (2026-11-24, `D-241`):** strip is 30 days not 14, editor unified with New Habit controls, 320 dp title fixed; no link to history yet. Suite clean 3 of 3; device cases NOT RUN.

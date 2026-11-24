@@ -4451,10 +4451,19 @@ class DayseedRepository(
             }
         }
 
+        // Say "This week/month" only when the period really contains today, otherwise name the period.
+        val todayForLabel = clock.todayLocal()
+        val containsToday = !todayForLabel.isBefore(currentStart) && !todayForLabel.isAfter(currentEnd)
         val label = if (periodKind.uppercase() == "MONTH") {
-            "This Month (${currentStart.month.name.lowercase().replaceFirstChar { it.uppercase() }})"
+            val monthName = "${currentStart.month.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.getDefault())}" +
+                if (currentStart.year != todayForLabel.year) " ${currentStart.year}" else ""
+            if (containsToday) "This month ($monthName)" else monthName
         } else {
-            "This Week ($currentStart – $currentEnd)"
+            val fmt = java.time.format.DateTimeFormatter.ofPattern(
+                if (currentStart.year == currentEnd.year) "MMM d" else "MMM d, yyyy", java.util.Locale.getDefault()
+            )
+            val range = "${currentStart.format(fmt)} – ${currentEnd.format(fmt)}"
+            if (containsToday) "This week ($range)" else "Week of $range"
         }
 
         return MoodInsightsResult(

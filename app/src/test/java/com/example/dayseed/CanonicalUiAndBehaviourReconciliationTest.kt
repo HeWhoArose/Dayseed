@@ -1344,6 +1344,11 @@ class CanonicalUiAndBehaviourReconciliationTest {
             //    without ellipsis truncation, and paired cards in each row must have matching heights.
             vm.selectTab(NavTab.INSIGHTS)
             pumpViewport(widthDp = widthDp, heightDp = 1200, recompose = true)
+            // Statistics are the secondary mode (D-244). Do not recompose from scratch: that would reset the mode.
+            findNodeByTag("insights_mode_stats").config.getOrNull(SemanticsActions.OnClick)!!.action!!.invoke()
+            pumpViewport(widthDp = widthDp, heightDp = 1201, recompose = false)
+            pumpViewport(widthDp = widthDp, heightDp = 1200, recompose = false)
+            pumpViewport(widthDp = widthDp, heightDp = 1202, recompose = false)
 
             val statBoxTags = listOf(
                 "overview_habit_active_dates",

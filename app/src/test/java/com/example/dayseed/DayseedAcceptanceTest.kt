@@ -776,4 +776,16 @@ class DayseedAcceptanceTest {
         }
         return cols
     }
+
+    @Test
+    fun moodInsightsLabelNamesThePeriodAndOnlySaysThisWhenItContainsToday() {
+        repository.setSettingSync("week_start", "ENUM", "MONDAY")
+        // Test clock today = Sun 15 Mar 2026
+        val current = repository.computeMoodInsights("WEEK", LocalDate.of(2026, 3, 15))
+        assertEquals("This week (Mar 9 – Mar 15)", current.periodLabel)
+        val earlier = repository.computeMoodInsights("WEEK", LocalDate.of(2026, 3, 8))
+        assertEquals("Week of Mar 2 – Mar 8", earlier.periodLabel)
+        assertEquals("This month (March)", repository.computeMoodInsights("MONTH", LocalDate.of(2026, 3, 10)).periodLabel)
+        assertEquals("February", repository.computeMoodInsights("MONTH", LocalDate.of(2026, 2, 10)).periodLabel)
+    }
 }

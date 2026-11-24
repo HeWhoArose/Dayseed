@@ -1,5 +1,6 @@
 package com.example.dayseed.ui.screens
 
+import com.example.dayseed.ui.components.SegmentedChoice
 import com.example.dayseed.ui.components.dayseedHeading
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.background
@@ -81,7 +82,7 @@ import java.util.Locale
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun InsightsScreen(viewModel: DayseedViewModel) {
+fun InsightsScreen(viewModel: DayseedViewModel, initialMode: Int = 0) {
     val habits by viewModel.habits.collectAsState()
     val habitVersions by viewModel.habitVersions.collectAsState()
     val habitEntries by viewModel.habitEntries.collectAsState()
@@ -160,6 +161,9 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
         viewModel.repository.computeDayDetailSummary(selectedDate, referenceToday)
     }
     var progressBandsExpanded by rememberSaveable { mutableStateOf(false) }
+    // Two modes (D-215: calendar and history first, statistics as a secondary mode): 0 = Calendar, 1 = Stats.
+    var insightsMode by rememberSaveable { mutableStateOf(initialMode) }
+    val calendarMode = insightsMode == 0
 
     LazyColumn(
         modifier = Modifier
@@ -184,7 +188,16 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
             )
         }
 
-        if (longestActiveStreak != null) {
+        item {
+            SegmentedChoice(
+                labels = listOf("Calendar", "Stats"),
+                tags = listOf("insights_mode_calendar", "insights_mode_stats"),
+                selected = insightsMode,
+                onSelect = { insightsMode = it }
+            )
+        }
+
+        if (!calendarMode && longestActiveStreak != null) {
             item {
                 com.example.dayseed.ui.components.TodayLongestStreakIndicator(
                     longestSelection = longestActiveStreak,
@@ -197,7 +210,7 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
         // =====================================================================
         // 1. MONTHLY CALENDAR & INLINE SELECTED-DAY ACTIVITY SUMMARY
         // =====================================================================
-        item {
+        if (calendarMode) item {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -241,7 +254,7 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
         // =====================================================================
         // 2. OVERVIEW METRICS (Equal-height paired stat cards)
         // =====================================================================
-        item {
+        if (!calendarMode) item {
             Card(
                 shape = DayseedShapes.CardLarge,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -440,9 +453,9 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
         }
 
         // =====================================================================
-        // 3. WEEKLY HABIT CONSISTENCY BOARD & EXPANDABLE PROGRESS BANDS
+        // 3. WEEKLY HABIT CONSISTENCY BOARD (Calendar mode) & EXPANDABLE PROGRESS BANDS (Stats mode)
         // =====================================================================
-        item {
+        if (calendarMode) item {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -465,6 +478,16 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
                     onOpenHabitDetail = { habitId, date -> viewModel.openHabitDetail(habitId, date) }
                 )
 
+            }
+        }
+
+        if (!calendarMode) item {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("insights_section_bands"),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
                 // Expandable Detailed Progress Bands (D-040 — preserved in full without crowding Insights)
                 val detailedBands = listOf(
                     ProgressBand.ZERO,
@@ -540,7 +563,7 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
         // =====================================================================
         // 3. MOOD SECTION (D-096..D-102, Primary Mood Distribution & Comparisons)
         // =====================================================================
-        item {
+        if (!calendarMode) item {
             Card(
                 shape = RoundedCornerShape(22.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -562,7 +585,7 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Mood & Reflections",
+                                text = "Mood",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
@@ -768,7 +791,7 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
         // =====================================================================
         // 4. GROWTH SECTION (Collected Moments G2/G3 + Living Grove)
         // =====================================================================
-        item {
+        if (!calendarMode) item {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -812,19 +835,23 @@ fun InsightsScreen(viewModel: DayseedViewModel) {
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "${growthMetrics.habitActiveDatesCount} Habit-Active Dates",
+                                text = if (growthMetrics.currentMonthDurationMinutes > 0L) formattedDuration else "Collected moments",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "$formattedDuration collected this month • $durationSessions duration ${if (durationSessions == 1) "session" else "sessions"}",
+                                text = if (growthMetrics.currentMonthDurationMinutes > 0L) {
+                                    "collected this month • $durationSessions timed ${if (durationSessions == 1) "session" else "sessions"}"
+                                } else {
+                                    "No timed sessions yet this month"
+                                },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Tap to inspect Collected Moments by date →",
+                                text = "See time by date →",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.SemiBold

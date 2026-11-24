@@ -452,14 +452,10 @@ class UiUxRedesignVerificationTest {
 
         val calNode = findNodeByTagOrNull(insightsActivity, "insights_section_calendar")
         val daySummaryNode = findNodeByTagOrNull(insightsActivity, "insights_selected_day_summary")
-        val overviewNode = findNodeByTagOrNull(insightsActivity, "insights_section_overview")
         assertNotNull("Monthly Calendar section must render at top of Insights", calNode)
         assertNotNull("Inline Selected-Day Activity Summary must render", daySummaryNode)
-        assertNotNull("Overview metrics section must render", overviewNode)
-        assertTrue(
-            "Monthly calendar must appear above Overview metrics",
-            calNode!!.boundsInRoot.top < overviewNode!!.boundsInRoot.top
-        )
+        assertNotNull("Weekly board must render in Calendar mode", findNodeByTagOrNull(insightsActivity, "insights_section_habits"))
+        assertNull("Statistics are the secondary mode, not shown with the calendar (D-244)", findNodeByTagOrNull(insightsActivity, "insights_section_overview"))
         assertNotNull(
             "Selected-day summary must show tappable habit row",
             findNodeByTagOrNull(insightsActivity, "insights_day_summary_habit_h_water")
@@ -468,6 +464,13 @@ class UiUxRedesignVerificationTest {
             "Full Day Detail link must exist on selected-day summary",
             findNodeByTagOrNull(insightsActivity, "insights_open_selected_day_detail")
         )
+
+        // Switching to Stats shows the statistics and hides the calendar.
+        clickTag(insightsActivity, "insights_mode_stats", widthDp = 320, heightDp = 2600)
+        layoutAndIdle(insightsActivity, widthDp = 320, heightDp = 2600)
+        assertNotNull("Overview metrics section must render in Stats mode", findNodeByTagOrNull(insightsActivity, "insights_section_overview"))
+        assertNotNull("Mood card must render in Stats mode", findNodeByTagOrNull(insightsActivity, "mood_insights_card"))
+        assertNull("Calendar is hidden in Stats mode", findNodeByTagOrNull(insightsActivity, "insights_section_calendar"))
         insightsController.pause().stop()
 
         // B) Settings Screen refined headings

@@ -645,6 +645,12 @@ The decision log and register now contain 236 unique decision IDs through D-242 
 
 The decision log and register now contain 237 unique decision IDs through D-243 (gaps preserved).
 
+## D-244 — Insights audit (2026-11-24)
+
+| D-244 | Insights split into Calendar and Stats modes; weekly board habit names restored; mood period label made honest; collected-moments headline is the duration. Full record in `docs/09-DECISION-LOG.md` (D-244). Stage C/D NOT OPEN. |
+
+The decision log and register now contain 238 unique decision IDs through D-244 (gaps preserved).
+
 
 
 
