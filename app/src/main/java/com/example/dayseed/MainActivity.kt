@@ -133,6 +133,11 @@ fun DayseedApp(
     val themeMode = remember(appSettings) {
         ThemeModeOption.fromSetting(appSettings["theme_mode"]?.valueText)
     }
+    // Keep the notification styling in step with the saved theme (also after a restore or update).
+    val styleContext = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(themeMode) {
+        runCatching { com.example.dayseed.data.NotificationStyle.rememberTheme(styleContext, themeMode) }
+    }
     val reducedMotion = remember(appSettings) {
         viewModel.isReducedMotionEnabled()
     }

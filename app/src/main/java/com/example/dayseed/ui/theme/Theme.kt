@@ -102,10 +102,66 @@ private val EveningColorScheme = LightColorScheme.copy(
     outlineVariant = SoftBotanicalThemeConfig.EveningBorder
 )
 
+// Light variant of Night ("Moonlit Paper") and dark variants of Morning, Day and Evening (D-245).
+private val NightLightColorScheme = LightColorScheme.copy(
+    primary = SoftBotanicalThemeConfig.NightLightBrand,
+    onPrimary = LightOnBrand,
+    primaryContainer = SoftBotanicalThemeConfig.NightLightGrowth,
+    onPrimaryContainer = LightTextPrimary,
+    secondary = SoftBotanicalThemeConfig.NightLightBrand,
+    onSecondary = LightOnBrand,
+    secondaryContainer = SoftBotanicalThemeConfig.NightLightGrowth,
+    onSecondaryContainer = LightTextPrimary,
+    background = SoftBotanicalThemeConfig.NightLightCanvas,
+    surface = SoftBotanicalThemeConfig.NightLightSurface,
+    surfaceVariant = SoftBotanicalThemeConfig.NightLightGrowth,
+    outline = SoftBotanicalThemeConfig.NightLightControl,
+    outlineVariant = SoftBotanicalThemeConfig.NightLightBorder
+)
+
+private fun darkTinted(
+    canvas: Color, surface: Color, growth: Color, brand: Color, onBrand: Color, border: Color, control: Color,
+    secondary: Color = brand
+) = DarkColorScheme.copy(
+    primary = brand, onPrimary = onBrand,
+    primaryContainer = growth, onPrimaryContainer = DarkTextPrimary,
+    secondary = secondary, onSecondary = onBrand,
+    secondaryContainer = growth, onSecondaryContainer = DarkTextPrimary,
+    background = canvas, surface = surface, surfaceVariant = growth,
+    outline = control, outlineVariant = border
+)
+
+private val MorningDarkColorScheme = with(SoftBotanicalThemeConfig) {
+    darkTinted(MorningDarkCanvas, MorningDarkSurface, MorningDarkGrowth, MorningDarkBrand, MorningDarkOnBrand, MorningDarkBorder, MorningDarkControl)
+}
+private val DayDarkColorScheme = with(SoftBotanicalThemeConfig) {
+    darkTinted(DayDarkCanvas, DayDarkSurface, DayDarkGrowth, DayDarkBrand, DayDarkOnBrand, DayDarkBorder, DayDarkControl)
+}
+private val EveningDarkColorScheme = with(SoftBotanicalThemeConfig) {
+    darkTinted(EveningDarkCanvas, EveningDarkSurface, EveningDarkGrowth, EveningDarkBrand, EveningDarkOnBrand, EveningDarkBorder, EveningDarkControl, EveningDarkSecondary)
+}
+
+/** Time-of-day palette that is light by day and dark at night (the "Time of day" theme). */
 private fun schemeForDaypart(daypart: BotanicalDaypart): ColorScheme = when (daypart) {
     BotanicalDaypart.MORNING -> MorningColorScheme
     BotanicalDaypart.DAY -> LightColorScheme
     BotanicalDaypart.EVENING -> EveningColorScheme
+    BotanicalDaypart.NIGHT -> DarkColorScheme
+}
+
+/** Time-of-day palette that always stays light. */
+internal fun lightSchemeForDaypart(daypart: BotanicalDaypart): ColorScheme = when (daypart) {
+    BotanicalDaypart.MORNING -> MorningColorScheme
+    BotanicalDaypart.DAY -> LightColorScheme
+    BotanicalDaypart.EVENING -> EveningColorScheme
+    BotanicalDaypart.NIGHT -> NightLightColorScheme
+}
+
+/** Time-of-day palette that always stays dark. */
+internal fun darkSchemeForDaypart(daypart: BotanicalDaypart): ColorScheme = when (daypart) {
+    BotanicalDaypart.MORNING -> MorningDarkColorScheme
+    BotanicalDaypart.DAY -> DayDarkColorScheme
+    BotanicalDaypart.EVENING -> EveningDarkColorScheme
     BotanicalDaypart.NIGHT -> DarkColorScheme
 }
 
@@ -141,30 +197,35 @@ fun lerpColorScheme(start: ColorScheme, stop: ColorScheme, fraction: Float): Col
     )
 }
 
+private fun blendedDaypartScheme(
+    localTime: LocalTime,
+    pick: (BotanicalDaypart) -> ColorScheme
+): ColorScheme {
+    val blend = SoftBotanicalThemeConfig.resolveDaypartBlend(localTime)
+    val fromScheme = pick(blend.from)
+    val toScheme = pick(blend.to)
+    return if (blend.from == blend.to || blend.fraction <= 0f) fromScheme else lerpColorScheme(fromScheme, toScheme, blend.fraction)
+}
+
 fun resolveDayseedColorScheme(
     themeMode: ThemeModeOption,
     systemDark: Boolean,
     localTime: LocalTime = LocalTime.now()
 ): Pair<ColorScheme, Boolean> {
+    val blend = SoftBotanicalThemeConfig.resolveDaypartBlend(localTime)
+    val effectiveDaypart = if (blend.fraction >= 0.5f) blend.to else blend.from
     return when (themeMode) {
+        // Plain themes: one fixed palette, no time-of-day tint.
         ThemeModeOption.LIGHT -> LightColorScheme to false
         ThemeModeOption.DARK -> DarkColorScheme to true
         ThemeModeOption.SYSTEM -> if (systemDark) DarkColorScheme to true else LightColorScheme to false
-        ThemeModeOption.SOFT_BOTANICAL_AUTO -> {
-            val blend = SoftBotanicalThemeConfig.resolveDaypartBlend(localTime)
-            val fromScheme = schemeForDaypart(blend.from)
-            val toScheme = schemeForDaypart(blend.to)
-            val resolvedScheme = if (blend.from == blend.to || blend.fraction <= 0f) {
-                fromScheme
-            } else {
-                lerpColorScheme(fromScheme, toScheme, blend.fraction)
-            }
-            val effectiveDaypart = if (blend.fraction >= 0.5f) blend.to else blend.from
-            resolvedScheme to effectiveDaypart.isDark
-        }
-        // Dark + Time-of-Day Artwork: the palette stays the canonical dark scheme all day;
-        // only the artwork axis follows local time (see resolveDayseedArtworkBlend).
-        ThemeModeOption.DARK_DAYPART_ART -> DarkColorScheme to true
+        // Botanical themes follow the time of day.
+        ThemeModeOption.SOFT_BOTANICAL_AUTO -> blendedDaypartScheme(localTime, ::schemeForDaypart) to effectiveDaypart.isDark
+        ThemeModeOption.BOTANICAL_LIGHT -> blendedDaypartScheme(localTime, ::lightSchemeForDaypart) to false
+        ThemeModeOption.DARK_DAYPART_ART -> blendedDaypartScheme(localTime, ::darkSchemeForDaypart) to true
+        ThemeModeOption.BOTANICAL_SYSTEM ->
+            if (systemDark) blendedDaypartScheme(localTime, ::darkSchemeForDaypart) to true
+            else blendedDaypartScheme(localTime, ::lightSchemeForDaypart) to false
     }
 }
 

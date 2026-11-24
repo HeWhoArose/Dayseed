@@ -96,6 +96,12 @@ import com.example.dayseed.ui.theme.LocalDayseedLiveTime
 import com.example.dayseed.ui.theme.NightGoldAccent
 import com.example.dayseed.ui.theme.SoftBotanicalThemeConfig
 import com.example.dayseed.ui.theme.ThemeModeOption
+import com.example.dayseed.ui.components.dayseedHeading
+import com.example.dayseed.ui.theme.artworkForDaypart
+import com.example.dayseed.ui.theme.greetingFor
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.selectable
 import com.example.dayseed.ui.theme.resolveDayseedArtwork
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
@@ -137,112 +143,137 @@ private fun PanelTitle(title: String, supporting: String? = null) {
  * (and reused inside [AppearancePanel] if opened as a sheet).
  */
 @OptIn(ExperimentalLayoutApi::class)
+private fun themeSwatches(mode: ThemeModeOption): List<Color> = when (mode) {
+    ThemeModeOption.SOFT_BOTANICAL_AUTO -> listOf(
+        SoftBotanicalThemeConfig.MorningCanvas, LightCanvas, SoftBotanicalThemeConfig.EveningCanvas, DarkCanvas
+    )
+    ThemeModeOption.BOTANICAL_LIGHT -> listOf(
+        SoftBotanicalThemeConfig.MorningCanvas, LightCanvas, SoftBotanicalThemeConfig.EveningCanvas,
+        SoftBotanicalThemeConfig.NightLightCanvas
+    )
+    ThemeModeOption.DARK_DAYPART_ART -> listOf(
+        SoftBotanicalThemeConfig.MorningDarkCanvas, SoftBotanicalThemeConfig.DayDarkCanvas,
+        SoftBotanicalThemeConfig.EveningDarkCanvas, DarkCanvas
+    )
+    ThemeModeOption.BOTANICAL_SYSTEM -> listOf(
+        SoftBotanicalThemeConfig.MorningCanvas, SoftBotanicalThemeConfig.DayDarkCanvas,
+        SoftBotanicalThemeConfig.EveningCanvas, DarkCanvas
+    )
+    ThemeModeOption.LIGHT -> listOf(LightCanvas)
+    ThemeModeOption.DARK -> listOf(DarkCanvas)
+    ThemeModeOption.SYSTEM -> listOf(LightCanvas, DarkCanvas)
+}
+
+private fun themeDescription(mode: ThemeModeOption): String = when (mode) {
+    ThemeModeOption.SOFT_BOTANICAL_AUTO -> "Light by day, dark at night. Leaves, hills and moon change with the hour."
+    ThemeModeOption.BOTANICAL_LIGHT -> "Always light. The colours and artwork still change from morning to night."
+    ThemeModeOption.DARK_DAYPART_ART -> "Always dark. The colours and artwork still change from morning to night."
+    ThemeModeOption.BOTANICAL_SYSTEM -> "Light or dark to match your phone, with the time-of-day colours and artwork."
+    ThemeModeOption.LIGHT -> "Calm light. No artwork."
+    ThemeModeOption.DARK -> "Calm dark. No artwork."
+    ThemeModeOption.SYSTEM -> "Matches your phone. No artwork."
+}
+
 @Composable
 fun InlineAppearanceSelector(
     viewModel: DayseedViewModel,
     currentThemeMode: ThemeModeOption,
     modifier: Modifier = Modifier
 ) {
-    val isSystemDark = isSystemInDarkTheme()
     val nowLocal = LocalDayseedLiveTime.current
-    val previewArtwork = remember(currentThemeMode, isSystemDark, nowLocal) {
-        resolveDayseedArtwork(currentThemeMode, isSystemDark, nowLocal)
-    }
-    val daypart = remember(currentThemeMode, nowLocal, isSystemDark) {
-        when (currentThemeMode) {
-            ThemeModeOption.SOFT_BOTANICAL_AUTO -> SoftBotanicalThemeConfig.resolveDaypart(nowLocal)
-            // Dark + Time-of-Day Artwork: palette is dark all day but the illustration
-            // still follows local time, so the preview shows the live daypart.
-            ThemeModeOption.DARK_DAYPART_ART -> SoftBotanicalThemeConfig.resolveDaypart(nowLocal)
-            ThemeModeOption.LIGHT -> null
-            ThemeModeOption.DARK -> BotanicalDaypart.NIGHT
-            ThemeModeOption.SYSTEM -> if (isSystemDark) BotanicalDaypart.NIGHT else null
-        }
-    }
+    val daypart = remember(nowLocal) { SoftBotanicalThemeConfig.resolveDaypart(nowLocal) }
+    val previewArtwork = remember(daypart) { artworkForDaypart(daypart) }
 
-    Column(modifier = modifier.fillMaxWidth()) {
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+    @Composable
+    fun Group(title: String, subtitle: String, modes: List<ThemeModeOption>) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 4.dp).dayseedHeading()
+        )
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(6.dp))
+        Column(
+            modifier = Modifier.fillMaxWidth().selectableGroup(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            for (mode in ThemeModeOption.entries) {
+            modes.forEach { mode ->
                 val selected = currentThemeMode == mode
-                val (swatchCanvas, swatchAccent) = remember(mode) {
-                    when (mode) {
-                        ThemeModeOption.SOFT_BOTANICAL_AUTO ->
-                            SoftBotanicalThemeConfig.MorningCanvas to SoftBotanicalThemeConfig.EveningBrand
-                        ThemeModeOption.LIGHT ->
-                            LightCanvas to LightBrand
-                        ThemeModeOption.DARK ->
-                            DarkCanvas to DarkBrand
-                        ThemeModeOption.SYSTEM ->
-                            SoftBotanicalThemeConfig.EveningCanvas to LightBrand
-                        ThemeModeOption.DARK_DAYPART_ART ->
-                            // Dark canvas + golden-clay accent: dark colours all day with
-                            // illustrations that still change with the time of day.
-                            DarkCanvas to NightGoldAccent
-                    }
-                }
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = if (selected) {
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.75f)
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                    },
+                    shape = RoundedCornerShape(14.dp),
+                    color = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.75f)
+                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
                     border = BorderStroke(
                         width = if (selected) 1.5.dp else 1.dp,
-                        color = if (selected) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
-                        }
+                        color = if (selected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
                     ),
                     modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable(role = Role.Button) { viewModel.setThemeMode(mode) }
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .selectable(selected = selected, role = Role.RadioButton) { viewModel.setThemeMode(mode) }
                         .testTag("theme_chip_${mode.settingValue.lowercase()}")
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                        modifier = Modifier.heightIn(min = 56.dp).padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(18.dp)
-                                .clip(CircleShape)
-                                .background(swatchCanvas)
-                                .border(1.dp, swatchAccent, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(swatchAccent)
+                        Row(horizontalArrangement = Arrangement.spacedBy((-6).dp)) {
+                            themeSwatches(mode).forEach { c ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .clip(CircleShape)
+                                        .background(c)
+                                        .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                                )
+                            }
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = mode.label,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = themeDescription(mode),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = mode.label,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
                         if (selected) {
-                            Spacer(modifier = Modifier.width(6.dp))
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
-                                contentDescription = null,
+                                contentDescription = "Selected",
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(14.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
                 }
             }
         }
+    }
+
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Group(
+            "Botanical",
+            "Leaf artwork and colours that follow the time of day.",
+            ThemeModeOption.entries.filter { it.isBotanical }
+        )
+        Spacer(Modifier.height(10.dp))
+        Group(
+            "Plain",
+            "No artwork. Only your Living Grove keeps its plants.",
+            ThemeModeOption.entries.filter { !it.isBotanical }
+        )
 
         Spacer(modifier = Modifier.height(10.dp))
         Surface(
@@ -254,16 +285,18 @@ fun InlineAppearanceSelector(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                DaypartArtwork(previewArtwork, modifier = Modifier.size(48.dp))
-                Spacer(modifier = Modifier.width(12.dp))
+                if (currentThemeMode.isBotanical) {
+                    DaypartArtwork(previewArtwork, modifier = Modifier.size(48.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
+                }
                 Column {
                     Text(
-                        text = "Active botanical atmosphere",
+                        text = "Right now",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = daypart?.displayName ?: currentThemeMode.label,
+                        text = if (currentThemeMode.isBotanical) "${daypart.displayName} · ${greetingFor(daypart)}" else greetingFor(daypart),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface
@@ -316,9 +349,8 @@ fun AppearancePanel(
 
     PanelTitle(
         "Appearance",
-        "How Dayseed looks. Soft Botanical (Time of Day) shifts palette and illustration gradually " +
-            "across Morning, Day, Evening, and Night. Dark + Time-of-Day Artwork keeps dark colours " +
-            "all day while the illustration still changes with the time of day."
+        "How Dayseed looks. Botanical themes follow the time of day: Morning 5am, Day 11am, Evening 4pm, " +
+            "Night 7pm. Every theme greets you by the time of day."
     )
     Spacer(modifier = Modifier.height(12.dp))
     InlineAppearanceSelector(viewModel = viewModel, currentThemeMode = currentThemeMode)
@@ -605,6 +637,24 @@ fun RemindersPanel(
         "Notifications & reminders",
         "Planned gentle prompts for habits and weekly reflections."
     )
+    Spacer(modifier = Modifier.height(10.dp))
+    // Lets the person hear Dayseed's chime and see how a reminder looks in their chosen theme (D-245).
+    OutlinedButton(
+        onClick = {
+            val posted = com.example.dayseed.data.ReminderNotifier.isNotificationDeliveryAvailable(context) &&
+                com.example.dayseed.data.ReminderNotifier.postWeeklyReminder(
+                    context, "dayseed_preview", 9_001,
+                    "Preview",
+                    "This is how a Dayseed reminder looks and sounds."
+                )
+            android.widget.Toast.makeText(
+                context,
+                if (posted) "Preview sent" else "Notifications are off for Dayseed. Turn them on in Android settings.",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+        },
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("reminders_preview_notification_btn")
+    ) { Text("Send a preview notification") }
     Spacer(modifier = Modifier.height(10.dp))
 
     // ---- Honest delivery status ----

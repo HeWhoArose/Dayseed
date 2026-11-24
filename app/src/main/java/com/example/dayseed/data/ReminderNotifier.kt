@@ -17,17 +17,55 @@ import androidx.core.app.NotificationCompat
  */
 internal object ReminderNotifier {
 
-    const val CHANNEL_ID = "dayseed_reminders"
+    /**
+     * Version 2 of the reminder channel (D-245): a channel's sound cannot be changed after creation, so the
+     * unique Dayseed chime lives on a new channel and the old `dayseed_reminders` one is removed.
+     */
+    const val CHANNEL_ID = "dayseed_reminders_v2"
+    private const val LEGACY_CHANNEL_ID = "dayseed_reminders"
+    private val VIBRATION = longArrayOf(0, 40, 90, 40)
+
+    /** Common look for every Dayseed notification: seedling icon, the chosen theme's accent, greeting sub-text. */
+    private fun styledBuilder(context: Context, title: String, text: String): NotificationCompat.Builder {
+        val look = NotificationStyle.lookFor(context)
+        return NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(com.example.dayseed.R.drawable.ic_stat_dayseed)
+            .setColor(look.accent)
+            .setColorized(false)
+            .setLargeIcon(NotificationStyle.largeIcon(look))
+            .setSubText("Dayseed · ${look.greeting}")
+            .setContentTitle(title)
+            .setContentText(text)
+            .setVibrate(VIBRATION)
+            .setLights(look.accent, 800, 1600)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setAutoCancel(true)
+    }
 
     fun ensureReminderChannel(context: Context) {
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
+        notificationManager.deleteNotificationChannel(LEGACY_CHANNEL_ID)
+        val chime = android.net.Uri.parse(
+            "${android.content.ContentResolver.SCHEME_ANDROID_RESOURCE}://${context.packageName}/${com.example.dayseed.R.raw.dayseed_chime}"
+        )
         val channel = NotificationChannel(
             CHANNEL_ID,
             "Gentle reminders",
             NotificationManager.IMPORTANCE_DEFAULT
         ).apply {
-            description = "Small nudges for habits and reflections"
+            description = "Small nudges for habits and reflections, with Dayseed's own chime"
+            setSound(
+                chime,
+                android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+            )
+            enableVibration(true)
+            vibrationPattern = VIBRATION
+            enableLights(true)
+            lightColor = NotificationStyle.lookFor(context).accent
         }
         notificationManager.createNotificationChannel(channel)
     }
@@ -81,18 +119,17 @@ internal object ReminderNotifier {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.star_on)
-            .setContentTitle("Gentle nudge")
-            .setContentText("Time for \"$habitName\" — your progress is more than your streak.")
+        val notification = styledBuilder(
+            context,
+            "Gentle nudge",
+            "Time for \"$habitName\" — your progress is more than your streak."
+        )
             .setStyle(
                 NotificationCompat.BigTextStyle()
                     .bigText("A gentle note for \"$habitName\". Scheduled reminders may be slightly " +
                         "delayed by Android battery saving.")
             )
-            .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setContentIntent(contentIntent)
-            .setAutoCancel(true)
             .build()
 
         return try {
@@ -135,14 +172,9 @@ internal object ReminderNotifier {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.star_on)
-            .setContentTitle(title)
-            .setContentText(body)
+        val notification = styledBuilder(context, title, body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
-            .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setContentIntent(contentIntent)
-            .setAutoCancel(true)
             .build()
 
         return try {
@@ -168,12 +200,9 @@ internal object ReminderNotifier {
             context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return false
         ensureReminderChannel(context)
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.star_on)
-            .setContentTitle("Debug verification")
-            .setContentText("Real notification test. It will be removed automatically.")
-            .setAutoCancel(true)
-            .build()
+        val notification = styledBuilder(
+            context, "Debug verification", "Real notification test. It will be removed automatically."
+        ).build()
 
         return try {
             notificationManager.notify(

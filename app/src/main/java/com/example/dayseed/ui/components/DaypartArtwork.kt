@@ -971,6 +971,8 @@ fun DaypartBackgroundLayer(
     reducedMotion: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    // Plain themes (Light, Dark, System default) draw no artwork at all (D-245).
+    if (!artworkBlend.visible) return
     val canvasColor = MaterialTheme.colorScheme.background
     val smoothFraction by animateFloatAsState(
         targetValue = artworkBlend.blendFraction.coerceIn(0f, 1f),

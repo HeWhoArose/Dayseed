@@ -56,9 +56,9 @@ class DayseedAppearanceSettingsTest {
     }
 
     @Test
-    fun unsetThemeModeFallsBackToSystem() {
+    fun unsetThemeModeFallsBackToBotanicalSystem() {
         val saved = repository.getSettingString("theme_mode", "")
-        assertEquals(ThemeModeOption.SYSTEM, ThemeModeOption.fromSetting(saved.ifEmpty { null }))
+        assertEquals(ThemeModeOption.BOTANICAL_SYSTEM, ThemeModeOption.fromSetting(saved.ifEmpty { null }))
     }
 
     @Test
@@ -74,7 +74,8 @@ class DayseedAppearanceSettingsTest {
         // preview use; palette must be dark and artwork must follow local time.
         val (scheme, isDark) = resolveDayseedColorScheme(reloaded, false, LocalTime.of(14, 0))
         assertTrue(isDark)
-        assertEquals(DarkCanvas, scheme.background)
+        // Always-dark, but tinted for the daypart: the afternoon canvas is the dark "Day" tone, not plain night.
+        assertEquals(com.example.dayseed.ui.theme.SoftBotanicalThemeConfig.DayDarkCanvas, scheme.background)
         assertEquals(
             resolveDayseedArtwork(ThemeModeOption.SOFT_BOTANICAL_AUTO, false, LocalTime.of(14, 0)),
             resolveDayseedArtwork(reloaded, false, LocalTime.of(14, 0))
@@ -99,9 +100,12 @@ class DayseedAppearanceSettingsTest {
     }
 
     @Test
-    fun allFiveAppearanceOptionsExposeDistinctDisplayNameAndSettingValue() {
+    fun allSevenAppearanceOptionsExposeDistinctDisplayNameAndSettingValue() {
         val values = ThemeModeOption.entries.map { it.settingValue }
-        assertEquals(5, ThemeModeOption.entries.size)
+        assertEquals(7, ThemeModeOption.entries.size)
+        assertEquals(4, ThemeModeOption.entries.count { it.isBotanical })
+        assertEquals(3, ThemeModeOption.entries.count { !it.isBotanical })
+        assertEquals(ThemeModeOption.entries.size, ThemeModeOption.entries.map { it.label }.toSet().size)
         assertEquals(values.size, values.toSet().size)
         assertTrue(ThemeModeOption.entries.any { it.settingValue == "DARK_DAYPART_ART" })
         // The original automatic combination is still offered (assignment requirement).

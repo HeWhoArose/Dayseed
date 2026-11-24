@@ -722,7 +722,7 @@ class DayseedDatabaseHelper(
         val defaults = listOf(
             Triple("onboarding_completed", "BOOL", "false"),
             Triple("week_start", "STRING", "MONDAY"),
-            Triple("theme_mode", "STRING", "SYSTEM"),
+            Triple("theme_mode", "STRING", "BOTANICAL_SYSTEM"),
             Triple("quiet_hours_start", "STRING", "22:00"),
             Triple("quiet_hours_end", "STRING", "07:00"),
             Triple("daily_reminder_cap", "INT", "3"),

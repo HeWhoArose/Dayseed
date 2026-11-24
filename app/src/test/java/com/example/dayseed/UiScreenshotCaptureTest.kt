@@ -243,7 +243,9 @@ class UiScreenshotCaptureTest {
         dark: Boolean = false,
         fontScale: Float = 1.0f,
         withData: Boolean = true,
-        scenes: List<String>
+        scenes: List<String>,
+        time: LocalTime = LocalTime.of(9, 30),
+        mode: ThemeModeOption? = null
     ) {
         RuntimeEnvironment.setFontScale(fontScale)
         val dbName = "shots_${prefix}_${System.nanoTime()}.db"
@@ -252,17 +254,17 @@ class UiScreenshotCaptureTest {
         val repo = DayseedRepository(context, clock = testClock, databaseName = dbName)
         seed(repo, withData)
         val vm = DayseedViewModel(application, customRepository = repo, ioDispatcher = Dispatchers.Unconfined)
-        vm.setThemeMode(if (dark) ThemeModeOption.DARK else ThemeModeOption.LIGHT)
+        vm.setThemeMode(mode ?: if (dark) ThemeModeOption.DARK else ThemeModeOption.LIGHT)
 
         val activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().get()
         activity.setContent {
             val settings by vm.appSettings.collectAsState()
             DayseedTheme(
                 themeMode = ThemeModeOption.fromSetting(settings["theme_mode"]?.valueText),
-                localTime = LocalTime.of(9, 30),
+                localTime = time,
                 reducedMotion = true
             ) {
-                DayseedApp(viewModel = vm, liveLocalTime = LocalTime.of(9, 30))
+                DayseedApp(viewModel = vm, liveLocalTime = time)
             }
         }
         pump(activity, wDp, hDp)
@@ -297,11 +299,18 @@ class UiScreenshotCaptureTest {
         "insights", "insights_stats", "day_detail", "grove", "settings"
     )
 
+    /** Today at four times of day under every appearance: the contact sheet for reviewing the themes (D-245). */
+    @Test fun themes_matrix() {
+        for (mode in ThemeModeOption.entries) for ((label, hour) in listOf("morning" to 8, "day" to 13, "evening" to 17, "night" to 22)) {
+            suite("theme_${mode.settingValue.lowercase()}_$label", 360, 640, scenes = listOf("today"), time = LocalTime.of(hour, 0), mode = mode)
+        }
+    }
+
     @Test fun light_360() = suite("light360", 360, 800, scenes = allScenes)
     @Test fun dark_360() = suite("dark360", 360, 800, dark = true, scenes = allScenes)
     @Test fun small_320() = suite("small320", 320, 640, scenes = allScenes)
     @Test fun largefont_360() = suite("font150", 360, 800, fontScale = 1.5f, scenes = allScenes)
     @Test fun wide_411() = suite("wide411", 411, 891, scenes = listOf("today", "insights"))
-    @Test fun tall_360() = suite("tall360", 360, 3600, scenes = listOf("today", "insights", "insights_stats"))
+    @Test fun tall_360() = suite("tall360", 360, 3200, scenes = listOf("today", "settings"))
     @Test fun firstrun_360() = suite("firstrun360", 360, 800, withData = false, scenes = listOf("today", "habits", "journal", "insights"))
 }

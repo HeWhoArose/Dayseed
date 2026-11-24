@@ -149,9 +149,9 @@ An audit of `app/src/main/java/com/example/dayseed/ui/theme/` and `TodayScreen.k
 - ✅ **Base Botanical Aesthetic:** The core brand identity in `Color.kt` and `DESIGN.md` uses sage and dark pine tones (`LightBrand = #286143`, `DarkCanvas = #121A15`), which align well with the overall botanical philosophy.
 - ✅ **Daypart Architecture:** `SoftBotanicalThemeConfig` in `Color.kt` already defines 4 time-of-day slots:
   - Morning (05:00 - 10:59)
-  - Day (11:00 - 16:59)
-  - Evening (17:00 - 20:59)
-  - Night (21:00 - 04:59)
+  - Day (11:00 - 15:59)
+  - Evening (16:00 - 18:59) — changed from 17:00 - 20:59 by D-245 (owner, 2026-11-24)
+  - Night (19:00 - 04:59) — changed from 21:00 - 04:59 by D-245
 - ✅ **Dark Theme Base:** `DarkCanvas` (`#121A15`) and `DarkSurface` (`#1D2820`) capture the deep pine tone of the "Night Garden".
 
 ---

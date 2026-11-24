@@ -186,25 +186,13 @@ fun SettingsScreen(
                 SettingsGroupCard {
                     SettingsRow(
                         label = "Appearance",
-                        summary = currentThemeMode.label,
+                        summary = currentThemeMode.label +
+                            if (currentThemeMode.isBotanical) " · botanical" else " · plain",
                         icon = Icons.Default.Palette,
-                        showChevron = false,
+                        showChevron = true,
                         onClick = { activeSheet = SettingsSheet.APPEARANCE },
                         testTag = "settings_row_appearance"
                     )
-                    Column(
-                        modifier = Modifier.padding(
-                            start = 16.dp,
-                            end = 16.dp,
-                            bottom = 14.dp
-                        )
-                    ) {
-                        InlineAppearanceSelector(
-                            viewModel = viewModel,
-                            currentThemeMode = currentThemeMode
-                        )
-                    }
-
                     SettingsRowDivider()
 
                     SettingsRow(
@@ -297,7 +285,7 @@ fun SettingsScreen(
                     )
                     SettingsRowDivider()
                     SettingsRow(
-                        label = "Quiet hours & reminders",
+                        label = "Quiet hours",
                         summary = SettingsSupport.quietHoursSummary(
                             appSettings["quiet_hours_start"]?.valueText,
                             appSettings["quiet_hours_end"]?.valueText

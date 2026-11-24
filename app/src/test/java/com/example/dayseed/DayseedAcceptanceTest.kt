@@ -757,7 +757,7 @@ class DayseedAcceptanceTest {
     fun phase7_verifySoftBotanicalDaypartAndFixedThemeResolution() {
         assertEquals(BotanicalDaypart.MORNING, SoftBotanicalThemeConfig.resolveDaypart(LocalTime.of(7, 30)))
         assertEquals(BotanicalDaypart.DAY, SoftBotanicalThemeConfig.resolveDaypart(LocalTime.of(13, 0)))
-        assertEquals(BotanicalDaypart.EVENING, SoftBotanicalThemeConfig.resolveDaypart(LocalTime.of(19, 0)))
+        assertEquals(BotanicalDaypart.EVENING, SoftBotanicalThemeConfig.resolveDaypart(LocalTime.of(17, 30)))
         assertEquals(BotanicalDaypart.NIGHT, SoftBotanicalThemeConfig.resolveDaypart(LocalTime.of(22, 30)))
 
         val (_, isDarkNight) = resolveDayseedColorScheme(ThemeModeOption.SOFT_BOTANICAL_AUTO, false, LocalTime.of(23, 0))

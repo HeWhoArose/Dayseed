@@ -337,13 +337,15 @@ fun TodayScreen(
                         null
                     },
                     illustration = {
-                        DaypartArtwork(
-                            artwork = artworkBlend.primaryArtwork,
-                            secondaryArtwork = artworkBlend.secondaryArtwork,
-                            blendFraction = artworkBlend.blendFraction,
-                            reducedMotion = reducedMotion,
-                            modifier = Modifier.fillMaxSize()
-                        )
+                        if (artworkBlend.visible) {
+                            DaypartArtwork(
+                                artwork = artworkBlend.primaryArtwork,
+                                secondaryArtwork = artworkBlend.secondaryArtwork,
+                                blendFraction = artworkBlend.blendFraction,
+                                reducedMotion = reducedMotion,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
                 )
             } else {
@@ -364,7 +366,7 @@ fun TodayScreen(
                     val largeText = rememberIsLargeText()
                     // Narrow phones (<340dp) also drop the small corner artwork so the greeting stays on one line.
                     val narrowScreen = LocalConfiguration.current.screenWidthDp < 340
-                    val showCornerArtwork = !largeText && !narrowScreen
+                    val showCornerArtwork = !largeText && !narrowScreen && artworkBlend.visible
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()

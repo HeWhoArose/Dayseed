@@ -45,16 +45,25 @@ val ExtraBranchColor = Color(0xFF1B4332)
 val RestColor = Color(0xFF708D81)
 val SkippedColor = Color(0xFF8D99AE)
 
-enum class ThemeModeOption(val settingValue: String, val label: String) {
-    SYSTEM("SYSTEM", "System Default"),
-    LIGHT("LIGHT", "Light (Botanical Day)"),
-    DARK("DARK", "Dark (Quiet Night)"),
-    SOFT_BOTANICAL_AUTO("SOFT_BOTANICAL_AUTO", "Soft Botanical (Time of Day)"),
-    DARK_DAYPART_ART("DARK_DAYPART_ART", "Dark + Time-of-Day Artwork");
+/**
+ * The seven appearance choices (D-245). The first four are *botanical*: leaf artwork, and palettes that follow the
+ * time of day. The last three are *plain*: no artwork, only the Living Grove. Every choice greets by time of day.
+ *
+ * A missing or unknown stored value resolves to [BOTANICAL_SYSTEM]: botanical look, light or dark like the phone.
+ * Stored values are stable: `SOFT_BOTANICAL_AUTO` and `DARK_DAYPART_ART` keep their original setting strings.
+ */
+enum class ThemeModeOption(val settingValue: String, val label: String, val isBotanical: Boolean) {
+    SOFT_BOTANICAL_AUTO("SOFT_BOTANICAL_AUTO", "Time of day", true),
+    BOTANICAL_LIGHT("BOTANICAL_LIGHT", "Time of day, always light", true),
+    DARK_DAYPART_ART("DARK_DAYPART_ART", "Time of day, always dark", true),
+    BOTANICAL_SYSTEM("BOTANICAL_SYSTEM", "Time of day, follow system", true),
+    LIGHT("LIGHT", "Light", false),
+    DARK("DARK", "Dark", false),
+    SYSTEM("SYSTEM", "System default", false);
 
     companion object {
         fun fromSetting(value: String?): ThemeModeOption {
-            return entries.find { it.settingValue.equals(value, ignoreCase = true) } ?: SYSTEM
+            return entries.find { it.settingValue.equals(value, ignoreCase = true) } ?: BOTANICAL_SYSTEM
         }
     }
 }
@@ -83,14 +92,15 @@ data class DaypartBlend(
  * continuous boundary transition blending.
  */
 object SoftBotanicalThemeConfig {
+    // Owner-confirmed 2026-11-24 (D-245): Evening is 16:00 - 18:59.
     const val MORNING_START_HOUR = 5   // 05:00 - 10:59
-    const val DAY_START_HOUR = 11      // 11:00 - 16:59
-    const val EVENING_START_HOUR = 17  // 17:00 - 20:59
-    const val NIGHT_START_HOUR = 21    // 21:00 - 04:59
+    const val DAY_START_HOUR = 11      // 11:00 - 15:59
+    const val EVENING_START_HOUR = 16  // 16:00 - 18:59
+    const val NIGHT_START_HOUR = 19    // 19:00 - 04:59
 
     // Gradual transition half-window in minutes around each boundary (total window = 90 mins: ±45m).
     // e.g. 04:15..05:45 (Night -> Morning), 10:15..11:45 (Morning -> Day),
-    // 16:15..17:45 (Day -> Evening), 20:15..21:45 (Evening -> Night).
+    // 15:15..16:45 (Day -> Evening), 18:15..19:45 (Evening -> Night).
     const val TRANSITION_HALF_WINDOW_MINUTES = 45f
 
     // Provisional Morning tokens — "Sage Modern" (D-210): airy cream-sage canvas, fresh leaf green action,
@@ -111,6 +121,41 @@ object SoftBotanicalThemeConfig {
     // 4.8:1 on EveningSurface, 4.6:1 on EveningCanvas. Same sage hue; the colour is used for text and icons.
     val EveningSecondary = Color(0xFF606F53)
     val EveningBorder = Color(0xFFDECDB4)
+
+    // Dark variants of the three light dayparts, and a light variant of Night (D-245), so "always dark" and
+    // "always light" botanical themes still shift tone through the day. Contrast checked (WCAG AA) in
+    // `ThemeContrastTest`.
+    val MorningDarkCanvas = Color(0xFF0F1B16)
+    val MorningDarkSurface = Color(0xFF17251E)
+    val MorningDarkGrowth = Color(0xFF203429)
+    val MorningDarkBrand = Color(0xFF8FCBA2)
+    val MorningDarkOnBrand = Color(0xFF0F1F17)
+    val MorningDarkBorder = Color(0xFF2C4438)
+    val MorningDarkControl = Color(0xFF6F8C7B)
+
+    val DayDarkCanvas = Color(0xFF161A10)
+    val DayDarkSurface = Color(0xFF1F2417)
+    val DayDarkGrowth = Color(0xFF2A3120)
+    val DayDarkBrand = Color(0xFFB2CF84)
+    val DayDarkOnBrand = Color(0xFF1A2110)
+    val DayDarkBorder = Color(0xFF39422B)
+    val DayDarkControl = Color(0xFF7D8A63)
+
+    val EveningDarkCanvas = Color(0xFF1B1411)
+    val EveningDarkSurface = Color(0xFF261C17)
+    val EveningDarkGrowth = Color(0xFF35261E)
+    val EveningDarkBrand = Color(0xFFE59468)
+    val EveningDarkOnBrand = Color(0xFF2A140A)
+    val EveningDarkSecondary = Color(0xFFB4C198)
+    val EveningDarkBorder = Color(0xFF4A362C)
+    val EveningDarkControl = Color(0xFF8C7565)
+
+    val NightLightCanvas = Color(0xFFEDF0F2)
+    val NightLightSurface = Color(0xFFF8FAFB)
+    val NightLightGrowth = Color(0xFFDFE6EB)
+    val NightLightBrand = Color(0xFF35586A)
+    val NightLightBorder = Color(0xFFC9D3DA)
+    val NightLightControl = Color(0xFF7A8A94)
 
     fun resolveDaypart(localTime: LocalTime): BotanicalDaypart {
         val h = localTime.hour

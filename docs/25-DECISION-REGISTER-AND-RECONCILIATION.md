@@ -651,6 +651,12 @@ The decision log and register now contain 237 unique decision IDs through D-243 
 
 The decision log and register now contain 238 unique decision IDs through D-244 (gaps preserved).
 
+## D-245 — Appearance, time-of-day hours, themed notifications (2026-11-24)
+
+| D-245 | Evening becomes 16:00-18:59 (Night from 19:00); seven appearances (four botanical, three plain with no artwork); every theme greets by the clock; reminders get their own chime, seedling icon and theme-coloured accent on a new channel; Settings Appearance opens from its row. Supersedes the 17:00/21:00 hours. Full record in `docs/09-DECISION-LOG.md` (D-245). Stage C/D NOT OPEN. |
+
+The decision log and register now contain 239 unique decision IDs through D-245 (gaps preserved).
+
 
 
 

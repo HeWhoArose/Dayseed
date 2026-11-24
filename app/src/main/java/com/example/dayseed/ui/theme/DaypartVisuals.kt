@@ -19,7 +19,9 @@ enum class DayseedArtwork {
 data class DayseedArtworkBlend(
     val primaryArtwork: DayseedArtwork,
     val secondaryArtwork: DayseedArtwork = primaryArtwork,
-    val blendFraction: Float = 0f // 0f = 100% primaryArtwork, 1f = 100% secondaryArtwork
+    val blendFraction: Float = 0f, // 0f = 100% primaryArtwork, 1f = 100% secondaryArtwork
+    /** False for the plain themes: no leaves, hills or moon are drawn anywhere. */
+    val visible: Boolean = true
 )
 
 fun artworkForDaypart(daypart: BotanicalDaypart): DayseedArtwork = when (daypart) {
@@ -33,61 +35,29 @@ fun resolveDayseedArtwork(
     themeMode: ThemeModeOption,
     systemDark: Boolean,
     localTime: LocalTime
-): DayseedArtwork {
-    return when (themeMode) {
-        ThemeModeOption.LIGHT -> DayseedArtwork.DAY_BRANCH
-        ThemeModeOption.DARK -> DayseedArtwork.NIGHT_MOON
-        ThemeModeOption.SYSTEM -> if (systemDark) DayseedArtwork.NIGHT_MOON else DayseedArtwork.DAY_BRANCH
-        ThemeModeOption.SOFT_BOTANICAL_AUTO -> artworkForDaypart(
-            SoftBotanicalThemeConfig.resolveDaypart(localTime)
-        )
-        // Dark + Time-of-Day Artwork keeps the dark palette but cycles all four
-        // illustrations with local time, exactly like Soft Botanical's artwork axis.
-        ThemeModeOption.DARK_DAYPART_ART -> artworkForDaypart(
-            SoftBotanicalThemeConfig.resolveDaypart(localTime)
-        )
-    }
-}
+): DayseedArtwork = artworkForDaypart(SoftBotanicalThemeConfig.resolveDaypart(localTime))
 
 /**
- * Resolves a continuous blend between two adjacent daypart pictures during dawn, midday,
- * dusk, and nightfall transition windows when in SOFT_BOTANICAL_AUTO mode.
+ * Resolves the picture, blended across the dawn, midday, dusk and nightfall windows. Plain themes
+ * (Light, Dark, System default) have no artwork: [DayseedArtworkBlend.visible] is false and screens draw none.
+ * Botanical themes all follow the time of day; only their palettes differ (see `resolveDayseedColorScheme`).
  */
 fun resolveDayseedArtworkBlend(
     themeMode: ThemeModeOption,
     systemDark: Boolean,
     localTime: LocalTime
 ): DayseedArtworkBlend {
-    return when (themeMode) {
-        ThemeModeOption.LIGHT -> DayseedArtworkBlend(DayseedArtwork.DAY_BRANCH)
-        ThemeModeOption.DARK -> DayseedArtworkBlend(DayseedArtwork.NIGHT_MOON)
-        ThemeModeOption.SYSTEM -> {
-            val art = if (systemDark) DayseedArtwork.NIGHT_MOON else DayseedArtwork.DAY_BRANCH
-            DayseedArtworkBlend(art)
-        }
-        ThemeModeOption.SOFT_BOTANICAL_AUTO -> {
-            val blend = SoftBotanicalThemeConfig.resolveDaypartBlend(localTime)
-            val fromArt = artworkForDaypart(blend.from)
-            val toArt = artworkForDaypart(blend.to)
-            DayseedArtworkBlend(
-                primaryArtwork = fromArt,
-                secondaryArtwork = toArt,
-                blendFraction = if (fromArt == toArt) 0f else blend.fraction
-            )
-        }
-        // Dark + Time-of-Day Artwork blends gradually across the same four boundaries
-        // while its palette remains fixed dark (resolveDayseedColorScheme handles that).
-        ThemeModeOption.DARK_DAYPART_ART -> {
-            val blend = SoftBotanicalThemeConfig.resolveDaypartBlend(localTime)
-            val fromArt = artworkForDaypart(blend.from)
-            val toArt = artworkForDaypart(blend.to)
-            DayseedArtworkBlend(
-                primaryArtwork = fromArt,
-                secondaryArtwork = toArt,
-                blendFraction = if (fromArt == toArt) 0f else blend.fraction
-            )
-        }
+    if (!themeMode.isBotanical) {
+        return DayseedArtworkBlend(primaryArtwork = DayseedArtwork.DAY_BRANCH, visible = false)
     }
+    val blend = SoftBotanicalThemeConfig.resolveDaypartBlend(localTime)
+    val fromArt = artworkForDaypart(blend.from)
+    val toArt = artworkForDaypart(blend.to)
+    return DayseedArtworkBlend(
+        primaryArtwork = fromArt,
+        secondaryArtwork = toArt,
+        blendFraction = if (fromArt == toArt) 0f else blend.fraction
+    )
 }
 
 /**

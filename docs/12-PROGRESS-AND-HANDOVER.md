@@ -1,6 +1,7 @@
 # Progress and Handover
 
 **Last updated:** 2026-11-22 (Stage B UI, accessibility and design-system polish pass; band chip option B; test-isolation fixes)
+- **Appearance, hours and notifications (2026-11-24, `D-245`):** evening 16:00-18:59, seven appearances (four botanical, three plain without artwork), reminders with a unique chime, seedling icon and theme-coloured accent, Settings Appearance opens from its row. Suite clean 3 of 3 (357 tests); chime, icon and notification shade not seen or heard on a device; device cases NOT RUN.
 - **Insights audit (2026-11-24, `D-244`):** Calendar/Stats modes, weekly board habit names restored, honest mood period label, duration headline on the collected-moments card. Suite clean 3 of 3; small calendar marks, legend, Overview wording and mixed section titles still open; device cases NOT RUN.
 - **Journal open findings fixed (2026-11-24, `D-243`):** floating Write, calendar icon in search, plain entry time, export link, dead card removed, editor rendered inline and repaired at large text. Suite clean 3 of 3 (353 tests); device cases NOT RUN.
 - **Journal and reflection editor audit (2026-11-24, `D-242`):** mood is now one row that opens an emoji pop-up grid; duplicate emoji fixed; editor and list decluttered. Suite clean 3 of 3; the editor window itself not rendered; device cases NOT RUN.

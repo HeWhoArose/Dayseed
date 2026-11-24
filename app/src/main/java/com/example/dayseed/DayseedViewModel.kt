@@ -1193,6 +1193,8 @@ class DayseedViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             withContext(ioDispatcher) {
                 repository.setSetting("theme_mode", "ENUM", mode.settingValue)
+                // Reminders are posted by the alarm receiver without the database, so they read this copy (D-245).
+                runCatching { com.example.dayseed.data.NotificationStyle.rememberTheme(getApplication(), mode) }
                 _userMessage.value = "Theme set to ${mode.label}"
             }
         }
