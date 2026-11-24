@@ -1532,6 +1532,17 @@ class DayseedRepository(
         return savedVersion!!
     }
 
+    /**
+     * Turns reminders on or off (D-246). Turning them on creates the reminder channel and arms the alarms for every
+     * habit that has a reminder time; turning them off cancels those alarms. Delivery is still re-checked by the
+     * receiver (opt-in, notification permission, quiet hours, daily cap).
+     */
+    fun setRemindersEnabledSync(enabled: Boolean) {
+        setSettingSync(ReminderScheduler.SETTING_REMINDERS_ENABLED, "ENUM", if (enabled) "true" else "false")
+        if (enabled) runCatching { ReminderNotifier.ensureReminderChannel(appContext) }
+        rescheduleReminderAlarms()
+    }
+
     /** Best-effort alarm realignment after any mutation that can change reminder eligibility. */
     private fun rescheduleReminderAlarms() {
         try {
@@ -5707,11 +5718,7 @@ class DayseedRepository(
         if (settings != null) {
             for (index in 0 until settings.length()) {
                 val setting = settings.optJSONObject(index) ?: continue
-                if (setting.optString("setting_key") == ReminderScheduler.SETTING_REMINDERS_ENABLED) {
-                    // Reminder activation is held behind physical-device verification. A
-                    // portable backup cannot bypass that release gate on a fresh install.
-                    setting.put("value_text", "false")
-                }
+                // D-246: reminders are active, so a restored backup keeps the person's own reminder preference.
             }
         }
         normalized.put("format_version", BackupAndExportManager.BACKUP_FORMAT_VERSION)

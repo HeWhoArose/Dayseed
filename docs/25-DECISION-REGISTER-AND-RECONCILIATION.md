@@ -657,6 +657,12 @@ The decision log and register now contain 238 unique decision IDs through D-244 
 
 The decision log and register now contain 239 unique decision IDs through D-245 (gaps preserved).
 
+## D-246 — Reminder delivery activated (2026-11-24)
+
+| D-246 | The global reminders switch and both weekly switches are live; choosing a habit reminder time turns reminders on and asks for permission; restore keeps the reminder preference; "not active yet" copy replaced with plain status. Taken by the owner ahead of physical-device verification; on-device delivery NOT RUN. Full record in `docs/09-DECISION-LOG.md` (D-246). Stage C/D NOT OPEN. |
+
+The decision log and register now contain 240 unique decision IDs through D-246 (gaps preserved).
+
 
 
 

@@ -857,7 +857,13 @@ class DayseedViewModel @JvmOverloads constructor(
                     policy = policy
                 )
                 closeAddEditHabit()
-                _userMessage.value = "Habit saved (effective ${savedVer.effectiveFromLocalDate})"
+                // Choosing a reminder time is the person's request for reminders (D-246): switch the global
+                // reminders on so the reminder they just set can actually arrive.
+                val turnedRemindersOn = habit.reminderMode == "AT_TIME" &&
+                    !com.example.dayseed.data.ReminderScheduler.isGlobalRemindersEnabled(repository)
+                if (turnedRemindersOn) repository.setRemindersEnabledSync(true)
+                _userMessage.value = "Habit saved (effective ${savedVer.effectiveFromLocalDate})" +
+                    if (turnedRemindersOn) " · reminders turned on" else ""
                 savedVer
             } catch (e: Exception) {
                 if (isNewHabit) {
@@ -1196,6 +1202,31 @@ class DayseedViewModel @JvmOverloads constructor(
                 // Reminders are posted by the alarm receiver without the database, so they read this copy (D-245).
                 runCatching { com.example.dayseed.data.NotificationStyle.rememberTheme(getApplication(), mode) }
                 _userMessage.value = "Theme set to ${mode.label}"
+            }
+        }
+    }
+
+    fun setRemindersEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                repository.setRemindersEnabledSync(enabled)
+                _userMessage.value = if (enabled) "Reminders are on" else "Reminders are off"
+            }
+        }
+    }
+
+    fun setWeeklyReflectionsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                repository.setSettingSync("weekly_reflections_enabled", "ENUM", if (enabled) "true" else "false")
+            }
+        }
+    }
+
+    fun setEncouragementTipsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                repository.setSettingSync("encouragement_tips_enabled", "ENUM", if (enabled) "true" else "false")
             }
         }
     }

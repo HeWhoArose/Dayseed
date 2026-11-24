@@ -657,7 +657,7 @@ fun RemindersPanel(
     ) { Text("Send a preview notification") }
     Spacer(modifier = Modifier.height(10.dp))
 
-    // ---- Honest delivery status ----
+    // ---- How delivery works (honest, no promise of exact timing) ----
     Surface(
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
@@ -672,9 +672,8 @@ fun RemindersPanel(
             )
             Spacer(modifier = Modifier.width(10.dp))
             Text(
-                text = "Reminder delivery is not active yet. Dayseed's reminder scheduling is " +
-                    "being verified on a real device first; every switch here stays off until " +
-                    "then. Nothing can be enabled from this panel right now.",
+                text = "Reminders arrive at the time you set inside each habit. Android may delay them a " +
+                    "little to save battery, and they pause during quiet hours.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -698,24 +697,27 @@ fun RemindersPanel(
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Dayseed reminders", style = MaterialTheme.typography.bodyMedium)
                     Text(
-                        text = "Pending device verification",
+                        text = if (remindersEnabledNow) "On" else "Off",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Switch(
                     checked = remindersEnabledNow,
-                    onCheckedChange = null,
-                    enabled = false,
+                    onCheckedChange = { wantOn ->
+                        viewModel.setRemindersEnabled(wantOn)
+                        // Android 13+ needs the person's permission before any notification can appear.
+                        if (wantOn && !notificationAvailability.runtimePermissionGranted &&
+                            android.os.Build.VERSION.SDK_INT >= 33
+                        ) {
+                            requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    },
                     modifier = Modifier
                         .testTag("reminders_global_switch")
                         .semantics {
                             contentDescription = "Dayseed reminders"
-                            stateDescription = if (remindersEnabledNow) {
-                                "On; activation unavailable pending device verification"
-                            } else {
-                                "Off; activation unavailable pending device verification"
-                            }
+                            stateDescription = if (remindersEnabledNow) "On" else "Off"
                         }
                 )
             }
@@ -848,7 +850,7 @@ fun RemindersPanel(
     }
     Spacer(modifier = Modifier.height(14.dp))
 
-    // ---- Area 4: Weekly reminders (implemented; activation still gated) ----
+    // ---- Area 4: Weekly reminders ----
     val weeklyReflectionsPreference =
         appSettings["weekly_reflections_enabled"]?.valueText.equals("true", ignoreCase = true)
     val encouragementTipsPreference =
@@ -883,8 +885,7 @@ fun RemindersPanel(
                 }
                 Switch(
                     checked = weeklyReflectionsPreference,
-                    onCheckedChange = null,
-                    enabled = false,
+                    onCheckedChange = { viewModel.setWeeklyReflectionsEnabled(it) },
                     modifier = Modifier
                         .testTag("weekly_reflection_switch")
                         .semantics {
@@ -905,8 +906,7 @@ fun RemindersPanel(
                 }
                 Switch(
                     checked = encouragementTipsPreference,
-                    onCheckedChange = null,
-                    enabled = false,
+                    onCheckedChange = { viewModel.setEncouragementTipsEnabled(it) },
                     modifier = Modifier
                         .testTag("encouragement_tips_switch")
                         .semantics {
@@ -917,8 +917,7 @@ fun RemindersPanel(
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Both switches stay read-only until reminder delivery passes physical-device " +
-                    "verification, matching the rest of this panel.",
+                text = "Weekly reminders only arrive while \"Dayseed reminders\" above is on.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

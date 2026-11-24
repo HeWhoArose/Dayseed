@@ -274,11 +274,14 @@ fun SettingsScreen(
                 SettingsGroupCard {
                     SettingsRow(
                         label = "Notifications & reminders",
-                        summary = "Delivery not active yet (pending device verification) · " +
-                            SettingsSupport.quietHoursSummary(
+                        summary = if (appSettings["reminders_enabled"]?.valueText.equals("true", ignoreCase = true)) {
+                            "On · quiet hours " + SettingsSupport.quietHoursSummary(
                                 appSettings["quiet_hours_start"]?.valueText,
                                 appSettings["quiet_hours_end"]?.valueText
-                            ),
+                            )
+                        } else {
+                            "Off"
+                        },
                         icon = Icons.Default.NotificationsNone,
                         onClick = { activeSheet = SettingsSheet.REMINDERS },
                         testTag = "settings_row_reminders"

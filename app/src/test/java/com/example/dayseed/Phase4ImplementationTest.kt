@@ -940,20 +940,35 @@ class Phase4ImplementationTest {
     }
 
     @Test
-    fun p4_31_restoreCannotReEnableReminderDeliveryBeforeDeviceVerification() {
+    fun p4_31_restoreKeepsThePersonsReminderPreference() {
+        // D-246: reminders are active, so a restored backup keeps the person's own reminder switch.
         repository.setSettingSync("reminders_enabled", "BOOL", "true")
         val targetDbName = "p4_lock.db"
         val target = DayseedRepository(context = app, clock = testClock, databaseName = targetDbName)
         try {
             target.restorePortableBackupSync(repository.exportPortableBackupSync(), restoreMode = "REPLACE")
-            assertEquals(
-                "false",
-                target.getSettingString("reminders_enabled", "true")
-            )
+            assertEquals("true", target.getSettingString("reminders_enabled", "false"))
         } finally {
             target.dbHelper.close()
             app.deleteDatabase(targetDbName)
         }
+    }
+
+    @Test
+    fun p4_31b_turningRemindersOnArmsTheHabitAlarmAndOffCancelsIt() {
+        seedReminderHabit()
+        repository.setRemindersEnabledSync(false)
+        assertEquals("Off: nothing is armed", 0, alarmRepository().scheduledAlarms.size)
+
+        repository.setRemindersEnabledSync(true)
+        assertEquals("true", repository.getSettingString("reminders_enabled", "false"))
+        assertEquals("The habit's reminder is armed once reminders are on", 1, alarmRepository().scheduledAlarms.size)
+        assertNotNull("The Dayseed reminder channel exists", (app.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager)
+            .getNotificationChannel(com.example.dayseed.data.ReminderNotifier.CHANNEL_ID))
+
+        repository.setRemindersEnabledSync(false)
+        assertEquals("false", repository.getSettingString("reminders_enabled", "true"))
+        assertEquals("Turning reminders off cancels the alarm", 0, alarmRepository().scheduledAlarms.size)
     }
 
     // ---------------------------------------------------------------------

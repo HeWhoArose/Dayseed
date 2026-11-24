@@ -357,6 +357,10 @@ fun CreateEditHabitScreen(
     }
 
     var validationError by remember { mutableStateOf<String?>(null) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val notificationPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { _ -> }
     var scheduleExpanded by rememberSaveable { mutableStateOf(false) }
     var durationExpanded by rememberSaveable { mutableStateOf(false) }
 
@@ -1023,7 +1027,17 @@ fun CreateEditHabitScreen(
                                 }
                                 Switch(
                                     checked = reminderEnabled,
-                                    onCheckedChange = { reminderEnabled = it },
+                                    onCheckedChange = {
+                                        reminderEnabled = it
+                                        // Android 13+ needs the person's permission before any reminder can show.
+                                        if (it && android.os.Build.VERSION.SDK_INT >= 33 &&
+                                            androidx.core.content.ContextCompat.checkSelfPermission(
+                                                context, android.Manifest.permission.POST_NOTIFICATIONS
+                                            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+                                        ) {
+                                            notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                        }
+                                    },
                                     modifier = Modifier.testTag("habit_reminder_toggle")
                                 )
                             }
