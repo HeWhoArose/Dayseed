@@ -299,8 +299,8 @@ class OwnerReportedDefectsRemediationTest {
             "Expected unambiguous '4:00 AM (04:00)' preview, got: $amPreviewText",
             amPreviewText.contains("4:00 AM (04:00)")
         )
-        assertNotNull(
-            "04:00 AM falls inside default Quiet Hours (22:00–07:00) and must show warning",
+        assertNull(
+            "Quiet hours were removed (D-248): no warning is shown for an early reminder time",
             findNodeByTagOrNull(activity, "habit_reminder_quiet_hours_warning")
         )
 
@@ -340,7 +340,7 @@ class OwnerReportedDefectsRemediationTest {
     // =========================================================================
 
     @Test
-    fun odr002_reminderPipelineHonorsGlobalGateQuietHoursAndPostsRealNotificationWhenEnabled() {
+    fun odr002_reminderPipelineHonorsGlobalGateAndPostsRealNotificationWhenEnabled() {
         val dbName = "test_odr002_pipeline_${System.nanoTime()}.db"
         val repo = newRepository(dbName)
         ReminderNotifier.ensureReminderChannel(context)
@@ -378,7 +378,8 @@ class OwnerReportedDefectsRemediationTest {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val shadowNotificationManager = Shadows.shadowOf(notificationManager)
 
-        // 1. While reminders_enabled = false (default D-221 / P25-H03 gate), scheduler arms 0 OS alarms
+        // 1. While reminders_enabled = false (the person's explicit opt-out; the default is on since D-248), scheduler arms 0 OS alarms
+        repo.setSettingSync(ReminderScheduler.SETTING_REMINDERS_ENABLED, "ENUM", "false")
         ReminderScheduler.scheduleAll(context, repo)
         assertEquals(
             "With reminders_enabled=false, scheduler must arm 0 OS alarms",
@@ -395,25 +396,22 @@ class OwnerReportedDefectsRemediationTest {
             shadowAlarmManager.scheduledAlarms.size
         )
 
-        // 3. When 04:00 AM alarm fires inside Quiet Hours (22:00..07:00), it is suppressed
+        // 3. Quiet hours no longer exist (D-248): the 04:00 alarm is delivered like any other.
         testClock.currentLocalDate = today
         testClock.currentLocalTime = LocalTime.of(4, 0)
         testClock.currentUtcMs = today.atTime(4, 0).toInstant(ZoneOffset.UTC).toEpochMilli()
-        val suppressedDecision = ReminderAlarmReceiver.processAlarmSync(
+        val earlyDecision = ReminderAlarmReceiver.processAlarmSync(
             context = context,
             repository = repo,
             habitIdRaw = habit0400.habitId,
             deliveryDateRaw = today.toString(),
             reminderTimeRaw = "04:00"
         )
-        assertEquals(ReminderAlarmReceiver.DECISION_SUPPRESSED, suppressedDecision)
-        assertEquals(0, shadowNotificationManager.allNotifications.size)
-        assertEquals(
-            "SUPPRESSED",
-            repo.getReminderDeliveryStatus("HABIT_DAILY:${habit0400.habitId}:$today")
-        )
+        assertEquals(ReminderAlarmReceiver.DECISION_POSTED, earlyDecision)
+        assertEquals(1, shadowNotificationManager.allNotifications.size)
+        notificationManager.cancelAll()
 
-        // 4. When 16:00 (4:00 PM) alarm fires outside Quiet Hours, it posts a real notification with contentIntent & CATEGORY_REMINDER
+        // 4. When the 16:00 (4:00 PM) alarm fires, it posts a real notification with contentIntent & CATEGORY_REMINDER
         testClock.currentLocalDate = today
         testClock.currentLocalTime = LocalTime.of(16, 0)
         testClock.currentUtcMs = today.atTime(16, 0).toInstant(ZoneOffset.UTC).toEpochMilli()

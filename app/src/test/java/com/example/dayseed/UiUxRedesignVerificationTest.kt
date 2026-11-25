@@ -378,7 +378,9 @@ class UiUxRedesignVerificationTest {
         assertNotNull("Expandable Streak & Living Grove toggle must exist", findNodeByTagOrNull(detailActivity, "detail_toggle_streak_grove"))
         assertNotNull("Expandable Lifetime Progress toggle must exist", findNodeByTagOrNull(detailActivity, "detail_toggle_lifetime"))
         assertNotNull("End this habit CTA must remain directly accessible", findNodeByTagOrNull(detailActivity, "detail_end_habit_btn"))
-        assertNotNull("Danger zone must visually separate permanent deletion", findNodeByTagOrNull(detailActivity, "habit_detail_danger_zone"))
+        assertNotNull("Deleting a habit is a trash icon in the top bar that asks first (D-248)", findNodeByTagOrNull(detailActivity, "detail_delete_habit_btn"))
+        assertNull("The big Delete button card is gone", findNodeByTagOrNull(detailActivity, "habit_detail_danger_zone"))
+        assertNull("The note card is gone (D-248)", findNodeByTagOrNull(detailActivity, "habit_detail_note_input"))
 
         // The end-date editor uses the same mode + unit + stepper controls as New Habit (D-241).
         clickTag(detailActivity, "detail_edit_end_date_btn", widthDp = 360, heightDp = 2600)
@@ -521,6 +523,30 @@ class UiUxRedesignVerificationTest {
         layoutAndIdle(activity, widthDp = 360, heightDp = 1200, recompose = true)
         assertNotNull("A registered completion must offer Undo", findNodeByTagOrNull(activity, "undo_action_btn"))
 
+        controller.pause().stop()
+        repo.dbHelper.close()
+    }
+
+    @Test
+    fun newlyCreatedHabits_showTheRightRoundControlStraightAway() {
+        val repo = newRepository("test_new_habit_controls_${System.nanoTime()}.db")
+        val vm = newViewModel(repo)
+        runBlocking {
+            repo.saveHabit(Habit(habitId = "h_qty", name = "10 Push-ups", trackingMode = TrackingMode.QUANTITY, unitCode = "push-ups",
+                targetPeriod = TargetPeriod.DAY, targetValue = 10, scheduleKind = ScheduleKind.DAILY))
+            repo.saveHabit(Habit(habitId = "h_dur", name = "Walk", trackingMode = TrackingMode.DURATION, unitCode = "min",
+                targetPeriod = TargetPeriod.DAY, targetValue = 30, scheduleKind = ScheduleKind.DAILY))
+            repo.saveHabit(Habit(habitId = "h_chk", name = "Meditate", trackingMode = TrackingMode.COMPLETION_ONLY,
+                targetPeriod = TargetPeriod.DAY, targetValue = 1, scheduleKind = ScheduleKind.DAILY))
+        }
+        repo.habits.awaitMatch { it.size >= 3 }
+        val controller = Robolectric.buildActivity(ComponentActivity::class.java).create().start().resume().visible()
+        val activity = controller.get()
+        activity.setContent { DayseedTheme(themeMode = ThemeModeOption.LIGHT, reducedMotion = true) { DayseedApp(viewModel = vm) } }
+        layoutAndIdle(activity, widthDp = 360, heightDp = 1400)
+        assertNotNull("A new quantity habit gets the + that opens the quick-log pop-up", findNodeByTagOrNull(activity, "quick_log_btn_h_qty"))
+        assertNotNull("A new duration habit gets the + too", findNodeByTagOrNull(activity, "quick_log_btn_h_dur"))
+        assertNotNull("A check-off habit has nothing to measure, so it keeps the one-tap circle", findNodeByTagOrNull(activity, "habit_done_btn_h_chk"))
         controller.pause().stop()
         repo.dbHelper.close()
     }

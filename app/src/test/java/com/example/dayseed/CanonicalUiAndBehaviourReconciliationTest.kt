@@ -950,7 +950,8 @@ class CanonicalUiAndBehaviourReconciliationTest {
 
         val sheetNames = SettingsSheet.entries.map { it.name }.toSet()
         assertFalse("Unreachable JOURNAL_EXPORT sheet enum entry must be removed", sheetNames.contains("JOURNAL_EXPORT"))
-        assertTrue(sheetNames.containsAll(listOf("APPEARANCE", "WEEK_START", "QUIET_HOURS", "REMINDERS", "PRIVACY", "REMOVED_HABITS", "ABOUT")))
+        assertFalse("Quiet hours were removed (D-248)", sheetNames.contains("QUIET_HOURS"))
+        assertTrue(sheetNames.containsAll(listOf("APPEARANCE", "WEEK_START", "REMINDERS", "PRIVACY", "REMOVED_HABITS", "ABOUT")))
 
         repo.dbHelper.close()
     }

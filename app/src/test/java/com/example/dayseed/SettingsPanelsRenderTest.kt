@@ -22,8 +22,7 @@ import com.example.dayseed.data.TrackingMode
 import com.example.dayseed.ui.screens.AboutPanel
 import com.example.dayseed.ui.screens.AppearancePanel
 import com.example.dayseed.ui.screens.PrivacyPanel
-import com.example.dayseed.ui.screens.QuietHoursPanel
-import com.example.dayseed.ui.screens.RemindersPanel
+import com.example.dayseed.ui.screens.NotificationsPanel
 import com.example.dayseed.ui.screens.RemovedHabitsPanel
 import com.example.dayseed.ui.theme.DayseedTheme
 import com.example.dayseed.ui.theme.ThemeModeOption
@@ -67,8 +66,7 @@ class SettingsPanelsRenderTest {
         val vm = DayseedViewModel(context as Application, customRepository = repo, ioDispatcher = Dispatchers.Unconfined)
         val panels: List<Pair<String, @androidx.compose.runtime.Composable () -> Unit>> = listOf(
             "appearance" to { AppearancePanel(vm, ThemeModeOption.SOFT_BOTANICAL_AUTO) },
-            "reminders" to { RemindersPanel(vm, onOpenQuietHours = {}, onNavigateToHabitEditors = {}) },
-            "quiet" to { QuietHoursPanel(vm, "21:00", "08:00", onSaved = {}) },
+            "notifications" to { NotificationsPanel(vm) },
             "privacy" to { PrivacyPanel() },
             "about" to { AboutPanel() },
             "removed" to { RemovedHabitsPanel(vm, emptyList()) }

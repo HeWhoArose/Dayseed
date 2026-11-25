@@ -267,36 +267,17 @@ fun SettingsScreen(
             item {
                 SettingsSectionLabel(
                     text = "Habits & reminders",
-                    supporting = "Quiet hours, gentle reminders, and paused or archived habits."
+                    supporting = "Notifications, and paused or archived habits."
                 )
             }
             item {
                 SettingsGroupCard {
                     SettingsRow(
-                        label = "Notifications & reminders",
-                        summary = if (appSettings["reminders_enabled"]?.valueText.equals("true", ignoreCase = true)) {
-                            "On · quiet hours " + SettingsSupport.quietHoursSummary(
-                                appSettings["quiet_hours_start"]?.valueText,
-                                appSettings["quiet_hours_end"]?.valueText
-                            )
-                        } else {
-                            "Off"
-                        },
+                        label = "Notifications",
+                        summary = "Reminders and weekly check-ins",
                         icon = Icons.Default.NotificationsNone,
                         onClick = { activeSheet = SettingsSheet.REMINDERS },
                         testTag = "settings_row_reminders"
-                    )
-                    SettingsRowDivider()
-                    SettingsRow(
-                        label = "Quiet hours",
-                        summary = SettingsSupport.quietHoursSummary(
-                            appSettings["quiet_hours_start"]?.valueText,
-                            appSettings["quiet_hours_end"]?.valueText
-                        ),
-                        icon = Icons.Default.Bedtime,
-                        badgeText = "Max 3/day",
-                        onClick = { activeSheet = SettingsSheet.QUIET_HOURS },
-                        testTag = "settings_row_quiet_hours"
                     )
                     SettingsRowDivider()
                     SettingsRow(
@@ -417,22 +398,7 @@ fun SettingsScreen(
                         AppearancePanel(viewModel, currentThemeMode)
                     SettingsSheet.WEEK_START ->
                         WeekStartPanel(viewModel, currentWeekStart)
-                    SettingsSheet.QUIET_HOURS ->
-                        QuietHoursPanel(
-                            viewModel = viewModel,
-                            initialStart = appSettings["quiet_hours_start"]?.valueText ?: "21:00",
-                            initialEnd = appSettings["quiet_hours_end"]?.valueText ?: "08:00",
-                            onSaved = { activeSheet = null }
-                        )
-                    SettingsSheet.REMINDERS ->
-                        RemindersPanel(
-                            viewModel = viewModel,
-                            onOpenQuietHours = { activeSheet = SettingsSheet.QUIET_HOURS },
-                            onNavigateToHabitEditors = {
-                                activeSheet = null
-                                viewModel.selectTab(NavTab.HABITS)
-                            }
-                        )
+                    SettingsSheet.REMINDERS -> NotificationsPanel(viewModel)
                     SettingsSheet.PRIVACY -> PrivacyPanel()
                     SettingsSheet.REMOVED_HABITS ->
                         RemovedHabitsPanel(viewModel, inactiveHabits)

@@ -318,7 +318,7 @@ private fun HabitDirectoryCard(
     val activeReminderMode = eff?.reminderMode ?: habit.reminderMode
     val activeReminderTime = eff?.reminderTimeLocal ?: habit.reminderTimeLocal
     val reminderSummarySuffix = if (activeReminderMode == "AT_TIME" && !activeReminderTime.isNullOrBlank()) {
-        " • Reminder ${SettingsSupport.formatUnambiguousTimeDisplay(activeReminderTime, is24HourFormat)}"
+        " • Reminder ${SettingsSupport.formatPlainTime(activeReminderTime, is24HourFormat)}"
     } else {
         ""
     }

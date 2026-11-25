@@ -44,6 +44,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -112,7 +113,7 @@ import java.time.DayOfWeek
  * quick preferences and unifying Journal Export + Portable Backup into a cohesive Data sub-screen.
  */
 enum class SettingsSheet {
-    APPEARANCE, WEEK_START, QUIET_HOURS, REMINDERS, PRIVACY, REMOVED_HABITS, ABOUT
+    APPEARANCE, WEEK_START, REMINDERS, PRIVACY, REMOVED_HABITS, ABOUT
 }
 
 enum class DataSubScreenSection {
@@ -403,525 +404,128 @@ fun WeekStartPanel(
     Spacer(modifier = Modifier.height(20.dp))
 }
 
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun QuietHoursPanel(
-    viewModel: DayseedViewModel,
-    initialStart: String,
-    initialEnd: String,
-    onSaved: () -> Unit
-) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val is24HourFormat = remember(context) { android.text.format.DateFormat.is24HourFormat(context) }
-    var startText by remember { mutableStateOf(initialStart) }
-    var endText by remember { mutableStateOf(initialEnd) }
-    val startError = SettingsSupport.quietHoursError(startText)
-    val endError = SettingsSupport.quietHoursError(endText)
-    val valid = startError == null && endError == null
-
-    PanelTitle(
-        "Quiet hours & gentle prompts",
-        "Reminders pause during this window. To keep Dayseed calm, at most 3 reminders are sent per day."
-    )
-    Spacer(modifier = Modifier.height(12.dp))
-
-    Text(
-        text = "Quick presets",
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
-    Spacer(modifier = Modifier.height(6.dp))
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        for (preset in SettingsSupport.quietHoursPresets) {
-            val isSelected = startText.trim() == preset.start && endText.trim() == preset.end
-            FilterChip(
-                selected = isSelected,
-                onClick = {
-                    startText = preset.start
-                    endText = preset.end
-                },
-                label = { Text(preset.label) },
-                modifier = Modifier.testTag("quiet_preset_${preset.id}")
-            )
-        }
-    }
-
-    Spacer(modifier = Modifier.height(12.dp))
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            OutlinedTextField(
-                value = startText,
-                onValueChange = { startText = it },
-                label = { Text("Start (12h or 24h)") },
-                supportingText = {
-                    if (startError != null) {
-                        Text(startError)
-                    } else {
-                        Text(SettingsSupport.formatUnambiguousTimeDisplay(startText, is24HourFormat))
-                    }
-                },
-                isError = startError != null,
-                singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .bringIntoViewOnFocus()
-                    .testTag("quiet_hours_start_input")
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                OutlinedButton(
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 8.dp),
-                    onClick = { startText = SettingsSupport.stepQuietHours(startText, -30) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("quiet_start_minus_btn")
-                ) { Text("−30m", style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false) }
-                OutlinedButton(
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 8.dp),
-                    onClick = { startText = SettingsSupport.stepQuietHours(startText, 30) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("quiet_start_plus_btn")
-                ) { Text("+30m", style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false) }
-            }
-        }
-        Column(modifier = Modifier.weight(1f)) {
-            OutlinedTextField(
-                value = endText,
-                onValueChange = { endText = it },
-                label = { Text("End (12h or 24h)") },
-                supportingText = {
-                    if (endError != null) {
-                        Text(endError)
-                    } else {
-                        Text(SettingsSupport.formatUnambiguousTimeDisplay(endText, is24HourFormat))
-                    }
-                },
-                isError = endError != null,
-                singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .bringIntoViewOnFocus()
-                    .testTag("quiet_hours_end_input")
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                OutlinedButton(
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 8.dp),
-                    onClick = { endText = SettingsSupport.stepQuietHours(endText, -30) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("quiet_end_minus_btn")
-                ) { Text("−30m", style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false) }
-                OutlinedButton(
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 8.dp),
-                    onClick = { endText = SettingsSupport.stepQuietHours(endText, 30) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("quiet_end_plus_btn")
-                ) { Text("+30m", style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false) }
-            }
-        }
-    }
-
-    Spacer(modifier = Modifier.height(12.dp))
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.Top
-        ) {
-            Icon(
-                imageVector = Icons.Default.NotificationsNone,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(
-                text = "Per-habit reminders default to 9:00 AM (09:00) when turned on inside a habit. " +
-                    "Android battery saver or Do Not Disturb can delay or silence reminders outside Dayseed.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-
-    Spacer(modifier = Modifier.height(14.dp))
-    Button(
-        onClick = {
-            val start = SettingsSupport.parseFlexibleLocalTime(startText)
-            val end = SettingsSupport.parseFlexibleLocalTime(endText)
-            if (start != null && end != null) {
-                viewModel.setQuietHours(
-                    SettingsSupport.formatQuietHours(start),
-                    SettingsSupport.formatQuietHours(end)
-                )
-                onSaved()
-            }
-        },
-        enabled = valid,
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag("quiet_hours_save_btn")
-    ) {
-        Text("Save quiet hours")
-    }
-    Spacer(modifier = Modifier.height(20.dp))
-}
-
 /**
- * Dedicated Notifications & reminders detail panel. Re-opens the deferred reminders surface
- * (D-212) with an explicit owner ruling recorded for this phase:
- *
- * - Reminder **delivery is not active yet**: the built scheduling path has not passed an
- *   end-to-end delivery test on a physical device, so every activation switch stays
- *   disabled until that verification happens. This is deliberate — never present an
- *   enabled switch backed by unverified delivery.
- * - The panel still exposes the real Android notification permission state, a request
- *   action, and a route to the system notification settings.
- * - Habit reminders stay configured inside Create/Edit Habit (no duplicate reminder store).
- * - Quiet-hours controls and the shared three-per-day cap keep the existing behaviour.
- * - The weekly reminder family (D-043, Phase 4A) is implemented: week-start reflection,
- *   weekly-goal acknowledgement, two-day inactivity check-ins and optional encouragement
- *   tips. Their switches are shown read-only for the same device-verification reason, and
- *   the tips preference defaults to off.
+ * Notifications panel (D-248): deliberately small. Whether Dayseed may show notifications at all is Android's decision,
+ * so this panel only links to it; the reminder time lives on each habit. The two weekly check-ins are the only
+ * Dayseed-side switches.
  */
 @Composable
-@OptIn(ExperimentalLayoutApi::class)
-fun RemindersPanel(
-    viewModel: DayseedViewModel,
-    onOpenQuietHours: () -> Unit,
-    onNavigateToHabitEditors: () -> Unit
-) {
+fun NotificationsPanel(viewModel: DayseedViewModel) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val appSettings by viewModel.appSettings.collectAsState()
-
-    val remindersEnabledNow = appSettings["reminders_enabled"]?.valueText.equals("true", ignoreCase = true)
-    val quietSummary = SettingsSupport.quietHoursSummary(
-        appSettings["quiet_hours_start"]?.valueText,
-        appSettings["quiet_hours_end"]?.valueText
-    )
     val lifecycleOwner = LocalLifecycleOwner.current
-    var notificationAvailability by remember(context, remindersEnabledNow) {
-        mutableStateOf(readReminderAvailability(context, remindersEnabledNow))
-    }
-    fun refreshNotificationAvailability() {
-        notificationAvailability = readReminderAvailability(context, remindersEnabledNow)
-    }
+    var allowed by remember { mutableStateOf(notificationsAllowed(context)) }
     val requestPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { _ -> refreshNotificationAvailability() }
-
-    LaunchedEffect(remindersEnabledNow) { refreshNotificationAvailability() }
-    DisposableEffect(lifecycleOwner, remindersEnabledNow) {
+    ) { _ -> allowed = notificationsAllowed(context) }
+    DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) refreshNotificationAvailability()
+            if (event == Lifecycle.Event.ON_RESUME) allowed = notificationsAllowed(context)
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    PanelTitle(
-        "Notifications & reminders",
-        "Planned gentle prompts for habits and weekly reflections."
-    )
+    PanelTitle("Notifications", "Habit reminders arrive at the time you set on each habit.")
     Spacer(modifier = Modifier.height(10.dp))
-    // Lets the person hear Dayseed's chime and see how a reminder looks in their chosen theme (D-245).
+
+    if (!allowed) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+            modifier = Modifier.fillMaxWidth().testTag("notifications_off_notice")
+        ) {
+            Text(
+                text = "Notifications are off for Dayseed, so reminders can't reach you.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.padding(12.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        Button(
+            onClick = {
+                if (android.os.Build.VERSION.SDK_INT >= 33) {
+                    requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    openSystemNotificationSettings(context)
+                }
+            },
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("reminders_request_permission_btn")
+        ) { Text("Allow notifications") }
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+    OutlinedButton(
+        onClick = { openSystemNotificationSettings(context) },
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("reminders_open_system_settings_btn")
+    ) { Text("Notification settings") }
+    Spacer(modifier = Modifier.height(8.dp))
     OutlinedButton(
         onClick = {
-            val posted = com.example.dayseed.data.ReminderNotifier.isNotificationDeliveryAvailable(context) &&
-                com.example.dayseed.data.ReminderNotifier.postWeeklyReminder(
-                    context, "dayseed_preview", 9_001,
-                    "Preview",
-                    "This is how a Dayseed reminder looks and sounds."
-                )
+            val posted = allowed && com.example.dayseed.data.ReminderNotifier.postWeeklyReminder(
+                context, "dayseed_preview", 9_001, "Preview", "This is how a Dayseed reminder looks and sounds."
+            )
             android.widget.Toast.makeText(
                 context,
-                if (posted) "Preview sent" else "Notifications are off for Dayseed. Turn them on in Android settings.",
+                if (posted) "Preview sent" else "Allow notifications first",
                 android.widget.Toast.LENGTH_SHORT
             ).show()
         },
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("reminders_preview_notification_btn")
-    ) { Text("Send a preview notification") }
-    Spacer(modifier = Modifier.height(10.dp))
+    ) { Text("Send a preview") }
 
-    // ---- How delivery works (honest, no promise of exact timing) ----
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Default.NotificationsNone,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(
-                text = "Reminders arrive at the time you set inside each habit. Android may delay them a " +
-                    "little to save battery, and they pause during quiet hours.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-    Spacer(modifier = Modifier.height(14.dp))
-
-    // ---- Area 1: Global notifications ----
-    SettingsGroupCard {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Global notifications",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Dayseed reminders", style = MaterialTheme.typography.bodyMedium)
-                    Text(
-                        text = if (remindersEnabledNow) "On" else "Off",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Switch(
-                    checked = remindersEnabledNow,
-                    onCheckedChange = { wantOn ->
-                        viewModel.setRemindersEnabled(wantOn)
-                        // Android 13+ needs the person's permission before any notification can appear.
-                        if (wantOn && !notificationAvailability.runtimePermissionGranted &&
-                            android.os.Build.VERSION.SDK_INT >= 33
-                        ) {
-                            requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-                        }
-                    },
-                    modifier = Modifier
-                        .testTag("reminders_global_switch")
-                        .semantics {
-                            contentDescription = "Dayseed reminders"
-                            stateDescription = if (remindersEnabledNow) "On" else "Off"
-                        }
-                )
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = if (notificationAvailability.runtimePermissionGranted) {
-                    "Android permission: allowed to show notifications."
-                } else {
-                    "Android permission: notifications are not allowed right now. Android " +
-                        "blocks all reminders from any app where this is off."
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.testTag("reminders_permission_state")
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = if (notificationAvailability.appNotificationsEnabled) {
-                    "Android app notifications: enabled."
-                } else {
-                    "Android app notifications: blocked in system settings."
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.testTag("reminders_app_notifications_state")
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = when {
-                    !notificationAvailability.reminderChannelCreated ->
-                        "Reminder channel: not created yet."
-                    !notificationAvailability.reminderChannelEnabled ->
-                        "Reminder channel: blocked in Android settings."
-                    else -> "Reminder channel: available."
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.testTag("reminders_channel_state")
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                if (!notificationAvailability.runtimePermissionGranted) {
-                    OutlinedButton(
-                        onClick = {
-                            if (android.os.Build.VERSION.SDK_INT >= 33) {
-                                requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-                            } else {
-                                try {
-                                    context.startActivity(
-                                        android.content.Intent(
-                                            "android.settings.APP_NOTIFICATION_SETTINGS"
-                                        ).putExtra(
-                                            "android.provider.extra.APP_PACKAGE",
-                                            context.packageName
-                                        )
-                                    )
-                                } catch (_: Exception) {
-                                    openSystemNotificationSettings(context)
-                                }
-                            }
-                        },
-                        modifier = Modifier.testTag("reminders_request_permission_btn")
-                    ) { Text("Allow notifications", style = MaterialTheme.typography.labelMedium) }
-                }
-                OutlinedButton(
-                    onClick = { openSystemNotificationSettings(context) },
-                    modifier = Modifier.testTag("reminders_open_system_settings_btn")
-                ) {
-                    Text("Android notification settings", style = MaterialTheme.typography.labelMedium)
-                }
-            }
-        }
-    }
-    Spacer(modifier = Modifier.height(14.dp))
-
-    // ---- Area 2: Habit reminders ----
-    SettingsGroupCard {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Habit reminders",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "Individual habit reminders are set inside each habit in Create/Edit Habit " +
-                    "(they default to 09:00 when turned on there). Dayseed keeps a single " +
-                    "reminder source of truth and does not duplicate it here.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            OutlinedButton(
-                onClick = onNavigateToHabitEditors,
-                modifier = Modifier.testTag("reminders_open_habit_editors_btn")
-            ) {
-                Text("Open your habits", style = MaterialTheme.typography.labelMedium)
-            }
-        }
-    }
-    Spacer(modifier = Modifier.height(14.dp))
-
-    // ---- Area 3: Quiet hours (existing controls preserved; editor opened on demand) ----
-    SettingsGroupCard {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Quiet hours",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "Reminders pause during $quietSummary. All reminders share a daily limit " +
-                    "of at most 3 per day across the whole app to keep Dayseed calm.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            OutlinedButton(
-                onClick = onOpenQuietHours,
-                modifier = Modifier.testTag("reminders_open_quiet_hours_btn")
-            ) {
-                Text("Edit quiet hours", style = MaterialTheme.typography.labelMedium)
-            }
-        }
-    }
-    Spacer(modifier = Modifier.height(14.dp))
-
-    // ---- Area 4: Weekly reminders ----
+    Spacer(modifier = Modifier.height(16.dp))
+    Text(
+        text = "Weekly check-ins",
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier.dayseedHeading()
+    )
+    Spacer(modifier = Modifier.height(8.dp))
     val weeklyReflectionsPreference =
         appSettings["weekly_reflections_enabled"]?.valueText.equals("true", ignoreCase = true)
     val encouragementTipsPreference =
         appSettings["encouragement_tips_enabled"]?.valueText.equals("true", ignoreCase = true)
-    SettingsGroupCard {
-        Column(modifier = Modifier.padding(16.dp)) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text("Fresh start each week", style = MaterialTheme.typography.bodyLarge)
             Text(
-                text = "Weekly reminders",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "Weekly prompts are planned for 09:00 on your week-start day; Android may delay " +
-                    "them slightly. They follow quiet hours and the shared limit of 3 notifications a day.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Week-start reflection", style = MaterialTheme.typography.bodyMedium)
-                    Text(
-                        text = "Outcome-aware fresh start for the previous week.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Switch(
-                    checked = weeklyReflectionsPreference,
-                    onCheckedChange = { viewModel.setWeeklyReflectionsEnabled(it) },
-                    modifier = Modifier
-                        .testTag("weekly_reflection_switch")
-                        .semantics {
-                            contentDescription = "Week-start reflection"
-                            stateDescription = if (weeklyReflectionsPreference) "On" else "Off"
-                        }
-                )
-            }
-            Spacer(modifier = Modifier.height(10.dp))
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Encouragement tips", style = MaterialTheme.typography.bodyMedium)
-                    Text(
-                        text = "Optional tips after a week of partial progress (default off).",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Switch(
-                    checked = encouragementTipsPreference,
-                    onCheckedChange = { viewModel.setEncouragementTipsEnabled(it) },
-                    modifier = Modifier
-                        .testTag("encouragement_tips_switch")
-                        .semantics {
-                            contentDescription = "Encouragement tips"
-                            stateDescription = if (encouragementTipsPreference) "On" else "Off"
-                        }
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Weekly reminders only arrive while \"Dayseed reminders\" above is on.",
+                text = "A gentle note at the start of your week.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        Switch(
+            checked = weeklyReflectionsPreference,
+            onCheckedChange = { viewModel.setWeeklyReflectionsEnabled(it) },
+            modifier = Modifier
+                .testTag("weekly_reflection_switch")
+                .semantics {
+                    contentDescription = "Fresh start each week"
+                    stateDescription = if (weeklyReflectionsPreference) "On" else "Off"
+                }
+        )
+    }
+    Spacer(modifier = Modifier.height(10.dp))
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text("Encouragement tips", style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = "Occasional tips after a week of partial progress.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Switch(
+            checked = encouragementTipsPreference,
+            onCheckedChange = { viewModel.setEncouragementTipsEnabled(it) },
+            modifier = Modifier
+                .testTag("encouragement_tips_switch")
+                .semantics {
+                    contentDescription = "Encouragement tips"
+                    stateDescription = if (encouragementTipsPreference) "On" else "Off"
+                }
+        )
     }
 
     // ---- Debug only: real delivery verification (never shown in release builds) ----
@@ -930,6 +534,14 @@ fun RemindersPanel(
         ReminderDebugVerificationSection()
     }
     Spacer(modifier = Modifier.height(20.dp))
+}
+
+private fun notificationsAllowed(context: android.content.Context): Boolean {
+    val manager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as? android.app.NotificationManager
+    val permitted = android.os.Build.VERSION.SDK_INT < 33 ||
+        ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) ==
+        android.content.pm.PackageManager.PERMISSION_GRANTED
+    return permitted && manager?.areNotificationsEnabled() == true
 }
 
 /**
@@ -1200,15 +812,18 @@ fun RemovedHabitsPanel(
                             .testTag("restore_habit_${h.habitId}")
                     ) { Text("Restore", style = MaterialTheme.typography.labelMedium) }
                     Spacer(modifier = Modifier.width(8.dp))
-                    OutlinedButton(
+                    IconButton(
                         onClick = { pendingDelete = h },
-                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        ),
                         modifier = Modifier
-                            .height(40.dp)
+                            .size(48.dp)
                             .testTag("perm_delete_habit_${h.habitId}")
-                    ) { Text("Delete", style = MaterialTheme.typography.labelMedium) }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete ${h.name} permanently",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
             }
         }

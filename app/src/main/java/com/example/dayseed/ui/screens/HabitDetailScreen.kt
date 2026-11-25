@@ -203,6 +203,8 @@ fun HabitDetailScreen(
         mutableStateOf(noteOnSelectedDate?.body ?: "")
     }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var sessionToDelete by remember { mutableStateOf<String?>(null) }
+    val editDurationMemory = remember { androidx.compose.runtime.mutableStateMapOf<HabitDurationKind, String>() }
     var showEndHabitConfirmDialog by remember { mutableStateOf(false) }
 
     val habitStartDate = remember(habit.startLocalDate, activeVersion, today) {
@@ -316,6 +318,7 @@ fun HabitDetailScreen(
                         )
                     }
 
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                     if (rememberIsLargeText() || LocalConfiguration.current.screenWidthDp < 340) {
                         // Icon-only on narrow screens so the title is never truncated.
                         IconButton(
@@ -338,6 +341,17 @@ fun HabitDetailScreen(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("Edit", maxLines = 1, softWrap = false)
+                        }
+                    }
+                        IconButton(
+                            onClick = { showDeleteConfirmDialog = true },
+                            modifier = Modifier.size(48.dp).testTag("detail_delete_habit_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete habit",
+                                tint = MaterialTheme.colorScheme.error
+                            )
                         }
                     }
                 }
@@ -387,7 +401,7 @@ fun HabitDetailScreen(
                 val activeReminderMode = activeVersion?.reminderMode ?: habit.reminderMode
                 val activeReminderTime = activeVersion?.reminderTimeLocal ?: habit.reminderTimeLocal
                 val reminderSuffix = if (!habit.lifecycleState.isTerminal && activeReminderMode == "AT_TIME" && !activeReminderTime.isNullOrBlank()) {
-                    " · Reminder ${SettingsSupport.formatUnambiguousTimeDisplay(activeReminderTime, is24HourFormat)}"
+                    " · Reminder ${SettingsSupport.formatPlainTime(activeReminderTime, is24HourFormat)}"
                 } else {
                     ""
                 }
@@ -474,131 +488,6 @@ fun HabitDetailScreen(
                             )
                         }
 
-                    }
-                }
-            }
-
-            // SECTION B: Today's Progress & Immediate Primary Actions
-            item {
-                val activeBand = summary?.activeProgressBand ?: ProgressBand.ZERO
-                val isWeekly = habit.targetPeriod == TargetPeriod.WEEK
-                val currentUnits = summary?.activeTotalUnits ?: BigInteger.ZERO
-                val targetUnits = summary?.activeTargetUnits
-                    ?: BigInteger.valueOf((habit.targetValue ?: 1).coerceAtLeast(1).toLong())
-                val pct = summary?.activePercentage ?: 0
-                val rawUnit = activeVersion?.unitCode ?: habit.unitCode
-                val ratioDisplay = if (rawUnit != null && (UnitFormatter.extractScale(rawUnit) > 0 || UnitFormatter.isCurrencyUnit(rawUnit))) {
-                    UnitFormatter.formatProgressRatioBig(currentUnits, targetUnits, rawUnit)
-                } else {
-                    val unitLabel = rawUnit?.let { " ${UnitFormatter.cleanUnitCode(it)}" } ?: ""
-                    "$currentUnits / $targetUnits$unitLabel"
-                }
-
-                Card(
-                    shape = DayseedShapes.Card,
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("habit_detail_section_b")
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        FlowRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text(
-                                text = if (isWeekly) "Weekly Progress" else "Today's Progress",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            DayseedStatusPill(
-                                text = activeBand.label,
-                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f),
-                                modifier = Modifier
-                                    .semantics { contentDescription = activeBand.spokenDescription() }
-                                    .testTag("detail_progress_band_badge")
-                            )
-                        }
-
-                        val progressLabel = if (isWeekly && !summary?.weekStartLocalDate.isNullOrBlank()) {
-                            "This week (${friendlyDateRange(summary?.weekStartLocalDate.orEmpty(), summary?.weekEndLocalDate.orEmpty())}): $ratioDisplay ($pct%)"
-                        } else {
-                            "Today: $ratioDisplay ($pct%)"
-                        }
-                        Text(
-                            text = progressLabel,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.testTag("detail_progress_summary_text")
-                        )
-
-                        ProgressBarWithOverflow(
-                            fraction = pct / 100f,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        Text(
-                            text = activeBand.encouragementQuote,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.testTag("detail_encouragement_quote")
-                        )
-                        Text(
-                            text = activeBand.motivationQuote,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontStyle = FontStyle.Italic,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.testTag("detail_motivation_quote")
-                        )
-
-                        // Immediately discoverable Primary Actions
-                        if (!habit.lifecycleState.isTerminal) {
-                            DayseedPrimaryButton(
-                                text = if (selectedLocalDate == todayStr) "Add progress" else "Add progress for ${friendlyDate(selectedLocalDate, today)}",
-                                onClick = { onOpenRecordSession(habitId, selectedLocalDate, null) },
-                                icon = Icons.Default.Add,
-                                modifier = Modifier.fillMaxWidth().testTag("detail_record_session_btn")
-                            )
-
-                            if (selectedLocalDate == todayStr) {
-                                val hasRestDayToday = exceptionOnSelectedDate?.exceptionKind == HabitDateExceptionKind.REST_DAY ||
-                                    summary?.hasRestDayToday == true
-                                if (hasRestDayToday) {
-                                    OutlinedButton(
-                                        onClick = { viewModel.clearRestDayToday(habit) },
-                                        shape = DayseedShapes.Button,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .heightIn(min = 48.dp)
-                                            .testTag("detail_clear_rest_day_btn")
-                                    ) {
-                                        Text("Clear Rest Day")
-                                    }
-                                } else if (summary?.canTakeRestDayToday == true) {
-                                    TextButton(
-                                        onClick = { viewModel.takeRestDayToday(habit) },
-                                        modifier = Modifier
-                                            .heightIn(min = 48.dp)
-                                            .testTag("detail_take_rest_day_btn")
-                                    ) {
-                                        Text("Take a planned rest day today")
-                                    }
-                                }
-                            }
-                        } else {
-                            Text(
-                                text = "This habit is ${habit.lifetimeStatusLabel.lowercase()}. Historical records are preserved below; active daily logging is paused.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.testTag("detail_terminal_logging_disabled_notice")
-                            )
-                        }
                     }
                 }
             }
@@ -737,7 +626,7 @@ fun HabitDetailScreen(
                                             .atZone(ZoneId.systemDefault())
                                             .toLocalTime()
                                             .format(DateTimeFormatter.ofPattern("HH:mm"))
-                                        SettingsSupport.formatUnambiguousTimeDisplay(rawHhMm, is24HourFormat)
+                                        SettingsSupport.formatPlainTime(rawHhMm, is24HourFormat)
                                     }.getOrDefault("")
                                 }
                                 val rawUnit = activeVersion?.unitCode ?: habit.unitCode
@@ -792,9 +681,7 @@ fun HabitDetailScreen(
                                                 )
                                             }
                                             IconButton(
-                                                onClick = {
-                                                    viewModel.deleteHabitEntry(entry.entryId)
-                                                },
+                                                onClick = { sessionToDelete = entry.entryId },
                                                 modifier = Modifier
                                                     .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                                                     .testTag("delete_session_${entry.entryId}")
@@ -814,7 +701,7 @@ fun HabitDetailScreen(
 
                         if (!habit.lifecycleState.isTerminal && selectedLocalDate != todayStr) {
                             Text(
-                                text = "Rest days can only be taken on today's date (D-057).",
+                                text = "A rest day can only be taken today.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.testTag("detail_rest_day_past_info")
@@ -824,49 +711,126 @@ fun HabitDetailScreen(
                 }
             }
 
-            // SECTION D: Habit Date Note
+            // SECTION B: Today's Progress & Immediate Primary Actions
             item {
+                val activeBand = summary?.activeProgressBand ?: ProgressBand.ZERO
+                val isWeekly = habit.targetPeriod == TargetPeriod.WEEK
+                val currentUnits = summary?.activeTotalUnits ?: BigInteger.ZERO
+                val targetUnits = summary?.activeTargetUnits
+                    ?: BigInteger.valueOf((habit.targetValue ?: 1).coerceAtLeast(1).toLong())
+                val pct = summary?.activePercentage ?: 0
+                val rawUnit = activeVersion?.unitCode ?: habit.unitCode
+                val ratioDisplay = if (rawUnit != null && (UnitFormatter.extractScale(rawUnit) > 0 || UnitFormatter.isCurrencyUnit(rawUnit))) {
+                    UnitFormatter.formatProgressRatioBig(currentUnits, targetUnits, rawUnit)
+                } else {
+                    val unitLabel = rawUnit?.let { " ${UnitFormatter.cleanUnitCode(it)}" } ?: ""
+                    "$currentUnits / $targetUnits$unitLabel"
+                }
+
                 Card(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = DayseedShapes.Card,
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .testTag("habit_detail_section_d")
+                        .testTag("habit_detail_section_b")
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Text(
-                            text = "Note · ${friendlyDate(selectedLocalDate, today)}",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        OutlinedTextField(
-                            value = noteDraft,
-                            onValueChange = { noteDraft = it },
-                            placeholder = { Text("Add a note for ${friendlyDate(selectedLocalDate, today)}…") },
-                            maxLines = 3,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .bringIntoViewOnFocus()
-                                .testTag("habit_detail_note_input")
-                        )
-                        Row(
+                        FlowRow(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Button(
-                                onClick = {
-                                    viewModel.saveHabitDateNote(habitId, selectedDateObj, noteDraft)
-                                },
+                            Text(
+                                text = if (isWeekly) "Weekly Progress" else "Today's Progress",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            DayseedStatusPill(
+                                text = activeBand.label,
+                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f),
                                 modifier = Modifier
-                                    .heightIn(min = 48.dp)
-                                    .testTag("habit_detail_save_note_btn")
-                            ) {
-                                Text("Save Note")
+                                    .semantics { contentDescription = activeBand.spokenDescription() }
+                                    .testTag("detail_progress_band_badge")
+                            )
+                        }
+
+                        val progressLabel = if (isWeekly && !summary?.weekStartLocalDate.isNullOrBlank()) {
+                            "This week (${friendlyDateRange(summary?.weekStartLocalDate.orEmpty(), summary?.weekEndLocalDate.orEmpty())}): $ratioDisplay ($pct%)"
+                        } else {
+                            "Today: $ratioDisplay ($pct%)"
+                        }
+                        Text(
+                            text = progressLabel,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.testTag("detail_progress_summary_text")
+                        )
+
+                        ProgressBarWithOverflow(
+                            fraction = pct / 100f,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Text(
+                            text = activeBand.encouragementQuote,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.testTag("detail_encouragement_quote")
+                        )
+                        Text(
+                            text = activeBand.motivationQuote,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontStyle = FontStyle.Italic,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag("detail_motivation_quote")
+                        )
+
+                        // Immediately discoverable Primary Actions
+                        if (!habit.lifecycleState.isTerminal) {
+                            DayseedPrimaryButton(
+                                text = if (selectedLocalDate == todayStr) "Add progress" else "Add progress for ${friendlyDate(selectedLocalDate, today)}",
+                                onClick = { onOpenRecordSession(habitId, selectedLocalDate, null) },
+                                icon = Icons.Default.Add,
+                                modifier = Modifier.fillMaxWidth().testTag("detail_record_session_btn")
+                            )
+
+                            if (selectedLocalDate == todayStr) {
+                                val hasRestDayToday = exceptionOnSelectedDate?.exceptionKind == HabitDateExceptionKind.REST_DAY ||
+                                    summary?.hasRestDayToday == true
+                                if (hasRestDayToday) {
+                                    OutlinedButton(
+                                        onClick = { viewModel.clearRestDayToday(habit) },
+                                        shape = DayseedShapes.Button,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .heightIn(min = 48.dp)
+                                            .testTag("detail_clear_rest_day_btn")
+                                    ) {
+                                        Text("Clear Rest Day")
+                                    }
+                                } else if (summary?.canTakeRestDayToday == true) {
+                                    TextButton(
+                                        onClick = { viewModel.takeRestDayToday(habit) },
+                                        modifier = Modifier
+                                            .heightIn(min = 48.dp)
+                                            .testTag("detail_take_rest_day_btn")
+                                    ) {
+                                        Text("Take a planned rest day today")
+                                    }
+                                }
                             }
+                        } else {
+                            Text(
+                                text = "This habit is ${habit.lifetimeStatusLabel.lowercase()}. Historical records are preserved below; active daily logging is paused.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.testTag("detail_terminal_logging_disabled_notice")
+                            )
                         }
                     }
                 }
@@ -1245,16 +1209,10 @@ fun HabitDetailScreen(
 
                                     val editTimeUnits = listOf(HabitDurationKind.DAYS, HabitDurationKind.WEEKS, HabitDurationKind.MONTHS, HabitDurationKind.YEARS)
                                     fun chooseEditUnit(kind: HabitDurationKind) {
+                                        if (editDurationKind in editTimeUnits) editDurationMemory[editDurationKind] = editDurationValueText
                                         editDurationKind = kind
                                         editEndDateError = null
-                                        if (editDurationValueText.toIntOrNull() == null || editDurationValueText.toInt() <= 0) {
-                                            editDurationValueText = when (kind) {
-                                                HabitDurationKind.DAYS -> "30"
-                                                HabitDurationKind.WEEKS -> "4"
-                                                HabitDurationKind.MONTHS -> "3"
-                                                else -> "1"
-                                            }
-                                        }
+                                        editDurationValueText = editDurationMemory[kind] ?: "1"
                                     }
                                     SegmentedChoice(
                                         labels = listOf("No end date", "A set time", "Until a date"),
@@ -1492,50 +1450,25 @@ fun HabitDetailScreen(
                 }
             }
 
-            // Visually Separated Destructive Danger Zone
-            item {
-                Card(
-                    shape = DayseedShapes.Card,
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.14f)
-                    ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.42f)),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("habit_detail_danger_zone")
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = "Delete habit",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        Text(
-                            text = "Permanently deletes this habit and all its recorded sessions and notes. To keep your history, end or archive the habit above instead.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        OutlinedButton(
-                            onClick = { showDeleteConfirmDialog = true },
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.55f)),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 48.dp)
-                                .testTag("detail_delete_habit_btn")
-                        ) {
-                            Text("Delete permanently", fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                }
-            }
         }
+    }
+
+    sessionToDelete?.let { entryId ->
+        AlertDialog(
+            onDismissRequest = { sessionToDelete = null },
+            title = { Text("Delete this entry?") },
+            text = { Text("This removes the recorded amount from your history. You can undo it for a few seconds afterwards.") },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.deleteHabitEntry(entryId); sessionToDelete = null },
+                    modifier = Modifier.testTag("confirm_delete_session_btn")
+                ) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { sessionToDelete = null }, modifier = Modifier.testTag("cancel_delete_session_btn")) { Text("Cancel") }
+            },
+            modifier = Modifier.testTag("delete_session_confirm_dialog")
+        )
     }
 
     if (showEndHabitConfirmDialog) {

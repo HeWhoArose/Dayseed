@@ -669,6 +669,12 @@ The decision log and register now contain 240 unique decision IDs through D-246 
 
 The decision log and register now contain 241 unique decision IDs through D-247 (gaps preserved).
 
+## D-248 — Quiet hours removed, Notifications simplified, Habit Detail and Create/Edit fixes, delete confirmations (2026-11-25)
+
+| D-248 | Quiet hours removed; Notifications panel reduced to system links plus two weekly switches, first-launch permission prompt, no global switch; Habit Detail shows Recent days first, no note, trash icon for delete; every delete asks first; Create/Edit: reminder out in the open, days chosen by the person, one Weekly target, per-unit duration memory; Record summary lighter and plain times. Supersedes D-246's global switch. Full record in `docs/09-DECISION-LOG.md` (D-248). Stage C/D NOT OPEN. |
+
+The decision log and register now contain 242 unique decision IDs through D-248 (gaps preserved).
+
 
 
 

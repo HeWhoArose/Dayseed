@@ -657,7 +657,7 @@ class DayseedReminderConcurrencyTest {
     }
 
     @Test
-    fun stalePendingReservationDuringQuietHoursIsCorrectedNotDelivered() {
+    fun stalePendingReservationIsCompletedEvenLateAtNightBecauseQuietHoursWereRemoved() {
         testClock.currentLocalTime = LocalTime.of(22, 0)
         seededPendingReservation()
         makeReservationStale()
@@ -667,7 +667,7 @@ class DayseedReminderConcurrencyTest {
         val status = repository.getReminderDeliveryStatus(
             "HABIT_DAILY:h_rec:${repository.clock.todayLocal()}"
         )
-        assertEquals("SUPPRESSED", status)
+        assertEquals("DELIVERED", status)
     }
 
     @Test

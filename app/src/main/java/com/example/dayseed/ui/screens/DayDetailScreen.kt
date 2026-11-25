@@ -398,7 +398,7 @@ private fun DayDetailHabitCard(
                         onClick = { onRecordOrEditSession(null) },
                         modifier = Modifier.testTag("day_detail_log_session_${item.habit.habitId}")
                     ) {
-                        Text("Log / Edit")
+                        Text(if (item.entries.isNotEmpty()) "Add more" else "Log")
                     }
                 }
             }

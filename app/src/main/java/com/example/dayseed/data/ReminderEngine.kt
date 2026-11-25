@@ -21,6 +21,8 @@ data class ReminderEvaluationResult(
 
 object ReminderEngine {
 
+    /** Quiet hours were removed (D-248): a window whose start equals its end never matches, so nothing is silenced. */
+    const val NO_QUIET_HOURS = "00:00"
     const val DEFAULT_QUIET_START = "21:00"
     const val DEFAULT_QUIET_END = "08:00"
     const val DEFAULT_DAILY_CAP = 3

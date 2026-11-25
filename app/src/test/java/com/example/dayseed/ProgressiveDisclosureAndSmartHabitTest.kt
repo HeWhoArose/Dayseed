@@ -644,7 +644,8 @@ class ProgressiveDisclosureAndSmartHabitTest {
         assertNull("Target goal input must be collapsed until Adjust interpretation is tapped", findNodeByTagOrNull(activity, "habit_target_value_input"))
         assertNull("Category input must be hidden while More Options is collapsed", findNodeByTagOrNull(activity, "habit_category_input"))
         assertNull("Lifetime goal input must be hidden while More Options is collapsed", findNodeByTagOrNull(activity, "habit_lifetime_goal_input"))
-        assertNull("Reminder toggle must be hidden while More Options is collapsed", findNodeByTagOrNull(activity, "habit_reminder_toggle"))
+        assertNotNull("The reminder switch is out in the open, not inside More Options (D-248)", findNodeByTagOrNull(activity, "habit_reminder_toggle"))
+        assertNull("The reminder time controls appear only once the reminder is switched on", findNodeByTagOrNull(activity, "habit_reminder_hour12_input"))
 
         // 2. Type natural-language habit: "Read 10 pages of a book"
         setTextTag(activity, "habit_name_input", "Read 10 pages of a book", widthDp = 360, heightDp = 1100)
@@ -779,12 +780,8 @@ class ProgressiveDisclosureAndSmartHabitTest {
 
         val initialTexts = collectAllRenderedTexts(activity)
         assertTrue(
-            "Existing progress must display '6 / 10 pages (60%)'",
-            initialTexts.any { it.contains("Existing progress on ${friendlyDate(today, today)}: 6 / 10 pages (60%)") }
-        )
-        assertTrue(
             "Resulting daily total must remain '6 / 10 pages (60%)' before user enters a value",
-            initialTexts.any { it.contains("Resulting daily total on ${friendlyDate(today, today)}: 6 / 10 pages (60%)") }
+            initialTexts.any { it.contains("Total: 6 / 10 pages (60%)") }
         )
         assertFalse(
             "Preview must NEVER show '16 / 10 pages (160%)' on open",
@@ -807,9 +804,8 @@ class ProgressiveDisclosureAndSmartHabitTest {
         setTextTag(activity, "record_session_value_input", "2", widthDp = 360, heightDp = 1500)
         assertTrue("Save Progress must be enabled when valid positive amount '2' is entered", isNodeEnabled(activity, "record_session_save_btn"))
         val textsAfterTwo = collectAllRenderedTexts(activity)
-        assertTrue(textsAfterTwo.any { it.contains("Existing progress on ${friendlyDate(today, today)}: 6 / 10 pages (60%)") })
         assertTrue(textsAfterTwo.any { it.contains("New entry: +2 pages") })
-        assertTrue(textsAfterTwo.any { it.contains("Resulting daily total on ${friendlyDate(today, today)}: 8 / 10 pages (80%)") })
+        assertTrue(textsAfterTwo.any { it.contains("Total: 8 / 10 pages (80%)") })
 
         // Verify across 320dp, 360dp, and 411dp widths
         for (widthDp in listOf(320, 360, 411)) {
@@ -829,13 +825,17 @@ class ProgressiveDisclosureAndSmartHabitTest {
         val textsWhileEditingOriginal = collectAllRenderedTexts(activity)
         assertTrue(textsWhileEditingOriginal.any { it.contains("Edit Progress Entry") })
         assertTrue(textsWhileEditingOriginal.any { it.contains("Updating entry to: 3 pages") })
-        assertTrue(textsWhileEditingOriginal.any { it.contains("Resulting daily total on ${friendlyDate(today, today)}: 6 / 10 pages (60%)") })
+        assertTrue(textsWhileEditingOriginal.any { it.contains("Total: 6 / 10 pages (60%)") })
 
         // Screenshot 6: Existing-entry editing with original value populated
         saveScreenshotPng(activity, "07_record_session_edit_existing_entry.png", widthDp = 360, heightDp = 1080)
 
         // Delete the 1-page entry (e3) -> total becomes 5 / 10 pages (50%)
         clickTag(activity, "record_session_delete_entry_${e3.entryId}", widthDp = 360, heightDp = 1500)
+        // D-248: tapping the trash icon only asks; nothing is deleted until the person confirms in the pop-up
+        // (a separate window the test harness cannot drive, so the confirmed action is invoked directly).
+        assertTrue("A tap on delete alone must not delete", repo.habitEntries.value.any { it.entryId == e3.entryId })
+        vm.deleteHabitEntry(e3.entryId)
         repo.habitEntries.awaitMatch { list -> list.none { it.entryId == e3.entryId } }
         pumpActivity(activity, widthDp = 360, heightDp = 1500, recompose = true)
 
@@ -951,16 +951,12 @@ class ProgressiveDisclosureAndSmartHabitTest {
             sheetTextsInitial.any { it.contains("1.5 litres / day") } &&
                 sheetTextsInitial.none { it.contains("@scale2") }
         )
-        assertTrue(
-            "Existing progress must show '0.75 / 1.5 litres (50%)'",
-            sheetTextsInitial.any { it.contains("Existing progress on ${friendlyDate(today, today)}: 0.75 / 1.5 litres (50%)") }
-        )
 
         // Enter "0.75" in the input -> preview shows New entry: +0.75 litres, Resulting daily total: 1.5 / 1.5 litres (100%)
         setTextTag(activity, "record_session_value_input", "0.75", widthDp = 360, heightDp = 1100)
         val sheetTextsWithEntry = collectAllRenderedTexts(activity)
         assertTrue(sheetTextsWithEntry.any { it.contains("New entry: +0.75 litres") })
-        assertTrue(sheetTextsWithEntry.any { it.contains("Resulting daily total on ${friendlyDate(today, today)}: 1.5 / 1.5 litres (100%)") })
+        assertTrue(sheetTextsWithEntry.any { it.contains("Total: 1.5 / 1.5 litres (100%)") })
 
         // Screenshot 7: Fractional measurement habit (1.5 litres with 0.75 existing + 0.75 new entry)
         saveScreenshotPng(activity, "08_fractional_measurement_habit_progress.png", widthDp = 360, heightDp = 980)

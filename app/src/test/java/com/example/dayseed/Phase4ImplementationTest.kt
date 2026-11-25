@@ -389,19 +389,19 @@ class Phase4ImplementationTest {
     }
 
     @Test
-    fun p4_11_quietHoursDeferInsteadOfClaimingOrBurningTheOccurrence() {
+    fun p4_11_oldQuietHoursSettingsNoLongerDeferWeeklyReminders() {
         seedWeeklyHabit()
         repository.setSettingSync("weekly_reflections_enabled", "BOOL", "true")
+        // Leftover quiet-hours values from an older version are ignored (D-248).
         repository.setSettingSync("quiet_hours_start", "TIME_LOCAL", "09:00")
         repository.setSettingSync("quiet_hours_end", "TIME_LOCAL", "10:30")
 
         val result = repository.runWeeklyReminderPassSync(
             today = weekStart,
-            nowLocalTime = LocalTime.of(11, 0)
+            nowLocalTime = LocalTime.of(10, 0)
         ) { _, _, _, _ -> true }
-        assertEquals(0, result.posted)
-        assertTrue(result.deferred >= 1)
-        assertEquals("Quiet hours must not write a terminal row", 0, weeklyLedgerCount())
+        assertEquals("Nothing is deferred by quiet hours any more", 0, result.deferred)
+        assertTrue(result.posted >= 1)
     }
 
     @Test

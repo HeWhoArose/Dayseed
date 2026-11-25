@@ -138,6 +138,23 @@ fun DayseedApp(
     LaunchedEffect(themeMode) {
         runCatching { com.example.dayseed.data.NotificationStyle.rememberTheme(styleContext, themeMode) }
     }
+    // First launch: ask once for permission to show notifications (Android 13+). After that, Android's own
+    // notification settings are the control (D-248).
+    val notificationPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { _ -> }
+    LaunchedEffect(Unit) {
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            val granted = androidx.core.content.ContextCompat.checkSelfPermission(
+                styleContext, android.Manifest.permission.POST_NOTIFICATIONS
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            val alreadyAsked = viewModel.repository.getSettingString("notification_permission_asked", "false") == "true"
+            if (!granted && !alreadyAsked) {
+                viewModel.repository.setSetting("notification_permission_asked", "ENUM", "true")
+                notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
     val reducedMotion = remember(appSettings) {
         viewModel.isReducedMotionEnabled()
     }

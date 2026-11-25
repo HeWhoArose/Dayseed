@@ -99,8 +99,9 @@ class DayseedReminderAndBackupTest {
     // ---- Global opt-in gate: disabled until delivery is device-verified ----
 
     @Test
-    fun globalRemindersDefaultToDisabled() {
-        assertFalse(ReminderScheduler.isGlobalRemindersEnabled(repository))
+    fun globalRemindersDefaultToEnabled() {
+        // D-248: there is no global switch any more; reminders follow each habit's own reminder time.
+        assertTrue(ReminderScheduler.isGlobalRemindersEnabled(repository))
     }
 
     @Test

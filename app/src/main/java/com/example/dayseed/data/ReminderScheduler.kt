@@ -293,7 +293,9 @@ object ReminderScheduler {
     }
 
     fun isGlobalRemindersEnabled(repository: DayseedRepository): Boolean =
-        repository.getSettingString(SETTING_REMINDERS_ENABLED, "false").equals("true", ignoreCase = true)
+        // On unless the person switched it off: there is no longer a global switch in Settings (D-248); Android's own
+        // notification setting is the control, and a habit only reminds if it has a reminder time.
+        repository.getSettingString(SETTING_REMINDERS_ENABLED, "true").equals("true", ignoreCase = true)
 
     /**
      * Registers the durable periodic reconciliation work. WorkManager is used only for

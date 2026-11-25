@@ -599,7 +599,7 @@ class DayseedAcceptanceTest {
     }
 
     @Test
-    fun phase5_verifyRemindersQuietHoursCapAndHabitDeleteOutbox() {
+    fun phase5_verifyReminderDailyCapAndHabitDeleteOutbox() {
         val today = testClock.todayLocal()
         // Create 4 habits with reminders enabled: 1 inside quiet hours (22:30) and 3 in daytime (09:00, 12:00, 15:00, 18:00)
         val habits = listOf(
@@ -612,8 +612,9 @@ class DayseedAcceptanceTest {
         habits.forEach { repository.saveHabitSync(it) }
 
         val evals = repository.evaluateTodayRemindersSync(today).associateBy { it.habitId }
+        // Quiet hours were removed (D-248): the late reminder is limited only by the shared daily cap, like any other.
         assertEquals("SUPPRESSED", evals["h_quiet"]?.deliveryStatus)
-        assertEquals("QUIET_HOURS", evals["h_quiet"]?.suppressionReason)
+        assertEquals("DAILY_CAP_REACHED", evals["h_quiet"]?.suppressionReason)
         // Fresh decisions reserve slots as SCHEDULED; the receiver promotes them to DELIVERED
         // only after NotificationManager accepted the post.
         assertEquals("SCHEDULED", evals["h_1"]?.deliveryStatus)

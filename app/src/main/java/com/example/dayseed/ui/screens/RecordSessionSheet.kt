@@ -240,6 +240,7 @@ fun RecordSessionSheet(
 
     val today = viewModel.repository.clock.todayLocal()
     var activeEditingEntryId by remember(entryId) { mutableStateOf(entryId) }
+    var entryPendingDelete by remember { mutableStateOf<String?>(null) }
     val existingEntry = remember(entries, activeEditingEntryId) {
         activeEditingEntryId?.let { id -> entries.find { it.entryId == id } }
     }
@@ -704,7 +705,7 @@ fun RecordSessionSheet(
                     effectiveUnitCode
                 )
                 val newEntrySummaryText = when {
-                    valueText.isBlank() -> "Enter an amount above to preview new total"
+                    valueText.isBlank() -> "Enter an amount to see the new total"
                     !hasValidPositiveInput -> "Invalid amount"
                     existingEntry != null -> "Updating entry to: ${UnitFormatter.formatValueWithUnit(previewValueUnits, effectiveUnitCode)}"
                     else -> "New entry: +${UnitFormatter.formatValueWithUnit(previewValueUnits, effectiveUnitCode)}"
@@ -730,7 +731,7 @@ fun RecordSessionSheet(
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = "Progress Summary",
+                                text = "Summary",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold
                             )
@@ -741,13 +742,6 @@ fun RecordSessionSheet(
                                     .testTag("record_session_preview_band")
                             )
                         }
-
-                        Text(
-                            text = "Existing progress on ${friendlyDate(selectedDate, today)}: $formattedExistingRatio ($existingPct%)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.testTag("record_session_preview_existing")
-                        )
 
                         Text(
                             text = newEntrySummaryText,
@@ -762,7 +756,7 @@ fun RecordSessionSheet(
                         )
 
                         Text(
-                            text = "Resulting daily total on ${friendlyDate(selectedDate, today)}: $formattedProjectedDailyRatio ($projectedPct%)",
+                            text = "Total: $formattedProjectedDailyRatio ($projectedPct%)",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.primary,
@@ -793,12 +787,6 @@ fun RecordSessionSheet(
                                 text = projectedBand.encouragementQuote,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = projectedBand.motivationQuote,
-                                style = MaterialTheme.typography.bodySmall,
-                                fontStyle = FontStyle.Italic,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         } else {
                             Text(
@@ -839,7 +827,7 @@ fun RecordSessionSheet(
                                             .atZone(ZoneId.systemDefault())
                                             .toLocalTime()
                                             .format(DateTimeFormatter.ofPattern("HH:mm"))
-                                        SettingsSupport.formatUnambiguousTimeDisplay(rawHhMm, is24HourFormat)
+                                        SettingsSupport.formatPlainTime(rawHhMm, is24HourFormat)
                                     }.getOrDefault("")
                                 }
                                 Surface(
@@ -898,17 +886,7 @@ fun RecordSessionSheet(
                                             }
                                             IconButton(
                                                 onClick = {
-                                                    if (activeEditingEntryId == entry.entryId) {
-                                                        activeEditingEntryId = null
-                                                        valueText = defaultRecordSessionValueText(
-                                                            existingEntry = null,
-                                                            effectiveMode = effectiveMode,
-                                                            effectiveTargetValue = effectiveTarget,
-                                                            effectiveUnitCode = effectiveUnitCode
-                                                        )
-                                                        entryNote = ""
-                                                    }
-                                                    viewModel.deleteHabitEntry(entry.entryId)
+                                                    entryPendingDelete = entry.entryId
                                                 },
                                                 modifier = Modifier
                                                     .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
@@ -1033,5 +1011,36 @@ fun RecordSessionSheet(
         ) {
             DatePicker(state = datePickerState)
         }
+    }
+
+    entryPendingDelete?.let { pendingId ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { entryPendingDelete = null },
+            title = { Text("Delete this entry?") },
+            text = { Text("This removes the recorded amount from your history. You can undo it for a few seconds afterwards.") },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        if (activeEditingEntryId == pendingId) {
+                            activeEditingEntryId = null
+                            valueText = defaultRecordSessionValueText(
+                                existingEntry = null,
+                                effectiveMode = effectiveMode,
+                                effectiveTargetValue = effectiveTarget,
+                                effectiveUnitCode = effectiveUnitCode
+                            )
+                            entryNote = ""
+                        }
+                        viewModel.deleteHabitEntry(pendingId)
+                        entryPendingDelete = null
+                    },
+                    modifier = Modifier.testTag("confirm_record_delete_entry_btn")
+                ) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { entryPendingDelete = null }) { Text("Cancel") }
+            },
+            modifier = Modifier.testTag("record_delete_entry_confirm_dialog")
+        )
     }
 }

@@ -373,8 +373,8 @@ class DayseedRepository(
                 val targetDate = try { LocalDate.parse(parts[2]) } catch (_: Exception) { null }
                 val today = clock.todayLocal()
                 val timeNow = clock.nowLocalTime().let { String.format(java.util.Locale.ROOT, "%02d:%02d", it.hour, it.minute) }
-                val quietStart = getSettingString("quiet_hours_start", ReminderEngine.DEFAULT_QUIET_START)
-                val quietEnd = getSettingString("quiet_hours_end", ReminderEngine.DEFAULT_QUIET_END)
+                val quietStart = ReminderEngine.NO_QUIET_HOURS
+                val quietEnd = ReminderEngine.NO_QUIET_HOURS
                 val dailyCap = getSettingInt("daily_reminder_cap", ReminderEngine.DEFAULT_DAILY_CAP)
 
                 val eligibleHabit = getEffectiveHabitVersion(habitId, today)
@@ -4643,8 +4643,8 @@ class DayseedRepository(
         // the shared 3/day cap count (DELIVERED + SCHEDULED) and the reservation writes become a
         // single atomic step even across separate database connections (two alarms firing in
         // parallel). Contention is retried a few times before failing honestly.
-        val quietStart = getSettingString("quiet_hours_start", ReminderEngine.DEFAULT_QUIET_START)
-        val quietEnd = getSettingString("quiet_hours_end", ReminderEngine.DEFAULT_QUIET_END)
+        val quietStart = ReminderEngine.NO_QUIET_HOURS
+        val quietEnd = ReminderEngine.NO_QUIET_HOURS
         val dailyCap = getSettingInt("daily_reminder_cap", ReminderEngine.DEFAULT_DAILY_CAP)
         val nowMs = clock.nowUtcMs()
 
@@ -4683,8 +4683,8 @@ class DayseedRepository(
         habitId: String,
         targetDate: LocalDate = clock.todayLocal()
     ): ReminderEvaluationResult? {
-        val quietStart = getSettingString("quiet_hours_start", ReminderEngine.DEFAULT_QUIET_START)
-        val quietEnd = getSettingString("quiet_hours_end", ReminderEngine.DEFAULT_QUIET_END)
+        val quietStart = ReminderEngine.NO_QUIET_HOURS
+        val quietEnd = ReminderEngine.NO_QUIET_HOURS
         val dailyCap = getSettingInt("daily_reminder_cap", ReminderEngine.DEFAULT_DAILY_CAP)
         val nowMs = clock.nowUtcMs()
 
@@ -4721,8 +4721,8 @@ class DayseedRepository(
         targetDate: LocalDate = clock.todayLocal(),
         maxPendingAgeMs: Long = ReminderEngine.DEFAULT_MAX_PENDING_AGE_MS
     ): ReminderPostingClaimResult {
-        val quietStart = getSettingString("quiet_hours_start", ReminderEngine.DEFAULT_QUIET_START)
-        val quietEnd = getSettingString("quiet_hours_end", ReminderEngine.DEFAULT_QUIET_END)
+        val quietStart = ReminderEngine.NO_QUIET_HOURS
+        val quietEnd = ReminderEngine.NO_QUIET_HOURS
         val dailyCap = getSettingInt("daily_reminder_cap", ReminderEngine.DEFAULT_DAILY_CAP)
 
         return withImmediateTransaction {
@@ -5299,8 +5299,8 @@ class DayseedRepository(
             ReminderNotifier.postWeeklyReminder(appContext, tag, id, title, body)
         }
     ): WeeklyReminderPassResult {
-        val quietStart = getSettingString("quiet_hours_start", ReminderEngine.DEFAULT_QUIET_START)
-        val quietEnd = getSettingString("quiet_hours_end", ReminderEngine.DEFAULT_QUIET_END)
+        val quietStart = ReminderEngine.NO_QUIET_HOURS
+        val quietEnd = ReminderEngine.NO_QUIET_HOURS
         val dailyCap = getSettingInt("daily_reminder_cap", ReminderEngine.DEFAULT_DAILY_CAP)
         val nowMs = clock.nowUtcMs()
         val globallyEnabled = ReminderScheduler.isGlobalRemindersEnabled(this)
@@ -5414,8 +5414,8 @@ class DayseedRepository(
             .filter { it.habitId == habitId && it.localDate >= cutoffDate }
             .forEach { timestamps.add(it.createdAtUtcMs) }
 
-        val quietStart = getSettingString("quiet_hours_start", ReminderEngine.DEFAULT_QUIET_START)
-        val quietEnd = getSettingString("quiet_hours_end", ReminderEngine.DEFAULT_QUIET_END)
+        val quietStart = ReminderEngine.NO_QUIET_HOURS
+        val quietEnd = ReminderEngine.NO_QUIET_HOURS
         return ReminderEngine.suggestOptimalReminderTime(timestamps, clock.zoneId(), quietStart, quietEnd)
     }
 

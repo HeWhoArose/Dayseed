@@ -182,6 +182,12 @@ object SettingsSupport {
      * - When [is24HourPreference] is `true` (24-hour clock): `"04:00 (4:00 AM)"`, `"16:00 (4:00 PM)"`,
      *   `"00:00 (12:00 AM)"`, `"12:00 (12:00 PM)"`, `"23:59 (11:59 PM)"`, `"00:01 (12:01 AM)"`.
      */
+    /** A plain time for display, in the person's own clock style: "9:30 AM" or "09:30". */
+    fun formatPlainTime(raw: String?, is24HourPreference: Boolean = false): String {
+        val parsed = parseFlexibleLocalTime(raw) ?: return raw?.trim().orEmpty()
+        return if (is24HourPreference) formatTime24Hour(parsed) else formatTime12Hour(parsed)
+    }
+
     fun formatUnambiguousTimeDisplay(raw: String?, is24HourPreference: Boolean = false): String {
         val parsed = parseFlexibleLocalTime(raw) ?: return raw?.trim().orEmpty()
         val t12 = formatTime12Hour(parsed)

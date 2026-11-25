@@ -362,6 +362,8 @@ fun CreateEditHabitScreen(
         androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
     ) { _ -> }
     var scheduleExpanded by rememberSaveable { mutableStateOf(false) }
+    // What was typed for each unit (days, weeks, months, years) while this page stays open; a unit never visited starts at 1.
+    val durationMemory = remember { androidx.compose.runtime.mutableStateMapOf<HabitDurationKind, String>() }
     var durationExpanded by rememberSaveable { mutableStateOf(false) }
 
     // Live deterministic natural-language interpretation
@@ -463,7 +465,9 @@ fun CreateEditHabitScreen(
         val baseSchedule = when {
             scheduleKind == ScheduleKind.SELECTED_WEEKDAYS -> {
                 val days = WeekdayMask.fromMask(weekdaysMask)
-                if (days.size == 7) {
+                if (days.isEmpty()) {
+                    "Choose days"
+                } else if (days.size == 7) {
                     "Daily"
                 } else {
                     DayOfWeek.entries.filter { it in days }.joinToString(", ") {
@@ -669,11 +673,12 @@ fun CreateEditHabitScreen(
                                     1 -> {
                                         scheduleKind = ScheduleKind.SELECTED_WEEKDAYS
                                         targetPeriod = TargetPeriod.DAY
-                                        if (weekdaysMask <= 0) weekdaysMask = WeekdayMask.ALL_DAYS_MASK
+                                        // The person chooses the days: start with none ticked instead of all seven.
+                                        if (weekdaysMask == WeekdayMask.ALL_DAYS_MASK) weekdaysMask = 0
                                     }
                                     else -> {
                                         targetPeriod = TargetPeriod.WEEK
-                                        if (scheduleKind == ScheduleKind.DAILY) scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET
+                                        scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET
                                         if (selectedMode.canonical() == TrackingMode.COMPLETION_ONLY) {
                                             val cur = targetValueText.toIntOrNull() ?: 3
                                             if (cur !in 1..7) targetValueText = "3"
@@ -683,39 +688,9 @@ fun CreateEditHabitScreen(
                             }
                         )
 
-                        // Hidden compatibility chip tag for tests targeting target_period_day directly
-                        if (targetPeriod == TargetPeriod.WEEK) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                FilterChip(
-                                    selected = false,
-                                    onClick = {
-                                        userOverrodeSchedule = true
-                                        targetPeriod = TargetPeriod.DAY
-                                        if (scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET) {
-                                            scheduleKind = ScheduleKind.DAILY
-                                        }
-                                    },
-                                    label = { Text("Switch back to Daily Target") },
-                                    modifier = Modifier.testTag("target_period_day")
-                                )
-                                FilterChip(
-                                    selected = scheduleKind == ScheduleKind.FLEXIBLE_WEEKLY_TARGET,
-                                    onClick = {
-                                        userOverrodeSchedule = true
-                                        scheduleKind = ScheduleKind.FLEXIBLE_WEEKLY_TARGET
-                                    },
-                                    label = { Text("Flexible weekly") },
-                                    modifier = Modifier.testTag("schedule_kind_flexible_weekly")
-                                )
-                            }
-                        }
-
                         if (scheduleKind == ScheduleKind.SELECTED_WEEKDAYS) {
                             Text(
-                                text = "Scheduled weekdays:",
+                                text = if (weekdaysMask == 0) "Choose the days:" else "Scheduled weekdays:",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -730,7 +705,7 @@ fun CreateEditHabitScreen(
                                         onClick = {
                                             userOverrodeSchedule = true
                                             val currentSet = WeekdayMask.fromMask(weekdaysMask).toMutableSet()
-                                            if (isSelected && currentSet.size > 1) {
+                                            if (isSelected) {
                                                 currentSet.remove(day)
                                             } else {
                                                 currentSet.add(day)
@@ -807,16 +782,10 @@ fun CreateEditHabitScreen(
 
                         val timeUnits = listOf(HabitDurationKind.DAYS, HabitDurationKind.WEEKS, HabitDurationKind.MONTHS, HabitDurationKind.YEARS)
                         fun chooseTimeUnit(kind: HabitDurationKind) {
+                            if (durationKind in timeUnits) durationMemory[durationKind] = durationValueText
                             durationKind = kind
                             validationError = null
-                            if (durationValueText.toIntOrNull() == null || durationValueText.toInt() <= 0) {
-                                durationValueText = when (kind) {
-                                    HabitDurationKind.DAYS -> "30"
-                                    HabitDurationKind.WEEKS -> "4"
-                                    HabitDurationKind.MONTHS -> "3"
-                                    else -> "1"
-                                }
-                            }
+                            durationValueText = durationMemory[kind] ?: "1"
                         }
                         SegmentedChoice(
                             labels = listOf("No end date", "A set time", "Until a date"),
@@ -958,55 +927,18 @@ fun CreateEditHabitScreen(
                 }
             }
 
-            // STEP 4: Progressive Disclosure — Collapsed "More Options" (Reminder, Note, Category, Colour, Lifetime Goal)
+            // Gentle reminder: out in the open; the time options appear only once it is switched on.
             item {
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().testTag("habit_reminder_section")
                 ) {
                     Column(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
-                                .clickable(role = Role.Button) { showAdvancedOptions = !showAdvancedOptions }
-                                .padding(vertical = 2.dp)
-                                .testTag("habit_advanced_options_toggle"),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "More Options",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = if (reminderEnabled) {
-                                        "Reminder at ${reminderHour12Text.ifBlank { "--" }}:${reminderMinuteText.padStart(2, '0')} ${if (reminderIsPm) "PM" else "AM"} · note, category, colour, goal"
-                                    } else {
-                                        "Reminder off · note, category, colour, lifetime goal"
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Icon(
-                                imageVector = if (showAdvancedOptions) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                contentDescription = if (showAdvancedOptions) "Collapse more options" else "Expand more options"
-                            )
-                        }
-
-                        if (showAdvancedOptions) {
-                            HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-                            )
-
                             // Gentle Reminder inside More Options
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -1015,12 +947,12 @@ fun CreateEditHabitScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Gentle Reminder",
+                                        text = "Reminder",
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.SemiBold
                                     )
                                     Text(
-                                        text = "Optional daily notification at your chosen time.",
+                                        text = "A notification at the time you choose.",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -1049,11 +981,6 @@ fun CreateEditHabitScreen(
                                     isPm = reminderIsPm
                                 ) ?: "08:00"
                                 val unambiguousPreview = SettingsSupport.formatUnambiguousTimeDisplay(resolved24h, is24HourPreference = false)
-                                val quietHoursEnabled = appSettings["quiet_hours_enabled"]?.valueText != "false"
-                                val quietHoursStart = appSettings["quiet_hours_start"]?.valueText ?: "22:00"
-                                val quietHoursEnd = appSettings["quiet_hours_end"]?.valueText ?: "07:00"
-                                val fallsInQuietHours = quietHoursEnabled &&
-                                    SettingsSupport.isTimeWithinQuietHours(resolved24h, quietHoursStart, quietHoursEnd)
 
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -1123,25 +1050,55 @@ fun CreateEditHabitScreen(
                                     )
                                 }
 
-                                if (fallsInQuietHours) {
-                                    val qStartDisp = SettingsSupport.formatUnambiguousTimeDisplay(quietHoursStart, false)
-                                    val qEndDisp = SettingsSupport.formatUnambiguousTimeDisplay(quietHoursEnd, false)
-                                    Surface(
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = MaterialTheme.colorScheme.secondaryContainer,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .testTag("habit_reminder_quiet_hours_warning")
-                                    ) {
-                                        Text(
-                                            text = "Note: $unambiguousPreview falls within your Quiet Hours ($qStartDisp – $qEndDisp). Reminders are silenced during Quiet Hours.",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                            modifier = Modifier.padding(10.dp)
-                                        )
-                                    }
-                                }
                             }
+                    }
+                }
+            }
+
+            // STEP 4: Progressive Disclosure — Collapsed "More Options" (Reminder, Note, Category, Colour, Lifetime Goal)
+            item {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable(role = Role.Button) { showAdvancedOptions = !showAdvancedOptions }
+                                .padding(vertical = 2.dp)
+                                .testTag("habit_advanced_options_toggle"),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "More Options",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Note, category, colour and lifetime goal",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Icon(
+                                imageVector = if (showAdvancedOptions) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                contentDescription = if (showAdvancedOptions) "Collapse more options" else "Expand more options"
+                            )
+                        }
+
+                        if (showAdvancedOptions) {
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                            )
 
                             OutlinedTextField(
                                 value = description,
@@ -1672,6 +1629,11 @@ fun CreateEditHabitScreen(
                             val cleanName = effectiveActivityTitle.trim()
                             if (cleanName.isEmpty()) {
                                 validationError = "Please describe what you would like to do."
+                                return@Button
+                            }
+                            if (scheduleKind == ScheduleKind.SELECTED_WEEKDAYS && weekdaysMask == 0) {
+                                validationError = "Choose at least one day for this habit, or pick Every day."
+                                scheduleExpanded = true
                                 return@Button
                             }
                             if (cleanName.trimEnd('.', '!', ' ').lowercase() in BARE_ACTION_WORDS) {
