@@ -46,6 +46,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.material.icons.filled.Unarchive
+import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Park
 import androidx.compose.material3.AlertDialog
@@ -699,106 +705,8 @@ fun HabitDetailScreen(
                             }
                         }
 
-                        if (!habit.lifecycleState.isTerminal && selectedLocalDate != todayStr) {
-                            Text(
-                                text = "A rest day can only be taken today.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.testTag("detail_rest_day_past_info")
-                            )
-                        }
-                    }
-                }
-            }
-
-            // SECTION B: Today's Progress & Immediate Primary Actions
-            item {
-                val activeBand = summary?.activeProgressBand ?: ProgressBand.ZERO
-                val isWeekly = habit.targetPeriod == TargetPeriod.WEEK
-                val currentUnits = summary?.activeTotalUnits ?: BigInteger.ZERO
-                val targetUnits = summary?.activeTargetUnits
-                    ?: BigInteger.valueOf((habit.targetValue ?: 1).coerceAtLeast(1).toLong())
-                val pct = summary?.activePercentage ?: 0
-                val rawUnit = activeVersion?.unitCode ?: habit.unitCode
-                val ratioDisplay = if (rawUnit != null && (UnitFormatter.extractScale(rawUnit) > 0 || UnitFormatter.isCurrencyUnit(rawUnit))) {
-                    UnitFormatter.formatProgressRatioBig(currentUnits, targetUnits, rawUnit)
-                } else {
-                    val unitLabel = rawUnit?.let { " ${UnitFormatter.cleanUnitCode(it)}" } ?: ""
-                    "$currentUnits / $targetUnits$unitLabel"
-                }
-
-                Card(
-                    shape = DayseedShapes.Card,
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("habit_detail_section_b")
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        FlowRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text(
-                                text = if (isWeekly) "Weekly Progress" else "Today's Progress",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            DayseedStatusPill(
-                                text = activeBand.label,
-                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f),
-                                modifier = Modifier
-                                    .semantics { contentDescription = activeBand.spokenDescription() }
-                                    .testTag("detail_progress_band_badge")
-                            )
-                        }
-
-                        val progressLabel = if (isWeekly && !summary?.weekStartLocalDate.isNullOrBlank()) {
-                            "This week (${friendlyDateRange(summary?.weekStartLocalDate.orEmpty(), summary?.weekEndLocalDate.orEmpty())}): $ratioDisplay ($pct%)"
-                        } else {
-                            "Today: $ratioDisplay ($pct%)"
-                        }
-                        Text(
-                            text = progressLabel,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.testTag("detail_progress_summary_text")
-                        )
-
-                        ProgressBarWithOverflow(
-                            fraction = pct / 100f,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        Text(
-                            text = activeBand.encouragementQuote,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.testTag("detail_encouragement_quote")
-                        )
-                        Text(
-                            text = activeBand.motivationQuote,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontStyle = FontStyle.Italic,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.testTag("detail_motivation_quote")
-                        )
-
-                        // Immediately discoverable Primary Actions
+                        // Rest-day controls moved here from the removed Today's Progress card (today only).
                         if (!habit.lifecycleState.isTerminal) {
-                            DayseedPrimaryButton(
-                                text = if (selectedLocalDate == todayStr) "Add progress" else "Add progress for ${friendlyDate(selectedLocalDate, today)}",
-                                onClick = { onOpenRecordSession(habitId, selectedLocalDate, null) },
-                                icon = Icons.Default.Add,
-                                modifier = Modifier.fillMaxWidth().testTag("detail_record_session_btn")
-                            )
-
                             if (selectedLocalDate == todayStr) {
                                 val hasRestDayToday = exceptionOnSelectedDate?.exceptionKind == HabitDateExceptionKind.REST_DAY ||
                                     summary?.hasRestDayToday == true
@@ -859,28 +767,6 @@ fun HabitDetailScreen(
                     borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.32f),
                     modifier = Modifier.testTag("habit_detail_section_e")
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Streaks of 7+ active days remain permanent trees in your Grove forever.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        OutlinedButton(
-                            onClick = { onOpenLivingGrove(habitId) },
-                            modifier = Modifier
-                                .heightIn(min = 48.dp)
-                                .testTag("detail_open_grove_btn")
-                        ) {
-                            Text("Open Grove")
-                        }
-                    }
-
                     if (unacknowledgedDormantRun != null) {
                         DormantTransitionBanner(
                             run = unacknowledgedDormantRun,
@@ -891,132 +777,29 @@ fun HabitDetailScreen(
                         )
                     }
 
-                    HabitBranchCanvas(
-                        habitName = habit.name,
-                        activeRun = activeRun,
-                        groveRuns = qualifiedGroveTrees,
-                        reducedMotion = reducedMotion
-                    )
-
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        val activeSpan = activeRun?.elapsedActiveSpanCount ?: 0
+                    // Only this habit's current streak; the permanent trees and history live on the Grove screen.
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
                             text = if (activeRun != null) {
-                                "Active streak: $activeCount $unitWord ($activeSpan active days)"
+                                "$activeCount-${if (habit.targetPeriod == TargetPeriod.WEEK) "week" else "day"} streak"
                             } else {
-                                "No active streak run right now — log today to sprout a new sapling."
+                                "No active streak right now"
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.testTag("detail_active_streak_text")
+                            modifier = Modifier.weight(1f).testTag("detail_active_streak_text")
                         )
-                        if (activeRun != null) {
-                            val stateText = if (activeRun.qualifiedForGrove) {
-                                "Growing Grove Tree (7+ active days reached)"
-                            } else {
-                                "Active Sapling (${7 - activeRun.elapsedActiveSpanCount.coerceAtMost(7)} more active days to become a permanent Grove tree)"
-                            }
-                            Text(
-                                text = "Started ${friendlyDate(activeRun.startLocalDate, today)} • $stateText",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    // Permanent Grove Trees (>= 7 active span days)
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("detail_grove_trees_section"),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = "Permanent Grove Trees (${qualifiedGroveTrees.size})",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        if (qualifiedGroveTrees.isEmpty()) {
-                            Text(
-                                text = "No permanent Grove trees for this habit yet (requires 7+ active span days).",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        } else {
-                            for (tree in qualifiedGroveTrees) {
-                                val treeUnit = if (tree.streakUnit == StreakUnit.WEEKS) "weeks" else "days"
-                                Surface(
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .testTag("detail_grove_tree_${tree.runId}")
-                                ) {
-                                    Column(modifier = Modifier.padding(10.dp)) {
-                                        Text(
-                                            text = if (tree.isActive) {
-                                                "🌳 Growing Tree • ${tree.completedStreakCount} $treeUnit (${tree.elapsedActiveSpanCount} active days)"
-                                            } else {
-                                                "🌲 Dormant Tree • ${tree.completedStreakCount} $treeUnit (${tree.elapsedActiveSpanCount} active days)"
-                                            },
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                        Text(
-                                            text = "${friendlyDate(tree.startLocalDate, today)} → ${friendlyDate(tree.endLocalDate, today)} • ${formatTerminalReasonLabel(tree.terminalReason)}",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Earlier Short Runs (< 7 active span days)
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("detail_short_runs_section"),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = "Earlier Short Runs (< 7 days — not Grove trees) (${shortRuns.size})",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        if (shortRuns.isEmpty()) {
-                            Text(
-                                text = "No earlier short runs recorded.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        } else {
-                            for (shortRun in shortRuns) {
-                                val srUnit = if (shortRun.streakUnit == StreakUnit.WEEKS) "weeks" else "days"
-                                Surface(
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .testTag("detail_short_run_${shortRun.runId}")
-                                ) {
-                                    Column(modifier = Modifier.padding(10.dp)) {
-                                        Text(
-                                            text = "🌱 Short Run • ${shortRun.completedStreakCount} $srUnit (${shortRun.elapsedActiveSpanCount} active days)",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                        Text(
-                                            text = "${friendlyDate(shortRun.startLocalDate, today)} → ${friendlyDate(shortRun.endLocalDate, today)} • ${formatTerminalReasonLabel(shortRun.terminalReason)}",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                            }
+                        OutlinedButton(
+                            onClick = { onOpenLivingGrove(habitId) },
+                            modifier = Modifier
+                                .heightIn(min = 48.dp)
+                                .testTag("detail_open_grove_btn")
+                        ) {
+                            Text("Open Grove")
                         }
                     }
                 }
@@ -1134,58 +917,50 @@ fun HabitDetailScreen(
                             }
                         }
 
-                        // End-date editor toggle & remove end date button
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            OutlinedButton(
+                        if (habit.scheduledEndLocalDate != null || habit.lifecycleState.isEndedOrCompleted) {
+                            TextButton(
                                 onClick = {
-                                    editEndDateError = null
-                                    showEndDateEditor = !showEndDateEditor
+                                    viewModel.clearHabitEndDate(habit.habitId) { showEndDateEditor = false }
                                 },
-                                modifier = Modifier
-                                    .heightIn(min = 48.dp)
-                                    .testTag("detail_edit_end_date_btn")
+                                modifier = Modifier.heightIn(min = 48.dp).testTag("detail_remove_end_date_btn")
+                            ) { Text("Return to ongoing") }
+                        }
+
+                        // Icons for the actions that are clear as icons; words only where words are needed (Finish).
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                            if (habit.lifecycleState == HabitLifecycleState.PAUSED) {
+                                LifecycleIconAction(Icons.Default.PlayArrow, "Resume", "detail_pause_resume_btn") {
+                                    viewModel.updateHabitLifecycle(habit.habitId, HabitLifecycleState.ACTIVE)
+                                }
+                            } else if (habit.lifecycleState == HabitLifecycleState.ACTIVE) {
+                                LifecycleIconAction(Icons.Default.Pause, "Pause", "detail_pause_resume_btn") {
+                                    viewModel.updateHabitLifecycle(habit.habitId, HabitLifecycleState.PAUSED)
+                                }
+                            }
+                            LifecycleIconAction(
+                                Icons.Default.Event,
+                                if (habit.scheduledEndLocalDate != null) "Change end" else "End date",
+                                "detail_edit_end_date_btn"
                             ) {
-                                Text(
-                                    when {
-                                        showEndDateEditor -> "Close end-date editor"
-                                        habit.scheduledEndLocalDate != null -> "Change end date"
-                                        else -> "Set end date"
-                                    }
-                                )
+                                editEndDateError = null
+                                showEndDateEditor = !showEndDateEditor
                             }
-
-                            if (habit.scheduledEndLocalDate != null || habit.lifecycleState.isEndedOrCompleted) {
-                                OutlinedButton(
-                                    onClick = {
-                                        viewModel.clearHabitEndDate(habit.habitId) {
-                                            showEndDateEditor = false
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .heightIn(min = 48.dp)
-                                        .testTag("detail_remove_end_date_btn")
-                                ) {
-                                    Text("Return to ongoing")
+                            if (habit.lifecycleState == HabitLifecycleState.ARCHIVED) {
+                                LifecycleIconAction(Icons.Default.Unarchive, "Unarchive", "detail_archive_habit_btn") {
+                                    viewModel.updateHabitLifecycle(habit.habitId, HabitLifecycleState.ACTIVE)
+                                }
+                            } else {
+                                LifecycleIconAction(Icons.Default.Archive, "Archive", "detail_archive_habit_btn") {
+                                    viewModel.updateHabitLifecycle(habit.habitId, HabitLifecycleState.ARCHIVED)
                                 }
                             }
+                        }
 
-                            if (!habit.lifecycleState.isEndedOrCompleted) {
-                                Button(
-                                    onClick = { showEndHabitConfirmDialog = true },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                    ),
-                                    modifier = Modifier
-                                        .heightIn(min = 48.dp)
-                                        .testTag("detail_end_habit_btn")
-                                ) {
-                                    Text("Finish habit…")
-                                }
-                            }
+                        if (!habit.lifecycleState.isEndedOrCompleted) {
+                            OutlinedButton(
+                                onClick = { showEndHabitConfirmDialog = true },
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("detail_end_habit_btn")
+                            ) { Text("Finish habit…") }
                         }
 
                         if (showEndDateEditor) {
@@ -1393,59 +1168,6 @@ fun HabitDetailScreen(
                             }
                         }
 
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            if (habit.lifecycleState == HabitLifecycleState.PAUSED) {
-                                OutlinedButton(
-                                    onClick = {
-                                        viewModel.updateHabitLifecycle(habit.habitId, HabitLifecycleState.ACTIVE)
-                                    },
-                                    modifier = Modifier
-                                        .heightIn(min = 48.dp)
-                                        .testTag("detail_pause_resume_btn")
-                                ) {
-                                    Text("Resume habit")
-                                }
-                            } else if (habit.lifecycleState == HabitLifecycleState.ACTIVE) {
-                                OutlinedButton(
-                                    onClick = {
-                                        viewModel.updateHabitLifecycle(habit.habitId, HabitLifecycleState.PAUSED)
-                                    },
-                                    modifier = Modifier
-                                        .heightIn(min = 48.dp)
-                                        .testTag("detail_pause_resume_btn")
-                                ) {
-                                    Text("Pause habit")
-                                }
-                            }
-
-                            if (habit.lifecycleState == HabitLifecycleState.ARCHIVED) {
-                                OutlinedButton(
-                                    onClick = {
-                                        viewModel.updateHabitLifecycle(habit.habitId, HabitLifecycleState.ACTIVE)
-                                    },
-                                    modifier = Modifier
-                                        .heightIn(min = 48.dp)
-                                        .testTag("detail_archive_habit_btn")
-                                ) {
-                                    Text("Unarchive habit")
-                                }
-                            } else {
-                                OutlinedButton(
-                                    onClick = {
-                                        viewModel.updateHabitLifecycle(habit.habitId, HabitLifecycleState.ARCHIVED)
-                                    },
-                                    modifier = Modifier
-                                        .heightIn(min = 48.dp)
-                                        .testTag("detail_archive_habit_btn")
-                                ) {
-                                    Text("Archive habit")
-                                }
-                            }
-
-                        }
                     }
                 }
             }
@@ -1626,6 +1348,33 @@ private fun MetadataBadge(text: String) {
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        )
+    }
+}
+
+/** An icon with a one-word caption, at least 56 dp wide and tall, for the Lifecycle actions. */
+@Composable
+private fun LifecycleIconAction(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    tag: String,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(role = Role.Button, onClick = onClick)
+            .defaultMinSize(minWidth = 72.dp, minHeight = 56.dp)
+            .padding(horizontal = 8.dp, vertical = 6.dp)
+            .testTag(tag)
+    ) {
+        Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
         )
     }
 }

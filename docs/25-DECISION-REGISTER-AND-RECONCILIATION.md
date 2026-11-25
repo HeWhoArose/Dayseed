@@ -675,6 +675,12 @@ The decision log and register now contain 241 unique decision IDs through D-247 
 
 The decision log and register now contain 242 unique decision IDs through D-248 (gaps preserved).
 
+## D-249 — Habit Detail simplified, Record session reshaped, notes go to the Journal (2026-11-26)
+
+| D-249 | Today's Progress card removed from Habit Detail; Grove card reduced to the current streak; Lifecycle uses icon actions; Record session loses the date, the amount field and the note field and shows the summary and entries; the + pop-up's Add a note opens the Journal for today linked to the habit. Full record in `docs/09-DECISION-LOG.md` (D-249). Stage C/D NOT OPEN. |
+
+The decision log and register now contain 243 unique decision IDs through D-249 (gaps preserved).
+
 
 
 

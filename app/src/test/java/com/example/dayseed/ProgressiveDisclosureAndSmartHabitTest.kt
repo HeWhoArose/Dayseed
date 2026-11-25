@@ -724,31 +724,23 @@ class ProgressiveDisclosureAndSmartHabitTest {
     // =========================================================================
 
     @Test
-    fun recordSessionSheet_startsEmptyForNewEntryValidatesInputsAndSupportsEditAndDelete() {
+    fun recordSessionScreen_showsSummaryAndEntries_editsAmountsOnly_andNeverDeletesOnATap() {
         val dbName = "test_record_session_defaults_${System.nanoTime()}.db"
         val repo = newRepository(dbName)
         val vm = newViewModel(repo)
         val today = testClock.todayLocal()
 
-        // Verify pure helper for new vs existing entries across modes
+        // Pure helper: a blank starting value for measured habits (kept for the amount editor)
         assertEquals("", defaultRecordSessionValueText(null, TrackingMode.QUANTITY, TargetPeriod.DAY, "pages", 10))
         assertEquals("", defaultRecordSessionValueText(null, TrackingMode.DURATION, TargetPeriod.DAY, "min", 30))
         assertEquals("1", defaultRecordSessionValueText(null, TrackingMode.COMPLETION_ONLY, TargetPeriod.DAY, null, 1))
 
         val readHabit = Habit(
-            habitId = "h_pages",
-            name = "Read a book",
-            description = "",
-            trackingMode = TrackingMode.QUANTITY,
-            unitCode = "pages",
-            targetPeriod = TargetPeriod.DAY,
-            targetValue = 10,
-            scheduleKind = ScheduleKind.DAILY,
-            colorHex = "#286143"
+            habitId = "h_pages", name = "Read a book", description = "",
+            trackingMode = TrackingMode.QUANTITY, unitCode = "pages", targetPeriod = TargetPeriod.DAY,
+            targetValue = 10, scheduleKind = ScheduleKind.DAILY, colorHex = "#286143"
         )
         repo.saveHabitSync(readHabit, effectiveDateOverride = today)
-
-        // Log 2 pages, 3 pages, 1 page -> existing progress is 6 / 10 pages (60%)
         val (e1, _) = repo.logHabitEntrySync("h_pages", today, 2, "Morning pages")
         val (e2, _) = repo.logHabitEntrySync("h_pages", today, 3, "Lunch break")
         val (e3, _) = repo.logHabitEntrySync("h_pages", today, 1, "Evening page")
@@ -756,111 +748,56 @@ class ProgressiveDisclosureAndSmartHabitTest {
         val controller = Robolectric.buildActivity(ComponentActivity::class.java).setup()
         val activity = controller.get()
         activity.setContent {
-            DayseedTheme {
-                RecordSessionSheet(
-                    viewModel = vm,
-                    habitId = "h_pages",
-                    initialLocalDate = today.toString(),
-                    onNavigateBack = {}
-                )
-            }
+            DayseedTheme { RecordSessionSheet(viewModel = vm, habitId = "h_pages", initialLocalDate = today.toString(), onNavigateBack = {}) }
         }
         pumpActivity(activity, widthDp = 360, heightDp = 1500)
 
-        // 1. New quantity session starts with EMPTY input ("") — never 10!
-        assertEquals(
-            "New quantity session input must start empty",
-            "",
-            getEditableText(activity, "record_session_value_input")
-        )
-        assertFalse(
-            "Save Progress button must be disabled while input is empty",
-            isNodeEnabled(activity, "record_session_save_btn")
-        )
-
+        // 1. Record session: summary of what is recorded today, the entries, and Done. No amount field, no date picker (D-249).
+        assertNull("No amount field until an entry is being edited", findNodeByTagOrNull(activity, "record_session_value_input"))
+        assertNull("No session date picker", findNodeByTagOrNull(activity, "record_session_pick_date_btn"))
+        assertNull("No session note field: notes go to the Journal", findNodeByTagOrNull(activity, "record_session_note_input"))
+        assertNotNull(findNodeByTagOrNull(activity, "record_session_done_btn"))
         val initialTexts = collectAllRenderedTexts(activity)
-        assertTrue(
-            "Resulting daily total must remain '6 / 10 pages (60%)' before user enters a value",
-            initialTexts.any { it.contains("Total: 6 / 10 pages (60%)") }
-        )
-        assertFalse(
-            "Preview must NEVER show '16 / 10 pages (160%)' on open",
-            initialTexts.any { it.contains("16 / 10 pages") || it.contains("160%") }
-        )
+        assertTrue("Record session", initialTexts.any { it == "Record session" })
+        assertTrue("Summary shows today's total", initialTexts.any { it.contains("Total: 6 / 10 pages (60%)") })
+        assertFalse("Never 16 / 10 on open", initialTexts.any { it.contains("16 / 10 pages") || it.contains("160%") })
+        saveScreenshotPng(activity, "03_record_session_summary_and_entries.png", widthDp = 360, heightDp = 1080)
 
-        // Screenshot 4: Add Progress with empty initial input (6 / 10 pages (60%))
-        saveScreenshotPng(activity, "03_record_session_incremental_progress.png", widthDp = 360, heightDp = 1080)
-
-        // 2. Reject zero and negative inputs: Save button remains disabled for "0" and "-3"
-        setTextTag(activity, "record_session_value_input", "0", widthDp = 360, heightDp = 1500)
-        assertFalse("Save Progress must remain disabled when input is 0", isNodeEnabled(activity, "record_session_save_btn"))
-        setTextTag(activity, "record_session_value_input", "-3", widthDp = 360, heightDp = 1500)
-        assertFalse("Save Progress must remain disabled when input is negative", isNodeEnabled(activity, "record_session_save_btn"))
-        // Reject decimal on whole-item 'pages' habit
-        setTextTag(activity, "record_session_value_input", "1.5", widthDp = 360, heightDp = 1500)
-        assertFalse("Save Progress must remain disabled when decimal is entered for whole-item unit 'pages'", isNodeEnabled(activity, "record_session_save_btn"))
-
-        // 3. Enter valid amount "2" -> preview updates to New entry: +2 pages, Resulting daily total: 8 / 10 pages (80%)
-        setTextTag(activity, "record_session_value_input", "2", widthDp = 360, heightDp = 1500)
-        assertTrue("Save Progress must be enabled when valid positive amount '2' is entered", isNodeEnabled(activity, "record_session_save_btn"))
-        val textsAfterTwo = collectAllRenderedTexts(activity)
-        assertTrue(textsAfterTwo.any { it.contains("New entry: +2 pages") })
-        assertTrue(textsAfterTwo.any { it.contains("Total: 8 / 10 pages (80%)") })
-
-        // Verify across 320dp, 360dp, and 411dp widths
-        for (widthDp in listOf(320, 360, 411)) {
-            pumpActivity(activity, widthDp = widthDp, heightDp = 1500)
-            val saveBounds = findNodeByTag(activity, "record_session_save_btn").boundsInRoot
-            val cancelBounds = findNodeByTag(activity, "record_session_cancel_btn").boundsInRoot
-            assertTrue("Save and Cancel buttons must not overlap at ${widthDp}dp", cancelBounds.right <= saveBounds.left + 1f)
-        }
-
-        // Screenshot 5: Add Progress after entering a value (2 -> 8 / 10 pages (80%))
-        saveScreenshotPng(activity, "06_record_session_after_entering_value.png", widthDp = 360, heightDp = 1080)
-
-        // 4. Tap Edit on the 3-page entry (e2) -> pre-populates original value "3" and note "Lunch break"
+        // 2. Tap edit on the 3-page entry: the amount editor appears with its original value, no note field
         clickTag(activity, "record_session_edit_entry_${e2.entryId}", widthDp = 360, heightDp = 1500)
-        assertEquals("Editing existing entry must pre-populate its original value '3'", "3", getEditableText(activity, "record_session_value_input"))
-        assertEquals("Lunch break", getEditableText(activity, "record_session_note_input"))
-        val textsWhileEditingOriginal = collectAllRenderedTexts(activity)
-        assertTrue(textsWhileEditingOriginal.any { it.contains("Edit Progress Entry") })
-        assertTrue(textsWhileEditingOriginal.any { it.contains("Updating entry to: 3 pages") })
-        assertTrue(textsWhileEditingOriginal.any { it.contains("Total: 6 / 10 pages (60%)") })
+        assertEquals("3", getEditableText(activity, "record_session_value_input"))
+        assertNull(findNodeByTagOrNull(activity, "record_session_note_input"))
+        assertTrue(collectAllRenderedTexts(activity).any { it == "Edit amount" })
 
-        // Screenshot 6: Existing-entry editing with original value populated
-        saveScreenshotPng(activity, "07_record_session_edit_existing_entry.png", widthDp = 360, heightDp = 1080)
+        // 3. Validation: zero, negative and decimals on a whole-number unit cannot be saved
+        setTextTag(activity, "record_session_value_input", "0", widthDp = 360, heightDp = 1500)
+        assertFalse(isNodeEnabled(activity, "record_session_save_btn"))
+        setTextTag(activity, "record_session_value_input", "-3", widthDp = 360, heightDp = 1500)
+        assertFalse(isNodeEnabled(activity, "record_session_save_btn"))
+        setTextTag(activity, "record_session_value_input", "1.5", widthDp = 360, heightDp = 1500)
+        assertFalse(isNodeEnabled(activity, "record_session_save_btn"))
 
-        // Delete the 1-page entry (e3) -> total becomes 5 / 10 pages (50%)
+        // 4. A valid amount saves and updates that entry without duplicating it; its note is kept
+        setTextTag(activity, "record_session_value_input", "5", widthDp = 360, heightDp = 1500)
+        assertTrue(isNodeEnabled(activity, "record_session_save_btn"))
+        clickTag(activity, "record_session_save_btn", widthDp = 360, heightDp = 1500)
+        repo.habitEntries.awaitMatch { list -> list.firstOrNull { it.entryId == e2.entryId }?.valueUnits == 5 }
+        val afterEdit = repo.habitEntries.value.filter { it.habitId == "h_pages" && it.localDate == today.toString() }
+        assertEquals("Editing must not duplicate", 3, afterEdit.size)
+        assertEquals(8, afterEdit.sumOf { it.valueUnits })
+        assertEquals("Lunch break", afterEdit.first { it.entryId == e2.entryId }.entryNote)
+
+        // 5. Deleting asks first: a tap on the trash icon alone deletes nothing (the pop-up window is not driven here)
+        pumpActivity(activity, widthDp = 360, heightDp = 1500, recompose = true)
         clickTag(activity, "record_session_delete_entry_${e3.entryId}", widthDp = 360, heightDp = 1500)
-        // D-248: tapping the trash icon only asks; nothing is deleted until the person confirms in the pop-up
-        // (a separate window the test harness cannot drive, so the confirmed action is invoked directly).
         assertTrue("A tap on delete alone must not delete", repo.habitEntries.value.any { it.entryId == e3.entryId })
         vm.deleteHabitEntry(e3.entryId)
         repo.habitEntries.awaitMatch { list -> list.none { it.entryId == e3.entryId } }
-        pumpActivity(activity, widthDp = 360, heightDp = 1500, recompose = true)
+        assertNotNull(afterEdit.find { it.entryId == e1.entryId })
 
-        // Update the 3-page entry (e2) to 5 pages -> total becomes 2 + 5 = 7 / 10 pages (70%) without duplicating e2
-        clickTag(activity, "record_session_edit_entry_${e2.entryId}", widthDp = 360, heightDp = 1500)
-        setTextTag(activity, "record_session_value_input", "5", widthDp = 360, heightDp = 1500)
-        clickTag(activity, "record_session_save_btn", widthDp = 360, heightDp = 1500)
-        repo.habitEntries.awaitMatch { list -> list.firstOrNull { it.entryId == e2.entryId }?.valueUnits == 5 }
-
-        val entriesAfterEdit = repo.habitEntries.value.filter { it.habitId == "h_pages" && it.localDate == today.toString() }
-        assertEquals("Editing an entry must not duplicate it", 2, entriesAfterEdit.size)
-        assertEquals(7, entriesAfterEdit.sumOf { it.valueUnits })
-        assertNotNull(entriesAfterEdit.find { it.entryId == e1.entryId })
-        assertNotNull(entriesAfterEdit.find { it.entryId == e2.entryId })
-
-        // Do not destroy the activity here: an explicit destroy cancels the shared Compose frame
-        // clock, so every later test in this class would read stale, never-recomposed UI.
-        // Robolectric tears the activity down at the end of the test.
         controller.pause().stop()
         repo.dbHelper.close()
     }
-
-    // =========================================================================
-    // 5. Fractional Measurements, Minor-Unit Currency, Accumulation & Backup Round-Trip
-    // =========================================================================
 
     @Test
     fun fractionalMeasurementsAndMinorCurrency_accumulateWithoutPrecisionLossAndRoundTripBackup() {
@@ -952,13 +889,11 @@ class ProgressiveDisclosureAndSmartHabitTest {
                 sheetTextsInitial.none { it.contains("@scale2") }
         )
 
-        // Enter "0.75" in the input -> preview shows New entry: +0.75 litres, Resulting daily total: 1.5 / 1.5 litres (100%)
-        setTextTag(activity, "record_session_value_input", "0.75", widthDp = 360, heightDp = 1100)
-        val sheetTextsWithEntry = collectAllRenderedTexts(activity)
-        assertTrue(sheetTextsWithEntry.any { it.contains("New entry: +0.75 litres") })
-        assertTrue(sheetTextsWithEntry.any { it.contains("Total: 1.5 / 1.5 litres (100%)") })
+        // The summary shows the day's fractional total exactly: 0.5 + 0.25 = 0.75 of 1.5 litres (D-249: amounts are
+        // added from the + pop-up, so this screen has no amount field until an entry is edited).
+        assertTrue(sheetTextsInitial.any { it.contains("Total: 0.75 / 1.5 litres (50%)") })
 
-        // Screenshot 7: Fractional measurement habit (1.5 litres with 0.75 existing + 0.75 new entry)
+        // Screenshot 7: Fractional measurement habit (1.5 litres with 0.75 logged)
         saveScreenshotPng(activity, "08_fractional_measurement_habit_progress.png", widthDp = 360, heightDp = 980)
 
         // Verify editing existing 0.25 litres entry pre-populates "0.25"

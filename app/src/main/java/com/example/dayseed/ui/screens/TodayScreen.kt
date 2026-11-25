@@ -748,6 +748,11 @@ fun TodayScreen(
                     onOpenRecord = {
                         viewModel.openRecordSession(habit.habitId, today, null)
                         quickLogHabitId = null
+                    },
+                    // A note is a Journal reflection for today, linked to this habit (D-249).
+                    onAddNote = {
+                        viewModel.openJournalEditor(entry = null, forDate = today, linkedHabitId = habit.habitId)
+                        quickLogHabitId = null
                     }
                 )
             }

@@ -371,7 +371,8 @@ class UiUxRedesignVerificationTest {
         }
         layoutAndIdle(detailActivity, widthDp = 360, heightDp = 1800)
 
-        assertNotNull("Add Progress CTA must be immediately visible in Today's Progress card", findNodeByTagOrNull(detailActivity, "detail_record_session_btn"))
+        assertNull("Today's Progress lives on the Today screen only (D-249)", findNodeByTagOrNull(detailActivity, "habit_detail_section_b"))
+        assertNotNull("Recent days leads the page", findNodeByTagOrNull(detailActivity, "habit_detail_section_c"))
         assertNotNull("Edit lives once, in the header", findNodeByTagOrNull(detailActivity, "detail_edit_habit_btn"))
         assertNull("No second Edit button inside the progress card (D-240)", findNodeByTagOrNull(detailActivity, "detail_primary_edit_btn"))
         assertNull("No third Edit button inside Lifecycle (D-240)", findNodeByTagOrNull(detailActivity, "detail_lifecycle_edit_btn"))
@@ -390,10 +391,15 @@ class UiUxRedesignVerificationTest {
         assertNotNull("Stepper must appear for a set time", findNodeByTagOrNull(detailActivity, "detail_duration_plus_btn"))
         assertNotNull("Typed number field must remain", findNodeByTagOrNull(detailActivity, "detail_duration_value_input"))
 
-        // Expand Streak & Living Grove and verify inner content appears
+        // Expand Streak & Living Grove: only this habit's streak and the way into the Grove (D-249)
         assertNull("Streak details should be collapsed by default", findNodeByTagOrNull(detailActivity, "detail_open_grove_btn"))
         clickTag(detailActivity, "detail_toggle_streak_grove", widthDp = 360, heightDp = 2000)
         assertNotNull("Streak details should appear when expanded", findNodeByTagOrNull(detailActivity, "detail_open_grove_btn"))
+        assertNotNull("Current streak line", findNodeByTagOrNull(detailActivity, "detail_active_streak_text"))
+        assertNull("Permanent trees belong to the Grove screen", findNodeByTagOrNull(detailActivity, "detail_grove_trees_section"))
+        assertNotNull("Lifecycle icons: pause", findNodeByTagOrNull(detailActivity, "detail_pause_resume_btn"))
+        assertNotNull("Lifecycle icons: archive", findNodeByTagOrNull(detailActivity, "detail_archive_habit_btn"))
+        assertNotNull("Lifecycle icons: end date", findNodeByTagOrNull(detailActivity, "detail_edit_end_date_btn"))
 
         detailController.pause().stop()
 
@@ -411,7 +417,8 @@ class UiUxRedesignVerificationTest {
             }
         }
         layoutAndIdle(recordActivity, widthDp = 360, heightDp = 1200)
-        assertNotNull("Choose date button for Material DatePickerDialog must render", findNodeByTagOrNull(recordActivity, "record_session_pick_date_btn"))
+        assertNull("The session date is fixed to the day opened (D-249)", findNodeByTagOrNull(recordActivity, "record_session_pick_date_btn"))
+        assertNotNull("Summary and Done", findNodeByTagOrNull(recordActivity, "record_session_done_btn"))
 
         recordController.pause().stop()
         repo.dbHelper.close()

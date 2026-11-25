@@ -272,6 +272,17 @@ class DayseedAsyncMutationThreadingTest {
         assertEquals(1, repository.loadHabitsSync().size)
     }
 
+    private fun driveGateUntil(gate: GateDispatcher, timeoutMs: Long = 10_000, done: () -> Boolean) {
+        val deadline = System.nanoTime() + timeoutMs * 1_000_000
+        while (!done()) {
+            gate.releaseAll()
+            mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+            if (System.nanoTime() > deadline) break
+            Thread.sleep(5)
+        }
+        assertTrue("the gated work must finish", done())
+    }
+
     @Test
     fun saveHabitWrapperDropsDuplicateSubmissionsWhileFirstIsInFlight() {
         val gate = GateDispatcher()
@@ -285,13 +296,10 @@ class DayseedAsyncMutationThreadingTest {
         viewModel.saveHabit(habit)   // duplicate tap while first is in flight -> dropped
         assertEquals("duplicate submission must not enqueue a second save", 1, gate.pendingCount)
 
-        gate.releaseAll()
-        // Drive the gated save to completion step by step (event-driven):
-        // 1. released above, the gate body runs until repository.saveHabit
-        //    suspends on its real Dispatchers.IO hop;
-        assertTrue("IO hop must re-dispatch its continuation on the gate", gate.awaitPending())
-        // 2. released again, the body finishes (closes the editor, sets the message).
-        gate.releaseAll()
+        // Drive the gated save to completion. The IO hop may re-dispatch its continuation on the gate before or after
+        // a release drains the queue, so keep releasing until the save has finished instead of waiting for a pending
+        // task that may already have been consumed (that wait was a rare race).
+        driveGateUntil(gate) { viewModel.userMessage.value == "Habit saved (effective 2026-03-15)" }
         mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()   // launch body's finally clears the guard
         assertEquals("Habit saved (effective 2026-03-15)", viewModel.userMessage.value)
         assertFalse("save must complete and clear the in-flight guard", viewModel.isSaveInFlight.value)
@@ -301,9 +309,7 @@ class DayseedAsyncMutationThreadingTest {
         viewModel.saveHabit(habit.copy(name = "Renamed"))
         assertTrue("new save accepted after the first completes", viewModel.isSaveInFlight.value)
         mainDispatcherRule.dispatcher.scheduler.runCurrent()
-        gate.releaseAll()
-        assertTrue("rename IO hop must re-dispatch on the gate", gate.awaitPending())
-        gate.releaseAll()
+        driveGateUntil(gate) { !viewModel.isSaveInFlight.value }
         mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
         assertEquals("Renamed", repository.loadHabitsSync().single { it.habitId == "h_dup_save" }.name)
         assertFalse(viewModel.isSaveInFlight.value)

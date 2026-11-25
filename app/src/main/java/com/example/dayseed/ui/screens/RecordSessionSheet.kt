@@ -430,7 +430,7 @@ fun RecordSessionSheet(
                     Spacer(modifier = Modifier.width(6.dp))
                     Column {
                         Text(
-                            text = if (existingEntry != null) "Edit Progress Entry" else "Add Progress",
+                            text = if (existingEntry != null) "Edit amount" else "Record session",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground
@@ -444,95 +444,11 @@ fun RecordSessionSheet(
                 }
             }
 
-            // 1. Date Selection Strip (Today or recent past dates; future dates blocked per D-193)
+            // The session date is no longer chosen here (D-249): this screen always shows the day it was opened for
+            // (today when it comes from the + pop-up). Amounts are added only through that pop-up.
+            // 2. Amount editor: only while changing an existing entry
             item {
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        FlowRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Column {
-                                Text(
-                                    text = "Session Date",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "Selected: ${friendlyDate(selectedDate, today)}" + if (selectedDate == today) " (Today)" else "",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.testTag("record_session_selected_date")
-                                )
-                            }
-                            OutlinedButton(
-                                onClick = { showDatePickerDialog = true },
-                                modifier = Modifier
-                                    .heightIn(min = 48.dp)
-                                    .testTag("record_session_pick_date_btn"),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.CalendarMonth,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Choose date")
-                            }
-                        }
-
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            items(recentDates, key = { it.toString() }) { d ->
-                                val dStr = d.toString()
-                                val isSelected = dStr == selectedDateStr
-                                FilterChip(
-                                    selected = isSelected,
-                                    onClick = {
-                                        selectedDateStr = dStr
-                                        activeEditingEntryId = null
-                                        valueError = null
-                                    },
-                                    label = {
-                                        val labelText = if (d == today) {
-                                            "Today (${d.format(DateTimeFormatter.ofPattern("MMM d"))})"
-                                        } else {
-                                            d.format(DateTimeFormatter.ofPattern("EEE, MMM d"))
-                                        }
-                                        Text(labelText)
-                                    },
-                                    modifier = Modifier.testTag("record_session_date_chip_$dStr")
-                                )
-                            }
-                        }
-
-                        if (dateValidationError != null) {
-                            Text(
-                                text = dateValidationError,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.testTag("record_session_date_error")
-                            )
-                        }
-                    }
-                }
-            }
-
-            // 2. Value Entry & Quick Increment Chips
-            item {
-                Card(
+                if (existingEntry != null) Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
@@ -677,17 +593,6 @@ fun RecordSessionSheet(
                             )
                         }
 
-                        OutlinedTextField(
-                            value = entryNote,
-                            onValueChange = { entryNote = it },
-                            label = { Text("Session note (optional)") },
-                            placeholder = { Text("Saved with this session only — e.g. what went well") },
-                            maxLines = 3,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .bringIntoViewOnFocus()
-                                .testTag("record_session_note_input")
-                        )
                     }
                 }
             }
@@ -743,7 +648,7 @@ fun RecordSessionSheet(
                             )
                         }
 
-                        Text(
+                        if (existingEntry != null) Text(
                             text = newEntrySummaryText,
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Medium,
@@ -910,7 +815,12 @@ fun RecordSessionSheet(
 
             // 5. Save / Cancel Buttons
             item {
-                Row(
+                if (existingEntry == null) {
+                    Button(
+                        onClick = onNavigateBack,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("record_session_done_btn")
+                    ) { Text("Done") }
+                } else Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {

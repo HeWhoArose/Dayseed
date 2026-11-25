@@ -548,6 +548,9 @@ class OwnerReportedDefectsRemediationTest {
             createdAtUtcMs = testClock.nowUtcMs()
         )
         repo.saveHabitSync(quantityHabit, effectiveDateOverride = today)
+        // Amounts are added from the + pop-up now (D-249); this screen edits an existing entry's amount.
+        repo.logHabitEntrySync(quantityHabit.habitId, today, 1, "Felt refreshed after afternoon walk")
+        val seeded = repo.habitEntries.value.first { it.habitId == quantityHabit.habitId }
 
         val controller = Robolectric.buildActivity(ComponentActivity::class.java).setup()
         val activity = controller.get()
@@ -558,6 +561,7 @@ class OwnerReportedDefectsRemediationTest {
                     viewModel = vm,
                     habitId = quantityHabit.habitId,
                     initialLocalDate = today.toString(),
+                    entryId = seeded.entryId,
                     onNavigateBack = {}
                 )
             }
@@ -565,7 +569,6 @@ class OwnerReportedDefectsRemediationTest {
         pumpActivity(activity, widthDp = 360, heightDp = 1200)
 
         setTextTag(activity, "record_session_value_input", "3", widthDp = 360, heightDp = 1200)
-        setTextTag(activity, "record_session_note_input", "Felt refreshed after afternoon walk", widthDp = 360, heightDp = 1200)
         clickTag(activity, "record_session_save_btn", widthDp = 360, heightDp = 1200)
 
         repo.habitEntries.awaitMatch { list ->

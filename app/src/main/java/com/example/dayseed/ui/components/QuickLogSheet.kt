@@ -47,7 +47,8 @@ fun QuickLogSheetContent(
     onLogAmount: (units: Int) -> Unit,
     modifier: Modifier = Modifier,
     onTakeRestDay: (() -> Unit)? = null,
-    onOpenRecord: (() -> Unit)? = null
+    onOpenRecord: (() -> Unit)? = null,
+    onAddNote: (() -> Unit)? = null
 ) {
     var text by remember { mutableStateOf("") }
     val parsed = remember(text, progress.unitLabel) { UnitFormatter.parseUserValueToStoredUnits(text, progress.unitLabel) }
@@ -166,16 +167,21 @@ fun QuickLogSheetContent(
             modifier = Modifier.fillMaxWidth().testTag("quick_log_save_btn")
         )
 
-        if (onTakeRestDay != null || onOpenRecord != null) {
+        if (onTakeRestDay != null || onOpenRecord != null || onAddNote != null) {
             Column {
                 if (onTakeRestDay != null) {
                     TextButton(onClick = onTakeRestDay, modifier = Modifier.testTag("quick_log_rest_day_btn")) {
                         Text("Take a rest day (keeps your streak)")
                     }
                 }
+                if (onAddNote != null) {
+                    TextButton(onClick = onAddNote, modifier = Modifier.testTag("quick_log_add_note_btn")) {
+                        Text("Add a note")
+                    }
+                }
                 if (onOpenRecord != null) {
                     TextButton(onClick = onOpenRecord, modifier = Modifier.testTag("quick_log_open_record_btn")) {
-                        Text("Open Add Progress (note, edit entries)")
+                        Text("Today's entries")
                     }
                 }
             }
