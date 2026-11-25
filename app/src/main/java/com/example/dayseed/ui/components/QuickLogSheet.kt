@@ -175,7 +175,7 @@ fun QuickLogSheetContent(
                 }
                 if (onOpenRecord != null) {
                     TextButton(onClick = onOpenRecord, modifier = Modifier.testTag("quick_log_open_record_btn")) {
-                        Text("Add a note or edit entries")
+                        Text("Open Add Progress (note, edit entries)")
                     }
                 }
             }

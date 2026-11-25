@@ -550,4 +550,60 @@ class UiUxRedesignVerificationTest {
         controller.pause().stop()
         repo.dbHelper.close()
     }
+
+    private fun setTextTag(activity: ComponentActivity, tag: String, text: String, widthDp: Int = 360, heightDp: Int = 1600) {
+        layoutAndIdle(activity, widthDp, heightDp, recompose = false)
+        val node = findNodeByTagOrNull(activity, tag)
+        assertNotNull("Expected node with tag '$tag'", node)
+        node!!.config.getOrNull(SemanticsActions.SetText)!!.action!!.invoke(androidx.compose.ui.text.AnnotatedString(text))
+        layoutAndIdle(activity, widthDp, heightDp, recompose = false)
+        layoutAndIdle(activity, widthDp, heightDp + 1, recompose = false)
+    }
+
+    /** What "Here's what we understood" shows must be exactly what gets saved, and Today must then offer the right control. */
+    @Test
+    fun understoodSummaryMatchesTheSavedHabit_andTodayOffersThePlusForAmountHabits() {
+        val repo = newRepository("test_understood_${System.nanoTime()}.db")
+        val vm = newViewModel(repo)
+        val controller = Robolectric.buildActivity(ComponentActivity::class.java).create().start().resume().visible()
+        val activity = controller.get()
+        activity.setContent { DayseedTheme(themeMode = ThemeModeOption.LIGHT, reducedMotion = true) { DayseedApp(viewModel = vm) } }
+        layoutAndIdle(activity, widthDp = 360, heightDp = 1600)
+
+        data class Case(val typed: String, val name: String, val mode: TrackingMode, val target: Int?, val unit: String?, val summaryHas: List<String>)
+        val cases = listOf(
+            Case("Do 10 push-ups daily", "10 Push-ups", TrackingMode.QUANTITY, 10, "push-ups", listOf("Quantity", "10 push-ups", "Daily")),
+            Case("Walk for 30 minutes", "Walk 30 Minutes", TrackingMode.DURATION, 30, "min", listOf("Duration", "30 min")),
+            Case("Meditate daily", "Meditate", TrackingMode.COMPLETION_ONLY, null, null, listOf("Simple check-off", "Complete once"))
+        )
+        for ((index, c) in cases.withIndex()) {
+            vm.openAddHabit()
+            layoutAndIdle(activity, widthDp = 360, heightDp = 1600, recompose = true)
+            setTextTag(activity, "habit_name_input", c.typed)
+            // 1. The summary card describes what was understood
+            val texts = collectAllTexts(activity)
+            assertTrue("Summary card shown for '${c.typed}'", texts.any { it.contains("Here's what we understood") })
+            c.summaryHas.forEach { piece ->
+                assertTrue("Summary for '${c.typed}' must mention '$piece', got: ${texts.filter { it.length < 60 }}", texts.any { it.contains(piece) })
+            }
+            // 2. Saving stores exactly that
+            clickTag(activity, "save_habit_btn", heightDp = 1600)
+            repo.habits.awaitMatch { it.size == index + 1 }
+            val saved = repo.habits.value.first { it.name == c.name }
+            assertEquals("mode for '${c.typed}'", c.mode, saved.trackingMode)
+            assertEquals("target for '${c.typed}'", c.target, saved.targetValue)
+            assertEquals("unit for '${c.typed}'", c.unit, saved.unitCode)
+            assertEquals("Every day by default", ScheduleKind.DAILY, saved.scheduleKind)
+            layoutAndIdle(activity, widthDp = 360, heightDp = 1600, recompose = true)
+        }
+        // 3. Today: amount habits get the + straight away; check-off keeps the circle
+        vm.selectTab(NavTab.TODAY)
+        layoutAndIdle(activity, widthDp = 360, heightDp = 1600, recompose = true)
+        val byName = repo.habits.value.associateBy { it.name }
+        assertNotNull("+ for the push-ups habit", findNodeByTagOrNull(activity, "quick_log_btn_${byName.getValue("10 Push-ups").habitId}"))
+        assertNotNull("+ for the walking habit", findNodeByTagOrNull(activity, "quick_log_btn_${byName.getValue("Walk 30 Minutes").habitId}"))
+        assertNotNull("circle for the check-off habit", findNodeByTagOrNull(activity, "habit_done_btn_${byName.getValue("Meditate").habitId}"))
+        controller.pause().stop()
+        repo.dbHelper.close()
+    }
 }
