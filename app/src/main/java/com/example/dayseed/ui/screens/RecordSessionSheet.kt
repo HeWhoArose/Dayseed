@@ -30,6 +30,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
@@ -241,6 +242,8 @@ fun RecordSessionSheet(
     val today = viewModel.repository.clock.todayLocal()
     var activeEditingEntryId by remember(entryId) { mutableStateOf(entryId) }
     var entryPendingDelete by remember { mutableStateOf<String?>(null) }
+    // True while the + on "Recorded today" is open to add a new amount (D-250).
+    var isAddingNew by remember { mutableStateOf(false) }
     val existingEntry = remember(entries, activeEditingEntryId) {
         activeEditingEntryId?.let { id -> entries.find { it.entryId == id } }
     }
@@ -430,7 +433,7 @@ fun RecordSessionSheet(
                     Spacer(modifier = Modifier.width(6.dp))
                     Column {
                         Text(
-                            text = if (existingEntry != null) "Edit amount" else "Record session",
+                            text = if (existingEntry != null) "Edit amount" else if (isAddingNew) "Add a session" else "Record session",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground
@@ -448,7 +451,7 @@ fun RecordSessionSheet(
             // (today when it comes from the + pop-up). Amounts are added only through that pop-up.
             // 2. Amount editor: only while changing an existing entry
             item {
-                if (existingEntry != null) Card(
+                if (existingEntry != null || isAddingNew) Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
@@ -648,7 +651,7 @@ fun RecordSessionSheet(
                             )
                         }
 
-                        if (existingEntry != null) Text(
+                        if (existingEntry != null || isAddingNew) Text(
                             text = newEntrySummaryText,
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Medium,
@@ -705,7 +708,7 @@ fun RecordSessionSheet(
             }
 
             // 4. Existing Progress Entries on Selected Date (Inline Edit & Delete)
-            if (entriesOnSelectedDate.isNotEmpty()) {
+            run {
                 item {
                     Card(
                         shape = RoundedCornerShape(16.dp),
@@ -719,11 +722,38 @@ fun RecordSessionSheet(
                             modifier = Modifier.padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Text(
-                                text = "Recorded on ${friendlyDate(selectedDate, today)} (${entriesOnSelectedDate.size})",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Recorded ${if (selectedDate == today) "today" else friendlyDate(selectedDate, today)} (${entriesOnSelectedDate.size})",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                if (isMeasuredMode && !isAddingNew && existingEntry == null) {
+                                    IconButton(
+                                        onClick = {
+                                            valueText = ""
+                                            valueError = null
+                                            isAddingNew = true
+                                        },
+                                        modifier = Modifier.size(48.dp).testTag("record_session_add_btn")
+                                    ) {
+                                        Icon(Icons.Default.Add, contentDescription = "Add a session", tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+                            }
+                            if (entriesOnSelectedDate.isEmpty()) {
+                                Text(
+                                    text = "Nothing recorded yet. Tap + to add a session.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.testTag("record_session_no_entries_text")
+                                )
+                            }
                             for (entry in entriesOnSelectedDate) {
                                 val isBeingEdited = entry.entryId == activeEditingEntryId
                                 val timeFormatted = remember(entry.createdAtUtcMs, is24HourFormat) {
@@ -815,7 +845,7 @@ fun RecordSessionSheet(
 
             // 5. Save / Cancel Buttons
             item {
-                if (existingEntry == null) {
+                if (existingEntry == null && !isAddingNew) {
                     Button(
                         onClick = onNavigateBack,
                         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("record_session_done_btn")
@@ -825,7 +855,15 @@ fun RecordSessionSheet(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     OutlinedButton(
-                        onClick = onNavigateBack,
+                        onClick = {
+                            if (isAddingNew) {
+                                isAddingNew = false
+                                valueText = ""
+                                valueError = null
+                            } else {
+                                onNavigateBack()
+                            }
+                        },
                         modifier = Modifier
                             .weight(1f)
                             .heightIn(min = 48.dp)

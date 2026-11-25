@@ -47,6 +47,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -438,7 +439,7 @@ fun LivingGroveScreen(
                         modifier = Modifier.dayseedHeading()
                     )
                     Text(
-                        text = "Every streak reaching 7 active span days roots a permanent tree in your landscape.",
+                        text = "A streak of 7 days plants a permanent tree.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -457,8 +458,8 @@ fun LivingGroveScreen(
                 GroveStatCard(
                     icon = Icons.Default.Spa,
                     iconTint = MaterialTheme.colorScheme.primary,
-                    title = "Active Saplings",
-                    subtitle = "1–6d span",
+                    title = "Saplings",
+                    subtitle = "1–6 days",
                     count = growthMetrics.activeSaplingsCount,
                     modifier = Modifier
                         .weight(1f)
@@ -468,8 +469,8 @@ fun LivingGroveScreen(
                 GroveStatCard(
                     icon = Icons.Default.Forest,
                     iconTint = MaterialTheme.colorScheme.primary,
-                    title = "Growing Trees",
-                    subtitle = "7d+ active",
+                    title = "Growing",
+                    subtitle = "7+ days",
                     count = growthMetrics.growingTreesCount,
                     modifier = Modifier
                         .weight(1f)
@@ -479,8 +480,8 @@ fun LivingGroveScreen(
                 GroveStatCard(
                     icon = Icons.Default.Eco,
                     iconTint = MaterialTheme.colorScheme.secondary,
-                    title = "Dormant Trees",
-                    subtitle = "Preserved",
+                    title = "Resting",
+                    subtitle = "Kept safe",
                     count = growthMetrics.dormantTreesCount,
                     modifier = Modifier
                         .weight(1f)
@@ -630,14 +631,14 @@ private fun PermanentGroveSummaryCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "7+ active span days",
+                    text = "7+ days",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             if (qualifiedRuns.isEmpty()) {
                 Text(
-                    text = "When any habit reaches 7 elapsed active span days, its tree takes permanent root in your Grove—even if a streak later rests.",
+                    text = "Reach 7 days in a row and a tree stays in your Grove for good, even if the streak later pauses.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -649,7 +650,7 @@ private fun PermanentGroveSummaryCard(
                     .distinct()
                     .joinToString(", ")
                 Text(
-                    text = "$growing active growing ${if (growing == 1) "tree" else "trees"} and $dormant preserved autumn ${if (dormant == 1) "tree" else "trees"} across $habitNames.",
+                    text = "$growing growing, $dormant resting: $habitNames.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -700,9 +701,9 @@ private fun HabitGroveCard(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     val activeRunSummary = if (activeRun != null) {
-                        "Active streak: ${activeRun.completedStreakCount} $streakUnitWord (${activeRun.elapsedActiveSpanCount} active span days)"
+                        "Current streak: ${activeRun.completedStreakCount} $streakUnitWord"
                     } else {
-                        "No active streak run right now"
+                        "No streak right now"
                     }
                     Text(
                         text = activeRunSummary,
@@ -731,14 +732,14 @@ private fun HabitGroveCard(
 
             // Permanent Qualified Grove Trees (>= 7 active span days)
             Text(
-                text = "Permanent Grove Trees (${qualifiedGroveRuns.size})",
+                text = "Trees (${qualifiedGroveRuns.size})",
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             if (qualifiedGroveRuns.isEmpty()) {
                 Text(
-                    text = "Reaching 7 elapsed active span days grows a permanent tree here.",
+                    text = "Reach 7 days in a row to grow a tree here.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -782,7 +783,7 @@ private fun HabitGroveCard(
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = "${run.completedStreakCount} $unitLabel (${run.elapsedActiveSpanCount}d span)",
+                                        text = "${run.completedStreakCount} $unitLabel",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.primary
                                     )
@@ -798,23 +799,31 @@ private fun HabitGroveCard(
                 }
             }
 
-            // Short Unqualified Runs (< 7 active span days) kept strictly separate from Grove trees
+            // Short runs (< 7 days) stay out of the Grove; tucked behind a toggle so the page stays calm.
             if (shortUnqualifiedRuns.isNotEmpty()) {
-                Text(
-                    text = "Earlier Short Runs (< 7 active span days — not Grove trees): ${shortUnqualifiedRuns.size}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.testTag("short_unqualified_runs_header_${habit.habitId}")
-                )
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    for (shortRun in shortUnqualifiedRuns.reversed()) {
-                        val unitLabel = if (shortRun.streakUnit == StreakUnit.WEEKS) "weeks" else "days"
-                        Text(
-                            text = "• ${shortRun.startLocalDate} – ${shortRun.endLocalDate}: ${shortRun.completedStreakCount} $unitLabel (${shortRun.elapsedActiveSpanCount}d span, ${formatTerminalReasonLabel(shortRun.terminalReason)})",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.testTag("short_run_row_${shortRun.runId}")
-                        )
+                var showShort by rememberSaveable(habit.habitId) { mutableStateOf(false) }
+                TextButton(
+                    onClick = { showShort = !showShort },
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .testTag("short_unqualified_runs_header_${habit.habitId}")
+                ) {
+                    Text(
+                        text = (if (showShort) "Hide" else "Show") + " ${shortUnqualifiedRuns.size} shorter streaks (under 7 days)",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+                if (showShort) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        for (shortRun in shortUnqualifiedRuns.reversed()) {
+                            val unitLabel = if (shortRun.streakUnit == StreakUnit.WEEKS) "weeks" else "days"
+                            Text(
+                                text = "• ${shortRun.startLocalDate} – ${shortRun.endLocalDate}: ${shortRun.completedStreakCount} $unitLabel",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.testTag("short_run_row_${shortRun.runId}")
+                            )
+                        }
                     }
                 }
             }

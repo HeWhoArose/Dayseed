@@ -385,16 +385,6 @@ fun TodayScreen(
                             greeting = greetingFor(daypart),
                             modifier = Modifier.weight(1f)
                         )
-                        IconButton(
-                            onClick = { viewModel.openJournalEditor(todayJournal, today) },
-                            modifier = Modifier.size(48.dp).testTag("today_write_reflection_btn")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "Write a reflection for today",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
                         if (showCornerArtwork) {
                             Spacer(modifier = Modifier.width(8.dp))
                             DaypartArtwork(

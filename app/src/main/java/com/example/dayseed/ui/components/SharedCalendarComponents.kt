@@ -37,11 +37,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -229,7 +231,11 @@ fun SharedMonthCalendar(
     onJumpToToday: () -> Unit,
     onSelectDate: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
-    testTagPrefix: String = "shared_calendar"
+    testTagPrefix: String = "shared_calendar",
+    /** Journal use (D-250): smaller cells, mood and journal marks only (no habit marks or legend). */
+    journalMode: Boolean = false,
+    /** When set, days whose entries carry this primary mood are highlighted with a larger emoji. */
+    highlightMoodCode: String? = null
 ) {
     val monthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())
     val orderedWeekdays = (0..6).map { offset ->
@@ -251,8 +257,8 @@ fun SharedMonthCalendar(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(if (journalMode) 8.dp else 16.dp),
+            verticalArrangement = Arrangement.spacedBy(if (journalMode) 6.dp else 12.dp)
         ) {
             // Month navigation header
             Row(
@@ -378,7 +384,7 @@ fun SharedMonthCalendar(
                             Spacer(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(54.dp)
+                                    .height(if (journalMode) 44.dp else 54.dp)
                             )
                         } else {
                             val date = displayedMonth.atDay(dayOfMonth)
@@ -389,7 +395,10 @@ fun SharedMonthCalendar(
                                 ?.primaryMoodCode
                                 ?.let { MoodCatalog.findByCode(it) }
 
-                            val isSingleHabitMode = selectedHabitFilterId != null
+                            val isMoodHighlighted = highlightMoodCode != null && dayJournals.any {
+                                MoodCatalog.findByCode(it.primaryMoodCode)?.code.equals(highlightMoodCode, ignoreCase = true)
+                            }
+                            val isSingleHabitMode = selectedHabitFilterId != null && !journalMode
                             val perHabitStates = if (date.isAfter(referenceToday)) {
                                 emptyList()
                             } else if (isSingleHabitMode) {
@@ -416,7 +425,7 @@ fun SharedMonthCalendar(
                             val isToday = date == referenceToday
                             // In All-Habits Mode, keep the cell container background neutral instead of
                             // painting the whole cell green when only one habit is completed (Plan 2.B1).
-                            val (bgColor, textColor, borderColor) = if (isSingleHabitMode) {
+                            val (bgColor0, textColor, borderColor) = if (isSingleHabitMode) {
                                 calendarColorsForState(
                                     state = singleHabitState,
                                     isSelected = isSelected,
@@ -442,6 +451,7 @@ fun SharedMonthCalendar(
                                 Triple(neutralBg, neutralFg, neutralBorder)
                             }
 
+                            val bgColor = if (isMoodHighlighted) MaterialTheme.colorScheme.primaryContainer else bgColor0
                             val a11yDescription = buildString {
                                 append(date.toString())
                                 if (isToday) append(", Today")
@@ -455,7 +465,7 @@ fun SharedMonthCalendar(
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .defaultMinSize(minWidth = 44.dp, minHeight = 54.dp)
+                                    .defaultMinSize(minWidth = if (journalMode) 36.dp else 44.dp, minHeight = if (journalMode) 44.dp else 54.dp)
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(bgColor)
                                     .border(
@@ -464,7 +474,10 @@ fun SharedMonthCalendar(
                                         shape = RoundedCornerShape(10.dp)
                                     )
                                     .clickable(role = Role.Button) { onSelectDate(date) }
-                                    .semantics { contentDescription = a11yDescription }
+                                    .semantics {
+                                        contentDescription = a11yDescription
+                                        if (isMoodHighlighted) stateDescription = "Highlighted: ${latestMood?.label ?: "mood"} recorded"
+                                    }
                                     .testTag("${testTagPrefix}_date_${date}"),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -480,7 +493,9 @@ fun SharedMonthCalendar(
                                         color = textColor
                                     )
                                     // Habit non-colour status indicators (All-Habits compact per-habit marks vs Single-Habit mark)
-                                    if (isSingleHabitMode) {
+                                    if (journalMode) {
+                                        // The Journal calendar is about entries and moods, not habit results.
+                                    } else if (isSingleHabitMode) {
                                         Text(
                                             text = singleHabitState.nonColorIndicator,
                                             fontSize = 12.sp,
@@ -511,9 +526,13 @@ fun SharedMonthCalendar(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             if (latestMood != null) {
+                                                val dim = highlightMoodCode != null && !isMoodHighlighted
                                                 Text(
                                                     text = latestMood.symbol,
-                                                    fontSize = 10.sp
+                                                    fontSize = if (isMoodHighlighted) 22.sp else if (journalMode) 14.sp else 10.sp,
+                                                    modifier = Modifier
+                                                        .then(if (dim) Modifier.alpha(0.3f) else Modifier)
+                                                        .testTag("${testTagPrefix}_mood_$date")
                                                 )
                                             }
                                             if (dayJournals.isNotEmpty()) {
@@ -534,7 +553,7 @@ fun SharedMonthCalendar(
             }
 
             // Honest Date Legend (Compact non-colour + colour cues)
-            FlowRow(
+            if (!journalMode) FlowRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 4.dp)

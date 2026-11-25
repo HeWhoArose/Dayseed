@@ -176,7 +176,7 @@ fun QuickLogSheetContent(
                 }
                 if (onAddNote != null) {
                     TextButton(onClick = onAddNote, modifier = Modifier.testTag("quick_log_add_note_btn")) {
-                        Text("Add a note")
+                        Text("Journal about this")
                     }
                 }
                 if (onOpenRecord != null) {

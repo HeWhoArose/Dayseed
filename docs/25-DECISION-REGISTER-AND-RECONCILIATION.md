@@ -681,6 +681,8 @@ The decision log and register now contain 242 unique decision IDs through D-248 
 
 The decision log and register now contain 243 unique decision IDs through D-249 (gaps preserved).
 
+## D-250 — Journal calendar and mood highlight, Insights trends graph, Record session add, Grove tidy (2026-11-25)
 
+| D-250 | Journal calendar always visible and compact; mood chips highlight days instead of filtering; Insights calendar replaced by a 14-day trends graph; Record session + adds a session; Today pen removed; Add a note renamed Journal about this; Grove tidied; motivational copy audited. Full record in `docs/09-DECISION-LOG.md` (D-250). Stage C/D NOT OPEN. |
 
-
+The decision log and register now contain 244 unique decision IDs through D-250 (gaps preserved).

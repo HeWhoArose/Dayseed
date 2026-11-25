@@ -1316,7 +1316,7 @@ class CanonicalUiAndBehaviourReconciliationTest {
             pumpViewport(widthDp = widthDp, heightDp = 760, recompose = true)
 
             val journalTitleNode = findNodeByTag("journal_header_title")
-            val dateJumpNode = findNodeByTag("journal_date_jump_toggle")
+            val dateJumpNode = findNodeByTag("journal_overflow_btn")
             val writeBtnNode = findNodeByTag("journal_add_entry_fab")
 
             val titleLayoutResults = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
@@ -1332,7 +1332,7 @@ class CanonicalUiAndBehaviourReconciliationTest {
                 titleLayoutResults.first().isLineEllipsized(0)
             )
             assertFalse(
-                "At ${widthDp}dp, journal_header_title (${journalTitleNode.boundsInRoot}) must not overlap journal_date_jump_toggle (${dateJumpNode.boundsInRoot})",
+                "At ${widthDp}dp, journal_header_title (${journalTitleNode.boundsInRoot}) must not overlap journal_overflow_btn (${dateJumpNode.boundsInRoot})",
                 journalTitleNode.boundsInRoot.overlaps(dateJumpNode.boundsInRoot)
             )
             assertFalse(
@@ -1340,7 +1340,7 @@ class CanonicalUiAndBehaviourReconciliationTest {
                 journalTitleNode.boundsInRoot.overlaps(writeBtnNode.boundsInRoot)
             )
             assertFalse(
-                "At ${widthDp}dp, journal_date_jump_toggle (${dateJumpNode.boundsInRoot}) must not overlap journal_add_entry_fab (${writeBtnNode.boundsInRoot})",
+                "At ${widthDp}dp, journal_overflow_btn (${dateJumpNode.boundsInRoot}) must not overlap journal_add_entry_fab (${writeBtnNode.boundsInRoot})",
                 dateJumpNode.boundsInRoot.overlaps(writeBtnNode.boundsInRoot)
             )
 

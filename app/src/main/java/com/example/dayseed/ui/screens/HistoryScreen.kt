@@ -109,12 +109,8 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
             val matchesSearch = q.isEmpty() ||
                 (entry.title?.lowercase(Locale.ROOT)?.contains(q) == true) ||
                 entry.body.lowercase(Locale.ROOT).contains(q)
-            val matchesMood = selectedMoodFilter.isNullOrBlank() ||
-                entry.primaryMoodCode.equals(selectedMoodFilter, ignoreCase = true) ||
-                entry.secondaryMoodCode.equals(selectedMoodFilter, ignoreCase = true) ||
-                MoodCatalog.findByCode(entry.primaryMoodCode)?.code.equals(selectedMoodFilter, ignoreCase = true) ||
-                MoodCatalog.findByCode(entry.secondaryMoodCode)?.code.equals(selectedMoodFilter, ignoreCase = true)
-            matchesDate && matchesSearch && matchesMood
+            // A chosen mood highlights its days on the calendar (D-250); it no longer hides other entries.
+            matchesDate && matchesSearch
         }
     }
 
@@ -178,9 +174,45 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
             }
         }
 
+        // Mood row: tap a mood to highlight the days it was recorded on the calendar below (D-250)
+        item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = selectedMoodFilter == null,
+                        onClick = { viewModel.setJournalMoodFilter(null) },
+                        label = { Text("All") },
+                        modifier = Modifier.testTag("journal_mood_filter_ALL")
+                    )
+                    MoodCatalog.pickerMoods.forEach { mood ->
+                        FilterChip(
+                            selected = selectedMoodFilter.equals(mood.code, ignoreCase = true),
+                            onClick = {
+                                viewModel.setJournalMoodFilter(
+                                    if (selectedMoodFilter.equals(mood.code, ignoreCase = true)) null else mood.code
+                                )
+                            },
+                            label = {
+                                // Emoji only until chosen, so the whole mood range is scannable at a glance.
+                                val chosen = selectedMoodFilter.equals(mood.code, ignoreCase = true)
+                                Text(if (chosen) "${mood.symbol} ${mood.label}" else mood.symbol)
+                            },
+                            modifier = Modifier
+                                .semantics { contentDescription = "Filter by ${mood.label}" }
+                                .testTag("journal_mood_filter_${mood.code}")
+                        )
+                    }
+                }
+
+        }
+
         // Collapsible Date Jump Calendar (A2)
         item {
-            AnimatedVisibility(visible = isDateJumpExpanded) {
+            run {
                 Column(
                     modifier = Modifier.testTag("journal_date_jump_calendar"),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -208,7 +240,9 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
                             viewModel.selectHistoryDate(clickedDate)
                             isDateFilterActive = true
                         },
-                        testTagPrefix = "journal_date_jump"
+                        testTagPrefix = "journal_date_jump",
+                        journalMode = true,
+                        highlightMoodCode = selectedMoodFilter
                     )
 
                     FlowRow(
@@ -340,16 +374,6 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
                                     Icon(imageVector = Icons.Default.Clear, contentDescription = "Clear search")
                                 }
                             }
-                            IconButton(
-                                onClick = { isDateJumpExpanded = !isDateJumpExpanded },
-                                modifier = Modifier.testTag("journal_date_jump_toggle")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.DateRange,
-                                    contentDescription = if (isDateJumpExpanded) "Hide date jump calendar" else "Jump to a date",
-                                    tint = if (isDateJumpExpanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
                         }
                     },
                     singleLine = true,
@@ -358,38 +382,6 @@ fun HistoryScreen(viewModel: DayseedViewModel) {
                         .fillMaxWidth()
                         .testTag("journal_search_input")
                 )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    FilterChip(
-                        selected = selectedMoodFilter == null,
-                        onClick = { viewModel.setJournalMoodFilter(null) },
-                        label = { Text("All Moods") },
-                        modifier = Modifier.testTag("journal_mood_filter_ALL")
-                    )
-                    MoodCatalog.pickerMoods.forEach { mood ->
-                        FilterChip(
-                            selected = selectedMoodFilter.equals(mood.code, ignoreCase = true),
-                            onClick = {
-                                viewModel.setJournalMoodFilter(
-                                    if (selectedMoodFilter.equals(mood.code, ignoreCase = true)) null else mood.code
-                                )
-                            },
-                            label = {
-                                // Emoji only until chosen, so the whole mood range is scannable at a glance.
-                                val chosen = selectedMoodFilter.equals(mood.code, ignoreCase = true)
-                                Text(if (chosen) "${mood.symbol} ${mood.label}" else mood.symbol)
-                            },
-                            modifier = Modifier
-                                .semantics { contentDescription = "Filter by ${mood.label}" }
-                                .testTag("journal_mood_filter_${mood.code}")
-                        )
-                    }
-                }
 
                 if (hasActiveFilters) {
                     Row(

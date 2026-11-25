@@ -459,27 +459,21 @@ class UiUxRedesignVerificationTest {
         }
         layoutAndIdle(insightsActivity, widthDp = 320, heightDp = 1400)
 
-        val calNode = findNodeByTagOrNull(insightsActivity, "insights_section_calendar")
-        val daySummaryNode = findNodeByTagOrNull(insightsActivity, "insights_selected_day_summary")
-        assertNotNull("Monthly Calendar section must render at top of Insights", calNode)
-        assertNotNull("Inline Selected-Day Activity Summary must render", daySummaryNode)
-        assertNotNull("Weekly board must render in Calendar mode", findNodeByTagOrNull(insightsActivity, "insights_section_habits"))
-        assertNull("Statistics are the secondary mode, not shown with the calendar (D-244)", findNodeByTagOrNull(insightsActivity, "insights_section_overview"))
-        assertNotNull(
-            "Selected-day summary must show tappable habit row",
-            findNodeByTagOrNull(insightsActivity, "insights_day_summary_habit_h_water")
-        )
-        assertNotNull(
-            "Full Day Detail link must exist on selected-day summary",
-            findNodeByTagOrNull(insightsActivity, "insights_open_selected_day_detail")
-        )
+        // Trends mode (D-250): the month calendar moved to the Journal; Insights leads with a graph and the weekly board.
+        assertNotNull("Trends graph must render at the top of Insights", findNodeByTagOrNull(insightsActivity, "insights_trends_chart"))
+        assertNotNull("Weekly board must render in Trends mode", findNodeByTagOrNull(insightsActivity, "insights_section_habits"))
+        assertNull("The month calendar no longer lives in Insights", findNodeByTagOrNull(insightsActivity, "insights_calendar_card"))
+        assertNull("The selected-day summary card went with the calendar", findNodeByTagOrNull(insightsActivity, "insights_selected_day_summary"))
+        assertNull("Statistics are the secondary mode, not shown with the graph", findNodeByTagOrNull(insightsActivity, "insights_section_overview"))
+        val todayBar = findNodeByTagOrNull(insightsActivity, "trend_day_${today}")
+        assertNotNull("Today has a bar that opens its day", todayBar)
 
         // Switching to Stats shows the statistics and hides the calendar.
         clickTag(insightsActivity, "insights_mode_stats", widthDp = 320, heightDp = 2600)
         layoutAndIdle(insightsActivity, widthDp = 320, heightDp = 2600)
         assertNotNull("Overview metrics section must render in Stats mode", findNodeByTagOrNull(insightsActivity, "insights_section_overview"))
         assertNotNull("Mood card must render in Stats mode", findNodeByTagOrNull(insightsActivity, "mood_insights_card"))
-        assertNull("Calendar is hidden in Stats mode", findNodeByTagOrNull(insightsActivity, "insights_section_calendar"))
+        assertNull("The graph is hidden in Stats mode", findNodeByTagOrNull(insightsActivity, "insights_trends_chart"))
         insightsController.pause().stop()
 
         // B) Settings Screen refined headings

@@ -567,7 +567,7 @@ class ProgressiveDisclosureAndSmartHabitTest {
         assertNotNull(findNodeByTagOrNull(activity, "today_rest_day_view_habits_btn"))
         assertNotNull(findNodeByTagOrNull(activity, "today_rest_day_create_habit_btn"))
         assertTrue(collectAllRenderedTexts(activity).any { it.contains("No habits scheduled for today.") })
-        assertNotNull("Header reflection pen should appear once user has at least 1 active habit", findNodeByTagOrNull(activity, "today_write_reflection_btn"))
+        assertNull("The header pen was removed (D-250): journalling starts from the Journal tab or the + pop-up", findNodeByTagOrNull(activity, "today_write_reflection_btn"))
         assertNull("The old Daily Reflection card is gone (D-236)", findNodeByTagOrNull(activity, "reflection_card"))
         assertNull("CollectedMomentsSummaryCard must stay hidden when 0 activity recorded", findNodeByTagOrNull(activity, "growth_mark_summary_card"))
         assertNull("TodayLongestStreakIndicator must stay hidden when no active streak exists", findNodeByTagOrNull(activity, "today_main_streak_indicator"))

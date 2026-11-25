@@ -161,7 +161,7 @@ fun InsightsScreen(viewModel: DayseedViewModel, initialMode: Int = 0) {
         viewModel.repository.computeDayDetailSummary(selectedDate, referenceToday)
     }
     var progressBandsExpanded by rememberSaveable { mutableStateOf(false) }
-    // Two modes (D-215: calendar and history first, statistics as a secondary mode): 0 = Calendar, 1 = Stats.
+    // Two modes: 0 = Trends (graph and weekly board), 1 = Stats. The month calendar moved to the Journal (D-250).
     var insightsMode by rememberSaveable { mutableStateOf(initialMode) }
     val calendarMode = insightsMode == 0
 
@@ -190,8 +190,8 @@ fun InsightsScreen(viewModel: DayseedViewModel, initialMode: Int = 0) {
 
         item {
             SegmentedChoice(
-                labels = listOf("Calendar", "Stats"),
-                tags = listOf("insights_mode_calendar", "insights_mode_stats"),
+                labels = listOf("Trends", "Stats"),
+                tags = listOf("insights_mode_trends", "insights_mode_stats"),
                 selected = insightsMode,
                 onSelect = { insightsMode = it }
             )
@@ -208,45 +208,31 @@ fun InsightsScreen(viewModel: DayseedViewModel, initialMode: Int = 0) {
         }
 
         // =====================================================================
-        // 1. MONTHLY CALENDAR & INLINE SELECTED-DAY ACTIVITY SUMMARY
+        // 1. TRENDS GRAPH (the month calendar lives in the Journal now; D-250)
         // =====================================================================
         if (calendarMode) item {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("insights_section_calendar"),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                SharedMonthCalendar(
-                    displayedMonth = displayedMonth,
-                    selectedDate = selectedDate,
-                    referenceToday = referenceToday,
-                    weekStartDay = viewModel.repository.getWeekStartDay(monthStart),
-                    habitsForMonth = habitsForMonth,
-                    selectedHabitFilterId = selectedCalendarHabitId,
-                    onSelectHabitFilter = { selectedCalendarHabitId = it },
-                    evaluateDateStateForHabit = { hId, d ->
-                        viewModel.repository.evaluateHonestCalendarDateState(hId, d, referenceToday)
-                    },
-                    journalEntries = journalEntries,
-                    onPreviousMonth = { displayedMonthStr = displayedMonth.minusMonths(1).toString() },
-                    onNextMonth = { displayedMonthStr = displayedMonth.plusMonths(1).toString() },
-                    onJumpToToday = {
-                        displayedMonthStr = YearMonth.from(referenceToday).toString()
-                        weeklyBoardDateStr = referenceToday.toString()
-                        viewModel.selectHistoryDate(referenceToday)
-                    },
-                    onSelectDate = { date ->
-                        weeklyBoardDateStr = date.toString()
-                        viewModel.selectHistoryDate(date)
-                    },
-                    testTagPrefix = "insights_calendar"
-                )
-
-                SelectedDayActivitySummaryCard(
-                    summary = selectedDaySummary,
-                    onOpenDayDetail = { viewModel.openDayDetail(selectedDate) },
-                    onOpenHabitDetail = { habitId -> viewModel.openHabitDetail(habitId, selectedDate) }
+            val activeForChart = remember(habits) { habits.filter { it.lifecycleState == com.example.dayseed.data.HabitLifecycleState.ACTIVE } }
+            val trendDays = remember(activeForChart, habitEntries, habitDayOutcomes, habitDateExceptions, referenceToday) {
+                (13 downTo 0).map { back ->
+                    val d = referenceToday.minusDays(back.toLong())
+                    var met = 0; var partial = 0; var scheduled = 0
+                    for (h in activeForChart) {
+                        when (viewModel.repository.evaluateHonestCalendarDateState(h.habitId, d, referenceToday)) {
+                            com.example.dayseed.data.HonestCalendarDateState.COMPLETED_TARGET_MET -> { met++; scheduled++ }
+                            com.example.dayseed.data.HonestCalendarDateState.PARTIAL_OR_TINY_PROGRESS -> { partial++; scheduled++ }
+                            com.example.dayseed.data.HonestCalendarDateState.EXPLICIT_ZERO_NOT_DONE,
+                            com.example.dayseed.data.HonestCalendarDateState.MISSED_SCHEDULED_DATE -> scheduled++
+                            else -> Unit
+                        }
+                    }
+                    com.example.dayseed.ui.components.TrendDay(d, met, partial, scheduled)
+                }
+            }
+            Column(modifier = Modifier.fillMaxWidth().testTag("insights_section_trends")) {
+                com.example.dayseed.ui.components.TrendsChartCard(
+                    days = trendDays,
+                    today = referenceToday,
+                    onSelectDay = { date -> viewModel.openDayDetail(date) }
                 )
             }
         }
